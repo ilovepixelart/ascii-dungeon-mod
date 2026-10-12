@@ -8,7 +8,7 @@ import { CANVAS, INK } from './palette'
 import { MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, TOWN_BIG_ART, TOWN_TERRAIN, TOWN_THING_ART, TREE_ALT, heroArt, torch } from './pixelart'
 import { TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
 import { TOWN_PX_W, townImage } from './townpixels'
-import { DECAL_ART, FRAMES_PER_TILE, walkState, hitFramesFor, hitFreeze, isStrideFrame, strideOf, wallTorchesOf, HIT_FRAMES, decalAt, themeOf, themed, benchRoute, hitColor, hitRise, hitsBetween, clickToTile, deadZone, followCamera, tileCamera, frameOf, torchColor, wallFaceLight, hexToInt, originAt, rasterCells, viewOrigin, walkPosition, walkingGame, windowOrigin, worldSize } from './pixels'
+import { DECAL_ART, FRAMES_PER_TILE, lightStep, pixelMap, stampCells, stampOf, walkState, hitFramesFor, hitFreeze, isStrideFrame, strideOf, wallTorchesOf, HIT_FRAMES, decalAt, themeOf, themed, benchRoute, hitColor, hitRise, hitsBetween, clickToTile, deadZone, followCamera, tileCamera, frameOf, torchColor, wallFaceLight, hexToInt, originAt, rasterCells, viewOrigin, walkPosition, walkingGame, windowOrigin, worldSize } from './pixels'
 
 const W = 96
 const H = 72
@@ -516,7 +516,8 @@ describe('a wall\'s light', () => {
     const red = (frame: Uint32Array, lx: number, ly: number) => (frame[((g.y + 3) * PX + ly - o.y) * w + g.x * PX + lx - o.x]! >> 16) & 255
     for (let lx = 0; lx < PX; lx += 1) {
       for (const [ly, light] of [[0, near], [1, near], [2, Math.max(0.15, near * 0.6)], [7, Math.max(0.15, near * 0.6)]] as const) {
-        expect(red(lit, lx, ly)).toBe(Math.min(255, Math.round(red(bare, lx, ly) * torchColor(light)[0])))
+        // At the light's level of LIGHT_STEPS, snapped to the host's step of 17.
+        expect(red(lit, lx, ly)).toBe(Math.round(Math.min(255, Math.round(red(bare, lx, ly) * torchColor(lightStep(light))[0])) / 17) * 17)
       }
     }
   })
@@ -940,5 +941,39 @@ describe('the game as the walk stands', () => {
 
   test('one frame and the next on the same tile are the same game, so what is drawn of it is kept', async () => {
     expect(walkState(g, tiles, 2 * FRAMES_PER_TILE)).toBe(walkState(g, tiles, 2 * FRAMES_PER_TILE + 1))
+  })
+})
+
+describe('frame stamps', () => {
+  test('a frame stamped with its number reads back that number modulo 16, on the host\'s step of 17; an unstamped one reads none; the rest of the frame is untouched', async () => {
+    const g = newGame(3)
+    const cells = pixelMap(g, 40, 10)
+    for (const n of [1, 15, 16, 17, 159]) {
+      const stamped = stampCells(cells, n)
+      expect(stampOf(stamped)).toBe(n % 16)
+      // Only the first cell's 12 bytes change: 16 base64 characters, the rest identical.
+      expect(stamped.slice(16)).toBe(cells.slice(16))
+    }
+    expect(stampOf(cells)).toBeUndefined()
+  })
+})
+
+describe('light in steps', () => {
+  test('every lit pixel is on the host\'s step of 17, and a tile is lit the same all over', async () => {
+    const g = { ...newGame(3), seen: '1'.repeat(64 * 18) }
+    const frame = frameOf(g, 120, 80, {})
+    const off = [...frame].filter(n => [16, 8, 0].some(sh => ((n >> sh) & 0xff) % 17 !== 0))
+    // Memory, the canvas and unlit sprites are not lit: only what the light touched is held to the step.
+    const lit = frameOf(g, 120, 80, { isLit: false })
+    expect([...frame].filter((n, i) => n !== lit[i] && [16, 8, 0].some(sh => ((n >> sh) & 0xff) % 17 !== 0)).length).toBe(0)
+    expect(off.length).toBeLessThan(frame.length)
+  })
+
+  test('a light level is one of LIGHT_STEPS, none to full', async () => {
+    expect(lightStep(0)).toBe(0)
+    expect(lightStep(1)).toBe(1)
+    // 0.5 of 7 steps up is 3.5, rounded to 4: four sevenths.
+    expect(Math.abs(lightStep(0.5) - 4 / 7)).toBeLessThan(1e-9)
+    expect(lightStep(2)).toBe(1)
   })
 })

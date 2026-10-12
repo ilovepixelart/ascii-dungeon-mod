@@ -81,9 +81,11 @@ export type Attribute = 'might' | 'focus' | 'vigor' | 'insight'
 /** What is open over the map; 'start' is the start screen, where the dungeon waits. */
 export type Panel = 'none' | 'start' | 'bag' | 'sheet' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
 
-export type Consumable = 'health' | 'greater' | 'regen' | 'mapping' | 'fury' | 'ward' | 'smoke'
+/** The five kinds of consumable, a belt slot each, each in three tiers. */
+export type Consumable = 'health' | 'regen' | 'fury' | 'ward' | 'smoke'
 
-export type BeltSlot = { kind: Consumable; count: number }
+/** A belt slot's kind and how many of each tier it holds, I to III. */
+export type BeltSlot = { kind: Consumable; tiers: [number, number, number] }
 
 export type Game = {
   /** The save format: 2 since pixel art became the default view. A save without it predates that. */

@@ -6,8 +6,7 @@ import { depthMod } from './game'
 import type { DepthMod } from './game'
 import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, canvas, canvasCells, digits, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
-import { bar } from './pieces'
-import { CONSUMABLE_ICONS } from './icons'
+import { bar, beltSlot } from './pieces'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
 
 export const PORTRAIT = SLOT
@@ -161,15 +160,7 @@ export const hudContent = (g: Game, width: number): Canvas => {
   art(c, heroArt(g), 1, 1)
   bars(c, g, width)
   const top = BELT_BELOW_Y
-  g.belt.forEach((slot, i) => {
-    const x = beltSlotX(width, i)
-    frame(c, x, top, BELT_SLOT_W, SLOT, GRID)
-    fill(c, x + 1, top + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
-    // A filled slot shows its icon with the count beside it.
-    if (slot === null) return
-    art(c, CONSUMABLE_ICONS[slot.kind], x + 1, top + 1)
-    digits(c, String(slot.count), x + BELT_SLOT_W - 2, top + SLOT / 2 + 2)
-  })
+  g.belt.forEach((slot, i) => beltSlot(c, slot, beltSlotX(width, i), top))
   // The portal, dark while a foe lives and it will not open.
   const px = portalSlotX(width)
   frame(c, px, 0, SLOT, SLOT, GRID)

@@ -1,11 +1,12 @@
 // The merchant's window: the wares on a shelf on the left, the bag and belt as in the inventory. A ware or a bag item
 // is chosen with a click and shows its card; a second click (or a right-click) opens its menu: buy, or sell and equip.
 // Pure: the click layer reports whole gestures, this decides the window's next state and the game actions to apply.
-import type { Consumable, Game, Item } from '../types'
+import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
-import { SHOP_PRICES } from './game'
-import { CONSUMABLES, beltRoom } from './consumables'
-import { CONSUMABLE_ICONS } from './icons'
+import { SHOP_PRICES, priceOfWare } from './game'
+import { CONSUMABLES, hasRoom, heldOf, wareOf } from './consumables'
+import type { Ware } from './consumables'
+import { consumableIcon } from './icons'
 import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './items'
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H } from './inventory'
@@ -16,10 +17,10 @@ import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 
 /** The wares in shelf order, three to a row. */
-export const WARES = Object.keys(SHOP_PRICES) as Consumable[]
+export const WARES = Object.keys(SHOP_PRICES) as Ware[]
 
 /** What the window shows beyond the game: the ware chosen (a bag item is chosen in the game), and which menu is open. */
-export type ShopUi = { ware: Consumable | null; menu: boolean }
+export type ShopUi = { ware: Ware | null; menu: boolean }
 export const SHOP_UI_IDLE: ShopUi = { ware: null, menu: false }
 
 const KEY_INK = '#ffd34d'
@@ -34,8 +35,8 @@ const itemRect = (item: Item): Rect => cellBox(item, BAG_X, BODY_TOP + BAG_Y)
 const beltRect = (i: number): Rect => beltSlotRect(BELT_X, BODY_TOP + BELT_Y, i)
 
 /** Why a ware cannot be bought now, or undefined when it can. */
-export const whyNot = (g: Game, ware: Consumable) =>
-  g.gold < SHOP_PRICES[ware] ? 'not enough gold' : beltRoom(g, ware) < 0 ? 'no room on your belt' : undefined
+export const whyNot = (g: Game, ware: Ware) =>
+  g.gold < priceOfWare(ware) ? 'not enough gold' : !hasRoom(g, wareOf(ware).kind, wareOf(ware).tier) ? 'no room on your belt' : undefined
 
 const chosenItem = (g: Game, ui: ShopUi) => (ui.ware === null ? g.bag.find(i => i.id === g.cursor) : undefined)
 
@@ -44,7 +45,8 @@ export const shopPixels = (g: Game, ui: ShopUi, boxes: readonly OverlayBox[] = [
   const body = canvas(WINDOW_W, INV_H)
   WARES.forEach((ware, i) => {
     const r = wareRect(i)
-    wareTag(body, CONSUMABLE_ICONS[ware], SHOP_PRICES[ware], r.x, r.y - BODY_TOP, g.gold >= SHOP_PRICES[ware], ui.ware === ware)
+    const { kind, tier } = wareOf(ware)
+    wareTag(body, consumableIcon(kind, tier), priceOfWare(ware), r.x, r.y - BODY_TOP, g.gold >= priceOfWare(ware), ui.ware === ware)
   })
   // With a ware chosen no bag item is: the game's cursor is drawn only while the bag has the choice.
   itemGrid(body, ui.ware === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
@@ -65,15 +67,16 @@ const shown = (g: Game): Weighted[] => [
 const entry = (key: string, label: string, why?: string): Run[] =>
   why === undefined ? [{ text: key, color: KEY_INK, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
 
-const wareMenu = (g: Game, ware: Consumable): Run[][] => [entry('b', `Buy for ${SHOP_PRICES[ware]}`, whyNot(g, ware))]
+const wareMenu = (g: Game, ware: Ware): Run[][] => [entry('b', `Buy for ${priceOfWare(ware)}`, whyNot(g, ware))]
 const itemMenu = (g: Game, item: Item): Run[][] => [entry('s', `Sell for ${priceOf(item)}`, item.locked === true ? 'locked' : undefined), entry('e', 'Equip', canWear(g, item) ? undefined : classLabel(item))]
 
-const wareCard = (g: Game, ware: Consumable): Run[][] => {
-  const have = g.belt.reduce((n, b) => n + (b?.kind === ware ? b.count : 0), 0)
+const wareCard = (g: Game, ware: Ware): Run[][] => {
+  const { kind, tier } = wareOf(ware)
+  const price = priceOfWare(ware)
   return [
-    [{ text: CONSUMABLES[ware].name, bold: true }],
-    [{ text: CONSUMABLES[ware].about }],
-    [{ text: 'Price ', dim: true }, { text: String(SHOP_PRICES[ware]), color: g.gold >= SHOP_PRICES[ware] ? KEY_INK : OFF_CLASS }, { text: `   On your belt: ${have}`, dim: true }],
+    [{ text: CONSUMABLES[kind][tier].name, bold: true }],
+    [{ text: CONSUMABLES[kind][tier].about }],
+    [{ text: 'Price ', dim: true }, { text: String(price), color: g.gold >= price ? KEY_INK : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
   ]
 }
 

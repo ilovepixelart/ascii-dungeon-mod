@@ -196,8 +196,12 @@ describe('each rule speaks up when broken', () => {
   test('an item worn in the wrong slot', async () => {
     expect(broke({ ...g, gear: { ...g.gear, helm: item({ id: 1 }) } })).toContain('gear in its slot')
   })
-  test('a belt stack of 10, and a belt of 4 slots', async () => {
-    expect(broke({ ...g, belt: [{ kind: 'health', count: 10 }, null, null, null, null] })).toContain('belt stacks')
+  test('a belt tier of 10, an empty stack kept, a kind out of its slot, and a belt of 4 slots', async () => {
+    expect(broke({ ...g, belt: [{ kind: 'health', tiers: [0, 10, 0] }, null, null, null, null] })).toContain('belt stacks')
+    expect(broke({ ...g, belt: [{ kind: 'health', tiers: [0, 0, 0] }, null, null, null, null] })).toContain('belt stacks')
+    expect(broke({ ...g, belt: [{ kind: 'health', tiers: [9, 9, 9] }, null, null, null, null] })).not.toContain('belt stacks')
+    expect(broke({ ...g, belt: [{ kind: 'fury', tiers: [1, 0, 0] }, null, null, null, null] })).toContain('belt kinds in their slots')
+    expect(broke({ ...g, belt: [null, null, { kind: 'fury', tiers: [1, 0, 0] }, null, null] })).not.toContain('belt kinds in their slots')
     expect(broke({ ...g, belt: [null, null, null, null] })).toContain('belt size')
   })
   test('the cursor on an item no longer in the bag', async () => {

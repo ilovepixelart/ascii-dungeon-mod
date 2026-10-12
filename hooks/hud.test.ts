@@ -10,6 +10,7 @@ import {
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
 import { MAP_W } from './map'
 import { CONSUMABLE_ICONS } from './icons'
+import { TIER_INK } from './pieces'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
 import { CHAMPION_MARK, FOE_BAR_EMPTY, FOE_BAR_FILL, FOE_BAR_W, frameOf, hexToInt, viewOrigin } from './pixels'
 
@@ -105,16 +106,25 @@ describe('the strip', () => {
   })
 
   test('draws each belt slot\'s icon, and nothing in an empty slot', async () => {
-    const g = hero({ belt: [{ kind: 'smoke', count: 2 }, null, null, null, null] })
+    const g = hero({ belt: [null, null, null, null, { kind: 'smoke', tiers: [2, 0, 0] }] })
     const c = hudContent(g, W)
     const icon = CONSUMABLE_ICONS.smoke
-    const x0 = beltSlotX(W, 0) + 1
+    const x0 = beltSlotX(W, 4) + 1
     icon.forEach((row, y) => [...row].forEach((k, x) => {
       if (k !== '.' && y < 5) expect(c.px[BELT_BELOW_Y + 1 + y]?.[x0 + x]).toBe(PAL[k])
     }))
     // An empty slot is its background and frame only: no key number, as there are no keys.
     const empty = new Set(ink(c, beltSlotX(W, 1) + 1, BELT_BELOW_Y + 1, BELT_SLOT_W - 2, SLOT - 2))
     expect([...empty]).toEqual(['#1a1820'])
+  })
+
+  test('marks a slot by the tier it uses next: no pip for the first tier, one for the second, two for the third', async () => {
+    const pips = (tiers: [number, number, number]) => {
+      const c = hudContent(hero({ belt: [{ kind: 'health', tiers }, null, null, null, null] }), W)
+      // The pips sit on the slot's last inner row, right of the icon.
+      return ink(c, beltSlotX(W, 0) + 1 + PX, BELT_BELOW_Y + PX, BELT_SLOT_W - 2 - PX, 1).filter(p => p === TIER_INK).length
+    }
+    expect([pips([1, 0, 0]), pips([3, 1, 0]), pips([1, 1, 1])]).toEqual([0, 1, 2])
   })
 })
 

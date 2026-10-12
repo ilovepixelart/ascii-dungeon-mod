@@ -1,6 +1,7 @@
 // Inventory art: one icon per item base, drawn at its bag footprint, used in the bag and in the worn slots alike;
-// and one PX by PX icon per consumable for the belt.
+// and PX by PX icons for the consumables on the belt, a kind's stronger tiers drawn apart where they differ in use.
 import type { Consumable } from '../types'
+import type { Tier } from './consumables'
 
 /** Bag cell size in pixels: a 6 px icon area plus a 1 px grid line. A footprint of w x h cells is (7w - 1) x (7h - 1) px. */
 export const CELL = 7
@@ -42,8 +43,8 @@ export const ICONS: Readonly<Record<string, Icon>> = {
   pendant: { cells: [1, 1], art: ['K....K', '.K..K.', '..KK..', '.KrrK.', '.KrRK.', '..KK..'] },
 }
 
-/** Each consumable's belt icon, PX by PX: potions by their liquid, scrolls by their mark, the smoke bomb. */
-export const CONSUMABLE_ICONS: Readonly<Record<Consumable, readonly string[]>> = {
+/** The consumables' belt icons, PX by PX: potions by their liquid, scrolls by their mark, the smoke bomb. */
+export const CONSUMABLE_ICONS = {
   health: [
     '........',
     '...KK...',
@@ -114,4 +115,8 @@ export const CONSUMABLE_ICONS: Readonly<Record<Consumable, readonly string[]>> =
     '.KEEqqK.',
     '..KKKK..',
   ],
-}
+} as const satisfies Readonly<Record<string, readonly string[]>>
+
+/** A kind's icon at a tier: the great potions and the scroll that lays a level bare have their own. */
+export const consumableIcon = (kind: Consumable, tier: Tier): readonly string[] =>
+  kind === 'health' && tier > 1 ? CONSUMABLE_ICONS.greater : kind === 'smoke' && tier === 3 ? CONSUMABLE_ICONS.mapping : CONSUMABLE_ICONS[kind]

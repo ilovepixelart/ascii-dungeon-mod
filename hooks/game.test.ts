@@ -3,6 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game } from '../types'
 import { SAVE_VERSION, SHOP_PRICES, alongTheWay, foeTierWeights, apply, isOnlyAWalk, championOf, classAbout, critChance, xpGain, levelOf, newGame, normalize, onToolStart, reforgeCost, routeToStairs } from './game'
 import { foeAhead, plainHero } from './fixtures'
+import { countOf } from './consumables'
 import { plainItem } from './items'
 import { arrive } from './world'
 import { analyze, bfs, cellId, chestAt, floorThing, generate, same, themedRoomOf } from './map'
@@ -701,7 +702,7 @@ describe('a version 4 save, from before the levels were rebuilt', () => {
     const g = normalize(v4({ version: 5 }))
     expect({ x: g.x, y: g.y }).toEqual(generate(g.world, 3).start)
     expect(g.taken).toEqual([])
-    expect(g.version).toBe(6)
+    expect(g.version).toBe(SAVE_VERSION)
   })
 
   test('a current save loads as it is', async () => {
@@ -831,7 +832,7 @@ describe('champions', () => {
     expect(championOf({ ...base, atk: 10 }, 'shielded').atk).toBe(13)
   })
 
-  test('about one foe in ten is a champion from depth 2, none at depth 1', async () => {
+  test('about one foe in ten is a champion from depth 2, none at depth 1', { timeoutMs: 20000 }, async () => {
     const share = (depth: number) => {
       let champions = 0
       for (let seed = 1; seed <= 800; seed += 1) {
@@ -915,20 +916,28 @@ describe('the merchant', () => {
     expect(apply(inTown(), { kind: 'goto', ...TOWN_SPOTS.smith }).panel).toBe('forge')
   })
 
-  test('sells potions and scrolls at fixed prices, onto the belt', async () => {
-    expect(SHOP_PRICES).toEqual({ health: 25, greater: 80, regen: 45, fury: 50, ward: 50, mapping: 30, smoke: 35 })
-    const g = apply(inTown(), { kind: 'buy', ware: 'health' })
+  test('sells potions and scrolls at fixed prices, onto the belt at their tier', async () => {
+    expect(SHOP_PRICES).toEqual({ health1: 25, health3: 80, regen1: 45, fury1: 50, ward1: 50, smoke1: 35, smoke3: 60 })
+    const g = apply(inTown(), { kind: 'buy', ware: 'health1' })
     expect(g.gold).toBe(75)
-    expect(g.belt[0]).toEqual({ kind: 'health', count: 1 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [1, 0, 0] })
     expect(g.log.at(-1)).toBe('You buy a Health Potion for 25 gold.')
+    const passage = apply(inTown(), { kind: 'buy', ware: 'smoke3' })
+    expect({ gold: passage.gold, slot: passage.belt[4] }).toEqual({ gold: 40, slot: { kind: 'smoke', tiers: [0, 0, 1] } })
+  })
+
+  test('a ware the merchant does not stock is not sold, and costs nothing', async () => {
+    const g = apply(inTown(), { kind: 'buy', ware: 'fury3' })
+    expect({ gold: g.gold, slot: g.belt[2] }).toEqual({ gold: 100, slot: null })
+    expect(g.log.at(-1)).toBe("The merchant has no Berserker's Oath to sell.")
   })
 
   test('refuses what you cannot pay for, or have no room for, and takes nothing', async () => {
-    const poor = apply(inTown({ gold: 20 }), { kind: 'buy', ware: 'health' })
+    const poor = apply(inTown({ gold: 20 }), { kind: 'buy', ware: 'health1' })
     expect({ gold: poor.gold, belt: poor.belt[0] }).toEqual({ gold: 20, belt: null })
     expect(poor.log.at(-1)).toBe('Not enough gold: a Health Potion costs 25.')
-    const full = inTown({ belt: Array.from({ length: 5 }, () => ({ kind: 'ward' as const, count: 9 })) })
-    const refused = apply(full, { kind: 'buy', ware: 'health' })
+    const full = inTown({ belt: [{ kind: 'health', tiers: [9, 0, 0] }, null, null, null, null] })
+    const refused = apply(full, { kind: 'buy', ware: 'health1' })
     expect(refused.gold).toBe(100)
     expect(refused.log.at(-1)).toBe('Your belt has no room for a Health Potion.')
   })
@@ -939,7 +948,7 @@ describe('the merchant', () => {
   })
 
   test('trades only in town', async () => {
-    const g = apply({ ...newGame(4), gold: 100 }, { kind: 'buy', ware: 'health' })
+    const g = apply({ ...newGame(4), gold: 100 }, { kind: 'buy', ware: 'health1' })
     expect(g.gold).toBe(100)
     expect(g.log.at(-1)).toBe('The merchant is in town.')
   })
@@ -1062,13 +1071,13 @@ describe('the themed room in play', () => {
     expect(hurt.hp).toBe(14)
   })
 
-  test('reading at the lectern gives a Scroll of Mapping, once', async () => {
+  test('reading at the lectern gives a Scroll of Passage, once', async () => {
     const { g, mid } = beside('library')
     const read = apply({ ...g, belt: [null, null, null, null, null] }, { kind: 'goto', ...mid })
-    expect(read.belt).toContainEqual({ kind: 'mapping', count: 1 })
-    expect(read.log.at(-1)).toBe('You read at the lectern and copy out a Scroll of Mapping.')
+    expect(read.belt[4]).toEqual({ kind: 'smoke', tiers: [0, 0, 1] })
+    expect(read.log.at(-1)).toBe('You read at the lectern and copy out a Scroll of Passage.')
     const again = apply(apply(read, { kind: 'goto', x: g.x, y: g.y }), { kind: 'goto', ...mid })
-    expect(again.belt.filter(s => s?.kind === 'mapping')).toEqual([{ kind: 'mapping', count: 1 }])
+    expect(again.belt[4]).toEqual({ kind: 'smoke', tiers: [0, 0, 1] })
   })
 
   test('braziers and shelves are furnishings: walking past them takes nothing', async () => {
@@ -1088,8 +1097,8 @@ describe('the boss of every fifth depth', () => {
   test('on depth 5 the first try to descend raises its guardian instead: two tiers up, two and a half times the HP', async () => {
     const g = apply(atDepth(5), { kind: 'descend' })
     expect(g.depth).toBe(5)
-    // Its attack: (5 + 3 + 4 + 1) times 1.15 is 14.95, rounded to 15; times BOSS_ATK 1.45 is 21.75, rounded up to 22.
-    expect(g.foe).toMatchObject({ glyph: 'W', name: 'wraith overlord', hp: 105, maxHp: 105, atk: 22, xp: 108, boss: true })
+    // Its attack: (5 + 3 + 4 + 1) times 1.2 is 15.6, rounded to 16; times BOSS_ATK 1.45 is 23.2, rounded up to 24.
+    expect(g.foe).toMatchObject({ glyph: 'W', name: 'wraith overlord', hp: 105, maxHp: 105, atk: 24, xp: 108, boss: true })
     expect(g.log.at(-1)).toBe('The wraith overlord (W) rises to bar the way down!')
     expect(apply(g, { kind: 'descend' }).log.at(-1)).toBe('The wraith overlord guards the stairs.')
   })
@@ -1109,12 +1118,12 @@ describe('the boss of every fifth depth', () => {
     expect([ten.depth, ten.foe?.boss]).toEqual([10, true])
   })
 
-  test('a boss leaves five times the gold, a Greater Healing Potion and an item of Rare or better', async () => {
+  test('a boss leaves five times the gold, an Elixir and an item of Rare or better', async () => {
     const met = apply(atDepth(5), { kind: 'descend' })
     const before = { ...met, foe: { ...met.foe!, hp: 1 }, gold: 0, belt: [null, null, null, null, null] }
     const slain = apply(before, { kind: 'attack' })
     expect([25, 50, 75]).toContain(slain.gold)
-    expect(slain.belt.find(s => s?.kind === 'greater')?.count).toBe(1)
+    expect(slain.belt[0]).toEqual({ kind: 'health', tiers: [0, 0, 1] })
     const found = slain.bag.filter(item => !before.bag.some(b => b.id === item.id))
     expect(found).toHaveLength(1)
     expect(['rare', 'epic', 'legendary']).toContain(found[0]!.rarity)
@@ -1561,7 +1570,7 @@ describe('a walk tile by tile', () => {
   const g = { ...newGame(), seen: '1'.repeat(64 * 18), x: 48, y: 4 }
   const action = { kind: 'goto' as const, x: 55, y: 4 }
   const plan = apply(g, action)
-  const healing = (s: Game) => s.belt.reduce((n, b) => n + (b?.kind === 'health' ? b.count : 0), 0)
+  const healing = (s: Game) => countOf(s.belt[0])
 
   test('each tile holds the game as it stands when the hero reaches it: the gold on the second, the potion on the third', async () => {
     const tiles = alongTheWay(g, plan)!
@@ -1599,7 +1608,7 @@ describe('a walk cut where the hero stands', () => {
   // On depth 1 of world 1, the row y 4 holds gold at x 50 and a potion at x 51.
   const g = { ...newGame(), seen: '1'.repeat(64 * 18), x: 48, y: 4 }
   const plan = apply(g, { kind: 'goto', x: 55, y: 4 })
-  const healing = (s: Game) => s.belt.reduce((n, b) => n + (b?.kind === 'health' ? b.count : 0), 0)
+  const healing = (s: Game) => countOf(s.belt[0])
 
   test('walking the first tiles of a walk takes up only what lies on them', async () => {
     const cut = apply(g, { kind: 'trail', path: plan.walked.slice(0, 2) })

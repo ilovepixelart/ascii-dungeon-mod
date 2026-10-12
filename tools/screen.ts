@@ -37,7 +37,7 @@ g = {
     make('kite', 'legendary', 2, 3, { name: 'Aegis of Green Builds', def: 4, power: 'greenBlock' }),
     make('greaves', 'uncommon', 0, 3, { def: 3 }),
   ],
-  belt: [{ kind: 'health', count: 3 }, { kind: 'regen', count: 2 }, { kind: 'mapping', count: 1 }, null, null],
+  belt: [{ kind: 'health', tiers: [3, 0, 0] }, { kind: 'regen', tiers: [2, 0, 0] }, null, null, { kind: 'smoke', tiers: [0, 0, 1] }],
 }
 g.cursor = g.bag[1]?.id ?? null
 

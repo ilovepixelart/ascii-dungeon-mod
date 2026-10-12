@@ -13,7 +13,7 @@ Opened by clicking the portrait (`i` on the text dashboard). On a terminal at le
 - A pixel title bar: INVENTORY, the gold, and a close box. WORN and BAG label the two areas.
 - Worn slots on the left, each sized to the largest footprint its items have, so the same icon art serves the bag and the slot. An empty slot shows a faint outline of what goes there.
 - The bag grid on the right (`BAG_W` x `BAG_H` in `hooks/items/bag.ts`), 7 px cells. An item covers its whole footprint; the frame around it shows its tier (see `items.md`).
-- The belt along the bottom, each slot with its stack count.
+- The belt along the bottom, a slot a kind, as the dashboard draws it (`beltSlot` in `hooks/pieces.ts`).
 - Off-class items carry a small red mark in a corner; a small green up mark means an upgrade for this hero.
 
 Colors keep one meaning each: white is "this one, and where it goes"; red is "cannot". Green is not used for targets, because it is the Uncommon tier's color.

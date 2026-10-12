@@ -12,7 +12,7 @@ Any kind the depth has unlocked can come, the theme's favorites and the newest m
 
 - The peak waits for a hero at `PEAK_HP` of max HP or more: tension is recent damage, so without the wait the champion came exactly when the hero was most hurt, and deaths nearly doubled.
 - The calm is short on purpose: every summon it holds back is a kill not made, while the depth goes on growing at each task's end. A calm of 4 calls put the hero about a level behind and raised deaths by half.
-- Peaks cost some lives, paid for by foes hitting 1.15 times their plain sum (`FOE_ATK_SCALE`) where without the director they hit 1.3 times.
+- Peaks cost some lives, paid for by foes hitting 1.2 times their plain sum (`FOE_ATK_SCALE`) where without the director they hit 1.3 times.
 
 ## Depth twists
 

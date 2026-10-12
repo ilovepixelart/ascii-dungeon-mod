@@ -6,7 +6,7 @@
 export const foeHp = (depth: number, tier: number, d4: number) => 6 + depth * 4 + tier * 2 + d4
 
 /** How much harder than the plain sum foes hit: at 1 the hero died about once in 550 tool calls. */
-export const FOE_ATK_SCALE = 1.15
+export const FOE_ATK_SCALE = 1.2
 
 /** A monster's attack: mostly depth, a little tier, and a swing of 3 or 5 so some monsters hit hard. */
 export const foeAtk = (depth: number, tier: number, d2: number) => Math.round((depth + Math.floor(tier / 2) + d2 * 2 + 1) * FOE_ATK_SCALE)

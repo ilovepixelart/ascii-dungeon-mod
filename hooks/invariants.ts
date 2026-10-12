@@ -1,7 +1,7 @@
 // Rules every game state must keep, whatever happened: the simulator checks them after every step.
 // Each returns a sentence naming what broke, or nothing.
 import type { Game } from '../types'
-import { BELT_SIZE, STACK_MAX } from './consumables'
+import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
 import { BAG_H, BAG_W, RARE_KILLS, SLOTS, TEMPER_MAX, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
@@ -96,7 +96,8 @@ const RULES: Readonly<Record<string, Rule>> = {
   'gear in its slot': g => (Object.entries(g.gear).map(([slot, i]) => (i !== undefined && i.slot !== slot ? `${i.name} (${i.slot}) worn as ${slot}` : undefined)).find(Boolean)),
   'cursor on a bag item': g => (g.cursor === null || g.bag.some(i => i.id === g.cursor) ? undefined : `cursor ${g.cursor} names no bag item`),
   'belt size': g => (g.belt.length === BELT_SIZE ? undefined : `belt has ${g.belt.length} slots`),
-  'belt stacks': g => g.belt.map((s, i) => (s !== null && (s.count < 1 || s.count > STACK_MAX) ? `belt slot ${i + 1} holds ${s.count}` : undefined)).find(Boolean),
+  'belt stacks': g => g.belt.map((s, i) => (s !== null && (countOf(s) < 1 || s.tiers.some(n => !Number.isInteger(n) || n < 0 || n > STACK_MAX)) ? `belt slot ${i + 1} holds ${s.tiers.join('/')}` : undefined)).find(Boolean),
+  'belt kinds in their slots': g => g.belt.map((s, i) => (s !== null && s.kind !== KINDS[i] ? `belt slot ${i + 1} holds ${s.kind}` : undefined)).find(Boolean),
   'log length': g => (g.log.length <= 5 ? undefined : `log holds ${g.log.length} lines`),
 }
 

@@ -32,9 +32,9 @@ const onRow = (g: Game, ui: ShopUi, row: number): Gesture => {
 describe('wares', () => {
   test('a clicked ware is chosen and shows its card: name, what it does, price and how many are on the belt', async () => {
     const g = knight(100)
-    g.belt = [{ kind: 'health', count: 3 }, null, null, null, null]
-    const { ui, actions } = shopGesture(g, SHOP_UI_IDLE, onWare(WARES.indexOf('health')))
-    expect(ui).toEqual({ ware: 'health', menu: false })
+    g.belt = [{ kind: 'health', tiers: [3, 0, 2] }, null, null, null, null]
+    const { ui, actions } = shopGesture(g, SHOP_UI_IDLE, onWare(WARES.indexOf('health1')))
+    expect(ui).toEqual({ ware: 'health1', menu: false })
     expect(actions).toEqual([])
     expect(text(g, ui, 'card')).toEqual(['Health Potion', 'Restores 35% of your HP.', 'Price 25   On your belt: 3'])
     expect(text(g, ui, 'menu')).toBeUndefined()
@@ -54,27 +54,27 @@ describe('wares', () => {
     expect(shopGesture(g, SHOP_UI_IDLE, onWare(0, 'right')).ui).toEqual({ ware: WARES[0], menu: true })
     expect(text(g, twice, 'menu')).toEqual(['b Buy for 25'])
     const bought = shopGesture(g, twice, onRow(g, twice, 0))
-    expect(bought.actions).toEqual([{ kind: 'buy', ware: 'health' }])
+    expect(bought.actions).toEqual([{ kind: 'buy', ware: 'health1' }])
     expect(bought.ui).toEqual(twice)
   })
 
   test('what cannot be bought says why, and its Buy does nothing: short of gold, or no room on the belt', async () => {
     const poor = knight(24)
-    const open: ShopUi = { ware: 'health', menu: true }
+    const open: ShopUi = { ware: 'health1', menu: true }
     expect(text(poor, open, 'menu')).toEqual(['b Buy for 25  not enough gold'])
     expect(shopGesture(poor, open, onRow(poor, open, 0)).actions).toEqual([])
     const full = knight(100)
-    full.belt = [{ kind: 'regen', count: 1 }, { kind: 'fury', count: 1 }, { kind: 'ward', count: 1 }, { kind: 'smoke', count: 1 }, { kind: 'health', count: 9 }]
-    expect(whyNot(full, 'health')).toBe('no room on your belt')
-    expect(whyNot(full, 'regen')).toBeUndefined()
-    expect(whyNot(knight(25), 'health')).toBeUndefined()
+    full.belt = [{ kind: 'health', tiers: [9, 0, 0] }, { kind: 'regen', tiers: [1, 0, 0] }, null, null, null]
+    expect(whyNot(full, 'health1')).toBe('no room on your belt')
+    expect(whyNot(full, 'regen1')).toBeUndefined()
+    expect(whyNot(knight(25), 'health1')).toBeUndefined()
   })
 
   test('a click anywhere but the menu closes it and buys nothing', async () => {
     const g = knight(100)
-    const open: ShopUi = { ware: 'health', menu: true }
+    const open: ShopUi = { ware: 'health1', menu: true }
     const out = shopGesture(g, open, tap(WINDOW_W - 3, BODY_TOP + 40))
-    expect(out).toEqual({ ui: { ware: 'health', menu: false }, actions: [] })
+    expect(out).toEqual({ ui: { ware: 'health1', menu: false }, actions: [] })
   })
 
   test('the next-ware key steps along the shelf and wraps', async () => {
@@ -88,7 +88,7 @@ describe('the bag in the shop', () => {
   test('a clicked item is chosen, again its menu: Sell for its price, then Equip', async () => {
     const g = knight(0)
     const ring = put(g, 'ring', 'rare', 2, 1)
-    const first = shopGesture(g, { ware: 'health', menu: false }, onItem(ring))
+    const first = shopGesture(g, { ware: 'health1', menu: false }, onItem(ring))
     expect(first).toEqual({ ui: { ware: null, menu: false }, actions: [{ kind: 'select', id: ring.id }] })
     g.cursor = ring.id
     const second = shopGesture(g, first.ui, onItem(ring))
@@ -112,7 +112,7 @@ describe('the bag in the shop', () => {
     g.cursor = put(g, 'ring', 'common', 0, 0).id
     expect(shopGesture(g, { ware: null, menu: false }, tap(WINDOW_W - 3, BODY_TOP + 50))).toEqual({ ui: SHOP_UI_IDLE, actions: [{ kind: 'deselect' }] })
     const [x, y] = CLOSE_BOX
-    expect(shopGesture(g, { ware: 'health', menu: false }, tap(x + 2, y + 2)).actions).toEqual([{ kind: 'panel', panel: 'shop' }])
+    expect(shopGesture(g, { ware: 'health1', menu: false }, tap(x + 2, y + 2)).actions).toEqual([{ kind: 'panel', panel: 'shop' }])
   })
 
   test('a drag, or a release far from its press, does nothing', async () => {
@@ -148,7 +148,7 @@ describe('the window', () => {
   test('in a full bag, where every place hides something, a chosen item\'s card and menu still never cover it', async () => {
     const g = knight(0)
     for (let y = 0; y < 6; y += 1) for (let x = 0; x < 8; x += 1) put(g, 'ring', 'common', x, y)
-    g.belt = [{ kind: 'health', count: 1 }, { kind: 'regen', count: 1 }, { kind: 'fury', count: 1 }, { kind: 'ward', count: 1 }, { kind: 'smoke', count: 1 }]
+    g.belt = [{ kind: 'health', tiers: [1, 0, 0] }, { kind: 'regen', tiers: [1, 0, 0] }, { kind: 'fury', tiers: [1, 0, 0] }, { kind: 'ward', tiers: [1, 0, 0] }, { kind: 'smoke', tiers: [1, 0, 0] }]
     for (const item of g.bag) {
       g.cursor = item.id
       const own = { x: BAG_X + item.x * CELL + 1, y: BODY_TOP + BAG_Y + item.y * CELL + 1, w: CELL - 1, h: CELL - 1 }
@@ -158,16 +158,16 @@ describe('the window', () => {
 
   test('the chosen ware is framed white; a price that cannot be paid is grey, one that can is gold', async () => {
     const g = knight(30)
-    const px = shopPixels(g, { ware: 'mapping', menu: false })
-    const r = wareRect(WARES.indexOf('mapping'))
+    const px = shopPixels(g, { ware: 'smoke1', menu: false })
+    const r = wareRect(WARES.indexOf('smoke1'))
     const slotX = r.x + Math.floor((r.w - 10) / 2)
     expect(px[r.y]?.[slotX + 3]).toBe(CURSOR)
     const priceRow = (i: number) => px.slice(wareRect(i).y + 12, wareRect(i).y + 17).flatMap(row => row.slice(wareRect(i).x, wareRect(i).x + wareRect(i).w))
-    // Mapping costs 30, a health potion 25: both paid; a greater potion's 80 is not.
-    expect(priceRow(WARES.indexOf('mapping'))).toContain(GOLD_INK)
-    expect(priceRow(WARES.indexOf('greater'))).toContain(UNPAID_INK)
-    expect(priceRow(WARES.indexOf('greater'))).not.toContain(GOLD_INK)
-    expect(px[wareRect(WARES.indexOf('health')).y]?.[slotX + 3]).not.toBe(CURSOR)
+    // A Smoke Bomb costs 35 and 30 is short; a Health Potion's 25 is paid; an Elixir's 80 is not.
+    expect(priceRow(WARES.indexOf('health1'))).toContain(GOLD_INK)
+    expect(priceRow(WARES.indexOf('health3'))).toContain(UNPAID_INK)
+    expect(priceRow(WARES.indexOf('health3'))).not.toContain(GOLD_INK)
+    expect(px[wareRect(WARES.indexOf('health1')).y]?.[slotX + 3]).not.toBe(CURSOR)
   })
 
   test('with a ware chosen, the bag item the game still has selected is not framed as chosen', async () => {
@@ -176,7 +176,7 @@ describe('the window', () => {
     g.cursor = ring.id
     const frameAt = (ui: ShopUi) => shopPixels(g, ui)[BODY_TOP + BAG_Y + ring.y * CELL - 1]?.[BAG_X + ring.x * CELL + 3]
     expect(frameAt(SHOP_UI_IDLE)).toBe(CURSOR)
-    expect(frameAt({ ware: 'health', menu: false })).not.toBe(CURSOR)
+    expect(frameAt({ ware: 'health1', menu: false })).not.toBe(CURSOR)
   })
 })
 

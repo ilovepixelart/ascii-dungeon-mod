@@ -28,7 +28,7 @@ Three shops face a cobbled square across its north side: the merchant (red roof,
 | Spot | Does |
 |---|---|
 | Healer | restores HP to full, free, and remembers what it mended (`mended`) for the window to say |
-| Merchant | sells potions and scrolls (`SHOP_PRICES` in `hooks/game.ts`) |
+| Merchant | sells potions and scrolls, some kinds at more than one tier (`SHOP_PRICES` in `hooks/game.ts`, a ware named by its kind and tier) |
 | Smith | tempers a worn item, +1 to its main stat, up to 3 times (`temperItem` in `hooks/items/loot.ts`); reforges a worn Uncommon, Rare or Epic item's affixes (`reforgeCost` in `hooks/game.ts`) |
 | Stash | keeps up to 10 items in town (`STASH_SIZE`, `store` and `retrieve` in `hooks/game.ts`): its panel stores the selected bag item and takes any stored one back while the bag has room |
 | Elder | one quest at a time (`elder` in `hooks/game.ts`): slay 8 foes on the hero's deepest depth or deeper, slay a champion there or deeper, or reach 3 depths further; a visit says how it stands, and once done pays 15 gold a depth plus 30 and an item of Uncommon or better, waiting while the bag has no room (Claim asks again, the `claim` action). Over 300 simulated games: about 2.5 quests a game |

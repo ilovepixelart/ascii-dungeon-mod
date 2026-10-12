@@ -18,7 +18,7 @@ import type { Pos } from './map'
 import { TOWN_SPOTS } from './town'
 import { wareRect } from './shop'
 import { PX } from './pixelart'
-import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
   plugin: 'ascii-dungeon',
@@ -619,7 +619,11 @@ test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dun
   const route = benchRoute(bench, 40)
   // A new place: the camera starts on the tile line nearest the hero as the first frame draws him.
   const at = walkPosition(route, 1)
-  expect(frames[0]).toBe(pixelMap(walkingGame(bench, bench, route, 1), columns, rows, at, tileCamera(null, at, columns, rows * 2), [], 0, true))
+  expect(frames[0]).toBe(stampCells(pixelMap(walkingGame(bench, bench, route, 1), columns, rows, at, tileCamera(null, at, columns, rows * 2), [], 0, true), 1))
+  // Each bench frame carries its number: every one of them sent, in order, once; nothing after the bench is stamped.
+  const stamps = frames.map(stampOf)
+  expect(stamps.slice(0, 40 * 4 - 1)).toEqual(Array.from({ length: 40 * 4 - 1 }, (_, i) => (i + 1) % 16))
+  expect(stamps.slice(40 * 4 - 1).every(n => n === undefined)).toBe(true)
   const report = ((await $.command.run({ command: 'dungeon-frames', args: '' } as never)) as { text: string }).text
   expect(report).toMatch(/^160 ticks, 0 late /)
   await ui.unmount()
@@ -809,13 +813,13 @@ test('in a pane too narrow for its window the merchant opens a text shop of clic
   await (await atTheMerchant($, on)).unmount()
   const ui = await $.ui.mount({ ...NARROW, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'shop' })).toBeUndefined()
-  expect(await ui.find({ type: 'Button', key: 'buy-health', text: 'Buy Health Potion: 25 gold' })).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'buy-health1', text: 'Buy Health Potion: 25 gold' })).toBeDefined()
   said.length = 0
-  await ui.press({ key: 'buy-health' })
+  await ui.press({ key: 'buy-health1' })
   // A new hero has no gold: the shop says so.
   expect(said).toEqual(['Not enough gold: a Health Potion costs 25.'])
   await ui.press({ key: 'shop-close' })
-  expect(await ui.find({ type: 'Button', key: 'buy-health' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'buy-health1' })).toBeUndefined()
   await ui.unmount()
 })
 
@@ -824,7 +828,7 @@ test('on a wide pane the merchant opens a pixel window in place of the map, with
   expect(await ui.find({ type: 'Raster', key: 'shop' })).toBeDefined()
   expect(await ui.find({ type: 'Client', key: 'shop-clicks' })).toBeDefined()
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeUndefined()
-  expect(await ui.find({ type: 'Button', key: 'buy-health' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'buy-health1' })).toBeUndefined()
   await ui.press({ key: 'shop-close' })
   expect(await ui.find({ type: 'Raster', key: 'shop' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeDefined()

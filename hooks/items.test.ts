@@ -176,7 +176,7 @@ describe('saves and drawing', () => {
     expect(g.gear.weapon?.cls).toBeUndefined()
     expect(g.bag.map(i => [i.base, i.rarity, i.atk + i.def]).sort()).toEqual([['axe', 'uncommon', 6], ['chain', 'rare', 5]])
     for (const it of g.bag) expect(it.x + it.w <= BAG_W && it.y + it.h <= BAG_H).toBe(true)
-    expect(g.belt[0]).toEqual({ kind: 'health', count: 3 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [3, 0, 0] })
     expect(g.gold).toBe(9)
     expect(g.cursor).toBe(2)
   })

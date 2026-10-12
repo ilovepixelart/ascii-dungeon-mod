@@ -1,6 +1,6 @@
 // The inventory screen in pixels: worn slots, the bag grid, the belt; and the selected item's card in text.
 import type { Game, Slot } from '../types'
-import { CONSUMABLES } from './consumables'
+import { bestTier, countOf, nameOf } from './consumables'
 import type { Run } from './game'
 import { CELL, ICONS } from './icons'
 import { BAG_H, BAG_W, POWERS, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, priceOf, selected } from './items'
@@ -156,5 +156,6 @@ export const itemCard = (g: Game): Run[][] => {
 /** A belt button's label; its hotkey prints the slot number in front of it. */
 export const beltLabel = (g: Game, i: number) => {
   const slot = g.belt[i]
-  return slot === null || slot === undefined ? 'empty' : `${CONSUMABLES[slot.kind].name} x${slot.count}`
+  const tier = bestTier(slot)
+  return slot === null || slot === undefined || tier === undefined ? 'empty' : `${nameOf(slot.kind, tier)} x${countOf(slot)}`
 }

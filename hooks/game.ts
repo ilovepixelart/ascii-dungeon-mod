@@ -1,7 +1,8 @@
-import type { Attribute, ChampionMod, Consumable, Foe, Fortune, Game, HeroClass, Item, Nemesis, Panel, Quest, Rarity, Slot } from '../types'
+import type { Attribute, ChampionMod, Foe, Fortune, Game, HeroClass, Item, Nemesis, Panel, Quest, Rarity, Slot } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
-import { CONSUMABLES, addToBelt, healingSlot, killConsumable, tickEffects, useBelt } from './consumables'
+import { addToBelt, healingSlot, killConsumable, nameOf, tickEffects, useBelt, wareOf } from './consumables'
+import type { Ware } from './consumables'
 import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, cycle, destroy, equip, gearBonus, makeItem, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Pos, Theme } from './map'
@@ -37,7 +38,7 @@ export type Action =
   | { kind: 'arrange' }
   | { kind: 'panel'; panel: Panel }
   | { kind: 'cycle' }
-  | { kind: 'buy'; ware: Consumable }
+  | { kind: 'buy'; ware: Ware }
   | { kind: 'reforge'; slot: Slot }
   | { kind: 'temper'; slot: Slot }
   | { kind: 'store' }
@@ -160,7 +161,7 @@ const pickUp = (g: Game) => {
   const isAnvilIdle = found === 'N' && (weapon === undefined || (weapon.temper ?? 0) >= TEMPER_MAX)
   const isUnhurt = (found === 'A' || found === 'S') && g.hp >= g.maxHp
   const tile = found === 'B' || found === 'L' || found === 'Q' || found === 'F' || isUnhurt || isAnvilIdle ? ' ' : found
-  if (tile === 'R' && !addToBelt(g, 'mapping')) {
+  if (tile === 'R' && !addToBelt(g, 'smoke', 3)) {
     say(g, 'Your belt has no room for the scroll the lectern offers.')
     return
   }
@@ -185,7 +186,7 @@ const pickUp = (g: Game) => {
     g.gear = { ...g.gear, weapon: temperItem(weapon) }
     say(g, `The old anvil still rings: your ${weapon.name} is tempered, +1 ${temperStat(weapon) === 'atk' ? 'attack' : 'defense'}.`)
   } else if (tile === 'R') {
-    say(g, 'You read at the lectern and copy out a Scroll of Mapping.')
+    say(g, 'You read at the lectern and copy out a Scroll of Passage.')
   } else if (tile === 'C' || tile === 'H' || tile === 'G') {
     openChest(g, chestAt(g.world, g.depth, levelOf(g), g) ?? 'wooden')
   }
@@ -478,8 +479,11 @@ export const itemChance = (depth: number) => Math.min(55, 35 + depth)
 /** What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Rare or better. */
 const loot = (g: Game, isChampion = false) => {
   const isBarren = modHere(g) === 'barren'
-  const kind = isBarren ? undefined : killConsumable(g)
-  if (kind !== undefined) say(g, addToBelt(g, kind) ? `Loot: ${CONSUMABLES[kind].name}.` : `Your belt is full. The ${CONSUMABLES[kind].name} stays on the floor.`)
+  const drop = isBarren ? undefined : killConsumable(g)
+  if (drop !== undefined) {
+    const name = nameOf(drop.kind, drop.tier)
+    say(g, addToBelt(g, drop.kind, drop.tier) ? `Loot: ${name}.` : `Your belt is full. The ${name} stays on the floor.`)
+  }
   // Good loot is never long in coming: the RARE_KILLS-th kill without any leaves a Rare at least.
   const isRareDue = g.sinceRare >= RARE_KILLS - 1
   if (!isChampion && !isRareDue && roll(g, 100) > itemChance(g.depth) + (isBarren ? BARREN_ITEMS : 0)) {
@@ -493,9 +497,9 @@ const loot = (g: Game, isChampion = false) => {
   else say(g, `Your bag is full. The ${item.name} stays on the floor.`)
 }
 
-/** A boss's hoard: the best of three rolls, Rare at least, and a Greater Healing Potion; the way down opens. */
+/** A boss's hoard: the best of three rolls, Rare at least, and an Elixir; the way down opens. */
 const bossLoot = (g: Game, name: string) => {
-  say(g, addToBelt(g, 'greater') ? 'Loot: Greater Healing Potion.' : 'Your belt is full. The Greater Healing Potion stays on the floor.')
+  say(g, addToBelt(g, 'health', 3) ? 'Loot: Elixir.' : 'Your belt is full. The Elixir stays on the floor.')
   const item = makeItem(g, 'rare', 3)
   if (stash(g, item)) say(g, `Loot: ${item.name} (${RARITY_NAME[item.rarity]}).`)
   else say(g, `Your bag is full. The ${item.name} stays on the floor.`)
@@ -997,14 +1001,19 @@ const retrieve = (g: Game, id: number) => {
 }
 
 
-/** What the merchant asks for each potion and scroll: gold's one way out besides the smith. */
-export const SHOP_PRICES: Readonly<Record<Consumable, number>> = { health: 25, greater: 80, regen: 45, fury: 50, ward: 50, mapping: 30, smoke: 35 }
+/** What the merchant sells and asks for it, in shelf order: gold's one way out besides the smith. */
+export const SHOP_PRICES = { health1: 25, health3: 80, regen1: 45, fury1: 50, ward1: 50, smoke1: 35, smoke3: 60 } as const satisfies Partial<Record<Ware, number>>
+const PRICES: Readonly<Partial<Record<Ware, number>>> = SHOP_PRICES
+/** A ware's price; one the merchant does not sell has none. */
+export const priceOfWare = (ware: Ware) => PRICES[ware] ?? Infinity
 
-const buy = (g: Game, ware: Consumable) => {
-  const name = CONSUMABLES[ware].name
-  const price = SHOP_PRICES[ware]
-  if (g.gold < price) say(g, `Not enough gold: a ${name} costs ${price}.`)
-  else if (!addToBelt(g, ware)) say(g, `Your belt has no room for a ${name}.`)
+const buy = (g: Game, ware: Ware) => {
+  const { kind, tier } = wareOf(ware)
+  const name = nameOf(kind, tier)
+  const price = priceOfWare(ware)
+  if (price === Infinity) say(g, `The merchant has no ${name} to sell.`)
+  else if (g.gold < price) say(g, `Not enough gold: a ${name} costs ${price}.`)
+  else if (!addToBelt(g, kind, tier)) say(g, `Your belt has no room for a ${name}.`)
   else {
     g.gold -= price
     say(g, `You buy a ${name} for ${price} gold.`)

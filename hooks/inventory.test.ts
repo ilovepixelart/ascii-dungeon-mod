@@ -111,11 +111,11 @@ describe('the panel', () => {
   })
 
   test('shows each belt stack\'s count in white', async () => {
-    const g = { ...knight(), belt: [{ kind: 'health' as const, count: 7 }, null, null, null, null] }
+    const g = { ...knight(), belt: [{ kind: 'health' as const, tiers: [4, 3, 0] as [number, number, number] }, null, null, null, null] }
     const px = inventoryPixels(g)
     const slot = new Set(px.slice(BELT_Y, BELT_Y + SLOT).flatMap(r => r.slice(BELT_X, BELT_X + BELT_SLOT_W)))
     expect(slot.has('#ffffff')).toBe(true)
-    expect(beltLabel(g, 0)).toBe('Health Potion x7')
+    expect(beltLabel(g, 0)).toBe('Greater Health Potion x7')
     expect(beltLabel(g, 1)).toBe('empty')
   })
 })

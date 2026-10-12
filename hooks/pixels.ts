@@ -53,7 +53,27 @@ export const torchColor = (light: number): [number, number, number] => {
 }
 
 /** Lit 0xRRGGBB: the ground through the torch's color, a creature or item only dimmed, never below 70%. */
+/**
+ * Light in LIGHT_STEPS levels, from none to full: a torch moving a tile changes only the tiles whose level changes, and
+ * every shade comes from a table. Each shade is snapped to the host's step of 17 a channel, what the terminal shows.
+ */
+export const LIGHT_STEPS = 8
+export const lightStep = (light: number) => Math.round(Math.max(0, Math.min(1, light)) * (LIGHT_STEPS - 1)) / (LIGHT_STEPS - 1)
+const HOST_STEP = 17
+const snap = (n: number) => (Math.round(((n >> 16) & 0xff) / HOST_STEP) * HOST_STEP << 16) | (Math.round(((n >> 8) & 0xff) / HOST_STEP) * HOST_STEP << 8) | (Math.round((n & 0xff) / HOST_STEP) * HOST_STEP)
+const shades = new Map<number, number>()
+/** A color at a light level, from the table: worked out once for each color, level and kind of thing lit. */
 const lightInt = (n: number, light: number, isCreature: boolean) => {
+  const level = Math.round(Math.max(0, Math.min(1.2, light)) * (LIGHT_STEPS - 1))
+  const key = (n * 32 + level) * 2 + (isCreature ? 1 : 0)
+  let out = shades.get(key)
+  if (out === undefined) {
+    out = snap(shadeInt(n, level / (LIGHT_STEPS - 1), isCreature))
+    shades.set(key, out)
+  }
+  return out
+}
+const shadeInt = (n: number, light: number, isCreature: boolean) => {
   if (!isCreature) {
     const [kr, kg, kb] = torchColor(light)
     return (clamp(((n >> 16) & 0xff) * kr) << 16) | (clamp(((n >> 8) & 0xff) * kg) << 8) | clamp((n & 0xff) * kb)
@@ -301,7 +321,21 @@ const artOf = (g: Game, tile: Tile): readonly string[] | undefined => {
   return THING_ART[o.glyph]
 }
 
-type Scene = { g: Game; level: Level; tiles: Map<number, TileInfo>; visible: ReadonlySet<number>; hero: Pos; isLit: boolean; isHeroMoved: boolean; lights: readonly Pos[]; torchIds: ReadonlySet<number> }
+type Scene = { g: Game; level: Level; tiles: Map<number, TileInfo>; visible: ReadonlySet<number>; hero: Pos; isLit: boolean; isHeroMoved: boolean; lights: readonly Pos[]; torchIds: ReadonlySet<number>; tileLight: Map<number, number> }
+
+/** A tile's light, the same over all its pixels: the brightest of the hero's light and the wall torches at its middle, in steps. */
+const lightOfTile = (s: Scene, tx: number, ty: number) => {
+  const id = ty * MAP_W + tx
+  const known = s.tileLight.get(id)
+  if (known !== undefined) return known
+  const cx = tx * PX + PX / 2
+  const cy = ty * PX + PX / 2
+  let light = torch(Math.hypot(cx - s.hero.x, cy - s.hero.y) / PX)
+  for (const l of s.lights) light = Math.max(light, wallTorchLight(Math.hypot(cx - l.x, cy - l.y) / PX))
+  const stepped = lightStep(light)
+  s.tileLight.set(id, stepped)
+  return stepped
+}
 
 /**
  * What every pixel of one tile needs, worked out once a frame per tile so the per-pixel work allocates nothing: the
@@ -360,9 +394,8 @@ const worldPixel = (s: Scene, x: number, y: number) => {
   if (!isShown && !(isForeground && tile.occupant?.kind === 'foe')) return asInt(CANVAS)
   const lx = x - tx * PX
   const ly = y - ty * PX
-  // The hero's torch and the wall torches together: the brightest of them lights the pixel.
-  let light = torch(Math.hypot(x - s.hero.x, y - s.hero.y) / PX)
-  for (const l of s.lights) light = Math.max(light, wallTorchLight(Math.hypot(x - l.x, y - l.y) / PX))
+  // The hero's torch and the wall torches together, a level a tile: the brightest of them at the tile's middle.
+  const light = lightOfTile(s, tx, ty)
   if (s.torchIds.has(ty * MAP_W + tx)) {
     const flame = TORCH_ART[ly]?.[lx] ?? '.'
     if (flame !== '.') return tile.isVisible ? asInt(PAL[flame] ?? '#ff00ff') : memoryInt(asInt(PAL[flame] ?? '#ff00ff'))
@@ -406,7 +439,7 @@ const worldLayer = (g: Game, level: Level, torchAt: Pos, isLit: boolean, isHeroM
   if (isKept && origin.x >= l.x && origin.y >= l.y && origin.x + width <= l.x + l.w && origin.y + height <= l.y + l.h) return l
   // Each wall torch lights from the foot of its wall, each brazier from its own tile.
   const lights = [...torches.map(t => ({ x: t.x * PX + PX / 2, y: t.y * PX + PX })), ...braziersOf(g.world, g.depth, level).map(b => ({ x: b.x * PX + PX / 2, y: b.y * PX + PX / 2 }))]
-  const s: Scene = { g, level, tiles: new Map(), visible: visibleSet(g, level), hero: torchAt, isLit, isHeroMoved, lights, torchIds: new Set(torches.map(cellId)) }
+  const s: Scene = { g, level, tiles: new Map(), visible: visibleSet(g, level), hero: torchAt, isLit, isHeroMoved, lights, torchIds: new Set(torches.map(cellId)), tileLight: new Map() }
   const x = origin.x - LAYER_MARGIN
   const y = origin.y - LAYER_MARGIN
   const w = width + 2 * LAYER_MARGIN
@@ -695,6 +728,32 @@ export const rasterCells = (frame: Uint32Array, columns: number, rows: number) =
   let binary = ''
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
   return btoa(binary)
+}
+
+/**
+ * Cells with a frame's number stamped into the first cell, for measuring: a space on a background of blue 255, green 0
+ * and red 17 times the number modulo 16. The host rounds every channel to a step of 17, so only such values reach the
+ * terminal whole, as `48;2;<17k>;0;255`; the cell changes every frame, so it is always sent, and a measure unwraps the
+ * count from the low four bits.
+ */
+const STAMP_STEP = 17
+export const stampCells = (cells: string, n: number) => {
+  const bytes = Uint8Array.from(atob(cells), c => c.charCodeAt(0))
+  const words = new Uint32Array(bytes.buffer)
+  const color = ((STAMP_STEP * (n % 16)) << 16) | 0xff
+  words[0] = SPACE
+  words[1] = color
+  words[2] = color
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(binary)
+}
+/** The number modulo 16 a stamped frame carries, or undefined for one without a stamp. */
+export const stampOf = (cells: string) => {
+  const words = new Uint32Array(Uint8Array.from(atob(cells.slice(0, 16)), c => c.charCodeAt(0)).buffer.slice(0, 12))
+  const bg = words[2] ?? 0
+  const red = bg >> 16
+  return (bg & 0xffff) === 0xff && red % STAMP_STEP === 0 && words[0] === SPACE ? red / STAMP_STEP : undefined
 }
 
 /** The map as a Raster's cells, `columns` by `rows` terminal cells. */

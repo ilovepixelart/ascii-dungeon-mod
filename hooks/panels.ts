@@ -1,4 +1,5 @@
 import type { Attribute, Game } from '../types'
+import { countOf, slotOf } from './consumables'
 import { attackBonus, bar, critChance, defense, levelOf, runsOf, threat, xpToLevel } from './game'
 import type { Run } from './game'
 import { BAG_H, BAG_W, GLYPH, RARITY_COLOR, itemAt } from './items'
@@ -230,7 +231,7 @@ export const statusRuns = (g: Game): Run[] => [
   ...stat('Atk', `+${attackBonus(g)}`),
   ...stat('Def', String(defense(g))),
   ...stat('Gold', String(g.gold)),
-  ...stat('Potions', String(g.belt.reduce((n, b) => n + (b?.kind === 'health' || b?.kind === 'greater' ? b.count : 0), 0))),
+  ...stat('Potions', String(countOf(g.belt[slotOf('health')]))),
   ...stat('Depth', g.where === 'town' ? `Town (depth ${g.depth})` : `${g.depth} (best ${g.deepest})`),
 ]
 

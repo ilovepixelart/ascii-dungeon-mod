@@ -1,6 +1,7 @@
 // Saves from older versions of the mod, brought up to the current shape. Each version step is one migration.
-import type { Game, Item, Rarity } from '../types'
-import { emptyBelt } from './consumables'
+import type { BeltSlot, Consumable, Game, Item, Rarity } from '../types'
+import { KINDS, STACK_MAX, TIERS, emptyBelt, slotOf } from './consumables'
+import type { Tier } from './consumables'
 import { baseOf, repack, priceOf } from './items'
 import { FOG, SAVE_VERSION, arrive, newGame } from './world'
 
@@ -29,7 +30,7 @@ const toVersion3 = (g: Game): Game => {
   const gear = Object.fromEntries(Object.entries(g.gear).map(([slot, item]) => [slot, item && migrateItem(item as LegacyItem)]))
   const { bag, left } = repack(g.bag.map(i => migrateItem(i as LegacyItem)))
   const potions = Math.min(9, legacy.potions ?? 0)
-  const belt = potions > 0 ? [{ kind: 'health' as const, count: potions }, ...emptyBelt().slice(1)] : emptyBelt()
+  const belt = potions > 0 ? [{ kind: 'health' as const, tiers: [potions, 0, 0] as [number, number, number] }, ...emptyBelt().slice(1)] : emptyBelt()
   const { potions: _, ...rest } = legacy
   return {
     ...rest,
@@ -58,12 +59,39 @@ export const normalize = (game: Game): Game => {
   return g
 }
 
+/** A belt slot as saved before version 7: one of seven kinds, and a count. */
+type LegacySlot = { kind: string; count: number }
+/** What each old kind is now: its kind, and the tier it became. */
+const LEGACY_KIND: Readonly<Record<string, readonly [Consumable, Tier]>> = {
+  health: ['health', 1], greater: ['health', 3], regen: ['regen', 1], fury: ['fury', 1], ward: ['ward', 1], mapping: ['smoke', 3], smoke: ['smoke', 1],
+}
+
+/** A saved slot's stacks as [kind, tier, count]: an old stack at the tier its kind became, a tiered slot as it is. */
+const stacksOf = (slot: LegacySlot | BeltSlot): [Consumable, Tier, number][] => {
+  if ('tiers' in slot) return KINDS.includes(slot.kind) ? TIERS.map(t => [slot.kind, t, slot.tiers[t - 1] ?? 0]) : []
+  const [kind, tier] = LEGACY_KIND[slot.kind] ?? []
+  return kind === undefined || tier === undefined ? [] : [[kind, tier, slot.count]]
+}
+
+/** Version 7: the belt holds five kinds in three tiers, a slot a kind; each old stack joins its kind's slot at its tier. */
+export const toVersion7 = (belt: readonly (LegacySlot | BeltSlot | null)[]): (BeltSlot | null)[] => {
+  const out = emptyBelt()
+  for (const [kind, tier, count] of belt.flatMap(s => (s === null ? [] : stacksOf(s)))) {
+    const at = slotOf(kind)
+    const tiers = [...(out[at]?.tiers ?? [0, 0, 0])] as [number, number, number]
+    tiers[tier - 1] = Math.min(STACK_MAX, tiers[tier - 1]! + Math.max(0, Math.floor(count)))
+    out[at] = tiers.some(n => n > 0) ? { kind, tiers } : null
+  }
+  return out
+}
+
 const normalizeOnce = (game: Game): Game => {
   const version = game.version ?? 1
   let g: Game = { ...newGame(game.seed), ...game }
   // Before version 2 the saved view was the old default, not a choice: it opens on pixel art.
   if (version < 2) g = { ...g, zoom: 3 }
   if (version < 3) g = toVersion3({ ...g, gear: game.gear ?? {}, bag: game.bag ?? [] })
+  if (version < 7) g = { ...g, belt: toVersion7(g.belt as (LegacySlot | BeltSlot | null)[]) }
   // Version 4 added the town (`where`, `portal`): the new-game defaults spread above put an older save in the dungeon.
   // A view that no longer exists (4 was briefly a pixel view) opens on the pixel view.
   if (![1, 2, 3].includes(g.zoom)) g = { ...g, zoom: 3 }

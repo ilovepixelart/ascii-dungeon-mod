@@ -1,6 +1,6 @@
 {
   "name": "ascii-dungeon",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Turns the session's coding activity into an interactive ASCII dungeon crawler pane",
   "types": "./types/index.d.ts",
   "userConfig": {

@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { Game } from '../types'
-import { addToBelt, emptyBelt, killConsumable, useBelt } from './consumables'
+import type { Consumable, Game } from '../types'
+import { CONSUMABLES, KINDS, addToBelt, emptyBelt, killConsumable, tierFor, useBelt } from './consumables'
+import { toVersion7 } from './save'
 import { foeAhead, plainHero } from './fixtures'
 import { apply, newGame } from './game'
 import { BASES, PRICE, canWear, makeItem, rarityOf, tierWeights } from './items'
@@ -9,23 +10,84 @@ import { itemChance } from './game'
 
 const withBelt = (belt: Game['belt']): Game => ({ ...plainHero(), belt })
 
+/** A belt holding one slot: `kind` in its own place, `tiers` of it. */
+const oneSlot = (kind: Consumable, tiers: [number, number, number]): Game['belt'] => KINDS.map(k => (k === kind ? { kind, tiers } : null))
+
 describe('the belt', () => {
-  test('stacks a kind up to 9, then starts a new slot', async () => {
+  test('has a slot a kind, 1 to 5: health, regeneration, fury, ward, smoke', async () => {
+    expect(KINDS).toEqual(['health', 'regen', 'fury', 'ward', 'smoke'])
+  })
+
+  test('puts each kind in its own slot, whatever order they come in', async () => {
     const g = withBelt(emptyBelt())
-    for (let i = 0; i < 10; i += 1) expect(addToBelt(g, 'health')).toBe(true)
-    expect(g.belt.slice(0, 2)).toEqual([{ kind: 'health', count: 9 }, { kind: 'health', count: 1 }])
+    for (const kind of ['smoke', 'fury', 'health', 'ward', 'regen'] as const) expect(addToBelt(g, kind)).toBe(true)
+    expect(g.belt.map(s => s?.kind)).toEqual(['health', 'regen', 'fury', 'ward', 'smoke'])
   })
 
-  test('refuses a sixth kind when all five slots hold others', async () => {
-    const g = withBelt([...['regen', 'mapping', 'fury', 'ward', 'smoke'].map(kind => ({ kind, count: 9 }))] as Game['belt'])
-    expect(addToBelt(g, 'health')).toBe(false)
+  test('stacks each tier up to 9; a full tier refuses one more and leaves the other tiers room', async () => {
+    const g = withBelt(emptyBelt())
+    for (let i = 0; i < 9; i += 1) expect(addToBelt(g, 'health', 1)).toBe(true)
+    expect(addToBelt(g, 'health', 1)).toBe(false)
+    expect(addToBelt(g, 'health', 2)).toBe(true)
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [9, 1, 0] })
   })
 
-  test('using the last of a stack empties its slot', async () => {
-    const g = withBelt([{ kind: 'health', count: 1 }, ...emptyBelt().slice(1)])
-    useBelt(g, 0)
+  test('a slot full of one kind never blocks another kind', async () => {
+    const g = withBelt(KINDS.map(kind => ({ kind, tiers: [9, 9, 9] as [number, number, number] })).map((s, i) => (i === 0 ? null : s)))
+    expect(addToBelt(g, 'health')).toBe(true)
+  })
+
+  test('uses the strongest tier first, then the next, and empties the slot after the last', async () => {
+    const g = withBelt(oneSlot('health', [1, 0, 1]))
+    g.hp = 1
+    expect(useBelt(g, 0)).toBe(`You drink an Elixir. +${g.maxHp - 1} HP`)
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [1, 0, 0] })
+    g.hp = 1
+    expect(useBelt(g, 0)).toBe(`You drink a Health Potion. +${Math.ceil(g.maxHp * 0.35)} HP`)
     expect(g.belt[0]).toBeNull()
     expect(useBelt(g, 0)).toBe('Belt slot 1 is empty.')
+  })
+
+  test('each kind\'s three tiers have their own names', async () => {
+    const names = KINDS.flatMap(k => [1, 2, 3].map(t => CONSUMABLES[k][t as 1 | 2 | 3].name))
+    expect(new Set(names).size).toBe(15)
+  })
+})
+
+describe('tiers by depth', () => {
+  const shares = (depth: number, n = 20000) => {
+    const g = { ...plainHero(), depth }
+    const seen = [0, 0, 0]
+    for (let i = 0; i < n; i += 1) seen[tierFor(g) - 1]! += 1
+    return seen.map(k => k / n)
+  }
+
+  test('at depth 1: tier III 1 in 100, tier II 4 in 100, the rest tier I', async () => {
+    const [one, two, three] = shares(1)
+    expect(Math.abs(three! - 0.01)).toBeLessThan(0.005)
+    expect(Math.abs(two! - 0.04)).toBeLessThan(0.008)
+    expect(Math.abs(one! - 0.95)).toBeLessThan(0.01)
+  })
+
+  test('from depth 16 on: tier III 30 in 100, tier II 45, tier I 25', async () => {
+    for (const depth of [16, 40]) {
+      const [one, two, three] = shares(depth)
+      expect(Math.abs(three! - 0.3)).toBeLessThan(0.015)
+      expect(Math.abs(two! - 0.45)).toBeLessThan(0.015)
+      expect(Math.abs(one! - 0.25)).toBeLessThan(0.015)
+    }
+  })
+})
+
+describe('a belt saved before tiers', () => {
+  test('moves each old stack to its kind\'s slot at the tier it became, adding stacks of one kind', async () => {
+    const old = [{ kind: 'greater', count: 1 }, { kind: 'mapping', count: 2 }, { kind: 'health', count: 3 }, { kind: 'smoke', count: 1 }, { kind: 'health', count: 2 }]
+    expect(toVersion7(old)).toEqual([{ kind: 'health', tiers: [5, 0, 1] }, null, null, null, { kind: 'smoke', tiers: [1, 0, 2] }])
+  })
+
+  test('caps a merged stack at 9 and drops a kind it does not know', async () => {
+    const old = [{ kind: 'ward', count: 9 }, { kind: 'ward', count: 4 }, { kind: 'scroll of doom', count: 3 }, null]
+    expect(toVersion7(old)).toEqual([null, null, null, { kind: 'ward', tiers: [9, 0, 0] }, null])
   })
 })
 
@@ -36,7 +98,7 @@ describe('effects', () => {
   }
 
   test('a Ward Scroll absorbs exactly the next 2 hits', async () => {
-    let g = apply(foeGame({ belt: [{ kind: 'ward', count: 1 }, ...emptyBelt().slice(1)] }), { kind: 'use', slot: 0 })
+    let g = apply(foeGame({ belt: oneSlot('ward', [1, 0, 0]) }), { kind: 'use', slot: 3 })
     for (let i = 0; i < 2; i += 1) g = apply(g, { kind: 'outcome', ok: false, what: 'Bash' })
     expect(g.hp).toBe(20)
     expect(apply(g, { kind: 'outcome', ok: false, what: 'Bash' }).hp).toBe(17)
@@ -61,7 +123,7 @@ describe('effects', () => {
   })
 
   test('a Regeneration Draught heals a tenth of max HP after each of the next 5 fights', async () => {
-    let g = apply(foeGame({ hp: 2, belt: [{ kind: 'regen', count: 1 }, ...emptyBelt().slice(1)] }), { kind: 'use', slot: 0 })
+    let g = apply(foeGame({ hp: 2, belt: oneSlot('regen', [1, 0, 0]) }), { kind: 'use', slot: 1 })
     g = { ...g, foe: null }
     const seen: number[] = []
     for (let i = 0; i < 6; i += 1) {
@@ -72,14 +134,29 @@ describe('effects', () => {
     expect(seen).toEqual([2, 2, 2, 2, 2, 0])
   })
 
-  test('a Scroll of Mapping reveals the whole level', async () => {
-    const g = apply(withBelt([{ kind: 'mapping', count: 1 }, ...emptyBelt().slice(1)]), { kind: 'use', slot: 0 })
+  test('a Scroll of Passage reveals the whole level, with no foe to escape', async () => {
+    const g = apply(withBelt(oneSlot('smoke', [0, 0, 1])), { kind: 'use', slot: 4 })
     expect(g.seen.includes('0')).toBe(false)
   })
 
-  test('a Smoke Bomb makes the foe lose the hero', async () => {
-    const g = apply(foeGame({ belt: [{ kind: 'smoke', count: 1 }, ...emptyBelt().slice(1)] }), { kind: 'use', slot: 0 })
+  test('a Smoke Bomb makes the foe lose the hero, and reveals nothing', async () => {
+    const before = foeGame({ belt: oneSlot('smoke', [1, 0, 0]) })
+    const g = apply(before, { kind: 'use', slot: 4 })
     expect(g.foe).toBeNull()
+    expect(g.seen).toBe(before.seen)
+  })
+
+  test('a Shadow Step escapes the foe and restores a fifth of max HP', async () => {
+    const g = apply(foeGame({ hp: 5, belt: oneSlot('smoke', [0, 1, 0]) }), { kind: 'use', slot: 4 })
+    expect(g.foe).toBeNull()
+    expect(g.hp).toBe(5 + Math.ceil(g.maxHp * 0.2))
+  })
+
+  test('a stronger tier lasts longer: a Greater Ward absorbs 3 hits, Battle Hymn and Troll Blood their counts', async () => {
+    expect(apply(foeGame({ belt: oneSlot('ward', [0, 1, 0]) }), { kind: 'use', slot: 3 }).effects.ward).toBe(3)
+    expect(apply(foeGame({ belt: oneSlot('ward', [0, 0, 1]) }), { kind: 'use', slot: 3 }).effects.ward).toBe(5)
+    expect(apply(foeGame({ belt: oneSlot('fury', [0, 1, 0]) }), { kind: 'use', slot: 2 }).effects.fury).toBe(8)
+    expect(apply(foeGame({ belt: oneSlot('regen', [0, 0, 1]) }), { kind: 'use', slot: 1 }).effects.regen).toBe(12)
   })
 })
 
@@ -100,7 +177,7 @@ describe('drops', () => {
 
   test('the potion chance falls 10 after a potion and rises 10 after a kill without one', async () => {
     const sure = { ...plainHero(), potionChance: 100 }
-    expect(killConsumable(sure)).toBe('health')
+    expect(killConsumable(sure)?.kind).toBe('health')
     expect(sure.potionChance).toBe(90)
     const never = { ...plainHero(), potionChance: 0, seed: 7 }
     killConsumable(never)

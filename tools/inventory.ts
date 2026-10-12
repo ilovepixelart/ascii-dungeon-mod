@@ -34,7 +34,7 @@ g.bag = [
   make('wand', 'rare', 7, 3),
 ]
 g.cursor = g.bag[Number(pick ?? 1)]?.id ?? null
-g.belt = [{ kind: 'health', count: 3 }, { kind: 'regen', count: 2 }, { kind: 'mapping', count: 1 }, { kind: 'fury', count: 1 }, { kind: 'smoke', count: 2 }]
+g.belt = [{ kind: 'health', tiers: [2, 1, 0] }, { kind: 'regen', tiers: [2, 0, 0] }, { kind: 'fury', tiers: [1, 0, 0] }, null, { kind: 'smoke', tiers: [1, 0, 1] }]
 
 const px = inventoryPixels(g)
 const rgb = (hex: string) => [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16)).join(';')

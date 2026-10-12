@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.0
+
+Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lost, and nothing needs doing.
+
+### Changed behaviour
+
+- The belt has a slot a kind, 1 to 5: health, regeneration, fury, ward, smoke. Each kind has three tiers, each tier
+  stacking to 9, and a slot uses its strongest tier first. Old stacks move to their kind's slot: a Greater Health
+  Potion becomes an Elixir, a Scroll of Mapping a Scroll of Passage (it now also escapes the foe).
+- Merchant wares are a kind at a tier: `{ kind: 'buy', ware: 'health1' }` where it was `ware: 'health'`. The shelf
+  sells Health Potion, Elixir, Regeneration Draught, Scroll of Fury, Ward Scroll, Smoke Bomb and Scroll of Passage.
+- Bosses leave an Elixir; the lectern gives a Scroll of Passage.
+- Foes hit 1.2 times their plain sum (was 1.15), keeping deaths where they were now potions are no longer crowded off
+  the belt.
+- Light is 8 levels a tile with colors on the terminal's own grid: rooms and corridors redraw fewer cells a step.
+
+### Added
+
+- Tiered consumables: Greater Health Potion, Strong Draught, Troll Blood, Battle Hymn, Berserker's Oath, Greater Ward,
+  Aegis, Shadow Step. Belt slots show a gold pip per tier above the first.
+- Frame stamps on the bench walk, and `tools/measure.py` reporting skipped, repeated and late frames and jitter.
+
 ## 0.2.0
 
 Saves from 0.1.0 load as they were: every new field of the game starts at its default.

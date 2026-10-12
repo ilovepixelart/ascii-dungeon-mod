@@ -5,7 +5,7 @@ import { kitFor } from './items'
 import { MAP_H, MAP_W, cellId, generate, visibleFrom } from './map'
 import type { Pos } from './map'
 
-export const SAVE_VERSION = 6
+export const SAVE_VERSION = 7
 
 export const FOG = '0'.repeat(MAP_W * MAP_H)
 
@@ -53,7 +53,7 @@ export const newGame = (seed = 1, cls: HeroClass = 'knight'): Game => {
     xp: 0,
     gold: 0,
     cls,
-    belt: [{ kind: 'health', count: 1 }, ...emptyBelt().slice(1)],
+    belt: [{ kind: 'health', tiers: [1, 0, 0] }, ...emptyBelt().slice(1)],
     effects: { regen: 0, fury: 0, ward: 0 },
     potionChance: 40,
     dryKills: 0,

@@ -1,18 +1,18 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren, ToolCallInput } from 'claude-code'
 
-import type { Consumable, Game, HeroClass } from '../types'
+import type { Game, HeroClass } from '../types'
 import { TOWN_TALK } from './town'
-import { SHOP_PRICES, STASH_SIZE, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
+import { STASH_SIZE, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
-import { BELT_SIZE, CONSUMABLES } from './consumables'
+import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker } from './frames'
 import type { FrameSummary, TickStats } from './frames'
 import { hudCells, hudHit, hudLayout } from './hud'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
 import type { BagUi, Gesture } from './bagui'
-import { SHOP_H, SHOP_UI_IDLE, nextWare, shopGesture, shopOverlay, shopPixels, whyNot } from './shop'
+import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopOverlay, shopPixels, whyNot } from './shop'
 import type { ShopUi } from './shop'
 import type { OverlayBox } from './window'
 import { canvasCells } from './canvas'
@@ -30,7 +30,7 @@ import { CLASS_NAME, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, why
 import { MAP_H, MAP_W } from './map'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
-import { FRAMES_PER_TILE, STILL, walkState, benchRoute, clickToTile, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { FRAMES_PER_TILE, STILL, stampCells, walkState, benchRoute, clickToTile, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit } from './pixels'
 import { MUSIC_GAIN, channel, gainOf, musicFor, soundAsset, soundFor, stepAt } from './sounds'
 import type { Channel, Sound } from './sounds'
@@ -105,7 +105,7 @@ const tileCenter = (g: Game): Pos => ({ x: g.x * TILE_PX + TILE_PX / 2, y: g.y *
 /** The character sheet's rows: its title, a row per attribute, a blank, the new-game row and a line per class. */
 const SHEET_ROWS = 3 + ATTRIBUTES.length
 /** The rows a panel under the dashboard takes: its title, a row per ware or worn slot, and its close row. */
-const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, shop: 3 + Object.keys(SHOP_PRICES).length, forge: 2 + SLOTS.length, stash: 3 + STASH_SIZE, healer: 3, elder: 5, mystic: 4, guard: 3, villager: 3, dog: 4 }
+const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, shop: 3 + WARES.length, forge: 2 + SLOTS.length, stash: 3 + STASH_SIZE, healer: 3, elder: 5, mystic: 4, guard: 3, villager: 3, dog: 4 }
 
 /** The townsfolk without work, by window: who they are, as their window's title says. */
 const TALKER_NAME: Readonly<Record<'guard' | 'villager' | 'dog', string>> = { guard: 'The guard', villager: 'A villager', dog: 'The dog' }
@@ -162,6 +162,8 @@ export const sendMap = async ($: EngineInterface, cells: string, size: { columns
 }
 /** Frames left out as repeats, for the frames report. */
 let unsent = 0
+/** Whether the walk playing is the bench's, whose frames are stamped with their number. */
+let isBenching = false
 /** The map as the pane itself draws it: what the terminal shows from then on. */
 const drawnMap = (cells: string) => {
   lastMap = cells
@@ -189,6 +191,7 @@ const walkFrame = async ($: EngineInterface, frame: number) => {
   // ordinary drawing takes over.
   const end = async () => {
     if (walk === w) walk = null
+    isBenching = false
     await settle($)
     const after = hitsAfterWalk
     hitsAfterWalk = null
@@ -202,7 +205,9 @@ const walkFrame = async ($: EngineInterface, frame: number) => {
   }
   if (at.isDone) return end()
   const view = cameraFor(w.game, at, mapSize.columns, mapSize.rows)
-  const cells = pixelMap(drawnAt(w.game, frame), mapSize.columns, mapSize.rows, at, view, [], 0, isStrideFrame(frame))
+  const drawn = pixelMap(drawnAt(w.game, frame), mapSize.columns, mapSize.rows, at, view, [], 0, isStrideFrame(frame))
+  // The bench walk's frames carry their number, so a measure reads which arrived: skipped, repeated, late.
+  const cells = isBenching ? stampCells(drawn, frame) : drawn
   const t0 = fineNow()
   const painted = await sendMap($, cells, mapSize)
   repaints.add(fineNow() - t0)
@@ -505,6 +510,7 @@ export const register: Register = (on, options) => {
     ticker.reset()
     repaints.reset()
     redraws.reset()
+    isBenching = true
     startWalk($, benchRoute(bench, BENCH_TILES), bench, bench)
     return { text: `Bench walk started: ${BENCH_TILES} tiles, about ${Math.ceil((BENCH_TILES * FRAMES_PER_TILE * FRAME_MS) / 1000)} s. Run /dungeon-frames once the hero stops.` }
   })
@@ -718,7 +724,7 @@ export const register: Register = (on, options) => {
       }
       const buyKey = async () => {
         if (shopUi.ware === null) {
-          shopUi = { ware: 'health', menu: false }
+          shopUi = { ware: 'health1', menu: false }
           $.ui.invalidate('ui.render')
         } else await act($, { kind: 'buy', ware: shopUi.ware }, true)
       }
@@ -742,7 +748,7 @@ export const register: Register = (on, options) => {
             </Box>
           </Box>
           <Box marginTop={1} columnGap={2}>
-            <Button key="shop-buy" label={chosen === null ? 'Buy' : `Buy ${CONSUMABLES[chosen].name}`} hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
+            <Button key="shop-buy" label={chosen === null ? 'Buy' : `Buy ${nameOf(wareOf(chosen).kind, wareOf(chosen).tier)}`} hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
             <Button key="shop-ware" label="Next ware" hotkey="w" plain onPress={redraw(nextWare(shopUi))} />
             <Button key="shop-sell" label="Sell" hotkey="s" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'sell' })} />
             <Button key="shop-junk" label={junk.count === 0 ? 'Sell junk' : `Sell junk (${junk.count}, ${junk.coins} gold)`} hotkey="x" plain dimColor={junk.count === 0} onPress={onItem({ kind: 'sellJunk' })} />
@@ -991,8 +997,8 @@ export const register: Register = (on, options) => {
           <Text bold>The merchant</Text>
           <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
         </Text>
-        {(Object.keys(SHOP_PRICES) as Consumable[]).map(ware => (
-          <Button key={`buy-${ware}`} label={`Buy ${CONSUMABLES[ware].name}: ${SHOP_PRICES[ware]} gold`} plain dimColor={g.gold < SHOP_PRICES[ware]} onPress={press({ kind: 'buy', ware })} />
+        {WARES.map(ware => (
+          <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware)} gold`} plain dimColor={g.gold < priceOfWare(ware)} onPress={press({ kind: 'buy', ware })} />
         ))}
         <Button key="shop-undo" label={undoLabel(g)} plain dimColor={whyNotBuyBack(g) !== undefined} onPress={press({ kind: 'buyBack' })} />
         <Button key="shop-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'shop' })} />

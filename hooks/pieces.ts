@@ -1,7 +1,9 @@
 // The pieces windows are built from: an item in its tier box with the marks that say what it means for this hero,
 // an item grid, the belt. Each draws at a given place on a canvas; the windows say where.
 import type { Game, Item, Rarity, Slot } from '../types'
-import { CELL, CONSUMABLE_ICONS, ICONS } from './icons'
+import { CELL, ICONS, consumableIcon } from './icons'
+import { bestTier, countOf } from './consumables'
+import type { BeltSlot } from '../types'
 import { RARITY_COLOR, canWear, isUpgrade } from './items'
 import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, digits, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
@@ -83,17 +85,21 @@ export const itemGrid = (c: Canvas, g: Game, items: readonly Item[], x: number, 
 /** A belt slot's place when the belt starts at x0, y: as drawn, BELT_SLOT_W by SLOT. */
 export const beltSlotRect = (x0: number, y: number, i: number): Rect => ({ x: x0 + i * BELT_STEP, y, w: BELT_SLOT_W, h: SLOT })
 
-/** The belt at x, y: each slot's icon, its count beside it. */
-export const belt = (c: Canvas, g: Game, x0: number, y: number) =>
-  g.belt.forEach((slot, i) => {
-    const x = x0 + i * BELT_STEP
-    fill(c, x + 1, y + 1, PX, PX, SLOT_BG)
-    frame(c, x, y, BELT_SLOT_W, SLOT, GRID)
-    fill(c, x + 1, y + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
-    if (slot === null) return
-    art(c, CONSUMABLE_ICONS[slot.kind], x + 1, y + 1)
-    digits(c, String(slot.count), x + BELT_SLOT_W - 2, y + SLOT / 2 + 2)
-  })
+export const TIER_INK = '#ffd34d'
+
+/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next, the count, and under it a pip a tier above the first. */
+export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number, y: number) => {
+  frame(c, x, y, BELT_SLOT_W, SLOT, GRID)
+  fill(c, x + 1, y + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
+  const tier = bestTier(slot)
+  if (slot === null || slot === undefined || tier === undefined) return
+  art(c, consumableIcon(slot.kind, tier), x + 1, y + 1)
+  for (let p = 1; p < tier; p += 1) put(c, x + BELT_SLOT_W - 2 - 2 * (p - 1), y + PX, TIER_INK)
+  digits(c, String(countOf(slot)), x + BELT_SLOT_W - 2, y + SLOT / 2 + 2)
+}
+
+/** The belt at x, y: a slot a kind, as `beltSlot` draws it. */
+export const belt = (c: Canvas, g: Game, x0: number, y: number) => g.belt.forEach((slot, i) => beltSlot(c, slot, x0 + i * BELT_STEP, y))
 
 /** A small coin, four pixels square, its top-left at x, y; grey when what it prices cannot be paid. */
 export const coin = (c: Canvas, x: number, y: number, canPay = true) => {

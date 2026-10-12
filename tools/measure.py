@@ -171,6 +171,59 @@ def bursts(chunks, start, end):
     return out
 
 
+# The bench walk's frames carry their number modulo 16 in the first cell's background, on the host's step of 17:
+# red 17 times it, green 0, blue 255.
+STAMP = re.compile(rb"48;2;(\d+);0;255m")
+
+
+def stamps(raw):
+    """The stamped frames the terminal received, in arrival order: (seconds the chunk arrived, frame number). The
+    number is unwrapped from its low four bits, each taken as the nearest step forward (up to 8) or back from the last:
+    a skip of 8 or more frames in a row reads as fewer."""
+    out = []
+    last = None
+    for t, chunk in raw:
+        for m in STAMP.finditer(chunk):
+            red = int(m.group(1))
+            if red % 17 != 0:
+                continue
+            low = red // 17
+            # The first is taken as it reads; each after it, the nearest count that ends in its four bits.
+            step = 0 if last is None else (low - last) % 16
+            n = low if last is None else last + step if step <= 8 else last + step - 16
+            out.append((t, n))
+            last = n
+    return out
+
+
+def frame_report(arrivals, frame_ms=FRAME_MS):
+    """What the stamps say: frames received, skipped, repeated and out of order; the gaps between arrivals and their
+    jitter; and how far behind the first frame's schedule (a frame every frame_ms) each arrived."""
+    if not arrivals:
+        return {"received": 0}
+    ids = [n for _, n in arrivals]
+    first_t, first_n = arrivals[0]
+    seen = set(ids)
+    expected = set(range(min(ids), max(ids) + 1))
+    gaps = [(b[0] - a[0]) * 1000 for a, b in itertools.pairwise(arrivals)]
+    mean = sum(gaps) / len(gaps) if gaps else 0
+    jitter = (sum((g - mean) ** 2 for g in gaps) / len(gaps)) ** 0.5 if gaps else 0
+    late = [(t - first_t) * 1000 - (n - first_n) * frame_ms for t, n in arrivals]
+    return {
+        "received": len(ids),
+        "first": min(ids),
+        "last": max(ids),
+        "skipped": sorted(expected - seen),
+        "repeated": sorted({n for n in ids if ids.count(n) > 1}),
+        "out_of_order": sum(1 for a, b in itertools.pairwise(ids) if b < a),
+        "gap_p50": pct(gaps, 0.5) if gaps else 0,
+        "gap_p99": pct(gaps, 0.99) if gaps else 0,
+        "jitter_ms": jitter,
+        "late_p50": pct(late, 0.5),
+        "late_max": max(late),
+    }
+
+
 def stop(pid):
     """Ends the session and everything it started: its own process group, never pid 0 or 1 or ours."""
     try:
@@ -300,6 +353,19 @@ def main():
             f"CPU: {100 * (cpu1 - cpu0) / (end - start):.0f}% of one core over the walk"
         )
         print(f"mod's own report: {report.group(0) if report else 'not found'}")
+        fr = frame_report(stamps(rec.raw))
+        if fr["received"] == 0:
+            print("stamped frames: none seen (is this build stamping the bench walk?)")
+        else:
+            skipped = fr["skipped"]
+            print(
+                f"stamped frames {fr['first']} to {fr['last']}: {fr['received']} received, {len(skipped)} skipped"
+                f"{' ' + str(skipped[:10]) if skipped else ''}, {len(fr['repeated'])} repeated, {fr['out_of_order']} out of order"
+            )
+            print(
+                f"arrival gaps: p50 {fr['gap_p50']:.1f}, p99 {fr['gap_p99']:.1f} ms, jitter {fr['jitter_ms']:.1f} ms; "
+                f"behind schedule: p50 {fr['late_p50']:.1f}, max {fr['late_max']:.1f} ms"
+            )
     finally:
         stop(pid)
         rec.done = True

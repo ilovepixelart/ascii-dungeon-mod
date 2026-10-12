@@ -7,7 +7,13 @@ export type Pos = { x: number; y: number }
 /** A room's floor: `w` by `h` cells from its top-left `x`, `y`, less what its shape gives back to rock. */
 export type Room = Pos & { w: number; h: number; shape?: RoomShape }
 /** A room not a plain rectangle: corners cut (cross), one quarter cut (L), or two rows of pillars along an aisle (pillars). */
-export type RoomShape = 'cross' | 'L' | 'pillars'
+export type RoomShape = 'cross' | 'L' | 'pillars' | 'ragged'
+/**
+ * How a level is laid out. Rooms: rooms joined as a branching tree. Hall: one great pillared hall, the other rooms each
+ * joined straight to it. Ring: the rooms joined round in a circle, so every walk has two ways. Warrens: many small
+ * rooms, cramped, with more dead ends. Caverns: rooms with ragged walls joined by winding passages.
+ */
+export type Layout = 'rooms' | 'hall' | 'ring' | 'warrens' | 'caverns'
 export type Level = { tiles: string[]; rooms: Room[]; start: Pos; stairs: Pos }
 
 const MAX_ROOMS = 8
@@ -44,22 +50,47 @@ const carve = (grid: string[][], x: number, y: number) => {
   if (row !== undefined && x > 0 && x < MAP_W - 1 && y > 0 && y < MAP_H - 1) row[x] = '.'
 }
 
-const placeRooms = (r: (n: number) => number) => {
-  const rooms: Room[] = []
-  for (let attempt = 0; attempt < 80 && rooms.length < MAX_ROOMS; attempt += 1) {
-    const w = 4 + r(8)
-    const h = 3 + r(4)
+/** The room sizes and count a layout places: width and height as a least and a spread, at most how many, in how many tries. */
+type Sizes = { w: [number, number]; h: [number, number]; most: number; tries: number }
+const ROOM_SIZES: Sizes = { w: [4, 8], h: [3, 4], most: MAX_ROOMS, tries: 80 }
+const WARREN_SIZES: Sizes = { w: [3, 4], h: [3, 2], most: 13, tries: 200 }
+
+const placeRooms = (r: (n: number) => number, sizes: Sizes = ROOM_SIZES, placed: readonly Room[] = [], keepOut?: Room) => {
+  const rooms: Room[] = [...placed]
+  for (let attempt = 0; attempt < sizes.tries && rooms.length < sizes.most; attempt += 1) {
+    const w = sizes.w[0] + r(sizes.w[1])
+    const h = sizes.h[0] + r(sizes.h[1])
     // Any room that fits inside the outer wall: its last floor row and column may be the ones just inside it.
     const room = { x: 1 + r(MAP_W - w - 1), y: 1 + r(MAP_H - h - 1), w, h }
-    if (!rooms.some(other => overlaps(room, other))) rooms.push(room)
+    if (!rooms.some(other => overlaps(room, other)) && (keepOut === undefined || !overlaps(room, keepOut))) rooms.push(room)
   }
   if (rooms.length < 2) return [{ x: 2, y: 2, w: 6, h: 4 }, { x: MAP_W - 10, y: MAP_H - 7, w: 6, h: 4 }]
   return rooms
 }
 
+/**
+ * A ragged room's cut: its corners and about half its edge cells, none on or beside a middle row or column where
+ * corridors meet, and any edge cell left standing alone between two cuts, so a ragged wall never leaves a dead end.
+ */
+const raggedCut = (room: Room, mid: Pos): Pos[] => {
+  const isEdge = (x: number, y: number) => x === room.x || y === room.y || x === room.x + room.w - 1 || y === room.y + room.h - 1
+  const isCorner = (x: number, y: number) => (x === room.x || x === room.x + room.w - 1) && (y === room.y || y === room.y + room.h - 1)
+  const nearMid = (x: number, y: number) => Math.abs(x - mid.x) <= 1 || Math.abs(y - mid.y) <= 1
+  const rolled = (x: number, y: number) => isEdge(x, y) && !nearMid(x, y) && (isCorner(x, y) || hash(room.x * 3 + room.y, x, y) < 45)
+  const along = (x: number, y: number): [Pos, Pos] => (y === room.y || y === room.y + room.h - 1 ? [{ x: x - 1, y }, { x: x + 1, y }] : [{ x, y: y - 1 }, { x, y: y + 1 }])
+  const cells: Pos[] = []
+  for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) {
+    if (x === mid.x || y === mid.y || !isEdge(x, y)) continue
+    const [a, b] = along(x, y)
+    if (rolled(x, y) || (rolled(a.x, a.y) && rolled(b.x, b.y))) cells.push({ x, y })
+  }
+  return cells
+}
+
 /** The cells of a room its shape gives back to rock; never on its middle row or column, so corridors still meet there. */
 export const shapeCut = (room: Room): Pos[] => {
   const mid = center(room)
+  if (room.shape === 'ragged') return raggedCut(room, mid)
   const cells: Pos[] = []
   for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) {
     if (x === mid.x || y === mid.y) continue
@@ -85,6 +116,17 @@ const shapeOf = (world: number, depth: number, room: Room): RoomShape | undefine
   return undefined
 }
 
+/**
+ * A tunnel that winds: two tunnels through a point a random way between its ends on each axis, so it bends twice where
+ * a tunnel bends once, and never doubles back to leave a spur.
+ */
+const windingTunnel = (grid: string[][], from: Pos, to: Pos, r: (n: number) => number) => {
+  const between = (a: number, b: number) => a + Math.round(((b - a) * (1 + r(3))) / 4)
+  const via = { x: between(from.x, to.x), y: between(from.y, to.y) }
+  tunnel(grid, from, via, r(2) === 0)
+  tunnel(grid, via, to, r(2) === 0)
+}
+
 const tunnel = (grid: string[][], from: Pos, to: Pos, isHorizontalFirst: boolean) => {
   const corner = isHorizontalFirst ? { x: to.x, y: from.y } : { x: from.x, y: to.y }
   for (const [a, b] of [[from, corner], [corner, to]] as const) {
@@ -94,7 +136,7 @@ const tunnel = (grid: string[][], from: Pos, to: Pos, isHorizontalFirst: boolean
 }
 
 /** Joins the rooms as a tree that branches: from a random first room, each joins the nearest room already joined. */
-const joinRooms = (grid: string[][], rooms: readonly Room[], r: (n: number) => number) => {
+const joinRooms = (grid: string[][], rooms: readonly Room[], r: (n: number) => number, dig = (from: Pos, to: Pos) => tunnel(grid, from, to, r(2) === 0)) => {
   const joined = [r(rooms.length)]
   const apart = (a: Room, b: Room) => Math.abs(center(a).x - center(b).x) + Math.abs(center(a).y - center(b).y)
   while (joined.length < rooms.length) {
@@ -106,10 +148,23 @@ const joinRooms = (grid: string[][], rooms: readonly Room[], r: (n: number) => n
       }
     }
     const [i, j] = best!
-    tunnel(grid, center(rooms[i]!), center(rooms[j]!), r(2) === 0)
+    dig(center(rooms[i]!), center(rooms[j]!))
     joined.push(j)
   }
   return joined[0]!
+}
+
+/** The branching tree of `joinRooms`, dug as winding passages. */
+const joinWinding = (grid: string[][], rooms: readonly Room[], r: (n: number) => number) => joinRooms(grid, rooms, r, (from, to) => windingTunnel(grid, from, to, r))
+
+/** Fills any dead end a passage left in a ragged room's wall by digging through a cut, so the wall stays without one. */
+const fillRaggedEnds = (grid: string[][], rooms: readonly Room[]) => {
+  for (const room of rooms.filter(rm => rm.shape === 'ragged')) {
+    for (const c of shapeCut(room)) {
+      const open = STEPS.slice(0, 4).filter(d => grid[c.y + d.y]?.[c.x + d.x] === '.').length
+      if (grid[c.y]![c.x] === '.' && open === 1) grid[c.y]![c.x] = '#'
+    }
+  }
 }
 
 /** At most this many loops a level, each a tunnel between two rooms near on the map but far apart by walking. */
@@ -168,6 +223,44 @@ const addBranches = (grid: string[][], rooms: readonly Room[], r: (n: number) =>
 
 const levels = new Map<string, Level>()
 
+/** Depth 1 and boss depths are plain rooms; otherwise about half of depths take another layout, each theme leaning its own way. */
+const LEANS: Readonly<Record<Theme, readonly Layout[]>> = {
+  crypt: ['warrens', 'warrens', 'hall', 'ring', 'caverns'],
+  flooded: ['caverns', 'caverns', 'ring', 'hall', 'warrens'],
+  forge: ['hall', 'hall', 'ring', 'caverns', 'warrens'],
+}
+export const layoutOf = (world: number, depth: number): Layout => {
+  if (depth <= 1 || depth % 5 === 0) return 'rooms'
+  const n = hash(world * 19 + depth * 11, 7, 2)
+  if (n < 50) return 'rooms'
+  const leans = LEANS[themeOf(depth)]
+  return leans[Math.floor(((n - 50) * leans.length) / 50)] ?? 'rooms'
+}
+
+/** The great hall: wide and tall, pillared, about the middle of the map. */
+const greatHall = (r: (n: number) => number): Room => {
+  const w = 18 + r(9)
+  const h = 7 + r(3)
+  return { x: Math.floor((MAP_W - w) / 2) + r(11) - 5, y: Math.floor((MAP_H - h) / 2) + r(3) - 1, w, h, shape: 'pillars' }
+}
+
+/** Joins every room straight to the first, the hall; returns the room the hero starts in, never the hall. */
+const joinToHall = (grid: string[][], rooms: readonly Room[], r: (n: number) => number) => {
+  for (let i = 1; i < rooms.length; i += 1) tunnel(grid, center(rooms[i]!), center(rooms[0]!), r(2) === 0)
+  return rooms.length > 1 ? 1 + r(rooms.length - 1) : 0
+}
+
+/** The rock a ring's rooms stand around, so the circle reads on the map. */
+const RING_CORE: Room = { x: 20, y: 6, w: 24, h: 6 }
+
+/** Joins the rooms round in a circle, in the order of their angle about the map's middle. */
+const joinInRing = (grid: string[][], rooms: readonly Room[], r: (n: number) => number) => {
+  const angle = (room: Room) => Math.atan2((center(room).y - MAP_H / 2) * 3, center(room).x - MAP_W / 2)
+  const order = rooms.map((_, i) => i).sort((a, b) => angle(rooms[a]!) - angle(rooms[b]!))
+  order.forEach((i, k) => tunnel(grid, center(rooms[i]!), center(rooms[order[(k + 1) % order.length]!]!), r(2) === 0))
+  return order[r(order.length)]!
+}
+
 /**
  * The level of `depth` in the world `world`: the same arguments always build the same map. Rooms joined as a branching
  * tree, a few loops knocked through, a few dead-end branches; the hero starts in a random room and the stairs lie in
@@ -179,14 +272,26 @@ export const generate = (world: number, depth: number): Level => {
   if (cached !== undefined) return cached
   const r = seeded(Math.imul(world, 7919) + Math.imul(depth, 104729))
   const grid = Array.from({ length: MAP_H }, () => Array<string>(MAP_W).fill('#'))
-  const rooms = placeRooms(r).map(room => ({ ...room, shape: shapeOf(world, depth, room) }))
+  const layout = layoutOf(world, depth)
+  const rooms =
+    layout === 'hall' ? placeRooms(r, { ...ROOM_SIZES, most: 7 }, [greatHall(r)]).map((room, i) => (i === 0 ? room : { ...room, shape: shapeOf(world, depth, room) }))
+    : layout === 'warrens' ? placeRooms(r, WARREN_SIZES)
+    : layout === 'ring' ? placeRooms(r, { ...ROOM_SIZES, tries: 160 }, [], RING_CORE)
+    : layout === 'caverns' ? placeRooms(r).map(room => (room.w >= 6 && room.h >= 5 ? { ...room, shape: 'ragged' as const } : room))
+    : placeRooms(r).map(room => ({ ...room, shape: shapeOf(world, depth, room) }))
   for (const room of rooms) {
     for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) carve(grid, x, y)
     for (const c of shapeCut(room)) grid[c.y]![c.x] = '#'
   }
-  const first = joinRooms(grid, rooms, r)
-  addLoops(grid, rooms, r)
+  const first =
+    layout === 'hall' ? joinToHall(grid, rooms, r)
+    : layout === 'ring' ? joinInRing(grid, rooms, r)
+    : layout === 'caverns' ? joinWinding(grid, rooms, r)
+    : joinRooms(grid, rooms, r)
+  if (layout === 'rooms' || layout === 'warrens') addLoops(grid, rooms, r)
   addBranches(grid, rooms, r)
+  if (layout === 'warrens') addBranches(grid, rooms, r)
+  if (layout === 'caverns') fillRaggedEnds(grid, rooms)
   const tiles = grid.map(row => row.join(''))
   const start = center(rooms[first]!)
   const { dist } = walkDistances(tiles, start)

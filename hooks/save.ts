@@ -3,6 +3,7 @@ import type { BeltSlot, Consumable, Game, Item, Rarity } from '../types'
 import { KINDS, STACK_MAX, TIERS, emptyBelt, slotOf } from './consumables'
 import type { Tier } from './consumables'
 import { baseOf, repack, priceOf } from './items'
+import { layoutOf } from './map'
 import { FOG, SAVE_VERSION, arrive, newGame } from './world'
 
 type LegacyItem = Omit<Item, 'base' | 'crit' | 'xp' | 'rarity'> & { rarity: string; base?: string; crit?: number; xp?: number }
@@ -100,7 +101,8 @@ const normalizeOnce = (game: Game): Game => {
   if (!isCurrent) return { ...g, world: g.seed, ...arrive(g.seed, g.depth), foe: null }
   // Versions 5 and 6 rebuilt every level (6 gave rooms shapes): an older position, fog and pickups belong to a layout
   // that is gone, so the save re-enters its depth at the new start; in town only the portal's way back moves there.
-  if (version < 6) {
+  // Version 8 gave some depths another layout: a save on one of those re-enters it the same way.
+  if (version < 6 || (version < 8 && layoutOf(g.world, g.depth) !== 'rooms')) {
     const fresh = arrive(g.world, g.depth)
     if (g.where === 'town') return { ...g, seen: fresh.seen, taken: fresh.taken, portal: { x: fresh.x, y: fresh.y }, foe: null }
     return { ...g, ...fresh, foe: null }

@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { SAVE_VERSION, SHOP_PRICES, alongTheWay, foeTierWeights, apply, isOnlyAWalk, championOf, classAbout, critChance, xpGain, levelOf, newGame, normalize, onToolStart, reforgeCost, routeToStairs } from './game'
+import { SAVE_VERSION, SHOP_PRICES, isBossDepth, alongTheWay, foeTierWeights, apply, isOnlyAWalk, championOf, classAbout, critChance, xpGain, levelOf, newGame, normalize, onToolStart, reforgeCost, routeToStairs } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { countOf } from './consumables'
 import { plainItem } from './items'
 import { arrive } from './world'
-import { analyze, bfs, cellId, chestAt, floorThing, generate, same, themedRoomOf } from './map'
+import { analyze, bfs, cellId, chestAt, floorThing, generate, layoutOf, same, themedRoomOf } from './map'
 import { foeRuns, mapRows, statusRuns, tileAt } from './panels'
 import { TOWN_ARRIVAL, TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W, isTownWalkable, pathBeside } from './town'
 
@@ -703,6 +703,23 @@ describe('a version 4 save, from before the levels were rebuilt', () => {
     expect({ x: g.x, y: g.y }).toEqual(generate(g.world, 3).start)
     expect(g.taken).toEqual([])
     expect(g.version).toBe(SAVE_VERSION)
+  })
+
+  test('a version 7 save re-enters its depth at the start where the layout changed, and stays put where it did not', async () => {
+    const depthOf = (changed: boolean) => {
+      for (let d = 2; d < 30; d += 1) if (!isBossDepth(d) && (layoutOf(4, d) !== 'rooms') === changed) return d
+      throw new Error('no such depth')
+    }
+    // The middle of a room the hero does not start in: floor whatever the room's shape.
+    const spotOn = (depth: number) => {
+      const level = generate(4, depth)
+      return level.rooms.map(r => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })).find(p => !same(p, level.start))!
+    }
+    const at = (depth: number) => normalize({ ...newGame(4), world: 4, depth, ...spotOn(depth), seen: '1'.repeat(64 * 18), version: 7 } as Game)
+    const moved = at(depthOf(true))
+    expect({ x: moved.x, y: moved.y }).toEqual(generate(4, moved.depth).start)
+    const kept = at(depthOf(false))
+    expect({ x: kept.x, y: kept.y, seen: kept.seen }).toEqual({ ...spotOn(kept.depth), seen: '1'.repeat(64 * 18) })
   })
 
   test('a current save loads as it is', async () => {

@@ -2,7 +2,8 @@
 
 ## 0.3.0
 
-Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lost, and nothing needs doing.
+Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lost, and nothing needs doing. A save
+standing on a depth whose layout changed (save version 8) starts that depth again from its new start, gains kept.
 
 ### Changed behaviour
 
@@ -18,6 +19,8 @@ Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lo
 
 ### Added
 
+- Level layouts: about half of depths past the first, boss depths aside, are a great hall, a ring round a core
+  of rock, cramped warrens or ragged caverns, each theme favoring its own.
 - Tiered consumables: Greater Health Potion, Strong Draught, Troll Blood, Battle Hymn, Berserker's Oath, Greater Ward,
   Aegis, Shadow Step. Belt slots show a gold pip per tier above the first.
 - Frame stamps on the bench walk, and `tools/measure.py` reporting skipped, repeated and late frames and jitter.

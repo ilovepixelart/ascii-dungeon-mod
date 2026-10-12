@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { MAP_H, MAP_W, analyze, bfs, braziersOf, chestAt, floorThing, generate, isFloor, roomAt, shapeCut, themedRoomOf, visibleFrom } from './map'
+import { MAP_H, MAP_W, analyze, bfs, braziersOf, chestAt, floorThing, generate, isFloor, layoutOf, roomAt, shapeCut, themedRoomOf, visibleFrom } from './map'
+import type { Layout } from './map'
 
 const GRID = [
   '#######',
@@ -291,7 +292,7 @@ describe('room shapes', () => {
   })
 
   const all = Array.from({ length: 400 }, (_, i) => ({ world: 1 + (i % 40), depth: 1 + Math.floor(i / 40) }))
-  test('all three show up over many levels; a shaped room keeps its middle row and column open, and a themed room is never shaped', async () => {
+  test('all four show up over many levels; a shaped room keeps its middle row and column open, and a themed room is never shaped', async () => {
     const seen = new Set<string>()
     for (const { world, depth } of all) {
       const level = generate(world, depth)
@@ -306,7 +307,7 @@ describe('room shapes', () => {
       }
       expect(themedRoomOf(world, depth, level)?.room.shape).toBeUndefined()
     }
-    expect([...seen].sort()).toEqual(['L', 'cross', 'pillars'])
+    expect([...seen].sort()).toEqual(['L', 'cross', 'pillars', 'ragged'])
   })
 
   test('nothing lies on a cell a shape gave back to rock', async () => {
@@ -346,5 +347,97 @@ describe('the themed room by theme', () => {
       want[t.kind] = true
     }
     expect(want).toEqual({ spring: true, anvil: true })
+  })
+})
+
+describe('layouts', () => {
+  const depths = Array.from({ length: 300 }, (_, i) => ({ world: 1 + (i % 60), depth: 2 + Math.floor(i / 60) })).concat(
+    Array.from({ length: 600 }, (_, i) => ({ world: 1 + (i % 100), depth: 6 + Math.floor(i / 100) })),
+  )
+  const of = (layout: Layout) => depths.filter(({ world, depth }) => layoutOf(world, depth) === layout)
+
+  test('depth 1 and every boss depth are plain rooms', async () => {
+    for (let world = 1; world <= 50; world += 1) for (const depth of [1, 5, 10, 15, 20]) expect(layoutOf(world, depth)).toBe('rooms')
+  })
+
+  test('about half of other depths take another layout, and a theme takes its favorite two times in five of those', async () => {
+    const crypt = Array.from({ length: 3000 }, (_, i) => layoutOf(1 + i, 2 + (i % 3)))
+    const other = crypt.filter(l => l !== 'rooms')
+    expect(Math.abs(other.length / crypt.length - 0.5)).toBeLessThan(0.04)
+    expect(Math.abs(other.filter(l => l === 'warrens').length / other.length - 0.4)).toBeLessThan(0.05)
+    const flooded = Array.from({ length: 3000 }, (_, i) => layoutOf(1 + i, 6 + (i % 4))).filter(l => l !== 'rooms')
+    expect(Math.abs(flooded.filter(l => l === 'caverns').length / flooded.length - 0.4)).toBeLessThan(0.05)
+  })
+
+  test('every layout shows up, and every level of every layout can be walked from end to end', async () => {
+    for (const layout of ['rooms', 'hall', 'ring', 'warrens', 'caverns'] as const) {
+      const levels = of(layout)
+      expect(levels.length).toBeGreaterThan(20)
+      for (const { world, depth } of levels) {
+        const a = analyze(generate(world, depth))
+        expect(a.reachable).toBe(a.floor)
+        expect(a.pathLength).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  test('a hall level has one great pillared hall, at least 18 by 7, and every room reaches it as straight as it lies', async () => {
+    for (const { world, depth } of of('hall')) {
+      const level = generate(world, depth)
+      const hall = level.rooms[0]!
+      expect(hall.w >= 18 && hall.h >= 7 && hall.shape === 'pillars').toBe(true)
+      const mid = { x: hall.x + Math.floor(hall.w / 2), y: hall.y + Math.floor(hall.h / 2) }
+      for (const room of level.rooms.slice(1)) {
+        const from = { x: room.x + Math.floor(room.w / 2), y: room.y + Math.floor(room.h / 2) }
+        expect(bfs(level.tiles, from, mid)!.length - 1).toBeLessThanOrEqual(Math.abs(from.x - mid.x) + Math.abs(from.y - mid.y))
+      }
+    }
+  })
+
+  /** The share of levels where one corridor cell on the walk to the stairs, blocked, cuts the hero off from them. */
+  const cutOffShare = (layout: Layout) => {
+    const levels = of(layout).slice(0, 60)
+    const cut = levels.filter(({ world, depth }) => {
+      const level = generate(world, depth)
+      return bfs(level.tiles, level.start, level.stairs)!.some(c => roomAt(level, c) === undefined && bfs(level.tiles, level.start, level.stairs, c) === null)
+    })
+    return cut.length / levels.length
+  }
+
+  test('a ring level\'s rooms stand around a middle of rock', async () => {
+    for (const { world, depth } of of('ring')) {
+      const level = generate(world, depth)
+      for (let y = 6; y < 12; y += 1) for (let x = 20; x < 44; x += 1) expect(roomAt(level, { x, y })).toBeUndefined()
+    }
+  })
+
+  test('a ring nearly always leaves a second way to the stairs, where a tree of rooms nearly never does', async () => {
+    expect(cutOffShare('ring')).toBeLessThan(0.3)
+    expect(cutOffShare('rooms')).toBeGreaterThan(0.8)
+  })
+
+  test('warrens are many small rooms: ten or more, none wider than 6 or taller than 4', async () => {
+    for (const { world, depth } of of('warrens')) {
+      const rooms = generate(world, depth).rooms
+      expect(rooms.length).toBeGreaterThanOrEqual(10)
+      for (const room of rooms) expect(room.w <= 6 && room.h <= 4).toBe(true)
+    }
+  })
+
+  test('a ragged wall leaves no dead end inside a room, so caverns hold no more chests than corridors earn', async () => {
+    const levels = of('caverns').map(({ world, depth }) => generate(world, depth))
+    expect(levels.filter(level => level.rooms.some(r => r.shape === 'ragged')).length / levels.length).toBeGreaterThan(0.9)
+    for (const level of levels) for (const end of analyze(level).deadEnds) expect(roomAt(level, end)).toBeUndefined()
+  })
+
+  test('a ragged cut takes only edge cells, never on or beside a middle row or column', async () => {
+    const room = { x: 3, y: 2, w: 11, h: 7, shape: 'ragged' as const }
+    const mid = { x: 8, y: 5 }
+    const cut = shapeCut(room)
+    expect(cut.length).toBeGreaterThan(0)
+    for (const c of cut) {
+      expect(c.x === room.x || c.y === room.y || c.x === room.x + room.w - 1 || c.y === room.y + room.h - 1).toBe(true)
+      expect(Math.abs(c.x - mid.x) > 1 && Math.abs(c.y - mid.y) > 1).toBe(true)
+    }
   })
 })

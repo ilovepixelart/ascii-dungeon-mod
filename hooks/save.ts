@@ -1,0 +1,88 @@
+// Saves from older versions of the mod, brought up to the current shape. Each version step is one migration.
+import type { Game, Item, Rarity } from '../types'
+import { emptyBelt } from './consumables'
+import { baseOf, repack, priceOf } from './items'
+import { FOG, SAVE_VERSION, arrive, newGame } from './world'
+
+type LegacyItem = Omit<Item, 'base' | 'crit' | 'xp' | 'rarity'> & { rarity: string; base?: string; crit?: number; xp?: number }
+
+const LEGACY_RARITY: Record<string, Rarity> = { common: 'common', enchanted: 'uncommon', forged: 'rare', legendary: 'legendary' }
+
+/** Which base an item from before bases existed most likely is, judged by its name and slot. */
+const legacyBase = (item: LegacyItem): string => {
+  const has = (word: string) => item.name.includes(word)
+  if (item.slot === 'weapon') return has('Axe') ? 'axe' : has('Dagger') ? 'dagger' : 'sword'
+  if (item.slot === 'armor') return has('Chain') ? 'chain' : has('Leather') ? 'leather' : 'tunic'
+  return { helm: 'hood', ring: 'ring', amulet: 'amulet' }[item.slot as 'helm' | 'ring' | 'amulet'] ?? 'ring'
+}
+
+/** An item from a version 2 save in the version 3 shape. It keeps its stats and stays wearable by any class. */
+export const migrateItem = (item: LegacyItem): Item => {
+  if (item.base !== undefined && item.rarity in { uncommon: 1, rare: 1, epic: 1, common: 1, legendary: 1 }) return item as Item
+  const base = baseOf(legacyBase(item))
+  return { ...item, base: base?.key ?? 'ring', w: base?.w ?? 1, h: base?.h ?? 1, rarity: LEGACY_RARITY[item.rarity] ?? 'common', crit: item.crit ?? 0, xp: item.xp ?? 0, cls: undefined }
+}
+
+/** Version 3: items move to the five tiers and the 8 x 6 bag, potions to the belt, and the hero is a Knight. */
+const toVersion3 = (g: Game): Game => {
+  const legacy = g as Game & { potions?: number }
+  const gear = Object.fromEntries(Object.entries(g.gear).map(([slot, item]) => [slot, item && migrateItem(item as LegacyItem)]))
+  const { bag, left } = repack(g.bag.map(i => migrateItem(i as LegacyItem)))
+  const potions = Math.min(9, legacy.potions ?? 0)
+  const belt = potions > 0 ? [{ kind: 'health' as const, count: potions }, ...emptyBelt().slice(1)] : emptyBelt()
+  const { potions: _, ...rest } = legacy
+  return {
+    ...rest,
+    gear,
+    bag,
+    gold: g.gold + left.reduce((sum, i) => sum + priceOf(i), 0),
+    cursor: bag.some(i => i.id === g.cursor) ? g.cursor : (bag[0]?.id ?? null),
+    cls: 'knight',
+    belt,
+    effects: { regen: 0, fury: 0, ward: 0 },
+    potionChance: 40,
+    dryKills: 0,
+  }
+}
+
+/** Fills fields a save from an older version lacks, and runs each migration it is behind on. */
+/** Each game normalized once: games are never changed in place, so the same input always gives the same output. */
+const normalized = new WeakMap<Game, Game>()
+
+export const normalize = (game: Game): Game => {
+  const known = normalized.get(game)
+  if (known !== undefined) return known
+  const g = normalizeOnce(game)
+  normalized.set(game, g)
+  normalized.set(g, g)
+  return g
+}
+
+const normalizeOnce = (game: Game): Game => {
+  const version = game.version ?? 1
+  let g: Game = { ...newGame(game.seed), ...game }
+  // Before version 2 the saved view was the old default, not a choice: it opens on pixel art.
+  if (version < 2) g = { ...g, zoom: 3 }
+  if (version < 3) g = toVersion3({ ...g, gear: game.gear ?? {}, bag: game.bag ?? [] })
+  // Version 4 added the town (`where`, `portal`): the new-game defaults spread above put an older save in the dungeon.
+  // A view that no longer exists (4 was briefly a pixel view) opens on the pixel view.
+  if (![1, 2, 3].includes(g.zoom)) g = { ...g, zoom: 3 }
+  g = { ...g, version: SAVE_VERSION }
+  const isCurrent = typeof game.world === 'number' && typeof game.y === 'number' && game.seen?.length === FOG.length
+  if (!isCurrent) return { ...g, world: g.seed, ...arrive(g.seed, g.depth), foe: null }
+  // Versions 5 and 6 rebuilt every level (6 gave rooms shapes): an older position, fog and pickups belong to a layout
+  // that is gone, so the save re-enters its depth at the new start; in town only the portal's way back moves there.
+  if (version < 6) {
+    const fresh = arrive(g.world, g.depth)
+    if (g.where === 'town') return { ...g, seen: fresh.seen, taken: fresh.taken, portal: { x: fresh.x, y: fresh.y }, foe: null }
+    return { ...g, ...fresh, foe: null }
+  }
+  return g
+}
+
+/**
+ * What a session opens on, when the game is not yet set this session (`version` 0): the saved game, or with none, a
+ * first game, on the start screen. Undefined leaves the game as it is.
+ */
+export const openingGame = (current: Game, version: number, saved: Game | undefined): Game | undefined =>
+  version !== 0 ? undefined : (saved ?? { ...current, panel: 'start' })

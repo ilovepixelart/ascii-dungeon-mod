@@ -1,0 +1,87 @@
+import { describe, expect, test } from 'claude-code/testing'
+
+import type { Foe } from '../types'
+import { apply, newGame } from './game'
+import { foeAhead, plainHero } from './fixtures'
+import { foeTurn, heroBlowOn } from './patterns'
+
+/** A foe of `glyph` beside the bare hero, 100 HP. */
+const foe = (glyph: string, over: Partial<Foe> = {}): Foe => ({ ...foeAhead(plainHero(), 1, { glyph, name: `${glyph}-foe`, hp: 100, maxHp: 100, atk: 10 }), ...over })
+
+describe("each kind's trait", () => {
+  test('a kobold at half HP drinks back 30% of its max once, and strikes no blow that turn', async () => {
+    const t = foeTurn(plainHero(), foe('k', { hp: 50 }))
+    expect([t.foe.hp, t.strikes, t.foe.used]).toEqual([80, false, true])
+    expect(t.said).toEqual(['The k-foe gulps a foul brew. +30 HP'])
+    expect(foeTurn(plainHero(), { ...t.foe, hp: 40 }).strikes).toBe(true)
+    expect(foeTurn(plainHero(), foe('k', { hp: 51 })).strikes).toBe(true)
+  })
+
+  test('an orc at 40% HP or less hits a quarter harder', async () => {
+    expect(foeTurn(plainHero(), foe('o', { hp: 40 })).times).toBe(1.25)
+    expect(foeTurn(plainHero(), foe('o', { hp: 41 })).times).toBe(1)
+  })
+
+  test('a troll knits 2% of its max HP each turn, never past full', async () => {
+    expect(foeTurn(plainHero(), foe('T', { hp: 50 })).foe.hp).toBe(52)
+    expect(foeTurn(plainHero(), foe('T', { hp: 100 })).foe.hp).toBe(100)
+  })
+
+  test("a wraith's every third blow passes through armor", async () => {
+    expect([0, 1, 2].map(turn => foeTurn(plainHero(), foe('W', { turn })).pierces)).toEqual([false, false, true])
+  })
+
+  test('a dragon draws breath on its second turn of three and breathes on the third, half again as hard; an overlord two and a half times', async () => {
+    const turns = [0, 1, 2].map(turn => foeTurn(plainHero(), foe('D', { turn })))
+    expect(turns.map(t => t.times)).toEqual([1, 1, 1.5])
+    expect(turns[1]!.said).toEqual(['The D-foe draws a deep breath...'])
+    expect(turns[2]!.said).toEqual(['The D-foe breathes fire!'])
+    expect(foeTurn(plainHero(), foe('D', { turn: 2, boss: true })).times).toBe(2.5)
+  })
+
+  test('a goblin steals only while it has not yet', async () => {
+    expect(foeTurn(plainHero(), foe('g')).steals).toBe(true)
+    expect(foeTurn(plainHero(), foe('g', { stolen: 0 })).steals).toBe(false)
+  })
+
+  test('a rat dodges about one blow in five; a skeleton blunts each by 1, never below 1; a wraith overlord fades every fourth turn', async () => {
+    const g = plainHero()
+    const dodged = Array.from({ length: 1000 }, () => heroBlowOn(g, foe('r'), 5).dmg === 0).filter(Boolean).length
+    expect(dodged).toBeGreaterThan(150)
+    expect(dodged).toBeLessThan(250)
+    expect([heroBlowOn(g, foe('s'), 5).dmg, heroBlowOn(g, foe('s'), 1).dmg]).toEqual([4, 1])
+    expect([0, 1, 2, 3, 4].map(turn => heroBlowOn(g, foe('W', { boss: true, turn }), 5).dmg)).toEqual([5, 5, 5, 0, 5])
+    expect(heroBlowOn(g, foe('W', { turn: 3 }), 5).dmg).toBe(5)
+  })
+})
+
+describe('the traits in a fight', () => {
+  test("a goblin's first landed blow takes 2 gold a depth, given back with its gold when it falls", async () => {
+    const g = { ...plainHero(), depth: 3, gold: 50, foe: foe('g', { opened: true }) }
+    const robbed = apply(g, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect([robbed.gold, robbed.foe?.stolen]).toEqual([44, 6])
+    expect(robbed.log).toContain('The g-foe snatches 6 gold!')
+    const slain = apply({ ...robbed, foe: { ...robbed.foe!, hp: 1 } }, { kind: 'attack' })
+    // The same kill, the same dice, with nothing stolen: exactly the 6 less.
+    const honest = apply({ ...robbed, foe: { ...robbed.foe!, hp: 1, stolen: 0 } }, { kind: 'attack' })
+    expect(slain.gold - honest.gold).toBe(6)
+  })
+
+  test('a kobold drinking its brew strikes no blow that turn', async () => {
+    const g = plainHero()
+    const after = apply({ ...g, foe: foe('k', { hp: 50, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect([after.hp, after.foe?.hp]).toEqual([g.hp, 80])
+  })
+
+  test("a wraith's chill ignores the hero's armor; a plain blow does not", async () => {
+    const armored = { ...plainHero(), gear: { ...plainHero().gear, armor: { ...plainHero().gear.weapon!, slot: 'armor' as const, atk: 0, def: 4, id: 901 } } }
+    const hit = (turn: number) => armored.hp - apply({ ...armored, foe: foe('W', { turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
+    expect([hit(0), hit(2)]).toEqual([6, 10])
+  })
+
+  test('a dragon breathes for half again its attack', async () => {
+    const g = plainHero()
+    const hit = (turn: number) => g.hp - apply({ ...g, hp: 99, maxHp: 99, foe: foe('D', { turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp - (g.hp - 99)
+    expect([hit(0), hit(2)]).toEqual([10, 15])
+  })
+})

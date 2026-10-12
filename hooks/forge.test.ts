@@ -1,0 +1,111 @@
+import { describe, expect, test } from 'claude-code/testing'
+
+import type { Game, Item, Rarity, Slot } from '../types'
+import { CURSOR, GOLD_INK } from './pieces'
+import { WORN_SLOTS } from './inventory'
+import { plainItem } from './items'
+import { BODY_TOP, CLOSE_BOX } from './window'
+import type { Gesture } from './window'
+import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
+import { newGame } from './world'
+
+const knight = (gold: number): Game => ({ ...newGame(1, 'knight'), gold })
+const wear = (g: Game, slot: Slot, base: string, rarity: Rarity, over: Partial<Item> = {}): Game => ({ ...g, gear: { ...g.gear, [slot]: { ...plainItem(g, base, rarity), x: 0, y: 0, ...over } } })
+const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
+const onSlot = (slot: Slot) => {
+  const [x, y, w, h] = WORN_SLOTS[slot]
+  return tap(x + Math.floor(w / 2), BODY_TOP + y + Math.floor(h / 2))
+}
+const card = (g: Game, slot: Slot | null) => forgeOverlay(g, { slot })[0]!.lines.map(l => l.map(r => r.text).join(''))
+/** The gold key letters on the work side, top to bottom: one a ready button. */
+const readyKeys = (g: Game, slot: Slot | null) => {
+  const px = forgePixels(g, { slot })
+  // Each letter's first row: a gold row with no gold row right above it.
+  const gold = (y: number) => px[y]?.slice(47, 54).includes(GOLD_INK) === true
+  const rows: number[] = []
+  for (let y = BODY_TOP; y < px.length; y += 1) if (gold(y) && !gold(y - 1)) rows.push(y)
+  return rows
+}
+
+describe('the piece chosen', () => {
+  test('is the first worn until another is clicked; a piece no longer worn gives way to the first', async () => {
+    const g = knight(0)
+    expect(chosenSlot(g, FORGE_UI_IDLE)).toBe('weapon')
+    expect(forgeGesture(g, FORGE_UI_IDLE, onSlot('armor')).ui).toEqual({ slot: 'armor' })
+    expect(chosenSlot(g, { slot: 'armor' })).toBe('armor')
+    expect(chosenSlot(g, { slot: 'ring' })).toBe('weapon')
+    expect(chosenSlot({ ...g, gear: {} }, FORGE_UI_IDLE)).toBeUndefined()
+  })
+
+  test('an empty slot is not chosen', async () => {
+    const g = knight(0)
+    expect(forgeGesture(g, { slot: 'armor' }, onSlot('ring')).ui).toEqual({ slot: 'armor' })
+  })
+
+  test('is framed white just outside its frame; the others are not', async () => {
+    const g = knight(0)
+    const px = forgePixels(g, { slot: 'armor' })
+    const edge = (slot: Slot) => {
+      const [x, y] = WORN_SLOTS[slot]
+      return px[BODY_TOP + y - 2]?.[x + 2]
+    }
+    expect(edge('armor')).toBe(CURSOR)
+    expect(edge('weapon')).not.toBe(CURSOR)
+  })
+
+  test('the step key goes through the worn pieces in slot order and wraps', async () => {
+    const g = knight(0)
+    const worn = (['weapon', 'offhand', 'helm', 'armor', 'boots', 'ring', 'amulet'] as const).filter(s => g.gear[s] !== undefined)
+    let ui = FORGE_UI_IDLE
+    const seen: (Slot | null)[] = []
+    for (let i = 0; i < worn.length + 1; i += 1) {
+      ui = nextWorn(g, ui)
+      seen.push(ui.slot)
+    }
+    expect(seen).toEqual([...worn.slice(1), worn[0]!, worn[1] ?? worn[0]!])
+  })
+})
+
+describe('the jobs', () => {
+  test('tempering: its price when it can be paid, else short of gold; never past the limit', async () => {
+    const g = knight(60)
+    const sword = g.gear.weapon!
+    expect(whyNotTemper(g, sword)).toBeUndefined()
+    expect(whyNotTemper({ ...g, gold: 59 }, sword)).toBe('not enough gold')
+    expect(whyNotTemper(g, { ...sword, temper: 3 })).toBe('tempered as far as it goes')
+  })
+
+  test('reforging: not a Common, not a Legendary, and not short of gold', async () => {
+    const g = knight(1000)
+    expect(whyNotReforge(g, g.gear.weapon!)).toBe('a Common has no affixes')
+    const rare = wear(g, 'helm', 'steelHelm', 'rare').gear.helm!
+    expect(whyNotReforge(g, rare)).toBeUndefined()
+    expect(whyNotReforge({ ...g, gold: 0 }, rare)).toBe('not enough gold')
+    expect(whyNotReforge(g, wear(g, 'ring', 'ring', 'legendary').gear.ring!)).toBe('a Legendary stays as it was made')
+  })
+
+  test('the card ends with what each job costs, or why it cannot be done', async () => {
+    // A new knight's Common sword: 60 to temper; nothing to reforge.
+    expect(card(knight(0), 'weapon').slice(-2)).toEqual(['Temper 60  not enough gold', 'Reforge a Common has no affixes'])
+    expect(card(knight(100), 'weapon').slice(-2)).toEqual(['Temper 60', 'Reforge a Common has no affixes'])
+    expect(card(wear(knight(0), 'weapon', 'sword', 'common', { temper: 3 }), 'weapon').at(-2)).toBe('Temper tempered as far as it goes')
+    expect(card({ ...knight(0), gear: {} }, null)).toEqual(['You wear nothing for the smith to work on.'])
+  })
+
+  test('a click on a job that can be done does it on the chosen piece; one that cannot does nothing', async () => {
+    const g = wear(knight(1000), 'helm', 'steelHelm', 'rare')
+    const [temperY, reforgeY] = readyKeys(g, 'helm')
+    expect(forgeGesture(g, { slot: 'helm' }, tap(50, temperY! + 2)).actions).toEqual([{ kind: 'temper', slot: 'helm' }])
+    expect(forgeGesture(g, { slot: 'helm' }, tap(50, reforgeY! + 2)).actions).toEqual([{ kind: 'reforge', slot: 'helm' }])
+    const poor = { ...g, gold: 0 }
+    expect(readyKeys(poor, 'helm')).toEqual([])
+    expect(forgeGesture(poor, { slot: 'helm' }, tap(50, temperY! + 2)).actions).toEqual([])
+    expect(forgeGesture(poor, { slot: 'helm' }, tap(50, reforgeY! + 2)).actions).toEqual([])
+  })
+
+  test('the close box closes the window; a drag does nothing', async () => {
+    const [x, y] = CLOSE_BOX
+    expect(forgeGesture(knight(0), { slot: 'armor' }, tap(x + 2, y + 2))).toEqual({ ui: FORGE_UI_IDLE, actions: [{ kind: 'panel', panel: 'forge' }] })
+    expect(forgeGesture(knight(0), FORGE_UI_IDLE, { type: 'drag', from: { x: 5, y: 15 }, at: { x: 9, y: 15 } }).actions).toEqual([])
+  })
+})

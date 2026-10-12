@@ -1,0 +1,20 @@
+{
+  "name": "ascii-dungeon",
+  "version": "0.2.0",
+  "description": "Turns the session's coding activity into an interactive ASCII dungeon crawler pane",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "sound": {
+      "type": "boolean",
+      "title": "Sound",
+      "description": "Play the game's sound effects: hits, kills, gold, chests, level-ups",
+      "default": true
+    },
+    "music": {
+      "type": "boolean",
+      "title": "Music",
+      "description": "Play the town's tune while the hero is in town",
+      "default": true
+    }
+  }
+}

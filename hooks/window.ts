@@ -1,0 +1,150 @@
+// The pixel window every menu is drawn in: the title bar (title, gold, close box), section labels, the body below,
+// and text boxes laid over it where they hide the least. Pure: a window says what it holds, this draws and places it.
+import type { Run } from './game'
+import { GRID, art, canvas, digits, fill, frame, put } from './canvas'
+import type { Canvas } from './canvas'
+import { textMask } from './pixelart'
+import type { Pos } from './map'
+import { coin } from './pieces'
+
+/** Every window is this many pixels (and columns) wide: one pane width shows them all, or none. */
+export const WINDOW_W = 105
+/** The title bar's height, the labels' row under it; the body starts at BODY_TOP. */
+export const HEAD_H = 11
+export const LABEL_Y = HEAD_H + 2
+export const BODY_TOP = HEAD_H + 9
+/** Without labels the body starts just under the title bar, on an even row so text boxes stay on whole cells. */
+const BARE_TOP = HEAD_H + 3
+export const TITLE_X = 3
+export const TITLE_Y = 3
+export const TITLE_INK = '#e8e4dc'
+export const LABEL_INK = '#8a8494'
+const HEAD_BG = '#15131b'
+const GOLD_INK = '#ffd34d'
+/** The gold this far left of the window's right edge. */
+const GOLD_FROM_RIGHT = 41
+/** The close box (x, y, w, h) at the title bar's right end of a window `width` wide. */
+export const closeBoxOf = (width: number) => [width - 10, 1, 9, 8] as const
+export const CLOSE_BOX = closeBoxOf(WINDOW_W)
+export const CLOSE_INK = '#ff5a4f'
+const CLOSE_BG = '#2a1e24'
+const CLOSE_EDGE = '#6b6258'
+/** A text box's fill: the click layer writes its text on the same color, inside the frame. */
+export const POPOVER_BG = '#0e0d13'
+
+/** A rectangle in window pixels. */
+export type Rect = { x: number; y: number; w: number; h: number }
+export type Label = { text: string; x: number }
+/** What a window shows around its body: its title, the gold when it matters there, and a label over each section. */
+export type Chrome = { title: string; gold?: number; labels: readonly Label[] }
+
+export const isInside = (p: Pos, x: number, y: number, w: number, h: number) => p.x >= x && p.x < x + w && p.y >= y && p.y < y + h
+
+/** Words in the pixel font, their top-left at x, y. */
+export const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>
+  textMask(text).forEach((row, dy) => [...row].forEach((k, dx) => k === '#' && put(c, x + dx, y + dy, ink)))
+
+/** Where a window's body starts: below its labels, or just under the title bar when it has none. */
+export const bodyTop = (chrome: Chrome) => (chrome.labels.length > 0 ? BODY_TOP : BARE_TOP)
+
+/** A window: its title bar and labels, then the body's pixel rows laid in at `bodyTop`, as tall as the body. */
+export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[], width = WINDOW_W): Canvas => {
+  const top = bodyTop(chrome)
+  const c = canvas(width, top + body.length)
+  // Clear of the title in a narrow window.
+  const GOLD_X = Math.max(TITLE_X + (textMask(chrome.title)[0]?.length ?? 0) + 5, width - GOLD_FROM_RIGHT)
+  fill(c, 0, 0, width, HEAD_H - 1, HEAD_BG)
+  fill(c, 0, HEAD_H - 1, width, 1, GRID)
+  word(c, chrome.title, TITLE_X, TITLE_Y, TITLE_INK)
+  if (chrome.gold !== undefined) {
+    coin(c, GOLD_X, TITLE_Y)
+    digits(c, String(chrome.gold), GOLD_X + 5 + String(chrome.gold).length * 4, TITLE_Y + 4, GOLD_INK)
+  }
+  const [cx, cy, cw, ch] = closeBoxOf(width)
+  fill(c, cx, cy, cw, ch, CLOSE_BG)
+  frame(c, cx, cy, cw, ch, CLOSE_EDGE)
+  art(c, ['w...w', '.w.w.', '..w..', '.w.w.', 'w...w'], cx + 2, cy + 1, CLOSE_INK)
+  for (const l of chrome.labels) word(c, l.text, l.x, LABEL_Y, LABEL_INK)
+  body.forEach((row, y) => row.forEach((p, x) => put(c, x, top + y, p)))
+  return c
+}
+
+/** A text box over the window, in cells from its top-left (one pixel across, two down), and its frame's color. */
+export type OverlayBox<Role extends string = string> = { role: Role; x: number; y: number; w: number; h: number; border: string; lines: Run[][] }
+
+/** A text box's frame in pixels: a 1 px frame in its color round the dark fill, on the cells the box covers. */
+export const drawBox = (c: Canvas, b: Pick<OverlayBox, 'x' | 'y' | 'w' | 'h' | 'border'>) => {
+  fill(c, b.x, b.y * 2, b.w, b.h * 2, POPOVER_BG)
+  frame(c, b.x, b.y * 2, b.w, b.h * 2, b.border)
+}
+
+const textWidth = (line: Run[]) => line.reduce((n, r) => n + r.text.length, 0)
+
+/** A box sized to its lines: two cells of frame and padding each side, one row of frame above and below. */
+export const boxShape = <Role extends string>(role: Role, lines: Run[][], border: string): OverlayBox<Role> =>
+  ({ role, x: 0, y: 0, w: Math.max(...lines.map(textWidth)) + 4, h: lines.length + 2, border, lines })
+
+/** What would be hidden under the window: rectangles, each pixel of one weighing `weight`. */
+export type Weighted = { rect: Rect; weight: number }
+
+/** What a box would hide, as a summed-area table over the window's cells; the result is the weight under a box. */
+export const coverage = (rows: number, weighted: readonly Weighted[], width = WINDOW_W) => {
+  const weight = new Float64Array(width * rows)
+  for (const { rect: r, weight: k } of weighted) {
+    for (let py = Math.max(0, r.y); py < Math.min(rows * 2, r.y + r.h); py += 1) {
+      for (let px = Math.max(0, r.x); px < Math.min(width, r.x + r.w); px += 1) {
+        const at = Math.floor(py / 2) * width + px
+        weight[at] = weight[at]! + k
+      }
+    }
+  }
+  const W = width + 1
+  const sum = new Float64Array(W * (rows + 1))
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < width; x += 1) sum[(y + 1) * W + x + 1] = weight[y * width + x]! + sum[y * W + x + 1]! + sum[(y + 1) * W + x]! - sum[y * W + x]!
+  }
+  const at = (x: number, y: number) => sum[y * W + x]!
+  return (x: number, y: number, w: number, h: number) => at(x + w, y + h) - at(x, y + h) - at(x + w, y) + at(x, y)
+}
+
+/**
+ * Where a box goes: of all the places it fits in the window's `rows` without overlapping `others`, the one hiding the
+ * least, nearest `near` among those.
+ */
+export const place = (cost: ReturnType<typeof coverage>, rows: number, others: readonly OverlayBox[], near: Rect, w: number, h: number, width = WINDOW_W): Pos => {
+  const cx = near.x + near.w / 2
+  const cy = near.y + near.h / 2
+  let best: { x: number; y: number; score: number } | null = null
+  for (let y = 0; y + h <= rows; y += 1) {
+    for (let x = 0; x + w <= width; x += 1) {
+      if (others.some(o => x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + h)) continue
+      const away = Math.hypot(x + w / 2 - cx, (y + h / 2) * 2 - cy)
+      const score = cost(x, y, w, h) * 1000 + away
+      if (best === null || score < best.score) best = { x, y, score }
+    }
+  }
+  return best ?? { x: 0, y: 0 }
+}
+
+/** A gesture in the click layer's cells, to the fraction: a drag still held, or a release (a click when it barely moved). */
+export type Gesture = { type: 'drag'; from: Pos; at: Pos } | { type: 'release'; from: Pos; at: Pos; button: 'left' | 'middle' | 'right' }
+/** Moves under this many pixels are a click, not a drag. */
+export const CLICK_SLOP = 2
+/** A point in cells as the window pixel under it. */
+export const pixel = (p: Pos): Pos => ({ x: Math.floor(p.x), y: Math.floor(p.y * 2) })
+
+/** Covering what a card is about costs this much against one pixel of anything else: it is never worth it. */
+export const KEEP = 100000
+
+/**
+ * A card near what it is about, never on it, where it hides the least of what the window shows (`shown`); its menu,
+ * when open, under it the same way. `rows` is the window's height in cells.
+ */
+export const cardWithMenu = <Role extends string>(rows: number, shown: readonly Weighted[], near: Rect, card: OverlayBox<Role>, menu?: OverlayBox<Role>, width = WINDOW_W): OverlayBox<Role>[] => {
+  const cost = coverage(rows, [...shown, { rect: near, weight: KEEP }], width)
+  const at = place(cost, rows, [], near, card.w, card.h, width)
+  const placed = { ...card, x: at.x, y: at.y }
+  if (menu === undefined) return [placed]
+  const under = place(cost, rows, [placed], { x: placed.x, y: (placed.y + placed.h) * 2, w: placed.w, h: 2 }, menu.w, menu.h, width)
+  return [placed, { ...menu, x: under.x, y: under.y }]
+}

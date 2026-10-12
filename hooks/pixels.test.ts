@@ -234,6 +234,77 @@ describe('walking between tiles', () => {
   })
 })
 
+describe('the kept ground layer', () => {
+  const w = 200
+  const h = 88
+  /** The frame as a layer drawn afresh would give it: a game on another depth first, so nothing of this one is kept. */
+  const fresh = (g: Game, opts: Parameters<typeof frameOf>[3]) => {
+    frameOf({ ...g, depth: g.depth + 1 }, w, h, opts)
+    return frameOf({ ...g }, w, h, opts)
+  }
+  const differ = (a: Uint32Array, b: Uint32Array) => a.findIndex((n, i) => n !== b[i])
+
+  test('patched tile by tile, every frame of a long walk is the frame drawn afresh', { timeoutMs: 20000 }, async () => {
+    const g = { ...newGame(21), seen: '1'.repeat(64 * 18) }
+    const route = benchRoute(g, 40)
+    let cam = tileCamera(null, walkPosition(route, 0), w, h)
+    for (let f = 0; f < (route.length - 1) * FRAMES_PER_TILE; f += 1) {
+      const heroAt = walkPosition(route, f)
+      cam = tileCamera(cam, heroAt, w, h)
+      const opts = { heroAt, camera: cam, stride: isStrideFrame(f) }
+      const game = walkingGame(g, g, route, f)
+      const patched = frameOf(game, w, h, opts)
+      expect(differ(patched, fresh(game, opts))).toBe(-1)
+      // The layer patched from goes on from this frame, as in play.
+      frameOf(game, w, h, opts)
+    }
+  })
+
+  test('patched tile by tile, a game played (fog lifting, pickups taken, a fight) is drawn as afresh', { timeoutMs: 20000 }, async () => {
+    let g = newGame(5)
+    for (let i = 0; i < 40; i += 1) {
+      g = apply(g, i % 7 === 3 ? { kind: 'summon', name: 'x.ts' } : g.foe !== null ? { kind: 'attack' } : { kind: 'explore', steps: 2 })
+      for (const opts of [{}, { bob: true }]) {
+        const patched = frameOf(g, w, h, opts)
+        expect(differ(patched, fresh(g, opts))).toBe(-1)
+        frameOf(g, w, h, opts)
+      }
+    }
+  })
+
+  test('a hero standing still who takes off his kit is drawn without it, as afresh', async () => {
+    const g = newGame(5)
+    const bare = { ...g, gear: {} }
+    const kitted = frameOf(g, w, h, {})
+    const patched = frameOf(bare, w, h, {})
+    expect(differ(kitted, patched)).not.toBe(-1)
+    expect(differ(patched, fresh(bare, {}))).toBe(-1)
+  })
+})
+
+describe('the palette a frame sends', () => {
+  // The host's Raster paints 1024 color pairs exactly and the rest as their nearest; it rounds each channel to a step of 17.
+  const snap = (n: number) => [16, 8, 0].reduce((out, s) => out | (Math.round(((n >>> s) & 255) / 17) * 17 << s), 0)
+  const pairsIn = (cells: string) => {
+    const words = new Uint32Array(Uint8Array.from(atob(cells), c => c.charCodeAt(0)).buffer)
+    const pairs = new Set<number>()
+    for (let i = 0; i < words.length; i += 3) pairs.add(snap(words[i + 1]!) * 0x1000000 + snap(words[i + 2]!))
+    return pairs.size
+  }
+
+  test('a wide pane of any theme, or the town, stays well under the 1024 color pairs the host paints exactly', async () => {
+    const most = Math.max(
+      ...[1, 3, 7, 12].map(depth => {
+        const g = { ...newGame(9), depth, seen: '1'.repeat(64 * 18) }
+        return pairsIn(pixelMap(g, 300, 72))
+      }),
+      pairsIn(pixelMap(apply(newGame(4), { kind: 'portal' }), 300, 72)),
+    )
+    expect(most).toBeLessThan(768)
+    expect(most).toBeGreaterThan(50)
+  })
+})
+
 describe('the camera', () => {
   const w = 96
   const h = 48
@@ -255,16 +326,23 @@ describe('the camera', () => {
     expect(tileCamera(null, { x: 43, y: 27 }, w, h)).toEqual({ x: 40, y: 24 })
   })
 
-  test('the view camera holds until the hero is half a tile past the middle, then moves exactly one tile', async () => {
+  test('the view camera holds until the hero is half a tile past the dead zone, then pages to leave him half a zone behind the middle', async () => {
+    // 96 by 48: a dead zone of 19 by 9 pixels, so it holds to 22 px off the middle across and 12 down.
     const cam = { x: 304, y: 120 }
-    const zone = deadZone(w, h)
-    expect(tileCamera(cam, { x: 304 + zone.x, y: 120 }, w, h)).toEqual(cam)
-    expect(tileCamera(cam, { x: 304 + zone.x + 3, y: 120 }, w, h)).toEqual(cam)
-    expect(tileCamera(cam, { x: 304 + zone.x + 4, y: 120 }, w, h)).toEqual({ x: 312, y: 120 })
-    expect(tileCamera(cam, { x: 304, y: 120 - zone.y - 4 }, w, h)).toEqual({ x: 304, y: 112 })
+    expect(deadZone(w, h)).toEqual({ x: 19, y: 9 })
+    expect(tileCamera(cam, { x: 326, y: 120 }, w, h)).toEqual(cam)
+    // 327 is 23 off: the camera goes to 327 + 9 = 336, a tile line.
+    expect(tileCamera(cam, { x: 327, y: 120 }, w, h)).toEqual({ x: 336, y: 120 })
+    // 107 is 13 above: 107 - 4 = 103, the nearest tile line 104.
+    expect(tileCamera(cam, { x: 304, y: 107 }, w, h)).toEqual({ x: 304, y: 104 })
   })
 
-  test('over a long walk the view camera only ever moves a whole tile at a time and keeps the hero near the middle', async () => {
+  test('after a jump a step back holds the view still', async () => {
+    const paged = tileCamera({ x: 304, y: 120 }, { x: 327, y: 120 }, w, h)
+    expect(tileCamera(paged, { x: 327 - PX, y: 120 }, w, h)).toEqual(paged)
+  })
+
+  test('over a long walk the view camera jumps seldom, on tile lines, at least a dead zone at a time, keeping the hero in view', async () => {
     const g = { ...newGame(21), seen: '1'.repeat(64 * 18) }
     const route = benchRoute(g, 60)
     const zone = deadZone(w, h)
@@ -273,13 +351,16 @@ describe('the camera', () => {
     for (let f = 1; f <= 60 * FRAMES_PER_TILE; f += 1) {
       const hero = walkPosition(route, f)
       const next = tileCamera(cam, hero, w, h)
-      expect([Math.abs(next.x - cam.x), Math.abs(next.y - cam.y)].every(d => d === 0 || d === PX)).toBe(true)
+      const [dx, dy] = [Math.abs(next.x - cam.x), Math.abs(next.y - cam.y)]
+      expect((dx === 0 || dx >= zone.x) && (dy === 0 || dy >= zone.y)).toBe(true)
       expect(next.x % PX === 0 && next.y % PX === 0).toBe(true)
-      expect(Math.abs(hero.x - next.x) <= zone.x + PX / 2 && Math.abs(hero.y - next.y) <= zone.y + PX / 2).toBe(true)
-      if (next.x !== cam.x || next.y !== cam.y) moves += 1
+      expect(Math.abs(hero.x - next.x) < zone.x + PX / 2 && Math.abs(hero.y - next.y) < zone.y + PX / 2).toBe(true)
+      if (dx !== 0 || dy !== 0) moves += 1
       cam = next
     }
-    expect(moves).toBeGreaterThan(3)
+    // A camera a tile at a time moved 54 times on this walk in this view; paging, under half as often.
+    expect(moves).toBeGreaterThan(0)
+    expect(moves).toBeLessThan(27)
   })
 
   test('with the camera held, a step leaves the map away from the hero where it was', async () => {

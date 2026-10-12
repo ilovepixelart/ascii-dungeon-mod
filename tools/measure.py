@@ -249,6 +249,10 @@ def main():
     ap.add_argument("--seconds", type=float, default=8)
     ap.add_argument("--cwd", default=os.getcwd())
     ap.add_argument(
+        "--chat",
+        help="a prompt sent to the model as the bench walk starts, so its reply streams beside the pane while it plays",
+    )
+    ap.add_argument(
         "--screen", help="write the session's text here, for looking at what happened"
     )
     ap.add_argument(
@@ -284,6 +288,12 @@ def main():
                 with open(args.screen, "w") as f:
                     f.write(rec.text())
             return
+        if args.chat:
+            time.sleep(0.5)
+            for ch in args.chat:
+                os.write(fd, ch.encode())
+                time.sleep(0.01)
+            os.write(fd, b"\r")
         start = time.perf_counter()
         cpu0 = cpu_seconds(pid)
         time.sleep(args.seconds)
@@ -299,7 +309,7 @@ def main():
             return
         rec.quiet_for(1.5, 10)
         report = re.search(
-            r"\d+ ticks, .*?Whole-pane redraws: .*? ms\.", rec.text(mark)
+            r"\d+ ticks, .*?Whole-pane redraws: .*? ms\.(?: Drawing the map: .*? max .*? ms\.)?", rec.text(mark)
         )
         if args.screen:
             with open(args.screen, "w") as f:

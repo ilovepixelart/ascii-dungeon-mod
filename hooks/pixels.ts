@@ -173,9 +173,12 @@ export const themed = (n: number, theme: Theme) => {
   return theme === 'crypt' ? n : (clamp(((n >> 16) & 0xff) * r) << 16) | (clamp(((n >> 8) & 0xff) * g) << 8) | clamp((n & 0xff) * b)
 }
 
-const groundCache = new Map<string, Uint32Array>()
+const groundCache = new Map<number, Uint32Array>()
+const TERRAIN_KINDS = Object.keys(TERRAIN) as (keyof typeof TERRAIN)[]
+const THEME_ORDER: readonly Theme[] = ['crypt', 'flooded', 'forge']
 const groundTexture = (kind: keyof typeof TERRAIN, p: Pos, theme: Theme = 'crypt') => {
-  const key = `${kind}:${p.x}:${p.y}:${theme}`
+  // A number for the kind, the cell (one tile of room each way past the map) and the theme.
+  const key = ((((p.y + 1) * (MAP_W + 2) + p.x + 1) * TERRAIN_KINDS.length + TERRAIN_KINDS.indexOf(kind)) * THEME_ORDER.length) + THEME_ORDER.indexOf(theme)
   let tex = groundCache.get(key)
   if (tex === undefined) {
     tex = new Uint32Array(PX * PX)
@@ -229,17 +232,17 @@ export const followCamera = (camera: Pos, hero: Pos, width: number, height: numb
 }
 
 /**
- * The view's camera: it moves only in whole tiles, one at a time, once the hero is half a tile past the middle
- * (`followCamera` rounded to a tile line); `null` starts it on the tile line nearest the hero. Scrolling a pixel or two a
- * frame changes almost every cell on screen, more than the host gets out to the terminal in a frame; a tile at a time
- * leaves the frames between jumps changing only around the hero.
+ * The view's camera: it holds while the hero is within the dead zone and half a tile, then pages: it jumps on a tile
+ * line ahead of him, leaving him half a zone behind the middle, so he crosses a zone and a half before the next jump
+ * and a step back does not jump it back. `null` starts it on the tile line nearest the hero. Every cell under a moving
+ * camera changes: a tile at a time the bench walk jumped on 34 of 159 frames, 87% of its bytes; paging, on 5.
  */
 export const tileCamera = (camera: Pos | null, hero: Pos, width: number, height: number): Pos => {
   if (camera === null) return { x: Math.round(hero.x / PX) * PX, y: Math.round(hero.y / PX) * PX }
-  const pulled = followCamera(camera, hero, width, height)
-  // Whole tiles toward the pull, a pull of half a tile or more counting as one, the same either way.
-  const step = (c: number, p: number) => c + Math.sign(p - c) * Math.floor((Math.abs(p - c) + PX / 2) / PX) * PX
-  return { x: step(camera.x, pulled.x), y: step(camera.y, pulled.y) }
+  const zone = deadZone(width, height)
+  const page = (c: number, h: number, half: number) =>
+    Math.abs(h - c) < half + PX / 2 ? c : Math.round((h + Math.sign(h - c) * Math.floor(half / 2)) / PX) * PX
+  return { x: page(camera.x, hero.x, zone.x), y: page(camera.y, hero.y, zone.y) }
 }
 
 /** A tile takes 4 frames: the hero moves exactly PX / 4 = 2 pixels every frame, never standing still or jumping. */
@@ -351,23 +354,45 @@ type TileInfo = {
   rock: { left: boolean; right: boolean; up: boolean; down: boolean }
 }
 
+/** What never changes about a cell of a level: which sides touch rock, and its floor texture with any decal on it. */
+type Cell = { rock: TileInfo['rock']; floor: Uint32Array }
+const cellsOf = new WeakMap<Level, { world: number; depth: number; cells: Cell[] }>()
+const cellOf = (g: Game, level: Level, tx: number, ty: number): Cell => {
+  let known = cellsOf.get(level)
+  if (known === undefined || known.world !== g.world || known.depth !== g.depth) {
+    known = { world: g.world, depth: g.depth, cells: [] }
+    cellsOf.set(level, known)
+  }
+  const id = (ty + 1) * (MAP_W + 2) + tx + 1
+  const cached = known.cells[id]
+  if (cached !== undefined) return cached
+  const p = { x: tx, y: ty }
+  const isRock = (dx: number, dy: number) => !isFloor(level.tiles, { x: tx + dx, y: ty + dy })
+  const cell = {
+    rock: { left: isRock(-1, 0), right: isRock(1, 0), up: isRock(0, -1), down: isRock(0, 1) },
+    floor: withDecal(groundTexture('floor', p, themeOf(g.depth)), decalAt(g.world, g.depth, level, p)),
+  }
+  known.cells[id] = cell
+  return cell
+}
+
 const tileInfo = (s: Scene, tx: number, ty: number): TileInfo => {
   const id = ty * MAP_W + tx
   const cached = s.tiles.get(id)
   if (cached !== undefined) return cached
   const p = { x: tx, y: ty }
-  const tile = tileAt(s.g, s.level, s.visible, p)
+  const tile = tileAt(s.g, s.level, s.visible, p, false)
   const isForeground = tile.occupant !== undefined && !(tile.occupant.kind === 'thing' && tile.occupant.glyph === '>') && !(s.isHeroMoved && tile.occupant.kind === 'hero')
   const kind = terrainOf(s.level, tile, p)
-  const isRock = (dx: number, dy: number) => !isFloor(s.level.tiles, { x: tx + dx, y: ty + dy })
+  const cell = cellOf(s.g, s.level, tx, ty)
   const info: TileInfo = {
     tile,
     isForeground,
     isShown: tile.surface !== 'unseen' && tile.surface !== 'void',
     art: isForeground ? artOf(s.g, tile) : undefined,
     kind,
-    tex: withDecal(groundTexture(kind, p, themeOf(s.g.depth)), kind === 'floor' ? decalAt(s.g.world, s.g.depth, s.level, p) : undefined),
-    rock: { left: isRock(-1, 0), right: isRock(1, 0), up: isRock(0, -1), down: isRock(0, 1) },
+    tex: kind === 'floor' ? cell.floor : groundTexture(kind, p, themeOf(s.g.depth)),
+    rock: cell.rock,
   }
   s.tiles.set(id, info)
   return info
@@ -425,17 +450,53 @@ const wallLight = (s: Scene, info: TileInfo, tx: number, ty: number, lx: number,
 
 /** Room around the window a kept layer covers: a tile each way, as far as the camera can move while the torch holds. */
 const LAYER_MARGIN = PX
-type Layer = { g: Game; torchX: number; torchY: number; isLit: boolean; isHeroMoved: boolean; lights: readonly Pos[]; x: number; y: number; w: number; h: number; px: Uint32Array }
+/** A layer's pixels, and each tile's key (`tileKey`) as it was drawn, by its place counted from one tile outside the map. */
+type Layer = { g: Game; level: Level; torchX: number; torchY: number; isLit: boolean; isHeroMoved: boolean; lights: readonly Pos[]; x: number; y: number; w: number; h: number; px: Uint32Array; keys: Map<number, string> }
 /** The last layer drawn with the hero in it and the last without, so the bob's two phases each keep theirs. */
 const lastLayers = new Map<boolean, Layer>()
+let layerBuilds = 0
+/** How many times the ground layer has been drawn afresh, for measuring what a frame that rebuilds it costs. */
+export const layerBuildCount = () => layerBuilds
+
+/** A number for each piece of art: art is kept, a look or a kind one array, so the same art is the same number. */
+const artIds = new WeakMap<readonly string[], number>()
+let artCount = 0
+const artId = (art: readonly string[] | undefined) => {
+  if (art === undefined) return 0
+  const known = artIds.get(art)
+  if (known !== undefined) return known
+  artCount += 1
+  artIds.set(art, artCount)
+  return artCount
+}
+
+/** Everything a tile's pixels are worked out from in a layer, so a tile whose key is unchanged keeps its pixels. */
+const tileKey = (s: Scene, tx: number, ty: number) => {
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return ''
+  const info = tileInfo(s, tx, ty)
+  const { tile } = info
+  const o = tile.occupant
+  // A wall's face reads the torch's place while a lit floor touches it; with none lit, its face is the floor light alone.
+  const face = info.kind === 'wall' && tile.isVisible && s.isLit ? wallKey(s, info, tx, ty) : ''
+  const occupant = o === undefined ? '' : `${o.kind}${o.glyph}`
+  return `${tile.surface}${tile.isVisible ? 1 : 0}|${occupant}|${artId(info.art)}|${lightOfTile(s, tx, ty)}|${face}`
+}
+
+const wallKey = (s: Scene, info: TileInfo, tx: number, ty: number) => {
+  const sides = [[-1, 0, info.rock.left], [1, 0, info.rock.right], [0, -1, info.rock.up], [0, 1, info.rock.down]] as const
+  const lit = sides.map(([dx, dy, isRock]) => (isRock ? 0 : torch(Math.hypot((tx + dx) * PX + PX / 2 - s.hero.x, (ty + dy) * PX + PX / 2 - s.hero.y) / PX)))
+  return lit.some(l => l > 0) ? `${lit.join(',')}@${s.hero.x},${s.hero.y}` : '-'
+}
 
 /**
- * The lit world around a window, kept while nothing that colors it changes: the same game object (games are never
- * changed in place), the torch on the same tile, the same light. A window inside it is cut from it; else it is redrawn.
+ * The lit world around a window. Kept whole while nothing that colors it changes: the same game object (games are
+ * never changed in place), the torch on the same tile, the same light, the window inside it. Otherwise it is drawn
+ * again tile by tile: a tile whose key (`tileKey`) is what it was, inside the last layer, keeps its pixels; only the
+ * rest are worked out afresh, so a step that moves the torch or the fog redraws only the tiles they touch.
  */
 const worldLayer = (g: Game, level: Level, torchAt: Pos, isLit: boolean, isHeroMoved: boolean, origin: Pos, width: number, height: number, torches: readonly Pos[]): Layer => {
   const l = lastLayers.get(isHeroMoved)
-  const isKept = l !== undefined && l.g === g && l.torchX === torchAt.x && l.torchY === torchAt.y && l.isLit === isLit && l.isHeroMoved === isHeroMoved && l.lights === torches
+  const isKept = l !== undefined && l.g === g && l.torchX === torchAt.x && l.torchY === torchAt.y && l.isLit === isLit && l.lights === torches
   if (isKept && origin.x >= l.x && origin.y >= l.y && origin.x + width <= l.x + l.w && origin.y + height <= l.y + l.h) return l
   // Each wall torch lights from the foot of its wall, each brazier from its own tile.
   const lights = [...torches.map(t => ({ x: t.x * PX + PX / 2, y: t.y * PX + PX })), ...braziersOf(g.world, g.depth, level).map(b => ({ x: b.x * PX + PX / 2, y: b.y * PX + PX / 2 }))]
@@ -445,8 +506,28 @@ const worldLayer = (g: Game, level: Level, torchAt: Pos, isLit: boolean, isHeroM
   const w = width + 2 * LAYER_MARGIN
   const h = height + 2 * LAYER_MARGIN
   const px = new Uint32Array(w * h)
-  for (let ly = 0; ly < h; ly += 1) for (let lx = 0; lx < w; lx += 1) px[ly * w + lx] = worldPixel(s, x + lx, y + ly)
-  const layer = { g, torchX: torchAt.x, torchY: torchAt.y, isLit, isHeroMoved, lights: torches, x, y, w, h, px }
+  layerBuilds += 1
+  const from = l !== undefined && l.level === level && l.isLit === isLit && l.lights === torches ? l : undefined
+  const keys = new Map<number, string>()
+  // Tile by tile over the window: a tile the last layer holds whole under the same key is copied a row at a time.
+  for (let ty = Math.floor(y / PX); ty * PX < y + h; ty += 1) {
+    for (let tx = Math.floor(x / PX); tx * PX < x + w; tx += 1) {
+      const id = (ty + 1) * (MAP_W + 2) + tx + 1
+      const key = tileKey(s, tx, ty)
+      keys.set(id, key)
+      const x0 = Math.max(x, tx * PX)
+      const x1 = Math.min(x + w, tx * PX + PX)
+      const y0 = Math.max(y, ty * PX)
+      const y1 = Math.min(y + h, ty * PX + PX)
+      const isKeptTile = from !== undefined && from.keys.get(id) === key && x0 >= from.x && y0 >= from.y && x1 <= from.x + from.w && y1 <= from.y + from.h
+      for (let wy = y0; wy < y1; wy += 1) {
+        const at = (wy - y) * w - x
+        const old = isKeptTile ? (wy - from.y) * from.w - from.x : 0
+        for (let wx = x0; wx < x1; wx += 1) px[at + wx] = isKeptTile ? from.px[old + wx]! : worldPixel(s, wx, wy)
+      }
+    }
+  }
+  const layer = { g, level, torchX: torchAt.x, torchY: torchAt.y, isLit, isHeroMoved, lights: torches, x, y, w, h, px, keys }
   lastLayers.set(isHeroMoved, layer)
   return layer
 }

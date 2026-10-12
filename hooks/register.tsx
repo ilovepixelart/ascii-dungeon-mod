@@ -6,7 +6,7 @@ import { TOWN_TALK } from './town'
 import { STASH_SIZE, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
-import { FRAME_MS, LATE_MS, createSamples, createTicker } from './frames'
+import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
 import { hudCells, hudHit, hudLayout } from './hud'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
@@ -30,7 +30,7 @@ import { CLASS_NAME, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, why
 import { MAP_H, MAP_W } from './map'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
-import { FRAMES_PER_TILE, STILL, stampCells, walkState, benchRoute, clickToTile, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit } from './pixels'
 import { MUSIC_GAIN, channel, gainOf, musicFor, soundAsset, soundFor, stepAt } from './sounds'
 import type { Channel, Sound } from './sounds'
@@ -65,6 +65,9 @@ const ticker = createTicker(fineNow)
 /** How long the host takes to take a repainted map, and how long drawing the whole pane takes (on every change). */
 const repaints = createSamples()
 const redraws = createSamples()
+/** Drawing a walk frame's map: with the ground layer kept, and with it drawn afresh. */
+const keptMaps = createSamples()
+const builtMaps = createSamples()
 /** The inventory screen's own state: an open menu, an item being dragged. */
 let bagUi: BagUi = BAG_UI_IDLE
 let shopUi: ShopUi = SHOP_UI_IDLE
@@ -170,6 +173,36 @@ const drawnMap = (cells: string) => {
   return cells
 }
 
+/**
+ * The walk's frames go to the host without waiting for it to take each: a host busy (drawing the chat beside the pane)
+ * would otherwise hold every tick and slow the hero. One blit is in flight at a time; a frame drawn meanwhile waits in
+ * its place, a newer one replacing it, so the host always gets the latest and the walk keeps its pace.
+ */
+let mapInFlight: Promise<void> | null = null
+let mapWaiting: { cells: string; size: { columns: number; rows: number } } | null = null
+/** A walk frame the host refused: the walk gives way to the ordinary drawing on its next frame. */
+let isMapRefused = false
+const sendLatest = ($: EngineInterface, cells: string, size: { columns: number; rows: number }) => {
+  if (mapInFlight !== null) {
+    mapWaiting = { cells, size }
+    return
+  }
+  const t0 = fineNow()
+  mapInFlight = sendMap($, cells, size).then(painted => {
+    repaints.add(fineNow() - t0)
+    mapInFlight = null
+    if (painted.deny !== undefined) isMapRefused = true
+    const next = mapWaiting
+    mapWaiting = null
+    if (next !== null && !isMapRefused) sendLatest($, next.cells, next.size)
+  })
+}
+/** Lets the walk's frames still on their way land before anything else draws the map; a waiting one is dropped. */
+const drainMap = async () => {
+  mapWaiting = null
+  while (mapInFlight !== null) await mapInFlight
+}
+
 const walkFrame = async ($: EngineInterface, frame: number) => {
   const w = walk
   if (w === null || mapSize === null) return false
@@ -192,6 +225,8 @@ const walkFrame = async ($: EngineInterface, frame: number) => {
   const end = async () => {
     if (walk === w) walk = null
     isBenching = false
+    await drainMap()
+    isMapRefused = false
     await settle($)
     const after = hitsAfterWalk
     hitsAfterWalk = null
@@ -203,15 +238,16 @@ const walkFrame = async ($: EngineInterface, frame: number) => {
     if (waiting !== null) await act($, waiting.action, waiting.byHand)
     return false
   }
-  if (at.isDone) return end()
+  if (at.isDone || isMapRefused) return end()
   const view = cameraFor(w.game, at, mapSize.columns, mapSize.rows)
+  const builds = layerBuildCount()
+  const drawFrom = fineNow()
   const drawn = pixelMap(drawnAt(w.game, frame), mapSize.columns, mapSize.rows, at, view, [], 0, isStrideFrame(frame))
+  ;(layerBuildCount() === builds ? keptMaps : builtMaps).add(fineNow() - drawFrom)
   // The bench walk's frames carry their number, so a measure reads which arrived: skipped, repeated, late.
   const cells = isBenching ? stampCells(drawn, frame) : drawn
-  const t0 = fineNow()
-  const painted = await sendMap($, cells, mapSize)
-  repaints.add(fineNow() - t0)
-  return painted.deny === undefined || (await end())
+  sendLatest($, cells, mapSize)
+  return true
 }
 
 const startWalk = ($: EngineInterface, path: Pos[], start: Game, game: Game, tiles: Game[] | null = null) => {
@@ -222,16 +258,18 @@ const startWalk = ($: EngineInterface, path: Pos[], start: Game, game: Game, til
 const ms = (n: number) => (n < 1 ? n.toFixed(2) : n.toFixed(1))
 /**
  * The measure in words: how evenly ticks come, how long a tick takes, how much of that is the host taking the
- * repainted map, and how long a whole-pane redraw takes.
+ * repainted map, how long a whole-pane redraw takes, and how long a walk frame's map takes to draw with its ground layer
+ * kept and with it drawn afresh.
  */
-export const framesReport = (s: TickStats, repaint: FrameSummary, redraw: FrameSummary) =>
+export const framesReport = (s: TickStats, repaint: FrameSummary, redraw: FrameSummary, kept: FrameSummary = summarize([]), built: FrameSummary = summarize([])) =>
   s.ticks === 0
     ? 'No frames played yet: walk somewhere first.'
     : `${s.ticks} ticks, ${s.late} late (over ${ms(LATE_MS)} ms after the last), ${s.skipped} skipped while a frame was drawing. ` +
       `Gap between ticks: p50 ${ms(s.interval.p50)}, p99 ${ms(s.interval.p99)}, max ${ms(s.interval.max)} ms. ` +
       `Drawing a tick: p50 ${ms(s.work.p50)}, p99 ${ms(s.work.p99)}, max ${ms(s.work.max)} ms (budget ${FRAME_MS}), ` +
       `of which the host taking the map: p50 ${ms(repaint.p50)}, p99 ${ms(repaint.p99)}, max ${ms(repaint.max)} ms. ` +
-      `Whole-pane redraws: ${redraw.count}, p50 ${ms(redraw.p50)}, p99 ${ms(redraw.p99)}, max ${ms(redraw.max)} ms.`
+      `Whole-pane redraws: ${redraw.count}, p50 ${ms(redraw.p50)}, p99 ${ms(redraw.p99)}, max ${ms(redraw.max)} ms. ` +
+      `Drawing the map: ${kept.count} with the ground kept, p50 ${ms(kept.p50)}, p99 ${ms(kept.p99)} ms; ${built.count} drawn afresh, p50 ${ms(built.p50)}, p99 ${ms(built.p99)}, max ${ms(built.max)} ms.`
 
 /**
  * What to toast after an action: the game's own news first; with no log on screen, also what a click of the player's
@@ -510,12 +548,14 @@ export const register: Register = (on, options) => {
     ticker.reset()
     repaints.reset()
     redraws.reset()
+    keptMaps.reset()
+    builtMaps.reset()
     isBenching = true
     startWalk($, benchRoute(bench, BENCH_TILES), bench, bench)
     return { text: `Bench walk started: ${BENCH_TILES} tiles, about ${Math.ceil((BENCH_TILES * FRAMES_PER_TILE * FRAME_MS) / 1000)} s. Run /dungeon-frames once the hero stops.` }
   })
 
-  on('command.run', { command: 'dungeon-frames' }, async () => ({ text: framesReport(ticker.stats(), repaints.summary(), redraws.summary()) }))
+  on('command.run', { command: 'dungeon-frames' }, async () => ({ text: framesReport(ticker.stats(), repaints.summary(), redraws.summary(), keptMaps.summary(), builtMaps.summary()) }))
 
   on('prompt.submit', async ($, e, next) => {
     await act($, { kind: 'quest', text: e.text })

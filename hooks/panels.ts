@@ -28,6 +28,19 @@ const opensOnRoom = (level: Level, p: Pos) =>
  * left one is the door, the other a passage, so doors never stand side by side.
  */
 export const surfaceOf = (level: Level, p: Pos): Surface => {
+  const isInside = p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H
+  if (!isInside) return workedSurface(level, p)
+  let known = surfaces.get(level)
+  if (known === undefined) {
+    known = []
+    surfaces.set(level, known)
+  }
+  return (known[cellId(p)] ??= workedSurface(level, p))
+}
+/** Each level's surfaces as worked out, by cell: a level never changes, and its door rules look at many cells. */
+const surfaces = new WeakMap<Level, Surface[]>()
+
+const workedSurface = (level: Level, p: Pos): Surface => {
   if (!isFloor(level.tiles, p)) {
     const touchesRoom = [-1, 0, 1].some(dx => [-1, 0, 1].some(dy => isRoom(level, p.x + dx, p.y + dy)))
     return touchesRoom ? 'wall' : 'void'
@@ -38,11 +51,22 @@ export const surfaceOf = (level: Level, p: Pos): Surface => {
   return besideADoor ? 'passage' : 'door'
 }
 
+/** A game's taken cells as a set, worked out once for each list (lists are never changed in place). */
+const takenSets = new WeakMap<readonly number[], ReadonlySet<number>>()
+const takenSet = (taken: readonly number[]) => {
+  let set = takenSets.get(taken)
+  if (set === undefined) {
+    set = new Set(taken)
+    takenSets.set(taken, set)
+  }
+  return set
+}
+
 /** The thing lying on a cell, if any: stairs, or gold, a potion, a sprung trap not yet used up. */
 const thingAt = (g: Game, level: Level, p: Pos) => {
   if (same(p, level.stairs)) return '>'
   const thing = floorThing(g.world, g.depth, level, p)
-  const isTaken = g.taken.includes(cellId(p))
+  const isTaken = takenSet(g.taken).has(cellId(p))
   if (thing === '^') return isTaken ? '^' : undefined
   // The themed room's furnishings stand there for good, used or not.
   if (thing === 'A' || thing === 'B' || thing === 'L' || thing === 'R' || thing === 'S' || thing === 'Q' || thing === 'N' || thing === 'F') return thing
@@ -90,12 +114,13 @@ const occupantOf = (g: Game, level: Level, isSeen: boolean, isVisible: boolean, 
   return isVisible ? { kind: 'thing', glyph: thing, color: THING_INK[thing] ?? INK.gold, bold: true } : { kind: 'thing', glyph: thing, color: MEMORY_FG }
 }
 
-export const tileAt = (g: Game, level: Level, visible: ReadonlySet<number>, p: Pos): Tile => {
+export const tileAt = (g: Game, level: Level, visible: ReadonlySet<number>, p: Pos, withGround = true): Tile => {
   const isInside = p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H
   if (!isInside) return { ground: VOID, surface: 'void', isVisible: false }
   const isSeen = g.seen[cellId(p)] === '1'
   const isVisible = visible.has(cellId(p))
-  const ground = isSeen ? groundOf(g, level, isVisible, p) : VOID
+  // The pixel views draw their own ground: the text one's colors are worked out only for it.
+  const ground = isSeen && withGround ? groundOf(g, level, isVisible, p) : VOID
   const surface = isSeen ? surfaceOf(level, p) : 'unseen'
   return { ground, surface, isVisible, occupant: occupantOf(g, level, isSeen, isVisible, p) }
 }

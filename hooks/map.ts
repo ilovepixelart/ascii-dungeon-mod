@@ -517,6 +517,19 @@ const themedThing = (themed: { room: Room; kind: RoomKind }, p: Pos) => {
  * gold, a potion, a trap or nothing.
  */
 export const floorThing = (world: number, depth: number, level: Level, p: Pos) => {
+  const isInside = p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H
+  if (!isInside) return workedThing(world, depth, level, p)
+  let known = thingsOf.get(level)
+  if (known === undefined || known.world !== world || known.depth !== depth) {
+    known = { world, depth, cells: [] }
+    thingsOf.set(level, known)
+  }
+  return (known.cells[cellId(p)] ??= workedThing(world, depth, level, p))
+}
+/** Each level's things as worked out, by cell: they are fixed by the world and depth (what is taken is the game's). */
+const thingsOf = new WeakMap<Level, { world: number; depth: number; cells: string[] }>()
+
+const workedThing = (world: number, depth: number, level: Level, p: Pos) => {
   const chest = chestAt(world, depth, level, p)
   if (chest !== undefined) return CHEST_GLYPH[chest]
   const themed = themedRoomOf(world, depth, level)

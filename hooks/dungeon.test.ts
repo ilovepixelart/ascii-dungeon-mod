@@ -488,7 +488,8 @@ test('a walk whose repaint is refused gives way to an ordinary redraw', async ($
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const start = newGame()
   await ui.pointer({ type: 'down', ...heroCell(start, map?.props.columns as number, map?.props.rows as number), button: 'left', in: 'map-clicks' })
-  await clock.advance(40)
+  // Frames go out without waiting for the host: the refusal of one is seen on the walk's next frame.
+  await clock.advance(80)
   const after = apply(start, { kind: 'walk' })
   const startCenter = viewOf(start, map?.props.columns as number, map?.props.rows as number)
   expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(pixelMap(after, map?.props.columns as number, map?.props.rows as number, undefined, startCenter))
@@ -575,7 +576,10 @@ test('the frames report says how evenly ticks came and how long drawing took, ag
   expect(framesReport({ ticks: 120, late: 3, skipped: 1, interval: summary(33, 36, 70), work: summary(0.12, 4.1, 7.25) }, summary(0.05, 2, 3), summary(1.5, 9, 12))).toBe(
     '120 ticks, 3 late (over 49.5 ms after the last), 1 skipped while a frame was drawing. Gap between ticks: p50 33.0, p99 36.0, max 70.0 ms. ' +
       'Drawing a tick: p50 0.12, p99 4.1, max 7.3 ms (budget 33), of which the host taking the map: p50 0.05, p99 2.0, max 3.0 ms. ' +
-      'Whole-pane redraws: 4, p50 1.5, p99 9.0, max 12.0 ms.',
+      'Whole-pane redraws: 4, p50 1.5, p99 9.0, max 12.0 ms. Drawing the map: 0 with the ground kept, p50 0.00, p99 0.00 ms; 0 drawn afresh, p50 0.00, p99 0.00, max 0.00 ms.',
+  )
+  expect(framesReport({ ticks: 1, late: 0, skipped: 0, interval: none, work: none }, none, none, summary(0.5, 1, 2), { ...summary(80, 120, 130), count: 9 })).toMatch(
+    /Drawing the map: 4 with the ground kept, p50 0\.50, p99 1\.0 ms; 9 drawn afresh, p50 80\.0, p99 120\.0, max 130\.0 ms\.$/,
   )
 })
 

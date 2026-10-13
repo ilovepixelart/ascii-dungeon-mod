@@ -37,7 +37,7 @@ Run `/reload-plugins` (or start a new session) after installing. To try it from 
 
 | Command | Does |
 |---|---|
-| `node scripts/gates.mjs --typecheck` | every gate: release check, strict validate, tests, typecheck (CI runs all but the typecheck, which needs a logged-in session) |
+| `node scripts/gates.mjs --typecheck` | every gate: release check, strict validate, tests, typecheck (CI runs all but the typecheck, which needs the plugin opened once interactively) |
 | `claude plugin test .` | every test |
 | `claude plugin validate .` | what the engine would refuse |
 | `bun tools/simulate.ts <out> --games 100 --steps 1000` | plays games through the rules, every invariant checked each step, and reports balance |

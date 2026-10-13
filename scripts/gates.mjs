@@ -4,7 +4,7 @@
 //
 //   node scripts/gates.mjs                 the gates
 //   node scripts/gates.mjs --typecheck     also the typecheck, locally: it needs the engine's type declarations,
-//                                          which Claude Code writes only in a logged-in session, so CI skips it
+//                                          which Claude Code writes when the plugin loads in an interactive session, so CI skips it
 //   node scripts/gates.mjs --tag <tag>     the release check also checks the tag
 //   node scripts/gates.mjs --load [n]      also run the tests n times at once (default 8),
 //                                          as a slower runner would, to catch timing flakes
@@ -38,18 +38,14 @@ const run = (name, command, argv) => {
   }
 }
 
-const writeTypes = () => {
+const needTypes = () => {
   if (existsSync(TYPES)) {
     return
   }
-  // a logged-in load writes the declarations; with no login it stops first
-  // and writes none, so the declarations, not its exit code, are the gate
-  console.log(`\n== type declarations: claude --plugin-dir . -p ping`)
-  spawnSync('claude', ['--plugin-dir', '.', '-p', 'ping'], { stdio: 'inherit' })
-  if (!existsSync(TYPES)) {
-    console.error(`\ntype declarations failed: ${TYPES} was not written`)
-    process.exit(1)
-  }
+  // Claude Code writes the declarations when the plugin loads in an
+  // interactive session; a print-mode run (-p) writes none
+  console.error(`\ntype declarations missing: ${TYPES}; open the plugin once with claude --plugin-dir . and run again`)
+  process.exit(1)
 }
 
 const underLoad = n =>
@@ -67,7 +63,7 @@ const underLoad = n =>
 
 for (const [name, command, argv] of gates) {
   if (name === 'typecheck') {
-    writeTypes()
+    needTypes()
   }
   run(name, command, argv)
 }

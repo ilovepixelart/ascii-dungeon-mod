@@ -18,16 +18,12 @@ describe('the character sheet', () => {
     expect(sheetGesture(hero({ points: 0 }), onPlus(0))).toEqual([])
   })
 
-  test('New game opens the start screen; the close box closes the sheet; a drag does nothing', async () => {
+  test('the close box closes the sheet; a drag does nothing; New game is not here but in settings', async () => {
     const g = hero()
-    const px = sheetPixels(g)
-    // New game's gold N: the last gold key on the left edge.
-    let ny = -1
-    for (let y = 0; y < px.length; y += 1) if (px[y]!.slice(3, 10).includes(GOLD_INK)) ny = y
-    expect(sheetGesture(g, tap(5, ny - 1))).toEqual([{ kind: 'panel', panel: 'start' }])
     const [x, y] = CLOSE_BOX
     expect(sheetGesture(g, tap(x + 2, y + 2))).toEqual([{ kind: 'panel', panel: 'sheet' }])
     expect(sheetGesture(g, { type: 'drag', from: { x: 5, y: 30 }, at: { x: 40, y: 30 } })).toEqual([])
+    for (let py = 0; py < SHEET_H; py += 2) expect(sheetGesture(g, tap(5, py))).not.toContainEqual({ kind: 'panel', panel: 'start' })
   })
 
   test('the + keys are lit only with points to spend', async () => {
@@ -52,4 +48,11 @@ describe('the character sheet', () => {
     expect(SHEET_H % 2).toBe(0)
     for (const row of px) expect(row.length).toBe(WINDOW_W)
   })
+})
+
+test('the XP is text on its flat bar, not pixels beside it', async () => {
+  const g = hero({ xp: 12 })
+  const label = sheetOverlay(g).find(b => b.role === 'label')!
+  expect(label.lines[0]!.map(r => r.text).join('')).toMatch(/^12\/\d+$/)
+  expect(label.lines[0]!.every(r => r.bg !== undefined)).toBe(true)
 })

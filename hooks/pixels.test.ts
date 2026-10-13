@@ -617,13 +617,21 @@ describe('hit feedback', () => {
     expect(hitsBetween({ ...g, foe }, hit)).toEqual([{ at: { x: foe.x, y: foe.y }, amount: 4, kind: 'hit' }])
     const crit = { ...g, foe: { ...foe, hp: 2 }, log: ['You CRITICALLY hit the goblin of x for 8.'] }
     expect(hitsBetween({ ...g, foe }, crit)).toEqual([{ at: { x: foe.x, y: foe.y }, amount: 8, kind: 'crit' }])
-    const slain = { ...g, foe: null, log: ['You slay the goblin of x! +10 XP, +3 gold.'] }
-    expect(hitsBetween({ ...g, foe }, slain)).toEqual([{ at: { x: foe.x, y: foe.y }, amount: 10, kind: 'kill' }])
+    const slain = { ...g, foe: null, xp: g.xp + 10, log: ['You slay the goblin of x! +10 XP, +3 gold.'] }
+    // A kill keeps the foe as it stood, to show it fall.
+    expect(hitsBetween({ ...g, foe }, slain)).toEqual([{ at: { x: foe.x, y: foe.y }, amount: 10, kind: 'kill', foe }])
     const hurt = { ...g, hp: g.hp - 3, foe }
     expect(hitsBetween({ ...g, foe }, hurt)).toEqual([{ at: { x: g.x, y: g.y }, amount: 3, kind: 'hurt' }])
     expect(hitsBetween({ ...g, foe }, { ...g, foe })).toEqual([])
     // Another place (a new depth, the town): nothing to show.
     expect(hitsBetween({ ...g, foe }, { ...g, depth: 2, foe: null })).toEqual([])
+  })
+
+  test('a kill reads as one however much is said after it; a foe lost in smoke is no kill', async () => {
+    const slain = { ...g, foe: null, xp: g.xp + 10, log: ['Loot: Elixir.', 'Loot: Hearty Tunic (Epic).', 'Level 2!', 'Level 3!', 'Level 4!'] }
+    expect(hitsBetween({ ...g, foe }, slain).map(h => h.kind)).toEqual(['kill'])
+    const fled = { ...g, foe: null, log: ['You vanish in smoke. The goblin of x loses you.'] }
+    expect(hitsBetween({ ...g, foe }, fled)).toEqual([])
   })
 
   test('a number rises from the tile: white for a hit, gold for a crit or a kill, red over the hurt hero; it holds still for 3 frames on a crit or a kill', async () => {
@@ -662,8 +670,8 @@ describe('hit feedback', () => {
 })
 
 describe('themes by depth', () => {
-  test('five depths each: crypt, flooded halls, the forge, then round again', async () => {
-    expect([1, 5, 6, 10, 11, 15, 16, 21].map(themeOf)).toEqual(['crypt', 'crypt', 'flooded', 'flooded', 'forge', 'forge', 'crypt', 'flooded'])
+  test('five depths each: crypt, flooded halls, fungal deep, frozen caverns, the forge, then round again', async () => {
+    expect([1, 5, 6, 10, 11, 15, 16, 20, 21, 25, 26, 31].map(themeOf)).toEqual(['crypt', 'crypt', 'flooded', 'flooded', 'fungal', 'fungal', 'frozen', 'frozen', 'forge', 'forge', 'crypt', 'flooded'])
   })
 
   test('a theme recolors the ground by its channel weights, worked by hand on one color; the crypt keeps it', async () => {
@@ -980,7 +988,7 @@ describe('idle motion', () => {
 
 describe('the spring and the old anvil drawn', () => {
   test('each still stands once used, drawn as it was', async () => {
-    for (const [kind, depth, key, row, col] of [['spring', 7, 'S', 1, 2], ['anvil', 12, 'N', 4, 1]] as const) {
+    for (const [kind, depth, key, row, col] of [['spring', 7, 'S', 1, 2], ['anvil', 22, 'N', 4, 1]] as const) {
       let found: { g: Game; mid: { x: number; y: number } } | undefined
       for (let world = 1; world <= 200 && found === undefined; world += 1) {
         const t = themedRoomOf(world, depth, generate(world, depth))

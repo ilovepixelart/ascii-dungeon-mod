@@ -2,13 +2,13 @@
 // an item grid, the belt. Each draws at a given place on a canvas; the windows say where.
 import type { Game, Item, Rarity, Slot } from '../types'
 import { CELL, ICONS, consumableIcon } from './icons'
-import { bestTier, countOf } from './consumables'
+import { activeTier, countOf } from './consumables'
 import type { BeltSlot } from '../types'
 import { RARITY_COLOR, canWear, isUpgrade } from './items'
 import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, digits, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
 import { PAL, PX, textMask } from './pixelart'
-import type { Rect } from './window'
+import type { OverlayBox, Rect } from './window'
 
 export const GHOST_INK = '#2a2732'
 export const OFF_CLASS = '#ff4a4a'
@@ -87,11 +87,11 @@ export const beltSlotRect = (x0: number, y: number, i: number): Rect => ({ x: x0
 
 export const TIER_INK = '#ffd34d'
 
-/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next, the count, and under it a pip a tier above the first. */
+/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`), how many it holds in all its tiers, and under it a pip a tier above the first. */
 export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number, y: number) => {
   frame(c, x, y, BELT_SLOT_W, SLOT, GRID)
   fill(c, x + 1, y + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
-  const tier = bestTier(slot)
+  const tier = activeTier(slot)
   if (slot === null || slot === undefined || tier === undefined) return
   art(c, consumableIcon(slot.kind, tier), x + 1, y + 1)
   for (let p = 1; p < tier; p += 1) put(c, x + BELT_SLOT_W - 2 - 2 * (p - 1), y + PX, TIER_INK)
@@ -131,6 +131,41 @@ export const wareTag = (c: Canvas, icon: readonly string[], cost: number, x: num
   frame(c, sx, y, SLOT, SLOT, chosen ? CURSOR : GRID)
   art(c, icon, sx + 1, y + 1)
   price(c, cost, x + Math.floor((TAG_W - priceW(cost)) / 2), y + SLOT + 2, canPay)
+}
+
+/** A flat bar's height: one text row, so the text on it covers it exactly. */
+/** A flat bar's height: its mark's, two text rows, its number on the middle two pixel rows. */
+export const FLAT_BAR_H = 4
+const INK_LIGHT = '#e8e4dc'
+const INK_DARK = '#1a1820'
+
+/** The text color that reads on a color: dark on a bright one, light on a dark one. */
+export const inkOn = (color: string) => {
+  const n = Number.parseInt(color.slice(1), 16)
+  const lum = 0.299 * ((n >> 16) & 0xff) + 0.587 * ((n >> 8) & 0xff) + 0.114 * (n & 0xff)
+  return lum > 140 ? INK_DARK : INK_LIGHT
+}
+
+/**
+ * A flat bar: FLAT_BAR_H pixels of one color, `share` of `w` filled, the rest its empty track; at x, y on canvas `c`.
+ * It starts on an odd pixel row of its surface, so its middle two rows are one text row for its number.
+ */
+export const flatBar = (c: Canvas, x: number, y: number, w: number, share: number, color: string, empty: string) =>
+  bar(c, x, y, w, FLAT_BAR_H, share, [color, color, color], empty)
+
+/**
+ * Text centred on a flat bar, as a text box over the pixels: `x`, `y` the bar's place in the surface's pixels (a cell
+ * one across, two down, `y` odd), on its middle two rows, each character on the bar's color under it, in the ink
+ * that reads there.
+ */
+export const barLabel = (x: number, y: number, w: number, share: number, color: string, empty: string, text: string): OverlayBox<'label'> => {
+  const filled = Math.round(Math.max(0, Math.min(1, share)) * w)
+  const x0 = Math.floor((w - text.length) / 2)
+  const runs = [...text].map((ch, i) => {
+    const under = x0 + i < filled ? color : empty
+    return { text: ch, color: inkOn(under), bg: under, bold: true }
+  })
+  return { role: 'label', x: x + x0 - 1, y: Math.floor((y + (FLAT_BAR_H - 2) / 2) / 2) - 1, w: text.length + 2, h: 3, border: empty, bg: empty, pad: 0, lines: [runs] }
 }
 
 /** A bar, `share` of it filled, its rows toned top to bottom (lit, body, shaded); no frame. */
@@ -174,13 +209,15 @@ const PORTRAIT_BG = '#1c2230'
 const PORTRAIT_FLOOR = '#232a3a'
 const PORTRAIT_EDGE = '#6b6258'
 
-/** A portrait at x, y: the sprite three times its size on a lit backdrop with a floor, in a double frame. */
+/** A portrait at x, y: the sprite as many times its size as fits (an 8 by 8 three times), centred on a lit backdrop with a floor, in a double frame. */
 export const portrait = (c: Canvas, rows: readonly string[], x: number, y: number) => {
   fill(c, x, y, PORTRAIT, PORTRAIT, PORTRAIT_BG)
   fill(c, x + 2, y + PORTRAIT - 8, PORTRAIT - 4, 6, PORTRAIT_FLOOR)
   frame(c, x, y, PORTRAIT, PORTRAIT, PORTRAIT_EDGE)
   frame(c, x + 1, y + 1, PORTRAIT - 2, PORTRAIT - 2, GRID)
+  const scale = Math.floor((PORTRAIT - 4) / rows.length)
+  const inset = 2 + Math.floor((PORTRAIT - 4 - rows.length * scale) / 2)
   rows.forEach((row, dy) => [...row].forEach((k, dx) => {
-    if (k !== '.') fill(c, x + 2 + dx * 3, y + 2 + dy * 3, 3, 3, PAL[k] ?? '#ff00ff')
+    if (k !== '.') fill(c, x + inset + dx * scale, y + inset + dy * scale, scale, scale, PAL[k] ?? '#ff00ff')
   }))
 }

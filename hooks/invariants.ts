@@ -23,7 +23,9 @@ const RULES: Readonly<Record<string, Rule>> = {
   'shield only on a shielded champion': g => {
     const foe = g.foe
     if (foe?.shield === undefined) return undefined
-    return foe.champion === 'shielded' && foe.shield >= 0 && foe.shield <= 1 ? undefined : `the ${foe.name} holds ${foe.shield} shield as a ${foe.champion ?? 'plain foe'}`
+    // The Bone King and the Frost Lich ward themselves as a shielded champion does.
+    const wards = foe.champion === 'shielded' || foe.big === 'king' || foe.big === 'lich'
+    return wards && foe.shield >= 0 && foe.shield <= 1 ? undefined : `the ${foe.name} holds ${foe.shield} shield as a ${foe.champion ?? 'plain foe'}`
   },
   'temper within 0 to 3': g => {
     const off = [...SLOTS.map(s => g.gear[s]), ...g.bag].find(item => item?.temper !== undefined && !(Number.isInteger(item.temper) && item.temper >= 0 && item.temper <= TEMPER_MAX))
@@ -97,6 +99,7 @@ const RULES: Readonly<Record<string, Rule>> = {
   'cursor on a bag item': g => (g.cursor === null || g.bag.some(i => i.id === g.cursor) ? undefined : `cursor ${g.cursor} names no bag item`),
   'belt size': g => (g.belt.length === BELT_SIZE ? undefined : `belt has ${g.belt.length} slots`),
   'belt stacks': g => g.belt.map((s, i) => (s !== null && (countOf(s) < 1 || s.tiers.some(n => !Number.isInteger(n) || n < 0 || n > STACK_MAX)) ? `belt slot ${i + 1} holds ${s.tiers.join('/')}` : undefined)).find(Boolean),
+  'a chosen tier is held': g => g.belt.map((s, i) => (s !== null && s.chosen !== undefined && (s.tiers[s.chosen - 1] ?? 0) === 0 ? `belt slot ${i + 1} chose tier ${s.chosen}, holding none` : undefined)).find(Boolean),
   'belt kinds in their slots': g => g.belt.map((s, i) => (s !== null && s.kind !== KINDS[i] ? `belt slot ${i + 1} holds ${s.kind}` : undefined)).find(Boolean),
   'log length': g => (g.log.length <= 5 ? undefined : `log holds ${g.log.length} lines`),
 }

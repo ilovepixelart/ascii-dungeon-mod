@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { Foe, Game, Item } from '../types'
+import type { Foe, Game, HeroClass, Item } from '../types'
 import { SAVE_VERSION, apply, attackBonus, critChance, newGame, normalize } from './game'
-import { BAG_H, BAG_W, fit, priceOf, stash } from './items'
+import { BAG_H, BAG_W, BASES, fit, priceOf, stash } from './items'
 import { foeAhead, plainHero } from './fixtures'
 import { bagRows } from './panels'
 
@@ -195,5 +195,14 @@ describe('saves and drawing', () => {
       '+--------+',
     ])
     expect(bagRows(g)[1]?.find(run => run.text === '[[')?.inverse).toBe(true)
+  })
+})
+
+describe('each class\'s pool', () => {
+  test('three bases of its own in weapon, offhand, helm and armor, one pair of boots, and the same count in all', async () => {
+    const own = (cls: HeroClass, slot: string) => BASES.filter(b => b.cls === cls && b.slot === slot).length
+    for (const cls of ['knight', 'mage', 'rogue'] as const) {
+      expect(['weapon', 'offhand', 'helm', 'armor', 'boots'].map(slot => own(cls, slot))).toEqual([3, 3, 3, 3, 1])
+    }
   })
 })

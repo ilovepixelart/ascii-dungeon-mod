@@ -71,6 +71,8 @@ export const SPRITES: Readonly<Record<string, Sprite>> = {
   T: sprite(['  (T) ', '(####)', '| || |'], ['..ttt.', 'ammmma', 'a.aa.a']),
   W: sprite([' /W\\  ', '( :: )', '^v^v^v'], ['.hhh..', 'vvvvvv', 'xxxxxx']),
   D: sprite(['/\\  /\\', '<(D)~~', ' /  \\ '], ['WW..WW', 'WDDDWW', '.W..W.']),
+  // A big boss: twice a foe's bulk, horned and armed.
+  '&': sprite(['}\\&&/{', '(####)', '/|  |\\'], ['WWDDWW', 'WDDDDW', 'WW..WW']),
 }
 
 const UNKNOWN = sprite([' (?)  ', ' [~]  ', '  /\\  '], ['......', '......', '......'])

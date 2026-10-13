@@ -1,4 +1,5 @@
-// Consumables: five kinds, each in three tiers, the belt they stack in (a slot a kind), and the effects they leave.
+// Consumables: five kinds, each its own form (potions, herbs, scrolls, runes, bombs) in three tiers, the belt they
+// stack in (a slot a kind), and the effects they leave.
 // Adding a tier or changing one is an entry in CONSUMABLES; a kind has its fixed place on the belt (KINDS).
 import type { BeltSlot, Consumable, Game } from '../types'
 import { pick, roll } from './rng'
@@ -49,25 +50,25 @@ export const CONSUMABLES: Readonly<Record<Consumable, Readonly<Record<Tier, Entr
     3: { name: 'Elixir', about: 'Restores all your HP.', use: g => `You drink an Elixir. +${heal(g, g.maxHp)} HP` },
   },
   regen: {
-    1: { name: 'Regeneration Draught', about: 'Heals a tenth of your HP after each of the next 5 fights.', use: g => regen(g, 5) },
-    2: { name: 'Strong Draught', about: 'Heals a tenth of your HP after each of the next 8 fights.', use: g => regen(g, 8) },
-    3: { name: 'Troll Blood', about: 'Heals a tenth of your HP after each of the next 12 fights.', use: g => regen(g, 12) },
+    1: { name: 'Healing Herb', about: 'Heals a tenth of your HP after each of the next 5 fights.', use: g => regen(g, 5) },
+    2: { name: 'Herbal Salve', about: 'Heals a tenth of your HP after each of the next 8 fights.', use: g => regen(g, 8) },
+    3: { name: 'Troll Moss', about: 'Heals a tenth of your HP after each of the next 12 fights.', use: g => regen(g, 12) },
   },
   fury: {
     1: { name: 'Scroll of Fury', about: 'Your next 5 hits deal double damage.', use: g => fury(g, 5) },
-    2: { name: 'Battle Hymn', about: 'Your next 8 hits deal double damage.', use: g => fury(g, 8) },
-    3: { name: "Berserker's Oath", about: 'Your next 12 hits deal double damage.', use: g => fury(g, 12) },
+    2: { name: 'Scroll of Battle', about: 'Your next 8 hits deal double damage.', use: g => fury(g, 8) },
+    3: { name: 'Scroll of the Berserker', about: 'Your next 12 hits deal double damage.', use: g => fury(g, 12) },
   },
   ward: {
-    1: { name: 'Ward Scroll', about: 'Absorbs the next 2 hits.', use: g => ward(g, 2) },
-    2: { name: 'Greater Ward', about: 'Absorbs the next 3 hits.', use: g => ward(g, 3) },
-    3: { name: 'Aegis', about: 'Absorbs the next 5 hits.', use: g => ward(g, 5) },
+    1: { name: 'Ward Rune', about: 'Absorbs the next 2 hits.', use: g => ward(g, 2) },
+    2: { name: 'Greater Ward Rune', about: 'Absorbs the next 3 hits.', use: g => ward(g, 3) },
+    3: { name: 'Aegis Rune', about: 'Absorbs the next 5 hits.', use: g => ward(g, 5) },
   },
   smoke: {
     1: { name: 'Smoke Bomb', about: 'Escapes the foe you are fighting.', use: g => escape(g, () => '') },
-    2: { name: 'Shadow Step', about: 'Escapes the foe you are fighting, and restores 20% of your HP.', use: g => escape(g, h => `+${heal(h, Math.ceil(h.maxHp * 0.2))} HP`) },
+    2: { name: 'Shadow Bomb', about: 'Escapes the foe you are fighting, and restores 20% of your HP.', use: g => escape(g, h => `+${heal(h, Math.ceil(h.maxHp * 0.2))} HP`) },
     3: {
-      name: 'Scroll of Passage',
+      name: 'Passage Bomb',
       about: 'Escapes the foe you are fighting, and reveals the whole level.',
       use: g => escape(g, h => {
         h.seen = '1'.repeat(h.seen.length)
@@ -95,6 +96,18 @@ export const bestTier = (slot: BeltSlot | null | undefined): Tier | undefined =>
   return undefined
 }
 
+/** The tier a slot uses next: the one chosen for it while it holds one, else its strongest; undefined for an empty slot. */
+export const activeTier = (slot: BeltSlot | null | undefined): Tier | undefined =>
+  slot !== null && slot !== undefined && slot.chosen !== undefined && (slot.tiers[slot.chosen - 1] ?? 0) > 0 ? slot.chosen : bestTier(slot)
+
+/** Chooses which tier a slot uses first; nothing when it holds none of that tier. */
+export const chooseTier = (g: Game, index: number, tier: Tier): string | undefined => {
+  const slot = g.belt[index]
+  if (slot === null || slot === undefined || (slot.tiers[tier - 1] ?? 0) === 0) return `You have no ${slot === null || slot === undefined ? 'such item' : nameOf(slot.kind, tier)} on your belt.`
+  g.belt = g.belt.map((s, i) => (i === index ? { ...slot, chosen: tier } : s))
+  return undefined
+}
+
 /** The belt slot a kind lives in. */
 export const slotOf = (kind: Consumable) => KINDS.indexOf(kind)
 
@@ -110,17 +123,23 @@ export const addToBelt = (g: Game, kind: Consumable, tier: Tier = 1): boolean =>
   const at = slotOf(kind)
   const now = g.belt[at]?.tiers ?? [0, 0, 0]
   const tiers = now.map((n, i) => (i === tier - 1 ? n + 1 : n)) as [number, number, number]
-  g.belt = g.belt.map((s, i) => (i === at ? { kind, tiers } : s))
+  g.belt = g.belt.map((s, i) => (i === at ? { ...s, kind, tiers } : s))
   return true
 }
 
-/** Uses a slot: its strongest tier, one less of it, the slot empty once none is left. */
-export const useBelt = (g: Game, index: number): string => {
+/**
+ * Uses a slot: the tier asked for, else the one it uses next (`activeTier`); one less of it, the slot empty once none
+ * is left. A chosen tier used up is forgotten, and the slot goes back to its strongest.
+ */
+export const useBelt = (g: Game, index: number, asked?: Tier): string => {
   const slot = g.belt[index]
-  const tier = bestTier(slot)
+  const tier = asked ?? activeTier(slot)
   if (slot === undefined || slot === null || tier === undefined) return `Belt slot ${index + 1} is empty.`
+  if ((slot.tiers[tier - 1] ?? 0) === 0) return `You have no ${nameOf(slot.kind, tier)} on your belt.`
   const tiers = slot.tiers.map((n, i) => (i === tier - 1 ? n - 1 : n)) as [number, number, number]
-  g.belt = g.belt.map((s, i) => (i === index ? (tiers.some(n => n > 0) ? { ...slot, tiers } : null) : s))
+  const { chosen, ...rest } = slot
+  const kept = chosen !== undefined && tiers[chosen - 1]! > 0 ? { ...rest, tiers, chosen } : { ...rest, tiers }
+  g.belt = g.belt.map((s, i) => (i === index ? (tiers.some(n => n > 0) ? kept : null) : s))
   return CONSUMABLES[slot.kind][tier].use(g)
 }
 

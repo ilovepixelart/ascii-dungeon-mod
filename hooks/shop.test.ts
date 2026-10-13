@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game, Item, Rarity } from '../types'
 import { CURSOR, UNPAID_INK, GOLD_INK } from './pieces'
 import { junkValue, plainItem } from './items'
-import { BAG_X, BAG_Y } from './inventory'
+import { BAG_X, BAG_Y, BELT_Y } from './inventory'
 import { CELL } from './icons'
 import { BODY_TOP, CLOSE_BOX, WINDOW_W } from './window'
 import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopOverlay, shopPixels, wareRect, whyNot } from './shop'
@@ -188,4 +188,13 @@ test('the junk to sell: how many items are marked and the gold they come to', as
   // A plain ring adds no worth: it sells at its tier's PRICE (items/catalog.ts), Common 2 and Epic 12. The Rare is not junk.
   expect(junkValue(g)).toEqual({ count: 2, coins: 14 })
   expect(junkValue(knight(0))).toEqual({ count: 0, coins: 0 })
+})
+
+test('the shelf holds its wares in three rows of three, clear of the belt below and inside the window', async () => {
+  expect(WARES).toHaveLength(9)
+  for (let i = 0; i < WARES.length; i += 1) {
+    const r = wareRect(i)
+    expect(r.x + r.w).toBeLessThanOrEqual(BAG_X)
+    expect(r.y + r.h).toBeLessThan(BODY_TOP + BELT_Y)
+  }
 })

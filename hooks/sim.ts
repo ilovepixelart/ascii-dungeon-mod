@@ -2,10 +2,11 @@
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
 import type { Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
-import { SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, threat } from './game'
+import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, chestAt, floorThing, isFloor } from './map'
+import type { Level, Pos } from './map'
 import { violations } from './invariants'
 import { FRAMES_PER_TILE, walkingGame } from './pixels'
 import { levelOf, newGame } from './world'
@@ -59,6 +60,10 @@ export type SimStats = {
   bossesMet: number
   bossesSlain: number
   bossDeaths: number
+  /** The big bosses of every tenth depth: risen, slain, and deaths to one. */
+  bigMet: number
+  bigSlain: number
+  bigDeaths: number
 }
 
 export type SimResult = { seed: number; cls: HeroClass; records: StepRecord[]; stats: SimStats; firstBreak: StepRecord | undefined; final: Game }
@@ -108,80 +113,121 @@ const frontier = (g: Game) => {
  * Where the simulated player clicks: the foe, now and then an opening into the unexplored, a visible pickup, a seen
  * floor tile nearby, or now and then the dark.
  */
-const clickTarget = (g: Game, d: (n: number) => number): Action => {
-  if (g.foe !== null && d(3) === 1) return { kind: 'goto', x: g.foe.x, y: g.foe.y }
-  const level = levelOf(g)
-  // A chest in sight, not yet opened, is worth the detour.
-  const chest = level.tiles.flatMap((row, y) => [...row].flatMap((_, x) => {
+type Dice = (n: number) => number
+
+/** The first chest in sight, not yet opened: worth the detour. */
+const chestInSight = (g: Game, level: Level) =>
+  level.tiles.flatMap((row, y) => [...row].flatMap((_, x) => {
     const id = y * MAP_W + x
     return g.seen[id] === '1' && !g.taken.includes(id) && chestAt(g.world, g.depth, level, { x, y }) !== undefined ? [{ x, y }] : []
   }))[0]
+
+/** A cell up to `r` away each way, on the map. */
+const nearCell = (g: Game, d: Dice, r: number) => ({ x: Math.max(0, Math.min(MAP_W - 1, g.x + d(2 * r + 1) - r - 1)), y: Math.max(0, Math.min(MAP_H - 1, g.y + d(2 * r + 1) - r - 1)) })
+
+/** Somewhere near worth a click: known floor with something on it, any known floor after a few tries, else just near. */
+const nearbyClick = (g: Game, d: Dice, level: Level): Pos => {
+  for (let tries = 0; tries < 12; tries += 1) {
+    const t = nearCell(g, d, 8)
+    const seen = g.seen[t.y * MAP_W + t.x] === '1'
+    if (seen && isFloor(level.tiles, t) && (floorThing(g.world, g.depth, level, t) !== ' ' || tries > 4)) return t
+  }
+  return nearCell(g, d, 3)
+}
+
+const clickTarget = (g: Game, d: Dice): Action => {
+  if (g.foe !== null && d(3) === 1) return { kind: 'goto', x: g.foe.x, y: g.foe.y }
+  const level = levelOf(g)
+  const chest = chestInSight(g, level)
   if (chest !== undefined && d(2) === 1) return { kind: 'goto', ...chest }
   const open = d(2) === 1 ? frontier(g) : null
   if (open !== null) return { kind: 'goto', ...open }
-  const near = (r: number) => ({ x: Math.max(0, Math.min(MAP_W - 1, g.x + d(2 * r + 1) - r - 1)), y: Math.max(0, Math.min(MAP_H - 1, g.y + d(2 * r + 1) - r - 1)) })
-  if (d(10) === 1) return { kind: 'goto', ...near(12) }
-  for (let tries = 0; tries < 12; tries += 1) {
-    const t = near(8)
-    const seen = g.seen[t.y * MAP_W + t.x] === '1'
-    if (seen && isFloor(level.tiles, t) && (floorThing(g.world, g.depth, level, t) !== ' ' || tries > 4)) return { kind: 'goto', ...t }
-  }
-  return { kind: 'goto', ...near(3) }
+  if (d(10) === 1) return { kind: 'goto', ...nearCell(g, d, 12) }
+  return { kind: 'goto', ...nearbyClick(g, d, level) }
 }
 
-/** In town: to the healer when hurt, a wander now and then, otherwise back through the portal. */
-const townMove = (g: Game, d: (n: number) => number): Action | undefined => {
+/** Hurt: to the healer; and a reforge that came out worse taken back. */
+const mendInTown = (g: Game): Action | undefined => {
   if (g.hp < g.maxHp) return { kind: 'goto', ...TOWN_SPOTS.healer }
-  // A reforge that came out worse is taken back.
   const from = keptChoice(g)
-  if (from !== undefined && worth(from.item) > worth(g.gear[from.slot]!)) return { kind: 'keepOld' }
-  // To the elder for a quest, or to be paid for one done (now and then, so a full bag cannot hold the hero there).
+  return from !== undefined && worth(from.item) > worth(g.gear[from.slot]!) ? { kind: 'keepOld' } : undefined
+}
+
+/**
+ * To the elder for a quest, or to be paid for one done (now and then, so a full bag cannot hold the hero there); with
+ * gold to spare, a potion when the belt runs low on healing, and a fortune now and then.
+ */
+const errands = (g: Game, d: Dice): Action | undefined => {
   if ((g.quest === null || g.quest.have >= g.quest.need) && d(2) === 1) return { kind: 'goto', ...TOWN_SPOTS.elder }
-  // With gold to spare: a potion when the belt runs low on healing, then the cheapest tempering, now and then a reforge of the weapon.
-  const healing = countOf(g.belt[slotOf('health')])
-  if (g.gold >= SHOP_PRICES.health1 && healing < 2) return { kind: 'buy', ware: 'health1' }
+  if (g.gold >= SHOP_PRICES.health1 && countOf(g.belt[slotOf('health')]) < 2) return { kind: 'buy', ware: 'health1' }
   const canAffordFortune = g.fortune === null && g.gold >= fortuneCost(g) + 2 * SHOP_PRICES.health1
   if (canAffordFortune && g.panel === 'mystic') return { kind: 'fortune' }
-  if (canAffordFortune && d(3) === 1) return { kind: 'goto', ...TOWN_SPOTS.mystic }
+  return canAffordFortune && d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.mystic } : undefined
+}
+
+/** At the smith, with gold to spare: the cheapest tempering, now and then a reforge of the weapon. */
+const smithing = (g: Game, d: Dice): Action | undefined => {
   const temperable = SLOTS.filter(slot => (g.gear[slot]?.temper ?? 0) < TEMPER_MAX && g.gear[slot] !== undefined)
   const cheapest = temperable.sort((a, b) => temperCost(g.gear[a]!) - temperCost(g.gear[b]!))[0]
   if (cheapest !== undefined && g.gold >= temperCost(g.gear[cheapest]!) + SHOP_PRICES.health1) return { kind: 'temper', slot: cheapest }
   const weapon = g.gear.weapon
-  if (weapon !== undefined && weapon.rarity !== 'common' && weapon.rarity !== 'legendary' && g.gold >= 2 * reforgeCost(g) && d(3) === 1) return { kind: 'reforge', slot: 'weapon' }
+  const isReforgeable = weapon !== undefined && weapon.rarity !== 'common' && weapon.rarity !== 'legendary'
+  return isReforgeable && g.gold >= 2 * reforgeCost(g) && d(3) === 1 ? { kind: 'reforge', slot: 'weapon' } : undefined
+}
+
+/** In town: to the healer when hurt, its errands, the smith, a wander now and then, otherwise back through the portal. */
+const townMove = (g: Game, d: Dice): Action | undefined => {
+  const chosen = mendInTown(g) ?? errands(g, d) ?? smithing(g, d)
+  if (chosen !== undefined) return chosen
   if (d(3) === 1) return { kind: 'goto', x: d(TOWN_W) - 1, y: d(TOWN_H) - 1 }
   return d(2) === 1 ? { kind: 'portal' } : { kind: 'goto', ...TOWN_SPOTS.portal }
 }
 
-/** What the simulated player does on its own before the next tool call, if anything. */
-const playerMove = (g: Game, d: (n: number) => number): Action | undefined => {
-  if (g.where === 'town') return townMove(g, d)
-  // Badly hurt with no foe about and no potion on the belt: off to the healer in town.
+/**
+ * With no foe about: badly hurt with no potion on the belt, off to the healer in town; with gold to spend, now and then
+ * a trip to the merchant and the smith; on the stairs, down now and then.
+ */
+const leaveWhenClear = (g: Game, d: Dice): Action | undefined => {
   if (g.foe === null && g.hp < g.maxHp * 0.5 && healingSlot(g) < 0 && d(2) === 1) return { kind: 'portal' }
-  // With gold to spend and no foe about, now and then a trip to the merchant and the smith.
   if (g.foe === null && g.gold >= 150 && d(25) === 1) return { kind: 'portal' }
   const stairs = levelOf(g).stairs
-  if (g.foe === null && g.x === stairs.x && g.y === stairs.y && d(2) === 1) return { kind: 'stairs' }
+  return g.foe === null && g.x === stairs.x && g.y === stairs.y && d(2) === 1 ? { kind: 'stairs' } : undefined
+}
+
+/** Staying alive: a potion when low, or before an announced breath that could kill; better gear on; fury against a deadly foe. */
+const keepAlive = (g: Game): Action | undefined => {
   const heal = healingSlot(g)
   if (g.hp < g.maxHp * 0.4 && heal >= 0) return { kind: 'use', slot: heal }
-  // A breath announced: drink first if it could kill.
   const isBreathNext = g.foe !== null && (g.log.at(-1) ?? '').includes('draws a deep breath')
   if (isBreathNext && g.foe !== null && g.hp <= g.foe.atk * 2.5 && heal >= 0) return { kind: 'use', slot: heal }
   const upgrade = g.bag.find(i => isUpgrade(g, i))
   if (upgrade !== undefined) return g.cursor === upgrade.id ? { kind: 'equip' } : { kind: 'cycle' }
   const fury = g.belt.findIndex(s => s?.kind === 'fury')
-  if (g.foe !== null && fury >= 0 && threat(g) === 'deadly') return { kind: 'use', slot: fury }
-  if (g.bag.length >= 8) {
-    // Now and then junk is destroyed rather than sold, the way a player clears the bag by hand.
-    const junk = g.bag.find(i => i.junk)
-    if (junk !== undefined && d(4) === 1) return g.cursor === junk.id ? { kind: 'destroy' } : { kind: 'select', id: junk.id }
-    return junk !== undefined ? { kind: 'sellJunk' } : { kind: 'junk' }
-  }
-  // Organizing: an item dragged to some cell, which may or may not take it.
+  return g.foe !== null && fury >= 0 && threat(g) === 'deadly' ? { kind: 'use', slot: fury } : undefined
+}
+
+/** A full bag cleared: junk sold, now and then destroyed rather than sold, the way a player clears it by hand; else marked. */
+const clearBag = (g: Game, d: Dice): Action | undefined => {
+  if (g.bag.length < 8) return undefined
+  const junk = g.bag.find(i => i.junk)
+  if (junk !== undefined && d(4) === 1) return g.cursor === junk.id ? { kind: 'destroy' } : { kind: 'select', id: junk.id }
+  return junk !== undefined ? { kind: 'sellJunk' } : { kind: 'junk' }
+}
+
+const STEPS_BY_HAND: readonly Action[] = [{ kind: 'move', dx: 1, dy: 0 }, { kind: 'move', dx: -1, dy: 0 }, { kind: 'move', dx: 0, dy: 1 }, { kind: 'move', dx: 0, dy: -1 }]
+
+/** Fidgeting: an item dragged to some cell, which may or may not take it; a click somewhere; a step by hand. */
+const fidget = (g: Game, d: Dice): Action | undefined => {
   const moved = g.bag[d(Math.max(1, g.bag.length)) - 1]
   if (moved !== undefined && d(100) <= 5) return { kind: 'place', id: moved.id, x: d(BAG_W) - 1, y: d(BAG_H) - 1 }
   if (d(100) <= 12) return clickTarget(g, d)
-  if (d(100) <= 4) return [{ kind: 'move', dx: 1, dy: 0 }, { kind: 'move', dx: -1, dy: 0 }, { kind: 'move', dx: 0, dy: 1 }, { kind: 'move', dx: 0, dy: -1 }][d(4) - 1] as Action
-  return undefined
+  return d(100) <= 4 ? STEPS_BY_HAND[d(4) - 1] : undefined
+}
+
+/** What the simulated player does on its own before the next tool call, if anything. */
+const playerMove = (g: Game, d: Dice): Action | undefined => {
+  if (g.where === 'town') return townMove(g, d)
+  return leaveWhenClear(g, d) ?? keepAlive(g) ?? clearBag(g, d) ?? fidget(g, d)
 }
 
 const pickTool = (d: (n: number) => number) => {
@@ -254,6 +300,7 @@ export const cutVsDrawn = (before: Game, next: Game) => {
   return off
 }
 
+const BIG_NAMES = Object.values(BIG_BOSSES).map(b => b.name).join('|')
 const count = (records: StepRecord[], re: RegExp) => records.reduce((n, r) => n + r.said.filter(l => re.test(l)).length, 0)
 
 /** Plays `steps` actions of one game and records each. */
@@ -317,6 +364,9 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     bossesMet: count(records, / rises to bar the way down!$/),
     bossesSlain: count(records, /^You slay the [\w ]+ overlord!/),
     bossDeaths: count(records, /^You were slain by the [\w ]+ overlord /),
+    bigMet: count(records, new RegExp(`^The (${BIG_NAMES}) \\(&\\) rises to bar the way down!$`)),
+    bigSlain: count(records, new RegExp(`^You slay the (${BIG_NAMES})!`)),
+    bigDeaths: count(records, new RegExp(`^You were slain by the (${BIG_NAMES}) `)),
     healed: count(records, /^The healer tends your wounds\./),
   }
   return { seed, cls, records, stats, firstBreak: records.find(r => r.broke.length > 0), final: g }

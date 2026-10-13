@@ -33,9 +33,9 @@ describe('where a unique waits', () => {
     expect(summon(at(d, { uniquesSlain: [1] })).foe?.unique).toBeUndefined()
   })
 
-  test('each theme has its own: Old Bones the skeleton, Mother Mire the troll, Emberjaw the drake', async () => {
-    expect([0, 1, 2].map(b => summon(at(uniqueDepth(WORLD, b))).foe?.name)).toEqual(['Old Bones', 'Mother Mire', 'Emberjaw'])
-    expect(Object.values(UNIQUES).map(u => u.glyph)).toEqual(['s', 'T', 'D'])
+  test('each theme has its own: Old Bones the skeleton, Mother Mire the troll, the Rotking, Rimehide, Emberjaw the drake', async () => {
+    expect([0, 1, 2, 3, 4].map(b => summon(at(uniqueDepth(WORLD, b))).foe?.name)).toEqual(['Old Bones', 'Mother Mire', 'the Rotking', 'Rimehide', 'Emberjaw'])
+    expect(Object.values(UNIQUES).map(u => u.glyph)).toEqual(['s', 'T', 'k', 'o', 'D'])
   })
 
   test('half again the HP of its kind at its strongest roll, a tenth more attack', async () => {
@@ -84,12 +84,27 @@ describe('their tricks', () => {
     expect([fire.times, fire.said]).toEqual([1.5, ['Emberjaw breathes fire!']])
   })
 
+  test('the Rotking\'s spores slip past armor every other turn', async () => {
+    const rot: Foe = { glyph: 'k', name: 'the Rotking', hp: 50, maxHp: 80, atk: 8, xp: 1, x: 0, y: 0, unique: 'rot', turn: 0 }
+    const turns = [0, 1, 2, 3].map(turn => foeTurn(at(13), { ...rot, turn }))
+    expect(turns.map(t => t.pierces)).toEqual([false, true, false, true])
+    expect(turns[1]!.said).toEqual(["the Rotking's spores slip past your armor!"])
+  })
+
+  test('Rimehide gathers frost one turn and brings it down double the next; a third turn plain', async () => {
+    const rime: Foe = { glyph: 'o', name: 'Rimehide', hp: 60, maxHp: 90, atk: 9, xp: 1, x: 0, y: 0, unique: 'rime', turn: 0 }
+    const turns = [0, 1, 2].map(turn => foeTurn(at(18), { ...rime, turn }))
+    expect(turns.map(t => t.times)).toEqual([1, 1, 2])
+    expect(turns[1]!.said).toEqual(["Frost gathers on Rimehide's axe..."])
+    expect(turns[2]!.said).toEqual(['Rimehide brings down a frost blow!'])
+  })
+
   test('slain, it leaves an Epic or better, is toasted, and its band\'s is done', async () => {
-    const d = uniqueDepth(WORLD, 2)
+    const d = uniqueDepth(WORLD, 4)
     const met = summon(at(d, { bag: [] }))
     const won = apply({ ...met, foe: { ...met.foe!, hp: 1 } }, { kind: 'attack' })
     expect(won.foe).toBeNull()
-    expect(won.uniquesSlain).toEqual([2])
+    expect(won.uniquesSlain).toEqual([4])
     expect(won.log.some(l => /^Emberjaw is no more\. It leaves .+ \((Epic|Legendary)\)\.$/.test(l))).toBe(true)
     expect(won.toast).toBe('Emberjaw slain!')
   })

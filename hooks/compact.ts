@@ -116,10 +116,17 @@ export const compactGesture = (g: Game, ui: BagUi, gesture: Gesture): Outcome =>
   if (moved) return { ui: BAG_UI_IDLE, actions: grabbed?.kind === 'bag' ? dropAt(g, grabbed.item, from, at) : [] }
   if (ui.menu !== null) return menuClick(g, ui, gesture.at)
   if (compactOverlay(g, ui).some(b => b.role !== 'worn' && isInside(gesture.at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
-  const h = hit(g, at, gesture.at)
+  return clickOn(g, ui, hit(g, at, gesture.at), gesture.type === 'release' && gesture.button === 'right')
+}
+
+/**
+ * A click on what lies under it: a bag item selected, or its menu opened (a second click, or a right-click); worn gear
+ * taken off; a belt slot used; the close box; anywhere else lets the selection go.
+ */
+const clickOn = (g: Game, ui: BagUi, h: ReturnType<typeof hit>, isRight: boolean): Outcome => {
   if (h?.kind === 'bag') {
     const menu = { id: h.item.id, confirm: false }
-    if (gesture.button === 'right') return { ui: { ...ui, menu }, actions: [{ kind: 'select', id: h.item.id }] }
+    if (isRight) return { ui: { ...ui, menu }, actions: [{ kind: 'select', id: h.item.id }] }
     return h.item.id === g.cursor ? { ui: { ...ui, menu }, actions: [] } : { ui, actions: [{ kind: 'select', id: h.item.id }] }
   }
   if (h?.kind === 'worn') return { ui, actions: [{ kind: 'unequip', slot: h.slot }] }

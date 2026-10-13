@@ -327,15 +327,17 @@ describe('the themed room by theme', () => {
     }
     return [...kinds].sort()
   }
-  test('every theme has shrines, libraries and vaults; the flooded halls add springs; the forge adds old anvils', async () => {
+  test('each theme its own rooms: springs in the flooded halls and the fungal deep, old anvils in the forge', async () => {
     expect(kindsOn([1, 2, 3, 4, 5])).toEqual(['library', 'shrine', 'vault'])
     expect(kindsOn([6, 7, 8, 9, 10])).toEqual(['library', 'shrine', 'spring', 'vault'])
-    expect(kindsOn([11, 12, 13, 14, 15])).toEqual(['anvil', 'library', 'shrine', 'vault'])
+    expect(kindsOn([11, 12, 13, 14, 15])).toEqual(['shrine', 'spring', 'vault'])
+    expect(kindsOn([16, 17, 18, 19, 20])).toEqual(['library', 'shrine', 'vault'])
+    expect(kindsOn([21, 22, 23, 24, 25])).toEqual(['anvil', 'library', 'shrine', 'vault'])
   })
 
   test('a spring in the middle with reeds two cells each side; an anvil in the middle with embers two cells each side, the embers lit', async () => {
     const want = { spring: false, anvil: false }
-    for (let world = 1; world <= 120 && !(want.spring && want.anvil); world += 1) for (const depth of [7, 12]) {
+    for (let world = 1; world <= 120 && !(want.spring && want.anvil); world += 1) for (const depth of [7, 22]) {
       const level = generate(world, depth)
       const t = themedRoomOf(world, depth, level)
       if (t?.kind !== 'spring' && t?.kind !== 'anvil') continue

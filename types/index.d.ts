@@ -24,10 +24,17 @@ export type Foe = {
   /** The hero's nemesis, come for them. */
   nemesis?: true
   /** One of the named uniques, by key: a theme's own monster with its own trick. */
-  unique?: 'bones' | 'mire' | 'ember'
+  unique?: 'bones' | 'mire' | 'rot' | 'rime' | 'ember'
+  /** A big boss, by key: every tenth depth's guardian, its theme's own, twice a foe's size, with its own moves. */
+  big?: 'king' | 'queen' | 'hive' | 'lich' | 'wyrm'
+  /** A big boss at half its HP or less: its second phase, entered once. */
+  phase?: 2
   /** Old Bones has pulled itself back together, as it does once. */
   risen?: true
 }
+
+/** A fall: what struck the last blow (`by`, as the log says it, and the foe as it stood; no foe for a trap), where the hero stood on which depth, the gold lost and the depth woken on. */
+export type Fallen = { by: string; foe?: Foe; at: { x: number; y: number }; depth: number; wake: number; lost: number }
 
 /** A champion that slew the hero, named, waiting on a depth below: there it comes for them again. */
 export type Nemesis = { given: string; kind: string; glyph: string; mod: ChampionMod; depth: number; wins: number }
@@ -79,13 +86,14 @@ export type Item = {
 export type Attribute = 'might' | 'focus' | 'vigor' | 'insight'
 
 /** What is open over the map; 'start' is the start screen, where the dungeon waits. */
-export type Panel = 'none' | 'start' | 'bag' | 'sheet' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
+export type Panel = 'none' | 'start' | 'death' | 'settings' | 'bag' | 'sheet' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
 
 /** The five kinds of consumable, a belt slot each, each in three tiers. */
 export type Consumable = 'health' | 'regen' | 'fury' | 'ward' | 'smoke'
 
 /** A belt slot's kind and how many of each tier it holds, I to III. */
-export type BeltSlot = { kind: Consumable; tiers: [number, number, number] }
+/** A belt slot: its kind, how many of each tier, and the tier chosen to use first, while the slot holds one. */
+export type BeltSlot = { kind: Consumable; tiers: [number, number, number]; chosen?: 1 | 2 | 3 }
 
 export type Game = {
   /** The save format: 2 since pixel art became the default view. A save without it predates that. */
@@ -132,6 +140,8 @@ export type Game = {
   fortune: Fortune | null
   deepest: number
   deaths: number
+  /** How the hero last fell, for the death window; absent before the first death. */
+  fallen?: Fallen
   /** HP the healer restored on this town visit: 0 when the hero came in unhurt, and back to 0 on leaving town. */
   mended: number
   /** Times the town dog has been petted. */

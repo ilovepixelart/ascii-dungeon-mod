@@ -24,7 +24,8 @@ const GOLD_INK = '#ffd34d'
 /** The gold this far left of the window's right edge. */
 const GOLD_FROM_RIGHT = 41
 /** The close box (x, y, w, h) at the title bar's right end of a window `width` wide. */
-export const closeBoxOf = (width: number) => [width - 10, 1, 9, 8] as const
+/** The close box: 9 px square under the title bar's line, its X centred with a pixel all round. */
+export const closeBoxOf = (width: number) => [width - 10, 1, 9, 9] as const
 export const CLOSE_BOX = closeBoxOf(WINDOW_W)
 export const CLOSE_INK = '#ff5a4f'
 const CLOSE_BG = '#2a1e24'
@@ -63,14 +64,15 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   const [cx, cy, cw, ch] = closeBoxOf(width)
   fill(c, cx, cy, cw, ch, CLOSE_BG)
   frame(c, cx, cy, cw, ch, CLOSE_EDGE)
-  art(c, ['w...w', '.w.w.', '..w..', '.w.w.', 'w...w'], cx + 2, cy + 1, CLOSE_INK)
+  art(c, ['w...w', '.w.w.', '..w..', '.w.w.', 'w...w'], cx + 2, cy + 2, CLOSE_INK)
   for (const l of chrome.labels) word(c, l.text, l.x, LABEL_Y, LABEL_INK)
   body.forEach((row, y) => row.forEach((p, x) => put(c, x, top + y, p)))
   return c
 }
 
 /** A text box over the window, in cells from its top-left (one pixel across, two down), and its frame's color. */
-export type OverlayBox<Role extends string = string> = { role: Role; x: number; y: number; w: number; h: number; border: string; lines: Run[][] }
+/** A text box over pixels: its place in cells, its frame's color, its lines; `bg`, a ground of its own under the text; `pad`, cells of room each side of the text (1 unless said). */
+export type OverlayBox<Role extends string = string> = { role: Role; x: number; y: number; w: number; h: number; border: string; lines: Run[][]; bg?: string; pad?: number }
 
 /** A text box's frame in pixels: a 1 px frame in its color round the dark fill, on the cells the box covers. */
 export const drawBox = (c: Canvas, b: Pick<OverlayBox, 'x' | 'y' | 'w' | 'h' | 'border'>) => {

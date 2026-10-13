@@ -3,6 +3,8 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Consumable, Game } from '../types'
 import { CONSUMABLES, KINDS, addToBelt, emptyBelt, killConsumable, tierFor, useBelt } from './consumables'
 import { toVersion7 } from './save'
+import { consumableIcon } from './icons'
+import { PAL } from './pixelart'
 import { foeAhead, plainHero } from './fixtures'
 import { apply, newGame } from './game'
 import { BASES, PRICE, canWear, makeItem, rarityOf, tierWeights } from './items'
@@ -46,6 +48,39 @@ describe('the belt', () => {
     expect(useBelt(g, 0)).toBe(`You drink a Health Potion. +${Math.ceil(g.maxHp * 0.35)} HP`)
     expect(g.belt[0]).toBeNull()
     expect(useBelt(g, 0)).toBe('Belt slot 1 is empty.')
+  })
+
+  test('uses the tier asked for, keeping the stronger one for later', async () => {
+    const g = apply(withBelt(oneSlot('health', [1, 0, 1])), { kind: 'use', slot: 0, tier: 1 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [0, 0, 1] })
+    expect(g.log.at(-1)).toMatch(/^You drink a Health Potion\./)
+  })
+
+  test('a chosen tier is used first, nothing used in choosing; once it runs out the slot goes back to its strongest', async () => {
+    let g = apply(withBelt(oneSlot('health', [2, 0, 1])), { kind: 'choose', slot: 0, tier: 1 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [2, 0, 1], chosen: 1 })
+    g = apply(g, { kind: 'use', slot: 0 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [1, 0, 1], chosen: 1 })
+    expect(g.log.at(-1)).toMatch(/^You drink a Health Potion\./)
+    g = apply(g, { kind: 'use', slot: 0 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [0, 0, 1] })
+    g = apply(g, { kind: 'use', slot: 0 })
+    expect(g.log.at(-1)).toMatch(/^You drink an Elixir\./)
+  })
+
+  test('a pick of a tier the slot does not hold changes nothing and says so; one more of a kind keeps the pick', async () => {
+    const g = apply(withBelt(oneSlot('health', [2, 0, 0])), { kind: 'choose', slot: 0, tier: 3 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [2, 0, 0] })
+    expect(g.log.at(-1)).toBe('You have no Elixir on your belt.')
+    const picked = withBelt([{ kind: 'health', tiers: [2, 0, 1], chosen: 1 }, null, null, null, null])
+    addToBelt(picked, 'health', 3)
+    expect(picked.belt[0]).toEqual({ kind: 'health', tiers: [2, 0, 2], chosen: 1 })
+  })
+
+  test('a tier asked for that the slot does not hold uses nothing and says so', async () => {
+    const g = apply(withBelt(oneSlot('health', [1, 0, 1])), { kind: 'use', slot: 0, tier: 2 })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [1, 0, 1] })
+    expect(g.log.at(-1)).toBe('You have no Greater Health Potion on your belt.')
   })
 
   test('each kind\'s three tiers have their own names', async () => {
@@ -97,7 +132,7 @@ describe('effects', () => {
     return { ...g, foe: foeAhead(g, 1, { hp: 999, maxHp: 999, atk: 3, opened: true }) }
   }
 
-  test('a Ward Scroll absorbs exactly the next 2 hits', async () => {
+  test('a Ward Rune absorbs exactly the next 2 hits', async () => {
     let g = apply(foeGame({ belt: oneSlot('ward', [1, 0, 0]) }), { kind: 'use', slot: 3 })
     for (let i = 0; i < 2; i += 1) g = apply(g, { kind: 'outcome', ok: false, what: 'Bash' })
     expect(g.hp).toBe(20)
@@ -122,7 +157,7 @@ describe('effects', () => {
     expect(doubled[5]).toBe(plain[5])
   })
 
-  test('a Regeneration Draught heals a tenth of max HP after each of the next 5 fights', async () => {
+  test('a Healing Herb heals a tenth of max HP after each of the next 5 fights', async () => {
     let g = apply(foeGame({ hp: 2, belt: oneSlot('regen', [1, 0, 0]) }), { kind: 'use', slot: 1 })
     g = { ...g, foe: null }
     const seen: number[] = []
@@ -134,7 +169,7 @@ describe('effects', () => {
     expect(seen).toEqual([2, 2, 2, 2, 2, 0])
   })
 
-  test('a Scroll of Passage reveals the whole level, with no foe to escape', async () => {
+  test('a Passage Bomb reveals the whole level, with no foe to escape', async () => {
     const g = apply(withBelt(oneSlot('smoke', [0, 0, 1])), { kind: 'use', slot: 4 })
     expect(g.seen.includes('0')).toBe(false)
   })
@@ -146,13 +181,13 @@ describe('effects', () => {
     expect(g.seen).toBe(before.seen)
   })
 
-  test('a Shadow Step escapes the foe and restores a fifth of max HP', async () => {
+  test('a Shadow Bomb escapes the foe and restores a fifth of max HP', async () => {
     const g = apply(foeGame({ hp: 5, belt: oneSlot('smoke', [0, 1, 0]) }), { kind: 'use', slot: 4 })
     expect(g.foe).toBeNull()
     expect(g.hp).toBe(5 + Math.ceil(g.maxHp * 0.2))
   })
 
-  test('a stronger tier lasts longer: a Greater Ward absorbs 3 hits, Battle Hymn and Troll Blood their counts', async () => {
+  test('a stronger tier lasts longer: a Greater Ward Rune absorbs 3 hits, a Scroll of Battle and Troll Moss their counts', async () => {
     expect(apply(foeGame({ belt: oneSlot('ward', [0, 1, 0]) }), { kind: 'use', slot: 3 }).effects.ward).toBe(3)
     expect(apply(foeGame({ belt: oneSlot('ward', [0, 0, 1]) }), { kind: 'use', slot: 3 }).effects.ward).toBe(5)
     expect(apply(foeGame({ belt: oneSlot('fury', [0, 1, 0]) }), { kind: 'use', slot: 2 }).effects.fury).toBe(8)
@@ -279,5 +314,19 @@ describe('what drops', () => {
 
   test('selling pays 2, 5, 6, 12 and 20 times worth by tier', async () => {
     expect(PRICE).toEqual({ common: 2, uncommon: 5, rare: 6, epic: 12, legendary: 20 })
+  })
+})
+
+describe('the items\' icons', () => {
+  test('all fifteen are their own: 8 by 8, palette colors only, no two alike', async () => {
+    const icons = KINDS.flatMap(kind => ([1, 2, 3] as const).map(tier => consumableIcon(kind, tier)))
+    expect(new Set(icons.map(i => i.join('/'))).size).toBe(15)
+    for (const icon of icons) {
+      expect(icon).toHaveLength(8)
+      for (const row of icon) {
+        expect(row).toHaveLength(8)
+        for (const k of row) expect(k === '.' || PAL[k] !== undefined).toBe(true)
+      }
+    }
   })
 })

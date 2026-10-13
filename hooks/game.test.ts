@@ -722,6 +722,19 @@ describe('a version 4 save, from before the levels were rebuilt', () => {
     expect({ x: kept.x, y: kept.y, seen: kept.seen }).toEqual({ ...spotOn(kept.depth), seen: '1'.repeat(64 * 18) })
   })
 
+  test('a version 8 save on a depth whose theme changed re-enters it at the start; on one that kept its theme it stays put', async () => {
+    // Depth 12 was the forge and is now the fungal deep; depth 7 was and is the flooded halls.
+    const spotOn = (depth: number) => {
+      const level = generate(4, depth)
+      return level.rooms.map(r => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })).find(p => !same(p, level.start))!
+    }
+    const at = (depth: number) => normalize({ ...newGame(4), world: 4, depth, ...spotOn(depth), seen: '1'.repeat(64 * 18), version: 8 } as Game)
+    const moved = at(12)
+    expect({ x: moved.x, y: moved.y }).toEqual(generate(4, 12).start)
+    const kept = at(layoutOf(4, 7) === 'rooms' ? 7 : 6)
+    expect({ x: kept.x, y: kept.y }).toEqual(spotOn(kept.depth))
+  })
+
   test('a current save loads as it is', async () => {
     const now = newGame(4)
     expect(normalize(now)).toEqual({ ...now })
@@ -934,7 +947,7 @@ describe('the merchant', () => {
   })
 
   test('sells potions and scrolls at fixed prices, onto the belt at their tier', async () => {
-    expect(SHOP_PRICES).toEqual({ health1: 25, health3: 80, regen1: 45, fury1: 50, ward1: 50, smoke1: 35, smoke3: 60 })
+    expect(SHOP_PRICES).toEqual({ health1: 25, health2: 50, health3: 80, regen1: 45, fury1: 50, ward1: 50, ward2: 75, smoke1: 35, smoke3: 60 })
     const g = apply(inTown(), { kind: 'buy', ware: 'health1' })
     expect(g.gold).toBe(75)
     expect(g.belt[0]).toEqual({ kind: 'health', tiers: [1, 0, 0] })
@@ -946,7 +959,7 @@ describe('the merchant', () => {
   test('a ware the merchant does not stock is not sold, and costs nothing', async () => {
     const g = apply(inTown(), { kind: 'buy', ware: 'fury3' })
     expect({ gold: g.gold, slot: g.belt[2] }).toEqual({ gold: 100, slot: null })
-    expect(g.log.at(-1)).toBe("The merchant has no Berserker's Oath to sell.")
+    expect(g.log.at(-1)).toBe('The merchant has no Scroll of the Berserker to sell.')
   })
 
   test('refuses what you cannot pay for, or have no room for, and takes nothing', async () => {
@@ -1088,13 +1101,13 @@ describe('the themed room in play', () => {
     expect(hurt.hp).toBe(14)
   })
 
-  test('reading at the lectern gives a Scroll of Passage, once', async () => {
+  test('reading at the lectern gives a Scroll of the Berserker, once', async () => {
     const { g, mid } = beside('library')
     const read = apply({ ...g, belt: [null, null, null, null, null] }, { kind: 'goto', ...mid })
-    expect(read.belt[4]).toEqual({ kind: 'smoke', tiers: [0, 0, 1] })
-    expect(read.log.at(-1)).toBe('You read at the lectern and copy out a Scroll of Passage.')
+    expect(read.belt[2]).toEqual({ kind: 'fury', tiers: [0, 0, 1] })
+    expect(read.log.at(-1)).toBe('You read at the lectern and copy out a Scroll of the Berserker.')
     const again = apply(apply(read, { kind: 'goto', x: g.x, y: g.y }), { kind: 'goto', ...mid })
-    expect(again.belt[4]).toEqual({ kind: 'smoke', tiers: [0, 0, 1] })
+    expect(again.belt[2]).toEqual({ kind: 'fury', tiers: [0, 0, 1] })
   })
 
   test('braziers and shelves are furnishings: walking past them takes nothing', async () => {
@@ -1463,8 +1476,10 @@ describe('which foes a depth holds', () => {
   test('any kind unlocked so far, up to two tiers past the depth; the theme\'s favorites three times, the newest three twice', async () => {
     // Depth 1, the crypt: rat, goblin, kobold, all among the newest; the rat a crypt favorite.
     expect(foeTierWeights(1)).toEqual([6, 2, 2])
-    // Depth 12, the forge: every kind; goblin, orc and dragon favored, troll, wraith and dragon the newest.
-    expect(foeTierWeights(12)).toEqual([1, 3, 1, 3, 1, 2, 2, 6])
+    // Depth 22, the forge: every kind; goblin, orc and dragon favored, troll, wraith and dragon the newest.
+    expect(foeTierWeights(22)).toEqual([1, 3, 1, 3, 1, 2, 2, 6])
+    // Depth 12, the fungal deep: rat, goblin and kobold favored.
+    expect(foeTierWeights(12)).toEqual([3, 3, 3, 1, 1, 2, 2, 2])
     // Depth 7, the flooded halls: up to the dragon; kobold, rat and troll favored.
     expect(foeTierWeights(7)).toEqual([3, 1, 3, 1, 1, 6, 2, 2])
   })
@@ -1545,7 +1560,7 @@ describe('the classes described', () => {
 
 describe('the spring and the old anvil in play', () => {
   const beside = (kind: 'spring' | 'anvil') => {
-    for (let world = 1; world <= 200; world += 1) for (const depth of [7, 12]) {
+    for (let world = 1; world <= 200; world += 1) for (const depth of [7, 22]) {
       const level = generate(world, depth)
       const themed = themedRoomOf(world, depth, level)
       if (themed?.kind !== kind) continue

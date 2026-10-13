@@ -8,7 +8,7 @@ import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
 import type { Theme } from './map'
-import { BUTTON_H, CURSOR, GOLD_INK, PORTRAIT, bar, button, buttonW, portrait } from './pieces'
+import { BUTTON_H, CURSOR, GOLD_INK, PORTRAIT, barLabel, button, buttonW, flatBar, portrait } from './pieces'
 import type { ButtonState } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -45,7 +45,7 @@ const nextGuardian = (g: Game) => {
   const at = Math.max(BOSS_EVERY, Math.ceil(g.depth / BOSS_EVERY) * BOSS_EVERY)
   return at > g.bossSlain ? at : at + BOSS_EVERY
 }
-const THEME_WORD: Readonly<Record<Theme, string>> = { crypt: 'to old tombs', flooded: 'to flooded halls', forge: 'to forges and slag' }
+const THEME_WORD: Readonly<Record<Theme, string>> = { crypt: 'to old tombs', flooded: 'to flooded halls', fungal: 'to fungal caves', frozen: 'to halls of ice', forge: 'to forges and slag' }
 const hasWorked = (g: Game) => g.reforges > 0 || SLOTS.some(s => (g.gear[s]?.temper ?? 0) > 0)
 
 /** What each says, first match wins: their words, then a dim line of what it means. */
@@ -138,25 +138,33 @@ const layout = (g: Game, who: Speaker) => {
 /** The window's height in pixels, for the pane to size its drawing. */
 export const talkHeight = (g: Game, who: Speaker) => layout(g, who).height
 
-/** The text boxes over the window: what they say. */
-export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => [layout(g, who).box]
+/** A status bar beside its mark, in window pixels: on an odd row, its number on its middle, as wide as the words' box less the mark. */
+const statusBar = (statusY: number) => ({ x: SIDE_X + 7, y: Math.floor((statusY + 2) / 2) * 2 + 1, w: WORDS_W - 7 })
+
+/** What a speaker's bar shows, if they have one: the healer the hero's HP, the elder the quest's progress. */
+const barOf = (g: Game, who: Speaker): { share: number; color: string; empty: string; text: string } | undefined => {
+  if (who === 'healer') {
+    const share = Math.max(0, g.hp) / g.maxHp
+    return { share, color: hpTones(share)[1], empty: HP_EMPTY, text: `${Math.max(0, g.hp)}/${g.maxHp}` }
+  }
+  if (who === 'elder' && g.quest !== null) return { share: g.quest.have / g.quest.need, color: QUEST_FILL, empty: QUEST_EMPTY, text: `${g.quest.have}/${g.quest.need}` }
+  return undefined
+}
+const QUEST_FILL = '#d9b54a'
+const QUEST_EMPTY = '#2a2618'
+
+/** The text boxes over the window: what they say, and the numbers on their bar. */
+export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => {
+  const l = layout(g, who)
+  const b = barOf(g, who)
+  if (b === undefined) return [l.box]
+  const at = statusBar(l.statusY)
+  return [l.box, barLabel(at.x, at.y, at.w, b.share, b.color, b.empty, b.text)]
+}
 
 const STATUS: Readonly<Record<Speaker, (c: ReturnType<typeof canvas>, g: Game, y: number) => void>> = {
-  healer: (c, g, y) => {
-    mark(c, MARK.heart, SIDE_X, y)
-    const share = Math.max(0, g.hp) / g.maxHp
-    const text = `${Math.max(0, g.hp)}/${g.maxHp}`
-    bar(c, SIDE_X + 7, y + 1, WORDS_W - 7 - 4 * text.length - 3, 3, share, hpTones(share), HP_EMPTY)
-    digits(c, text, WINDOW_W - 3, y + 5, NUM_INK)
-  },
-  elder: (c, g, y) => {
-    const q = g.quest
-    if (q === null) return
-    const text = `${q.have}/${q.need}`
-    mark(c, MARK.xp, SIDE_X, y)
-    bar(c, SIDE_X + 7, y + 1, WORDS_W - 7 - 4 * text.length - 3, 3, q.have / q.need, ['#f0d070', '#d9b54a', '#a8842a'], '#2a2618')
-    digits(c, text, WINDOW_W - 3, y + 5, NUM_INK)
-  },
+  healer: () => undefined,
+  elder: () => undefined,
   mystic: () => undefined,
   guard: () => undefined,
   villager: () => undefined,
@@ -189,6 +197,12 @@ export const talkPixels = (g: Game, who: Speaker): string[][] => {
   const body = canvas(WINDOW_W, l.height - l.top)
   portrait(body, NPC_ART[who], PAD, 2)
   STATUS[who](body, g, l.statusY - l.top)
+  const b = barOf(g, who)
+  if (b !== undefined) {
+    const at = statusBar(l.statusY)
+    mark(body, who === 'healer' ? MARK.heart : MARK.xp, SIDE_X, at.y - l.top)
+    flatBar(body, at.x, at.y - l.top, at.w, b.share, b.color, b.empty)
+  }
   if (l.act !== undefined && l.buttonRect !== undefined) button(body, l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y - l.top, l.act.state, l.act.cost, l.act.canPay)
   if (who === 'mystic') fortuneRows(body, g, l.fortunesY - l.top)
   const c = windowPixels(CHROME[who](g), body.px)

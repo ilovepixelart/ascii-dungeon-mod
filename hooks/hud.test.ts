@@ -4,9 +4,10 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { depthMod, isBossDepth, newGame } from './game'
 import {
-  BAR_X, BELT_BELOW_Y, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_Y, XP_FILL, XP_Y,
-  barsLayout, beltSlotX, contentLayout, hudContent, hudHit, hudLayout, hudPixels, portalSlotX,
+  BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_Y, XP_FILL, XP_Y,
+  BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
+import type { Gesture } from './window'
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
 import { MAP_W } from './map'
 import { CONSUMABLE_ICONS } from './icons'
@@ -17,10 +18,10 @@ import { CHAMPION_MARK, FOE_BAR_EMPTY, FOE_BAR_FILL, FOE_BAR_W, frameOf, hexToIn
 const W = 111
 const hero = (over: Partial<Game> = {}): Game => ({ ...newGame(4, 'knight'), ...over })
 /**
- * A strip whose bars are exactly 25 pixels long for a level 1 hero of 100 HP, worked by hand: the bars start 20 in,
- * then the bar, 2 px, the numbers' room ("100/100": 7 glyphs of 3 px and 6 gaps, 27 px), 3 px and the 10 px portal.
+ * A strip whose bars are exactly 25 pixels long, worked by hand: the bars start 17 in, then the bar, 1 px, the 10 px
+ * settings slot, 1 px and the 10 px portal. Their numbers are text on them and take no room.
  */
-const BAR25 = 20 + 25 + 2 + 27 + 3 + 10
+const BAR25 = 17 + 25 + 1 + 10 + 1 + 10
 const ink = (c: { px: string[][] }, x: number, y: number, w: number, h: number) => c.px.slice(y, y + h).flatMap(r => r.slice(x, x + w))
 /** Whether `text` is drawn in `color` with its top-left corner at x, y: lit exactly where the font is. */
 const hasText = (c: { px: string[][] }, text: string, x: number, y: number, color: string) =>
@@ -30,17 +31,17 @@ describe('the strip', () => {
   test('is the pane\'s width and the same height at every width: the top row, the belt, the side line', async () => {
     for (const width of [72, W, 140]) {
       const c = hudContent(hero(), width)
-      expect(c.px.length).toBe(32)
+      expect(c.px.length).toBe(28)
       for (const row of c.px) expect(row.length).toBe(width)
-      expect(contentLayout(width).height).toBe(32)
+      expect(contentLayout(width).height).toBe(28)
     }
     expect(beltSlotX(W, 0)).toBe(0)
     expect(portalSlotX(W) + SLOT).toBe(W)
   })
 
   test('works out the bars by hand: 25 px at the BAR25 width', async () => {
-    expect(BAR_X).toBe(20)
-    expect(barsLayout(hero({ maxHp: 100, level: 1 }), BAR25)).toEqual({ barW: 25, numX: 20 + 25 + 2 })
+    expect(BAR_X).toBe(17)
+    expect(barsLayout(hero({ maxHp: 100, level: 1 }), BAR25)).toEqual({ barW: 25 })
   })
 
   test('draws the portal in its colors when it can open, and dark while a foe lives', async () => {
@@ -52,7 +53,8 @@ describe('the strip', () => {
     }))
     const shut = hudContent({ ...g, foe: foeAhead(g, 3) }, W)
     const lit = new Set(Object.values(PAL))
-    const inked = TOWN_THING_ART.portal.flatMap((row, y) => [...row].flatMap((k, x) => (k === '.' ? [] : [shut.px[1 + y]?.[x0 + x]])))
+    // Its inside: the dark outline keeps its color, so the shut portal is the open one's size.
+    const inked = TOWN_THING_ART.portal.flatMap((row, y) => [...row].flatMap((k, x) => (k === '.' || k === 'K' ? [] : [shut.px[1 + y]?.[x0 + x]])))
     expect(inked.every(p => p !== undefined && !lit.has(p))).toBe(true)
   })
 
@@ -67,14 +69,16 @@ describe('the strip', () => {
   test('puts a heart before the HP bar, and a gold star under it before the XP bar', async () => {
     const c = hudContent(hero(), W)
     MARK.heart.forEach((row, y) => [...row].forEach((k, x) => {
-      if (k !== '.') expect(c.px[y]?.[HEART_X + x]).toBe(MARK_INK[k])
+      if (k !== '.') expect(c.px[HP_Y + y]?.[HEART_X + x]).toBe(MARK_INK[k])
     }))
-    const star = ink(c, HEART_X, LINE2_Y, 5, 5)
-    // A diamond star, worked by hand: its middle row lit across, its corners dark, gold at its edge, pale at its heart.
-    expect(star.slice(10, 15).every(p => p === '#e0b84a' || p === '#fff2a8')).toBe(true)
-    expect([star[0], star[4], star[20], star[24]].every(p => p !== '#e0b84a' && p !== '#fff2a8')).toBe(true)
+    const star = ink(c, HEART_X, XP_Y, 5, 4)
+    // A five-pointed star 4 px tall, worked by hand: its tip, its arms lit across, its body, its two feet; gold at its
+    // edge, pale at its heart.
+    const isLit = (p: string | undefined) => p === '#e0b84a' || p === '#fff2a8'
+    expect([star[2], ...star.slice(5, 10), star[11], star[12], star[13], star[16], star[18]].every(isLit)).toBe(true)
+    expect([star[0], star[4], star[15], star[17], star[19]].some(isLit)).toBe(false)
     expect(star[2]).toBe('#e0b84a')
-    expect(star[12]).toBe('#fff2a8')
+    expect(star[7]).toBe('#fff2a8')
   })
 
   test('fills the HP bar in proportion, green above 70%, amber to 40%, red below', async () => {
@@ -95,14 +99,25 @@ describe('the strip', () => {
     expect(row.slice(BAR_X, BAR_X + 25).filter(p => p === XP_FILL).length).toBe(13)
   })
 
-  test('writes the HP after its bar and the level after the XP bar, a green + while points wait', async () => {
+  test('writes the HP and the level as text centred on their bars, each character on the bar color under it', async () => {
     const g = hero({ hp: 86, maxHp: 100, level: 1 })
-    const c = hudContent(g, BAR25)
-    expect(hasText(c, '86/100', 47, 0, NUM_INK)).toBe(true)
-    expect(hasText(c, 'LV1', 47, LINE2_Y, LEVEL_INK)).toBe(true)
-    expect(ink(c, 47, LINE2_Y, 30, 5).includes(POINTS_INK)).toBe(false)
-    const ready = hudContent({ ...g, points: 2 }, BAR25)
-    expect(hasText(ready, '+', 47 + 11 + 1, LINE2_Y, POINTS_INK)).toBe(true)
+    const [hp, lv] = hudLabels(g, BAR25 + 2 * INSET)
+    const text = (b: typeof hp) => b!.lines[0]!.map(r => r.text).join('')
+    expect([text(hp), text(lv)]).toEqual(['86/100', 'LV1'])
+    expect(text(hudLabels({ ...g, points: 2 }, BAR25 + 2 * INSET)[1])).toBe('LV1+')
+    // The + is in the level's own ink, character for character.
+    const ready = hudLabels({ ...g, points: 2 }, BAR25 + 2 * INSET)[1]!.lines[0]!
+    expect(ready.at(-1)!.color).toBe(ready.at(-2)!.color)
+    // "86/100" on 25 px: 19 spare, 9 before it, so from BAR_X + 9; its box starts a cell before (no padding).
+    expect(hp!.x + 1).toBe(INSET + BAR_X + 9)
+    // On the HP bar's middle and bottom rows, and on the XP bar.
+    // Each on its bar's middle two rows: one text row, a bar row above it and one below.
+    expect((hp!.y + 1) * 2).toBe(INSET + HP_Y + 1)
+    expect((lv!.y + 1) * 2).toBe(INSET + XP_Y + 1)
+    // 86% of 25 is 22 px filled: the text's cells from 9 to 14 are all on the fill, in the bar's own green.
+    expect(hp!.lines[0]!.every(r => r.bg === HP_TONES.healthy[1])).toBe(true)
+    // At 20% only 5 px are filled: the text is on the empty bar.
+    expect(hudLabels({ ...g, hp: 20 }, BAR25 + 2 * INSET)[0]!.lines[0]!.every(r => r.bg === '#1e2420')).toBe(true)
   })
 
   test('draws each belt slot\'s icon, and nothing in an empty slot', async () => {
@@ -273,12 +288,14 @@ describe('the strip at any pane width', () => {
     for (let columns = 80; columns <= 140; columns += 1) {
       const width = columns - 2 * INSET
       const g = hero({ hp: 27, maxHp: 105 })
-      const { barW, numX } = barsLayout(g, width)
+      const { barW } = barsLayout(g, width)
       const row = hudContent(g, width).px[HP_Y + 1] ?? []
       const tones = new Set<string>([...HP_TONES.critical, '#1e2420'])
       expect(row.slice(BAR_X, BAR_X + barW).every(p => tones.has(p)) ? 'clear' : `${columns}: something drawn over the bar`).toBe('clear')
       expect(barW).toBeGreaterThanOrEqual(10)
-      expect(numX + 27).toBeLessThan(portalSlotX(width))
+      // "105/105" as text, a cell a character, lies on the bar.
+      const [label] = hudLabels(g, columns)
+      expect(label!.x + 1 >= INSET + BAR_X && label!.x + 1 + 7 <= INSET + BAR_X + barW).toBe(true)
     }
   })
 })
@@ -292,36 +309,99 @@ describe('clicks on the strip', () => {
       expect(hit(5, 3)).toEqual({ kind: 'panel', panel: 'bag' })
       expect(hit(BAR_X + 4, HP_Y)).toBeUndefined()
       expect(hit(BAR_X + 4, LINE2_Y + 2)).toEqual({ kind: 'panel', panel: 'sheet' })
-      expect(hit(barsLayout(hero(), inner).numX + 2, LINE2_Y + 2)).toEqual({ kind: 'panel', panel: 'sheet' })
+      expect(hit(BAR_X + barsLayout(hero(), inner).barW - 2, LINE2_Y + 2)).toEqual({ kind: 'panel', panel: 'sheet' })
       for (let i = 0; i < 5; i += 1) expect(hit(beltSlotX(inner, i) + 6, BELT_BELOW_Y + 6)).toEqual({ kind: 'use', slot: i })
       expect(hit(portalSlotX(inner) + 6, 6)).toEqual({ kind: 'portal' })
+      expect(hit(settingsSlotX(inner) + 5, 5)).toEqual({ kind: 'panel', panel: 'settings' })
       expect(hit(5, SIDE_LINE_Y + 2)).toBeUndefined()
       // On the iron itself: nothing.
       expect(hudHit(width, { x: 1, y: 1 })).toBeUndefined()
     }
   })
+
+  test('settings is a slot left of the portal at every width, the bars ending before it and keeping 10 px', async () => {
+    for (let columns = 80; columns <= 140; columns += 1) {
+      const inner = columns - 2 * INSET
+      const g = hero({ hp: 105, maxHp: 105, level: 12, points: 1 })
+      expect(BAR_X + barsLayout(g, inner).barW).toBeLessThan(settingsSlotX(inner))
+      expect(barsLayout(g, inner).barW).toBeGreaterThanOrEqual(10)
+      expect(settingsSlotX(inner) + SLOT).toBeLessThan(portalSlotX(inner))
+    }
+  })
+})
+
+describe('a belt slot\'s menu', () => {
+  const width = 111
+  const inner = width - 2 * INSET
+  const at = (x: number, y: number) => ({ x: x + 0.5, y: y + 0.25 })
+  const click = (p: { x: number; y: number }, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: p, at: p, button })
+  const onSlot = (i: number) => at(INSET + beltSlotX(inner, i) + 6, (INSET + BELT_BELOW_Y + 6) / 2)
+  const potions = hero({ belt: [{ kind: 'health', tiers: [4, 0, 1] }, null, null, null, { kind: 'smoke', tiers: [1, 0, 0] }] })
+
+  test('a right-click on a filled slot opens its menu: a line a tier held, strongest first, with how many', async () => {
+    expect(hudGesture(potions, null, click(onSlot(0), 'right'), width)).toEqual({ menu: 0, actions: [] })
+    const box = beltMenuBox(potions, 0, width)!
+    expect(box.lines.map(l => l.map(r => r.text).join(''))).toEqual(['> Elixir x1', '  Health Potion x4'])
+    // The tier chosen for the slot is the one marked.
+    const chose = hero({ belt: [{ kind: 'health', tiers: [4, 0, 1], chosen: 1 }, null, null, null, null] })
+    expect(beltMenuBox(chose, 0, width)!.lines.map(l => l[0]!.text)).toEqual(['  ', '> '])
+  })
+
+  test('a right-click on an empty slot opens nothing, and a left-click still uses the strongest', async () => {
+    expect(hudGesture(potions, null, click(onSlot(1), 'right'), width)).toEqual({ menu: null, actions: [] })
+    expect(hudGesture(potions, null, click(onSlot(0)), width)).toEqual({ menu: null, actions: [{ kind: 'use', slot: 0 }] })
+  })
+
+  test('a click on a line chooses that tier for the slot, using nothing, and closes the menu; a click elsewhere closes it and does what it does', async () => {
+    const box = beltMenuBox(potions, 0, width)!
+    expect(hudGesture(potions, 0, click(at(box.x + 2, box.y + 2)), width)).toEqual({ menu: null, actions: [{ kind: 'choose', slot: 0, tier: 1 }] })
+    expect(hudGesture(potions, 0, click(at(box.x + 2, box.y + 1)), width)).toEqual({ menu: null, actions: [{ kind: 'choose', slot: 0, tier: 3 }] })
+    // Its frame: nothing, the menu stays.
+    expect(hudGesture(potions, 0, click(at(box.x + 2, box.y)), width)).toEqual({ menu: 0, actions: [] })
+    expect(hudGesture(potions, 0, click(onSlot(4)), width)).toEqual({ menu: null, actions: [{ kind: 'use', slot: 4 }] })
+  })
+
+  test('stands on its slot: just above the belt, its left edge on the slot\'s, inside the strip', async () => {
+    const beltTop = Math.floor((INSET + BELT_BELOW_Y) / 2)
+    for (const w of [80, 111, 200]) {
+      for (const slot of [0, 4]) {
+        const box = beltMenuBox(potions, slot, w)!
+        expect(box.y + box.h).toBe(beltTop)
+        expect(box.x).toBe(Math.min(INSET + beltSlotX(w - 2 * INSET, slot), w - box.w))
+        expect(box.x >= 0 && box.x + box.w <= w && box.y >= 0).toBe(true)
+      }
+    }
+    expect(beltMenuBox(potions, 1, width)).toBeUndefined()
+  })
 })
 
 test('the bars have no frame: the pixels around them are the strip itself', async () => {
   const c = hudContent(hero({ hp: 50, maxHp: 100 }), BAR25)
-  const around = [...c.px[HP_Y - 1]!.slice(BAR_X, BAR_X + 25), ...c.px[XP_Y + 1]!.slice(BAR_X, BAR_X + 25), c.px[HP_Y]![BAR_X - 1], c.px[HP_Y]![BAR_X + 25]]
+  const around = [...c.px[HP_Y + 2]!.slice(BAR_X, BAR_X + 25), ...c.px[XP_Y + 2]!.slice(BAR_X, BAR_X + 25), c.px[HP_Y]![BAR_X - 1], c.px[HP_Y]![BAR_X + 25]]
   expect(around.filter(p => p === GRID)).toEqual([])
-  expect(HP_H).toBe(3)
+})
+
+test('the HP bar is four rows of one flat color, its mark\'s height', async () => {
+  expect(HP_H).toBe(4)
+  expect(HP_H).toBe(MARK.heart.length)
+  for (const hp of [100, 60, 30]) {
+    const c = hudContent(hero({ hp, maxHp: 100 }), BAR25)
+    const rows = [0, 1, 2, 3].map(dy => c.px[HP_Y + dy]!.slice(BAR_X, BAR_X + 5).join())
+    expect(new Set(rows).size).toBe(1)
+    expect(new Set(c.px[HP_Y]!.slice(BAR_X, BAR_X + 5)).size).toBe(1)
+  }
 })
 
 describe('the iron frame', () => {
-  test('surrounds the strip: a dark edge, rivets along it, and the contents INSET in, unchanged', async () => {
+  test('surrounds the strip: a metal band, rivets along it, and the contents INSET in, unchanged', async () => {
     const width = 110
     const g = hero({ hp: 50, maxHp: 100 })
     const framed = hudPixels(g, width)
     const inner = hudContent(g, width - 2 * INSET)
     expect(framed.px.length).toBe(inner.h + 2 * INSET)
     expect(hudLayout(width).height).toBe(framed.px.length)
-    // The outermost ring is all one dark edge color.
-    const ring = [...framed.px[0]!, ...framed.px[framed.h - 1]!, ...framed.px.map(r => r[0]!), ...framed.px.map(r => r[width - 1]!)]
-    expect(new Set(ring).size).toBe(1)
-    // Rivets along the top, in the frame's middle row.
-    expect(framed.px[1]!.filter(p => p === '#c8ccd4').length).toBeGreaterThanOrEqual(Math.floor(width / 12) - 1)
+    // Rivets along the top, in the band.
+    expect(framed.px[0]!.filter(p => p === '#c8ccd4').length).toBeGreaterThanOrEqual(Math.floor(width / 12) - 1)
     // The contents unchanged, INSET from the edges.
     inner.px.forEach((row, y) => row.forEach((p, x) => {
       if (framed.px[INSET + y]![INSET + x] !== p) throw new Error(`content moved at ${x},${y}`)
@@ -351,4 +431,89 @@ describe("a boss's crown", () => {
       expect(at(bare, left + 3, top - 1)).not.toBe(gold)
     }
   })
+})
+
+test('a belt menu open over the strip hides the numbers it covers, and leaves those it does not', async () => {
+  const g = hero({ hp: 87, maxHp: 105, level: 7, belt: [{ kind: 'health', tiers: [4, 0, 1] }, null, null, null, null] })
+  const menu = beltMenuBox(g, 0, 111)!
+  const shown = hudBoxes(g, 111, [menu])
+  const covers = (b: (typeof shown)[number]) => b.x < menu.x + menu.w && menu.x < b.x + b.w && b.y < menu.y + menu.h && menu.y < b.y + b.h
+  expect(shown.filter(b => b.role === 'label').some(covers)).toBe(false)
+  expect(shown.at(-1)).toBe(menu)
+  expect(hudBoxes(g, 111, []).filter(b => b.role === 'label')).toHaveLength(2)
+})
+
+test('the shut portal is the open one\'s size: its outline stays dark, only its inside goes grey', async () => {
+  const width = 111 - 2 * INSET
+  const g = hero()
+  const open = hudContent(g, width)
+  const shut = hudContent({ ...g, foe: foeAhead(g, 2) }, width)
+  const x0 = portalSlotX(width) + 1
+  const lit = (c: typeof open) => TOWN_THING_ART.portal.flatMap((row, y) => [...row].flatMap((k, x) => (k !== '.' && c.px[1 + y]![x0 + x] !== PAL.K ? [`${x},${y}`] : [])))
+  expect(lit(shut)).toEqual(lit(open))
+  expect(shut.px[1 + 3]![x0 + 3]).not.toBe(open.px[1 + 3]![x0 + 3])
+})
+
+test('the heart and the star are the same size: five pixels across, four down, a pixel either side of their bars', async () => {
+  for (const m of [MARK.heart, MARK.xp]) {
+    expect(m).toHaveLength(4)
+    const xs = m.flatMap(row => [...row].flatMap((k, x) => (k === '.' ? [] : [x])))
+    expect([Math.min(...xs), Math.max(...xs)]).toEqual([0, 4])
+    expect(m[0]!.includes('.') && m.every(row => row.length === 5)).toBe(true)
+  }
+})
+
+test('a pixel stands between the settings slot and the portal', async () => {
+  const width = 111 - 2 * INSET
+  expect(portalSlotX(width) - (settingsSlotX(width) + SLOT)).toBe(1)
+})
+
+test('each bar stands beside its mark on the same four rows, on an odd row of the strip', async () => {
+  const c = hudContent(hero(), 111 - 2 * INSET)
+  const rowsOf = (ink: string) => c.px.flatMap((row, y) => (row.slice(HEART_X, HEART_X + 5).includes(ink) ? [y] : []))
+  const heart = rowsOf(MARK_INK.r!)
+  const star = rowsOf(MARK_INK.x!)
+  expect([Math.min(...heart), Math.max(...heart)]).toEqual([HP_Y, HP_Y + 3])
+  expect([Math.min(...star), Math.max(...star)]).toEqual([XP_Y, XP_Y + 3])
+  expect([(INSET + HP_Y) % 2, (INSET + XP_Y) % 2]).toEqual([1, 1])
+})
+
+test('a pixel stands between the bars and the settings slot', async () => {
+  const width = 111 - 2 * INSET
+  expect(settingsSlotX(width) - (BAR_X + barsLayout(hero(), width).barW)).toBe(1)
+})
+
+test('a pixel stands between the marks and their bars', async () => {
+  expect(BAR_X - (HEART_X + 5)).toBe(1)
+})
+
+test('a pixel stands between the portrait and the marks', async () => {
+  expect(HEART_X - PORTRAIT).toBe(1)
+})
+
+test('a slot counts all it holds, every tier; its icon and pips are the tier it uses next', async () => {
+  const width = 111 - 2 * INSET
+  const g = hero({ belt: [null, null, { kind: 'fury', tiers: [2, 1, 0] }, null, null] })
+  const c = hudContent(g, width)
+  const x = beltSlotX(width, 2)
+  const digitsAt = (n: number) => hasText(hudContent(hero({ belt: [null, null, { kind: 'fury', tiers: [n, 0, 0] }, null, null] }), width), String(n), x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')
+  expect(digitsAt(3)).toBe(true)
+  expect(hasText(c, '3', x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(true)
+})
+
+test('a pixel stands under the star, above and below the side line, and between the content and the metal', async () => {
+  expect(BELT_BELOW_Y - (XP_Y + 4)).toBe(1)
+  expect(SIDE_LINE_Y - (BELT_BELOW_Y + SLOT)).toBe(1)
+  expect(contentLayout(100).height - (SIDE_LINE_Y + 5)).toBe(0)
+  expect(INSET - FRAME).toBe(1)
+})
+
+test('the iron frame is the riveted metal band alone, one pixel: no dark edge, no inner line', async () => {
+  const width = 110
+  const framed = hudPixels(hero(), width)
+  expect(FRAME).toBe(1)
+  const ring = new Set([...framed.px[0]!, ...framed.px[framed.h - 1]!, ...framed.px.map(r => r[0]!), ...framed.px.map(r => r[width - 1]!)])
+  expect([...ring].every(p => ['#5a5f6b', '#3a3e48', '#c8ccd4'].includes(p))).toBe(true)
+  expect([...ring]).not.toContain('#0e0c12')
+  expect([...ring]).not.toContain('#1a1820')
 })

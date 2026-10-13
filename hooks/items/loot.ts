@@ -109,20 +109,31 @@ const pickBase = (g: Game) => {
  * tier under it to it (a chest's or a champion's promise); after DRY_CERTAIN - 1 items without an Epic or better,
  * the next is one.
  */
-export const makeItem = (g: Game, atLeast: Rarity = 'common', rolls = 1): Item => {
+/**
+ * A drop's rarity: the best of `rolls` rolls, `atLeast` at the least and Epic once kills have gone dry long enough;
+ * an Epic or better resets the dry spell, a Rare or better the wait for one.
+ */
+const rarityFor = (g: Game, atLeast: Rarity, rolls: number): Rarity => {
   const weights = tierWeights(g.depth, g.dryKills)
   const rolled = Array.from({ length: rolls }, () => rarityOf((roll(g, 10000) - 1) / 100 + 0.01, weights)).reduce((a, b) => (TIERS.indexOf(b) > TIERS.indexOf(a) ? b : a))
   const floor = g.dryKills >= DRY_CERTAIN - 1 && TIERS.indexOf(atLeast) < TIERS.indexOf('epic') ? 'epic' : atLeast
   const rarity = TIERS.indexOf(rolled) < TIERS.indexOf(floor) ? floor : rolled
   g.dryKills = rarity === 'epic' || rarity === 'legendary' ? 0 : g.dryKills + 1
   if (TIERS.indexOf(rarity) >= TIERS.indexOf('rare')) g.sinceRare = 0
-  if (rarity === 'legendary') {
-    const { base, name, power, ...stats } = pick(g, LEGENDARIES)
-    // Fixed powers, but stats that grow with depth as any item's do.
-    const bonus = Math.floor(g.depth / 3)
-    const grown = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, typeof v === 'number' && v > 0 && STAT_KEYS.includes(k as never) ? v + (k === 'hp' ? bonus * 2 : bonus) : v]))
-    return { ...plainItem(g, base, 'legendary'), name, power, ...plus(NO_STATS, grown) }
-  }
+  return rarity
+}
+
+/** A Legendary: its fixed powers, and stats that grow with depth as any item's do. */
+const legendaryOf = (g: Game): Item => {
+  const { base, name, power, ...stats } = pick(g, LEGENDARIES)
+  const bonus = Math.floor(g.depth / 3)
+  const grown = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, typeof v === 'number' && v > 0 && STAT_KEYS.includes(k as never) ? v + (k === 'hp' ? bonus * 2 : bonus) : v]))
+  return { ...plainItem(g, base, 'legendary'), name, power, ...plus(NO_STATS, grown) }
+}
+
+export const makeItem = (g: Game, atLeast: Rarity = 'common', rolls = 1): Item => {
+  const rarity = rarityFor(g, atLeast, rolls)
+  if (rarity === 'legendary') return legendaryOf(g)
   const base = pickBase(g)
   const { name, stats } = affixed(g, base, AFFIX_COUNT[rarity])
   return { ...plainItem(g, base.key, rarity), name, ...stats }

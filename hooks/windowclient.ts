@@ -3,8 +3,8 @@
 // same frame replaces an undelivered one, which a lone 'down' could not survive.
 import type { ClientModule } from 'claude-code'
 
-type Run = { text: string; color?: string; bold?: boolean; dim?: boolean }
-type Box = { x: number; y: number; w: number; h: number; border: string; lines: Run[][] }
+type Run = { text: string; color?: string; bg?: string; bold?: boolean; dim?: boolean }
+type Box = { x: number; y: number; w: number; h: number; border: string; lines: Run[][]; bg?: string; pad?: number }
 type Props = { columns: number; rows: number; boxes: Box[] }
 type Held = { from: { x: number; y: number }; button: 'left' | 'middle' | 'right' } | null
 
@@ -34,9 +34,9 @@ const windowLayer: ClientModule<Props, Held> = (props, surface) => {
         width: b.w - 2,
         height: b.h - 2,
         flexDirection: 'column',
-        backgroundColor: BOX_BG,
-        paddingX: 1,
-        children: b.lines.map(line => Text({ wrap: 'truncate-end', children: line.map(r => Text({ color: r.color, bold: r.bold, dimColor: r.dim, children: r.text })) })),
+        backgroundColor: b.bg ?? BOX_BG,
+        paddingX: b.pad ?? 1,
+        children: b.lines.map(line => Text({ wrap: 'truncate-end', children: line.map(r => Text({ color: r.color, backgroundColor: r.bg, bold: r.bold, dimColor: r.dim, children: r.text })) })),
       }),
     ),
   })

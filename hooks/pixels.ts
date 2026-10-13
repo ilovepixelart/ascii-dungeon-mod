@@ -1,4 +1,4 @@
-import type { Game, Rarity } from '../types'
+import type { Foe, Game, Rarity } from '../types'
 import { RARITY_COLOR } from './items'
 import { levelOf } from './game'
 import { MAP_H, MAP_W, bfs, braziersOf, cellId, isFloor, roomAt, same, themeOf } from './map'
@@ -9,7 +9,9 @@ import { tileAt, visibleSet } from './panels'
 import type { Tile } from './panels'
 import { TOWN_H, TOWN_W } from './town'
 import { TOWN_PX_H, TOWN_PX_W, townImage } from './townpixels'
-import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, monsterArt, TERRAIN, THING_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
+import { BOSS_HOLD, BOSS_KEYS, FOE_HOLD, FOE_KEYS, HERO_HOLD, HERO_KEYS, HERO_REST, bossFall, fallDim, foeFall, heroFall } from './fall'
+import type { Pixel } from './fall'
+import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, TERRAIN, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
 
 const HALF_BLOCK = 0x2580
 const SPACE = 0x20
@@ -166,8 +168,9 @@ const withDecal = (tex: Uint32Array, decal: keyof typeof DECAL_ART | undefined) 
 export { themeOf } from './map'
 export type { Theme } from './map'
 import type { Theme } from './map'
-/** Each theme's weight on red, green and blue: the crypt as drawn, flooded halls cool and green, the forge red-black. */
-const THEME_WEIGHTS: Readonly<Record<Theme, readonly [number, number, number]>> = { crypt: [1, 1, 1], flooded: [0.7, 0.95, 1.05], forge: [1.05, 0.65, 0.55] }
+/** Each theme's weight on red, green and blue: the crypt as drawn, flooded halls cool and green, the fungal deep
+ * purple, the frozen caverns icy blue, the forge red-black. */
+const THEME_WEIGHTS: Readonly<Record<Theme, readonly [number, number, number]>> = { crypt: [1, 1, 1], flooded: [0.7, 0.95, 1.05], fungal: [0.95, 0.8, 1.05], frozen: [0.8, 0.95, 1.2], forge: [1.05, 0.65, 0.55] }
 export const themed = (n: number, theme: Theme) => {
   const [r, g, b] = THEME_WEIGHTS[theme]
   return theme === 'crypt' ? n : (clamp(((n >> 16) & 0xff) * r) << 16) | (clamp(((n >> 8) & 0xff) * g) << 8) | clamp((n & 0xff) * b)
@@ -316,11 +319,33 @@ const terrainOf = (level: Level, tile: Tile, p: Pos): keyof typeof TERRAIN => {
   return 'floor'
 }
 
+/** The foe's art: a named foe its own, else its kind as the theme draws it. */
+const foeArt = (g: Game): readonly string[] => (g.foe === null ? UNKNOWN_ART : foeArtOf({ ...g.foe, big: undefined }, themeOf(g.depth)))
+
+/**
+ * The foe as drawn over its tile: its art and where the art's top-left stands from the tile's. A big boss is 16 by 16,
+ * its feet on its tile's bottom edge, half a tile out each side and a tile up; any other foe fills its tile.
+ */
+const foeSprite = (g: Game): { art: readonly string[]; dx: number; dy: number } =>
+  g.foe?.big !== undefined ? { art: BOSS_ART[g.foe.big], dx: -PX / 2, dy: -PX } : { art: foeArt(g), dx: 0, dy: 0 }
+
+/** A big boss over the ground, lit as the hero is: drawn after the ground, so the tiles round it do not cut it off. */
+const drawBigBoss = (frame: Uint32Array, g: Game, width: number, height: number, origin: Pos, isLit: boolean) => {
+  if (g.foe === null) return
+  const { art, dx, dy } = foeSprite(g)
+  art.forEach((row, y) => [...row].forEach((key, x) => {
+    const px = g.foe!.x * PX + dx + x - origin.x
+    const py = g.foe!.y * PX + dy + y - origin.y
+    if (key !== '.' && px >= 0 && px < width && py >= 0 && py < height) frame[py * width + px] = hexToInt(isLit ? lightPixel(PAL[key] ?? '#ff00ff', 1, true) : (PAL[key] ?? '#ff00ff'))
+  }))
+}
+
 const artOf = (g: Game, tile: Tile): readonly string[] | undefined => {
   const o = tile.occupant
   if (o === undefined) return undefined
   if (o.kind === 'hero') return heroArt(g)
-  if (o.kind === 'foe') return monsterArt(o.glyph, themeOf(g.depth)) ?? UNKNOWN_ART
+  // A big boss is drawn over the ground in one piece, not in its tile.
+  if (o.kind === 'foe') return g.foe?.big !== undefined ? undefined : foeArt(g)
   return THING_ART[o.glyph]
 }
 
@@ -421,16 +446,29 @@ const worldPixel = (s: Scene, x: number, y: number) => {
   const ly = y - ty * PX
   // The hero's torch and the wall torches together, a level a tile: the brightest of them at the tile's middle.
   const light = lightOfTile(s, tx, ty)
-  if (s.torchIds.has(ty * MAP_W + tx)) {
-    const flame = TORCH_ART[ly]?.[lx] ?? '.'
-    if (flame !== '.') return tile.isVisible ? asInt(PAL[flame] ?? '#ff00ff') : memoryInt(asInt(PAL[flame] ?? '#ff00ff'))
-  }
+  const flame = s.torchIds.has(ty * MAP_W + tx) ? flamePixel(tile, lx, ly) : undefined
+  if (flame !== undefined) return flame
   const key = info.art?.[ly]?.[lx] ?? '.'
   if (key !== '.') return spritePixel(s, tile, key, light)
-  if (!isShown) return asInt(CANVAS)
-  const shade = (isForeground ? dropShadow(lx, ly) : 1) * (info.kind === 'wall' ? 1 : wallOcclusion(rockDistance(info.rock, lx, ly)))
+  return isShown ? groundAt(s, info, tx, ty, lx, ly, light) : asInt(CANVAS)
+}
+
+/** A wall torch's flame at a pixel of its tile, in memory's colors out of sight; none where the flame is not. */
+const flamePixel = (tile: Tile, lx: number, ly: number) => {
+  const flame = TORCH_ART[ly]?.[lx] ?? '.'
+  if (flame === '.') return undefined
+  const color = asInt(PAL[flame] ?? '#ff00ff')
+  return tile.isVisible ? color : memoryInt(color)
+}
+
+/**
+ * The ground at a pixel of a shown tile: its texture, shaded by a foreground thing's shadow and by the rock beside it,
+ * remembered out of sight, else lit, a wall by the light falling on its face.
+ */
+const groundAt = (s: Scene, info: ReturnType<typeof tileInfo>, tx: number, ty: number, lx: number, ly: number, light: number) => {
+  const shade = (info.isForeground ? dropShadow(lx, ly) : 1) * (info.kind === 'wall' ? 1 : wallOcclusion(rockDistance(info.rock, lx, ly)))
   const ground = darkenInt(info.tex[ly * PX + lx] ?? 0, shade)
-  if (!tile.isVisible) return memoryInt(ground)
+  if (!info.tile.isVisible) return memoryInt(ground)
   if (!s.isLit) return ground
   return lightInt(ground, info.kind === 'wall' ? (wallLight(s, info, tx, ty, lx, ly) ?? light) : light, false)
 }
@@ -494,10 +532,35 @@ const wallKey = (s: Scene, info: TileInfo, tx: number, ty: number) => {
  * again tile by tile: a tile whose key (`tileKey`) is what it was, inside the last layer, keeps its pixels; only the
  * rest are worked out afresh, so a step that moves the torch or the fog redraws only the tiles they touch.
  */
+/** Whether the last layer serves as it is: the same game, torch, light and wall torches, and the window inside it. */
+const isLayerKept = (l: Layer | undefined, g: Game, torchAt: Pos, isLit: boolean, torches: readonly Pos[], origin: Pos, width: number, height: number) =>
+  l !== undefined && l.g === g && l.torchX === torchAt.x && l.torchY === torchAt.y && l.isLit === isLit && l.lights === torches &&
+  origin.x >= l.x && origin.y >= l.y && origin.x + width <= l.x + l.w && origin.y + height <= l.y + l.h
+
+/**
+ * One tile of a new layer over its part of the window: copied a row at a time from the last layer when that holds it
+ * whole under the same key, else drawn pixel by pixel.
+ */
+const fillTile = (px: Uint32Array, box: { x: number; y: number; w: number; h: number }, s: Scene, tx: number, ty: number, from: Layer | undefined, isSame: boolean) => {
+  const { x, y, w, h } = box
+  const x0 = Math.max(x, tx * PX)
+  const x1 = Math.min(x + w, tx * PX + PX)
+  const y0 = Math.max(y, ty * PX)
+  const y1 = Math.min(y + h, ty * PX + PX)
+  const isKeptTile = from !== undefined && isSame && x0 >= from.x && y0 >= from.y && x1 <= from.x + from.w && y1 <= from.y + from.h
+  for (let wy = y0; wy < y1; wy += 1) {
+    const at = (wy - y) * w - x
+    // A plain copy: a row is 8 pixels, too few for a view of it to pay.
+    if (isKeptTile) {
+      const old = (wy - from.y) * from.w - from.x
+      for (let wx = x0; wx < x1; wx += 1) px[at + wx] = from.px[old + wx]!
+    } else for (let wx = x0; wx < x1; wx += 1) px[at + wx] = worldPixel(s, wx, wy)
+  }
+}
+
 const worldLayer = (g: Game, level: Level, torchAt: Pos, isLit: boolean, isHeroMoved: boolean, origin: Pos, width: number, height: number, torches: readonly Pos[]): Layer => {
   const l = lastLayers.get(isHeroMoved)
-  const isKept = l !== undefined && l.g === g && l.torchX === torchAt.x && l.torchY === torchAt.y && l.isLit === isLit && l.lights === torches
-  if (isKept && origin.x >= l.x && origin.y >= l.y && origin.x + width <= l.x + l.w && origin.y + height <= l.y + l.h) return l
+  if (l !== undefined && isLayerKept(l, g, torchAt, isLit, torches, origin, width, height)) return l
   // Each wall torch lights from the foot of its wall, each brazier from its own tile.
   const lights = [...torches.map(t => ({ x: t.x * PX + PX / 2, y: t.y * PX + PX })), ...braziersOf(g.world, g.depth, level).map(b => ({ x: b.x * PX + PX / 2, y: b.y * PX + PX / 2 }))]
   const s: Scene = { g, level, tiles: new Map(), visible: visibleSet(g, level), hero: torchAt, isLit, isHeroMoved, lights, torchIds: new Set(torches.map(cellId)), tileLight: new Map() }
@@ -509,22 +572,14 @@ const worldLayer = (g: Game, level: Level, torchAt: Pos, isLit: boolean, isHeroM
   layerBuilds += 1
   const from = l !== undefined && l.level === level && l.isLit === isLit && l.lights === torches ? l : undefined
   const keys = new Map<number, string>()
-  // Tile by tile over the window: a tile the last layer holds whole under the same key is copied a row at a time.
+  // Tile by tile over the window, each kept from the last layer where it can be (`fillTile`).
+  const box = { x, y, w, h }
   for (let ty = Math.floor(y / PX); ty * PX < y + h; ty += 1) {
     for (let tx = Math.floor(x / PX); tx * PX < x + w; tx += 1) {
       const id = (ty + 1) * (MAP_W + 2) + tx + 1
       const key = tileKey(s, tx, ty)
       keys.set(id, key)
-      const x0 = Math.max(x, tx * PX)
-      const x1 = Math.min(x + w, tx * PX + PX)
-      const y0 = Math.max(y, ty * PX)
-      const y1 = Math.min(y + h, ty * PX + PX)
-      const isKeptTile = from !== undefined && from.keys.get(id) === key && x0 >= from.x && y0 >= from.y && x1 <= from.x + from.w && y1 <= from.y + from.h
-      for (let wy = y0; wy < y1; wy += 1) {
-        const at = (wy - y) * w - x
-        const old = isKeptTile ? (wy - from.y) * from.w - from.x : 0
-        for (let wx = x0; wx < x1; wx += 1) px[at + wx] = isKeptTile ? from.px[old + wx]! : worldPixel(s, wx, wy)
-      }
+      fillTile(px, box, s, tx, ty, from, from?.keys.get(id) === key)
     }
   }
   const layer = { g, level, torchX: torchAt.x, torchY: torchAt.y, isLit, isHeroMoved, lights: torches, x, y, w, h, px, keys }
@@ -544,17 +599,20 @@ export const strideOf = (art: readonly string[]): readonly string[] => {
 export const isStrideFrame = (frame: number) => frame > 0 && Math.floor((frame - 1) / 2) % 2 === 0
 
 /** Frames a blow's first frame is held, by kind: a crit and a kill land with weight; a plain hit or a blow taken plays straight on. */
-const FREEZE: Readonly<Record<Hit['kind'], number>> = { crit: 3, kill: 4, hit: 0, hurt: 0, loot: 0 }
+const FREEZE: Readonly<Record<Hit['kind'], number>> = { crit: 3, kill: 4, hit: 0, hurt: 0, loot: 0, death: 0 }
 export const hitFreeze = (hits: readonly Hit[]) => Math.max(0, ...hits.map(h => FREEZE[h.kind]))
-/** How many frames an exchange's blows play, its freeze included. */
-export const hitFramesFor = (hits: readonly Hit[]) => HIT_FRAMES + hitFreeze(hits)
+/** The frames a death plays: a foe's crumble, a big boss's burst, the hero's fall and its rest; none for a blow. */
+const deathFrames = (h: Hit) =>
+  h.kind === 'death' ? HERO_KEYS * HERO_HOLD + HERO_REST : h.kind !== 'kill' || h.foe === undefined ? 0 : h.foe.big !== undefined ? BOSS_KEYS * BOSS_HOLD : FOE_KEYS * FOE_HOLD
+/** How many frames an exchange's blows play, its freeze included: the longer of the numbers' rise and any death. */
+export const hitFramesFor = (hits: readonly Hit[]) => Math.max(HIT_FRAMES, ...hits.map(deathFrames)) + hitFreeze(hits)
 
 /** How far the hero lunges toward the foe on each frame of a blow, from frame 1; home after. */
 export const LUNGE: readonly number[] = [2, 2, 1]
 
 /** The hero's offset on a frame of a blow they dealt: toward the struck tile; none for a blow taken. */
 const lungeOf = (g: Game, hits: readonly Hit[], hitFrame: number): Pos => {
-  const blow = hits.find(h => h.kind !== 'hurt' && h.kind !== 'loot')
+  const blow = hits.find(h => h.kind !== 'hurt' && h.kind !== 'loot' && h.kind !== 'death')
   const d = LUNGE[hitFrame - 1] ?? 0
   return blow === undefined || d === 0 ? { x: 0, y: 0 } : { x: Math.sign(blow.at.x - g.x) * d, y: Math.sign(blow.at.y - g.y) * d }
 }
@@ -567,6 +625,16 @@ const drawHeroAt = (frame: Uint32Array, g: Game, width: number, height: number, 
   }))
 
 /** The town by day: its window cut from the town's picture, then the hero with his shadow; no torch and no fog. */
+/** A drop shadow on the town's ground under a tile at `left`, `top`. */
+const townShadow = (frame: Uint32Array, width: number, height: number, left: number, top: number) => {
+  for (let ly = 0; ly < PX; ly += 1) for (let lx = 0; lx < PX; lx += 1) {
+    const x = left + lx
+    const y = top + ly
+    const d = dropShadow(lx, ly)
+    if (d < 1 && x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = hexToInt(darken(`#${(frame[y * width + x] ?? 0).toString(16).padStart(6, '0')}`, d))
+  }
+}
+
 const townFrame = (g: Game, width: number, height: number, heroAt: Pos | undefined, camera: Pos | undefined, stride: boolean, shimmer: boolean) => {
   const hero = heroAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }
   const origin = originAt(camera ?? hero, width, height, worldSize(g))
@@ -578,17 +646,8 @@ const townFrame = (g: Game, width: number, height: number, heroAt: Pos | undefin
     const isInside = wx >= 0 && wy >= 0 && wx < TOWN_PX_W && wy < TOWN_PX_H
     frame[y * width + x] = isInside ? (img[wy * TOWN_PX_W + wx] ?? 0) : hexToInt(CANVAS)
   }
-  if (heroAt === undefined) {
-    // Standing still, the hero casts the same shadow as everyone in town.
-    const left = g.x * PX - origin.x
-    const top = g.y * PX - origin.y
-    for (let ly = 0; ly < PX; ly += 1) for (let lx = 0; lx < PX; lx += 1) {
-      const x = left + lx
-      const y = top + ly
-      const d = dropShadow(lx, ly)
-      if (d < 1 && x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = hexToInt(darken(`#${(frame[y * width + x] ?? 0).toString(16).padStart(6, '0')}`, d))
-    }
-  }
+  // Standing still, the hero casts the same shadow as everyone in town.
+  if (heroAt === undefined) townShadow(frame, width, height, g.x * PX - origin.x, g.y * PX - origin.y)
   drawHeroAt(frame, g, width, height, hero, origin, false, stride)
   return frame
 }
@@ -597,6 +656,44 @@ const townFrame = (g: Game, width: number, height: number, heroAt: Pos | undefin
  * The world seen from above at PX pixels a cell, `width` by `height` pixels, the window following the hero:
  * 0xRRGGBB per pixel, row-major. `isLit: false` leaves torchlight off, every visible pixel its own color.
  */
+/**
+ * Where the hero is drawn this frame: walking, bobbing idle, or lunged off their tile toward a blow they dealt (in the
+ * stride, as a walk is); undefined `heroAt` when they stand on their tile, drawn with the ground.
+ */
+const heroDrawn = (g: Game, hits: readonly Hit[], hitFrame: number, walkingAt: Pos | undefined, idleAt: Pos | undefined, isStriding: boolean) => {
+  const lunge = walkingAt === undefined ? lungeOf(g, hits, hitFrame) : { x: 0, y: 0 }
+  const isLunging = lunge.x !== 0 || lunge.y !== 0
+  const heroAt = isLunging ? { x: g.x * PX + PX / 2 + lunge.x, y: g.y * PX + PX / 2 + lunge.y } : idleAt
+  return { heroAt, stride: isStriding || isLunging, hero: heroAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 } }
+}
+
+/**
+ * Where the torch stands: on the tile nearest the drawn hero, so a walk re-lights the ground once a tile, not every
+ * frame; in a room at the room's middle, lit as a whole and still while the hero crosses it, where a torch moving with
+ * him re-lit some 1,100 cells a tile, four times a corridor's.
+ */
+const torchOf = (level: Level, hero: Pos): Pos => {
+  const heroTile = { x: Math.floor(hero.x / PX), y: Math.floor(hero.y / PX) }
+  const inRoom = roomAt(level, heroTile)
+  return inRoom === undefined
+    ? { x: heroTile.x * PX + PX / 2, y: heroTile.y * PX + PX / 2 }
+    : { x: (inRoom.x + Math.floor(inRoom.w / 2)) * PX + PX / 2, y: (inRoom.y + Math.floor(inRoom.h / 2)) * PX + PX / 2 }
+}
+
+/** The foe's marks: its bar (a big boss's wider), gold pips on someone's (red on a nemesis), and a crown over a boss, a unique or a nemesis. */
+const drawFoeMarks = (frame: Uint32Array, width: number, height: number, foe: Foe, origin: Pos) => {
+  const isNemesis = foe.nemesis === true
+  const left = foe.x * PX - origin.x
+  const top = foe.y * PX - origin.y
+  if (foe.big !== undefined) {
+    bigBar(frame, width, height, left - PX / 2, top - PX, foe.hp / foe.maxHp)
+    return
+  }
+  const isSomeone = foe.boss === true || foe.unique !== undefined || isNemesis
+  foeBar(frame, width, height, left, top, foe.hp / foe.maxHp, foe.champion !== undefined || foe.boss === true || foe.unique !== undefined, isNemesis ? NEMESIS_MARK : CHAMPION_MARK)
+  if (isSomeone) drawCrown(frame, width, height, left, top, isNemesis ? NEMESIS_MARK : undefined)
+}
+
 export const frameOf = (
   g: Game,
   width: number,
@@ -610,46 +707,54 @@ export const frameOf = (
   // The freeze holds the blow's first frame, then plays the rest as it would have.
   const freeze = hitFreeze(hits)
   const hitFrame = rawHitFrame <= freeze ? Math.min(1, rawHitFrame) : rawHitFrame - freeze
-  // A lunge draws the hero off their tile, in the stride, as a walk does.
-  const lunge = walkingAt === undefined ? lungeOf(g, hits, hitFrame) : { x: 0, y: 0 }
-  const isLunging = lunge.x !== 0 || lunge.y !== 0
-  const heroAt = isLunging ? { x: g.x * PX + PX / 2 + lunge.x, y: g.y * PX + PX / 2 + lunge.y } : idleAt
-  const stride = isStriding || isLunging
-  const hero = heroAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }
+  const { heroAt, stride, hero } = heroDrawn(g, hits, hitFrame, walkingAt, idleAt, isStriding)
   const origin = originAt(camera ?? walkingAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, width, height)
-  // The torch sits on the tile nearest the drawn hero, so a walk re-lights the ground once a tile, not every frame.
-  // In a room it stands at the room's middle: the room is lit as a whole and holds still while the hero crosses it, where
-  // a torch moving with him re-lit some 1,100 cells a tile, four times a corridor's.
-  const heroTile = { x: Math.floor(hero.x / PX), y: Math.floor(hero.y / PX) }
-  const inRoom = roomAt(level, heroTile)
-  const torchAt = inRoom === undefined
-    ? { x: heroTile.x * PX + PX / 2, y: heroTile.y * PX + PX / 2 }
-    : { x: (inRoom.x + Math.floor(inRoom.w / 2)) * PX + PX / 2, y: (inRoom.y + Math.floor(inRoom.h / 2)) * PX + PX / 2 }
-  const layer = worldLayer(g, level, torchAt, isLit, heroAt !== undefined, origin, width, height, lights ?? wallTorchesOf(g.world, g.depth, level))
+  const torchAt = torchOf(level, hero)
+  // A falling hero is drawn by the fall alone.
+  const dying = hits.find(h => h.kind === 'death')
+  const layer = worldLayer(g, level, torchAt, isLit, heroAt !== undefined || dying !== undefined, origin, width, height, lights ?? wallTorchesOf(g.world, g.depth, level))
   const frame = new Uint32Array(width * height)
   for (let y = 0; y < height; y += 1) {
     const from = (origin.y - layer.y + y) * layer.w + (origin.x - layer.x)
     frame.set(layer.px.subarray(from, from + width), y * width)
   }
-  if (heroAt !== undefined) drawHeroAt(frame, g, width, height, hero, origin, isLit, stride)
-  const isNemesis = g.foe?.nemesis === true
-  if (g.foe !== null) foeBar(frame, width, height, g.foe.x * PX - origin.x, g.foe.y * PX - origin.y, g.foe.hp / g.foe.maxHp, g.foe.champion !== undefined || g.foe.boss === true || g.foe.unique !== undefined, isNemesis ? NEMESIS_MARK : CHAMPION_MARK)
-  // A crown over a boss, a unique and (in red) a nemesis: the foes that are someone.
-  if (g.foe !== null && (g.foe.boss === true || g.foe.unique !== undefined || isNemesis)) drawCrown(frame, width, height, g.foe.x * PX - origin.x, g.foe.y * PX - origin.y, isNemesis ? NEMESIS_MARK : undefined)
+  // A big boss spills half a tile onto its sides: the hero beside it is drawn again over it.
+  if (g.foe?.big !== undefined) drawBigBoss(frame, g, width, height, origin, isLit)
+  if (dying === undefined && (heroAt !== undefined || g.foe?.big !== undefined)) drawHeroAt(frame, g, width, height, hero, origin, isLit, stride)
+  if (g.foe !== null) drawFoeMarks(frame, width, height, g.foe, origin)
   // A beam first, so the kill's number stands over it.
   for (const hit of [...hits.filter(h => h.kind === 'loot'), ...hits.filter(h => h.kind !== 'loot')]) drawHit(frame, width, height, g, hit, hitFrame, origin)
+  if (dying !== undefined) dim(frame, fallDim(Math.floor(hitFrame / HERO_HOLD)))
   return frame
 }
 
+/** The whole frame darkened toward black by `t`. */
+const dim = (frame: Uint32Array, t: number) => {
+  if (t > 0) frame.forEach((n, i) => (frame[i] = blend(n, 0, t)))
+}
+
+const litKey = (k: string) => lightPixel(PAL[k] ?? '#ff00ff', 1, true)
+
+/** A death's keyframe laid over the frame, from `left`, `top`. */
+const drawFall = (frame: Uint32Array, width: number, height: number, pixels: readonly Pixel[], left: number, top: number) => {
+  for (const p of pixels) {
+    const x = left + p.x
+    const y = top + p.y
+    if (x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = hexToInt(p.hex)
+  }
+}
+
 /** What one action did, to show: a blow on the foe (a hit, a crit, a kill) or the hero hurt, where and how much. */
-/** A blow, or (`loot`) a drop of Rare or better from the foe slain there, `tier` its rarity. */
-export type Hit = { at: Pos; amount: number; kind: 'hit' | 'crit' | 'kill' | 'hurt' | 'loot'; tier?: Rarity }
+/** A blow, or (`loot`) a drop of Rare or better from the foe slain there, `tier` its rarity; a kill keeps the foe as it stood, to show it fall; `death`, the hero's. */
+export type Hit = { at: Pos; amount: number; kind: 'hit' | 'crit' | 'kill' | 'hurt' | 'loot' | 'death'; tier?: Rarity; foe?: Foe }
 
 /**
  * The blows between two games in the same place: the foe's HP lost (a crit when the hero's last lines say so), the
  * foe slain, the hero's HP lost. Nothing across a change of place, where there is nothing left to point at.
  */
 export const hitsBetween = (before: Game, after: Game): Hit[] => {
+  // A death is told across the change of place: the hero falls where they were struck, on the level they left.
+  if (after.deaths > before.deaths && after.fallen !== undefined) return [{ at: after.fallen.at, amount: 0, kind: 'death' }]
   if (before.where !== after.where || before.depth !== after.depth) return []
   const lines = after.log.slice(-4)
   const hits: Hit[] = []
@@ -657,8 +762,9 @@ export const hitsBetween = (before: Game, after: Game): Hit[] => {
   if (foe !== null && after.foe !== null && after.foe.hp < foe.hp) {
     hits.push({ at: { x: foe.x, y: foe.y }, amount: foe.hp - after.foe.hp, kind: lines.some(l => l.startsWith('You CRITICALLY hit')) ? 'crit' : 'hit' })
   }
-  if (foe !== null && after.foe === null && lines.some(l => l.startsWith('You slay'))) {
-    hits.push({ at: { x: foe.x, y: foe.y }, amount: foe.hp, kind: 'kill' })
+  // A kill always pays XP, where smoke does not; the log keeps too few lines to be sure to hold the kill's.
+  if (foe !== null && after.foe === null && (after.xp !== before.xp || after.level !== before.level)) {
+    hits.push({ at: { x: foe.x, y: foe.y }, amount: foe.hp, kind: 'kill', foe })
     // The best drop of the kill, Rare or better, stands as a beam where the foe fell.
     const fresh = after.log.slice(after.log.length - after.fresh)
     const tier = BEAM_TIERS.find(t => fresh.some(l => l.startsWith('Loot: ') && l.endsWith(` (${t[0]!.toUpperCase()}${t.slice(1)}).`)))
@@ -668,9 +774,13 @@ export const hitsBetween = (before: Game, after: Game): Hit[] => {
   return hits
 }
 
+/** What the hero's fall plays on: the level they died on, before they woke, them where they were struck and the foe that struck them as it stood. */
+export const deathScene = (before: Game, after: Game): Game | undefined =>
+  after.deaths > before.deaths && after.fallen !== undefined ? { ...before, ...after.fallen.at, hp: 0, foe: after.fallen.foe ?? null, panel: 'none' } : undefined
+
 /** How long a blow shows, in frames: about 0.6 s at 30 frames a second. */
 export const HIT_FRAMES = 18
-const HIT_COLOR: Readonly<Record<Hit['kind'], string>> = { hit: '#ffffff', crit: '#ffd34d', kill: '#ffd34d', hurt: '#ff4a4a', loot: '#ffffff' }
+const HIT_COLOR: Readonly<Record<Hit['kind'], string>> = { hit: '#ffffff', crit: '#ffd34d', kill: '#ffd34d', hurt: '#ff4a4a', loot: '#ffffff', death: '#ff4a4a' }
 export const hitColor = (kind: Hit['kind']) => HIT_COLOR[kind]
 
 /** How far the number has risen at `frame`: a pixel every 2 frames, after a 3-frame hold on a crit or a kill. */
@@ -700,53 +810,77 @@ const drawBeam = (frame: Uint32Array, width: number, height: number, hit: Hit, h
   const fade = Math.max(0, Math.min(1, (HIT_FRAMES - hitFrame) / BEAM_FADE))
   const x0 = left + Math.floor((PX - w) / 2)
   const bottom = top + PX - 1
-  for (let dy = 0; dy < tall; dy += 1) {
-    // Strongest at the ground, thinning as it rises.
-    const strength = fade * (0.85 - (0.45 * dy) / BEAM_H)
-    for (let dx = 0; dx < w; dx += 1) {
-      const x = x0 + dx
-      const y = bottom - dy
-      if (x < 0 || x >= width || y < 0 || y >= height) continue
-      const isCore = w > 2 && (dx === Math.floor(w / 2) - 1 || dx === Math.floor(w / 2))
-      frame[y * width + x] = blend(frame[y * width + x]!, isCore ? core : color, strength)
-    }
+  for (let dy = 0; dy < tall; dy += 1) drawBeamRow(frame, width, height, { x0, y: bottom - dy, w, color, core }, fade * (0.85 - (0.45 * dy) / BEAM_H))
+  if (fade > 0 && hitFrame % 4 < 2) drawSpark(frame, width, height, x0 + Math.floor(w / 2) - (w % 2 === 0 ? 1 : 0), bottom - tall, fade)
+}
+
+/** One row of a beam, `strength` over the frame: strongest at the ground, thinning as it rises; the core, the two middle columns of a wide one, brighter. */
+const drawBeamRow = (frame: Uint32Array, width: number, height: number, row: { x0: number; y: number; w: number; color: number; core: number }, strength: number) => {
+  const { x0, y, w } = row
+  if (y < 0 || y >= height) return
+  for (let dx = 0; dx < w; dx += 1) {
+    const x = x0 + dx
+    const isCore = w > 2 && (dx === Math.floor(w / 2) - 1 || dx === Math.floor(w / 2))
+    if (x >= 0 && x < width) frame[y * width + x] = blend(frame[y * width + x]!, isCore ? row.core : row.color, strength)
   }
-  const sparkY = bottom - tall
-  if (fade > 0 && hitFrame % 4 < 2) for (const [dx, dy] of [[0, 0], [-1, 1], [1, 1], [0, 2]] as const) {
-    const x = x0 + Math.floor(w / 2) + dx - (w % 2 === 0 ? 1 : 0)
-    const y = sparkY + dy
+}
+
+/** The spark at a beam's top: a small diamond of white, as faded as the beam. */
+const drawSpark = (frame: Uint32Array, width: number, height: number, cx: number, top: number, fade: number) => {
+  for (const [dx, dy] of [[0, 0], [-1, 1], [1, 1], [0, 2]] as const) {
+    const x = cx + dx
+    const y = top + dy
     if (x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = blend(frame[y * width + x]!, 0xffffff, fade)
   }
 }
 
-const drawHit = (frame: Uint32Array, width: number, height: number, g: Game, hit: Hit, hitFrame: number, origin: Pos) => {
-  const put = (x: number, y: number, color: number) => {
-    if (x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = color
-  }
-  const left = hit.at.x * PX - origin.x
-  const top = hit.at.y * PX - origin.y
-  if (hit.kind === 'loot') {
-    drawBeam(frame, width, height, hit, hitFrame, left, top)
-    return
-  }
-  const foe = g.foe
-  if ((hit.kind === 'hit' || hit.kind === 'crit') && hitFrame <= 2 && foe !== null && same(foe, hit.at)) {
-    const art = monsterArt(foe.glyph, themeOf(g.depth)) ?? UNKNOWN_ART
-    art.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(left + dx, top + dy, 0xffffff)))
-  }
+/** A pixel set, when it falls inside the frame. */
+const putPixel = (frame: Uint32Array, width: number, height: number, x: number, y: number, color: number) => {
+  if (x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = color
+}
+
+/** A slain foe falling where it stood: a big boss bursting over its two tiles, any other crumbling on its own. */
+const drawSlain = (frame: Uint32Array, width: number, height: number, g: Game, slain: Foe, hitFrame: number, left: number, top: number) => {
+  if (slain.big !== undefined) drawFall(frame, width, height, bossFall(BOSS_ART[slain.big], Math.floor(hitFrame / BOSS_HOLD), litKey), left - PX / 2, top - PX)
+  else drawFall(frame, width, height, foeFall(foeArtOf(slain, themeOf(g.depth)), Math.floor(hitFrame / FOE_HOLD), litKey), left, top)
+}
+
+/** A blow's number rising over the tile in the blow's color, outlined; clear of the foe's bar (3 px over the tile) from the first frame. */
+const drawNumber = (frame: Uint32Array, width: number, height: number, hit: Hit, hitFrame: number, left: number, top: number) => {
   const mask = textMask(String(hit.amount))
-  const w = mask[0]?.length ?? 0
-  const x0 = left + Math.floor((PX - w) / 2)
-  // Clear of the foe's bar (3 px over the tile) from the first frame, outline included.
+  const x0 = left + Math.floor((PX - (mask[0]?.length ?? 0)) / 2)
   const y0 = top - 9 - hitRise(hit.kind, hitFrame)
   const on = (x: number, y: number) => mask[y]?.[x] === '#'
   const ink = hexToInt(hitColor(hit.kind))
   const outline = hexToInt(POPUP_OUTLINE)
   mask.forEach((row, y) => [...row].forEach((_, x) => {
     if (!on(x, y)) return
-    for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) if (!on(x + ox, y + oy)) put(x0 + x + ox, y0 + y + oy, outline)
+    for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) if (!on(x + ox, y + oy)) putPixel(frame, width, height, x0 + x + ox, y0 + y + oy, outline)
   }))
-  mask.forEach((row, y) => [...row].forEach((k, x) => k === '#' && put(x0 + x, y0 + y, ink)))
+  mask.forEach((row, y) => [...row].forEach((k, x) => k === '#' && putPixel(frame, width, height, x0 + x, y0 + y, ink)))
+}
+
+const drawHit = (frame: Uint32Array, width: number, height: number, g: Game, hit: Hit, hitFrame: number, origin: Pos) => {
+  const left = hit.at.x * PX - origin.x
+  const top = hit.at.y * PX - origin.y
+  if (hit.kind === 'loot') {
+    drawBeam(frame, width, height, hit, hitFrame, left, top)
+    return
+  }
+  if (hit.kind === 'death') {
+    // Away from what struck them.
+    const side = g.foe !== null && g.foe.x > hit.at.x ? -1 : 1
+    drawFall(frame, width, height, heroFall(heroArt(g), Math.floor(hitFrame / HERO_HOLD), litKey, side), left, top)
+    return
+  }
+  if (hit.kind === 'kill' && hit.foe !== undefined) drawSlain(frame, width, height, g, hit.foe, hitFrame, left, top)
+  // The struck foe white for the blow's first frames.
+  const foe = g.foe
+  if ((hit.kind === 'hit' || hit.kind === 'crit') && hitFrame <= 2 && foe !== null && same(foe, hit.at)) {
+    const { art, dx: ox, dy: oy } = foeSprite(g)
+    art.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && putPixel(frame, width, height, left + ox + dx, top + oy + dy, 0xffffff)))
+  }
+  drawNumber(frame, width, height, hit, hitFrame, left, top)
 }
 
 export const FOE_BAR_FILL = '#e05a4a'
@@ -766,6 +900,17 @@ const foeBar = (frame: Uint32Array, width: number, height: number, left: number,
   for (let i = 0; i < FOE_BAR_W; i += 1) put(left + 1 + i, top - 3, i < filled ? FOE_BAR_FILL : FOE_BAR_EMPTY)
   // A champion's bar ends in a gold pip each side: a foe worth the fight.
   if (isChampion) for (const x of [left, left + FOE_BAR_W + 1]) put(x, top - 3, pip)
+}
+
+/** A big boss's bar: as wide as the boss less a pixel each side, over its head, gold pips at its ends. */
+export const BIG_BAR_W = 2 * PX - 2
+const bigBar = (frame: Uint32Array, width: number, height: number, left: number, top: number, share: number) => {
+  const put = (x: number, y: number, hex: string) => {
+    if (x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = hexToInt(hex)
+  }
+  const filled = Math.round(Math.max(0, Math.min(1, share)) * BIG_BAR_W)
+  for (let i = 0; i < BIG_BAR_W; i += 1) put(left + 1 + i, top - 3, i < filled ? FOE_BAR_FILL : FOE_BAR_EMPTY)
+  for (const x of [left, left + BIG_BAR_W + 1]) put(x, top - 3, CHAMPION_MARK)
 }
 
 /** A boss's crown, in the two pixel rows between its tile and its bar. */

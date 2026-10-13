@@ -88,20 +88,22 @@ const raggedCut = (room: Room, mid: Pos): Pos[] => {
 }
 
 /** The cells of a room its shape gives back to rock; never on its middle row or column, so corridors still meet there. */
+/** Each shape's cut, by a cell (`dx`, `dy` its distance in from the nearer wall) of a room off its middle row and column. */
+const SHAPE_CUTS: Readonly<Record<'cross' | 'L' | 'pillars', (c: { x: number; y: number; dx: number; dy: number }, room: Room, mid: Pos) => boolean>> = {
+  cross: (c, room) => c.dx < Math.floor(room.w / 3) && c.dy < Math.floor(room.h / 3),
+  L: (c, _room, mid) => c.x > mid.x && c.y < mid.y,
+  pillars: c => c.dy === 1 && c.dx % 2 === 1,
+}
+
 export const shapeCut = (room: Room): Pos[] => {
   const mid = center(room)
   if (room.shape === 'ragged') return raggedCut(room, mid)
+  const isCut = room.shape === undefined ? undefined : SHAPE_CUTS[room.shape]
+  if (isCut === undefined) return []
   const cells: Pos[] = []
   for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) {
-    if (x === mid.x || y === mid.y) continue
-    const dx = Math.min(x - room.x, room.x + room.w - 1 - x)
-    const dy = Math.min(y - room.y, room.y + room.h - 1 - y)
-    const isCut =
-      room.shape === 'cross' ? dx < Math.floor(room.w / 3) && dy < Math.floor(room.h / 3)
-      : room.shape === 'L' ? x > mid.x && y < mid.y
-      : room.shape === 'pillars' ? dy === 1 && dx % 2 === 1
-      : false
-    if (isCut) cells.push({ x, y })
+    const c = { x, y, dx: Math.min(x - room.x, room.x + room.w - 1 - x), dy: Math.min(y - room.y, room.y + room.h - 1 - y) }
+    if (x !== mid.x && y !== mid.y && isCut(c, room, mid)) cells.push({ x, y })
   }
   return cells
 }
@@ -198,24 +200,37 @@ const addLoops = (grid: string[][], rooms: readonly Room[], r: (n: number) => nu
  * Short corridors off rooms that end in rock: 1 to 3 a level, 3 to 6 cells long, never touching other floor, so each
  * ends in a dead end worth the detour.
  */
-const addBranches = (grid: string[][], rooms: readonly Room[], r: (n: number) => number) => {
+const SIDES: readonly Pos[] = [{ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }]
+
+/** The first cell of a branch out of a room's side `d`, at `along` that side: just outside the wall. */
+const branchStart = (room: Room, d: Pos, along: number): Pos => {
+  if (d.x === -1) return { x: room.x - 1, y: along }
+  if (d.x === 1) return { x: room.x + room.w, y: along }
+  return d.y === -1 ? { x: along, y: room.y - 1 } : { x: along, y: room.y + room.h }
+}
+
+/**
+ * Whether a branch can be dug there: it leaves from room floor (a shape may have given the edge cell back to rock),
+ * and is rock all round, each cell's two sides (beyond the first, which leaves the room) and the cell past its end.
+ */
+const isClearBranch = (grid: string[][], cells: readonly Pos[], from: Pos, d: Pos) => {
   const isRock = (x: number, y: number) => x >= 1 && y >= 1 && x < MAP_W - 1 && y < MAP_H - 1 && grid[y]![x] === '#'
+  const end = cells.at(-1)!
+  const isFromFloor = grid[from.y - d.y]?.[from.x - d.x] === '.'
+  const isWalled = (c: Pos, k: number) => isRock(c.x, c.y) && (k === 0 || (isRock(c.x + d.y, c.y + d.x) && isRock(c.x - d.y, c.y - d.x)))
+  return isFromFloor && cells.every(isWalled) && isRock(end.x + d.x, end.y + d.y)
+}
+
+const addBranches = (grid: string[][], rooms: readonly Room[], r: (n: number) => number) => {
   const wanted = 1 + r(3)
   let made = 0
   for (let attempt = 0; attempt < 40 && made < wanted; attempt += 1) {
     const room = rooms[r(rooms.length)]!
-    const side = r(4)
-    const d = [{ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }][side]!
+    const d = SIDES[r(4)]!
     const along = d.x === 0 ? room.x + 1 + r(Math.max(1, room.w - 2)) : room.y + r(room.h)
-    const from = d.x === -1 ? { x: room.x - 1, y: along } : d.x === 1 ? { x: room.x + room.w, y: along } : d.y === -1 ? { x: along, y: room.y - 1 } : { x: along, y: room.y + room.h }
-    const length = 3 + r(4)
-    const cells = Array.from({ length }, (_, k) => ({ x: from.x + d.x * k, y: from.y + d.y * k }))
-    const end = cells.at(-1)!
-    // Rock all round: each cell's two sides (beyond the first, which leaves the room), and the cell past the end.
-    // It leaves from room floor: a shape may have given the edge cell back to rock.
-    const isFromFloor = grid[from.y - d.y]?.[from.x - d.x] === '.'
-    const isClear = isFromFloor && cells.every((c, k) => isRock(c.x, c.y) && (k === 0 || (isRock(c.x + d.y, c.y + d.x) && isRock(c.x - d.y, c.y - d.x)))) && isRock(end.x + d.x, end.y + d.y)
-    if (!isClear) continue
+    const from = branchStart(room, d, along)
+    const cells = Array.from({ length: 3 + r(4) }, (_, k) => ({ x: from.x + d.x * k, y: from.y + d.y * k }))
+    if (!isClearBranch(grid, cells, from, d)) continue
     for (const c of cells) carve(grid, c.x, c.y)
     made += 1
   }
@@ -223,10 +238,37 @@ const addBranches = (grid: string[][], rooms: readonly Room[], r: (n: number) =>
 
 const levels = new Map<string, Level>()
 
+/** Every tenth depth a big boss guards the stairs, in an arena. */
+export const BIG_EVERY = 10
+/** The arena's least size: room for a boss twice a foe's size to move and the hero to step round it. */
+const ARENA_W = 14
+const ARENA_H = 8
+
+/**
+ * The stairs room grown into an arena: at least ARENA_W by ARENA_H about its middle, inside the map, plain (its shape
+ * gone). Growing only adds floor, so every way through still stands. A room that would take in the hero's start stays as
+ * it was, so the arena is never where a level begins.
+ */
+const arenaOf = (grid: string[][], rooms: Room[], room: Room, start: Pos): Room => {
+  const w = Math.min(MAP_W - 2, Math.max(room.w, ARENA_W))
+  const h = Math.min(MAP_H - 2, Math.max(room.h, ARENA_H))
+  const mid = center(room)
+  const x = Math.max(1, Math.min(MAP_W - 1 - w, mid.x - Math.floor(w / 2)))
+  const y = Math.max(1, Math.min(MAP_H - 1 - h, mid.y - Math.floor(h / 2)))
+  const arena: Room = { x, y, w, h }
+  const holdsStart = start.x >= x && start.x < x + w && start.y >= y && start.y < y + h
+  if (holdsStart) return room
+  for (let yy = y; yy < y + h; yy += 1) for (let xx = x; xx < x + w; xx += 1) carve(grid, xx, yy)
+  rooms[rooms.indexOf(room)] = arena
+  return arena
+}
+
 /** Depth 1 and boss depths are plain rooms; otherwise about half of depths take another layout, each theme leaning its own way. */
 const LEANS: Readonly<Record<Theme, readonly Layout[]>> = {
   crypt: ['warrens', 'warrens', 'hall', 'ring', 'caverns'],
   flooded: ['caverns', 'caverns', 'ring', 'hall', 'warrens'],
+  fungal: ['caverns', 'warrens', 'caverns', 'ring', 'warrens'],
+  frozen: ['hall', 'ring', 'hall', 'ring', 'caverns'],
   forge: ['hall', 'hall', 'ring', 'caverns', 'warrens'],
 }
 export const layoutOf = (world: number, depth: number): Layout => {
@@ -266,37 +308,76 @@ const joinInRing = (grid: string[][], rooms: readonly Room[], r: (n: number) => 
  * tree, a few loops knocked through, a few dead-end branches; the hero starts in a random room and the stairs lie in
  * the room farthest from it by walking.
  */
+type Rng = (n: number) => number
+
+/** Each layout's plan: its rooms, how they are joined (the room the level starts in), and what is dug after. */
+const LAYOUT_PLANS: Readonly<Record<Layout, { rooms: (r: Rng, world: number, depth: number) => Room[]; join: (grid: string[][], rooms: Room[], r: Rng) => number; after: (grid: string[][], rooms: Room[], r: Rng) => void }>> = {
+  rooms: {
+    rooms: (r, world, depth) => placeRooms(r).map(room => ({ ...room, shape: shapeOf(world, depth, room) })),
+    join: joinRooms,
+    after: (grid, rooms, r) => {
+      addLoops(grid, rooms, r)
+      addBranches(grid, rooms, r)
+    },
+  },
+  hall: {
+    rooms: (r, world, depth) => placeRooms(r, { ...ROOM_SIZES, most: 7 }, [greatHall(r)]).map((room, i) => (i === 0 ? room : { ...room, shape: shapeOf(world, depth, room) })),
+    join: joinToHall,
+    after: addBranches,
+  },
+  warrens: {
+    rooms: r => placeRooms(r, WARREN_SIZES),
+    join: joinRooms,
+    after: (grid, rooms, r) => {
+      addLoops(grid, rooms, r)
+      addBranches(grid, rooms, r)
+      addBranches(grid, rooms, r)
+    },
+  },
+  ring: {
+    rooms: r => placeRooms(r, { ...ROOM_SIZES, tries: 160 }, [], RING_CORE),
+    join: joinInRing,
+    after: addBranches,
+  },
+  caverns: {
+    rooms: r => placeRooms(r).map(room => (room.w >= 6 && room.h >= 5 ? { ...room, shape: 'ragged' as const } : room)),
+    join: joinWinding,
+    after: (grid, rooms, r) => {
+      addBranches(grid, rooms, r)
+      fillRaggedEnds(grid, rooms)
+    },
+  },
+}
+
+/** Each room dug out of the rock, less the cuts of its shape. */
+const carveRooms = (grid: string[][], rooms: readonly Room[]) => {
+  for (const room of rooms) {
+    for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) carve(grid, x, y)
+    for (const c of shapeCut(room)) grid[c.y]![c.x] = '#'
+  }
+}
+
+/** The room farthest from the start by walking: where the stairs go. */
+const farthestRoom = (grid: string[][], rooms: readonly Room[], first: Room, start: Pos) => {
+  const { dist } = walkDistances(grid.map(row => row.join('')), start)
+  return rooms.reduce((best, room) => (dist[cellId(center(room))]! > dist[cellId(center(best))]! ? room : best), first)
+}
+
 export const generate = (world: number, depth: number): Level => {
   const key = `${world}:${depth}`
   const cached = levels.get(key)
   if (cached !== undefined) return cached
   const r = seeded(Math.imul(world, 7919) + Math.imul(depth, 104729))
   const grid = Array.from({ length: MAP_H }, () => Array<string>(MAP_W).fill('#'))
-  const layout = layoutOf(world, depth)
-  const rooms =
-    layout === 'hall' ? placeRooms(r, { ...ROOM_SIZES, most: 7 }, [greatHall(r)]).map((room, i) => (i === 0 ? room : { ...room, shape: shapeOf(world, depth, room) }))
-    : layout === 'warrens' ? placeRooms(r, WARREN_SIZES)
-    : layout === 'ring' ? placeRooms(r, { ...ROOM_SIZES, tries: 160 }, [], RING_CORE)
-    : layout === 'caverns' ? placeRooms(r).map(room => (room.w >= 6 && room.h >= 5 ? { ...room, shape: 'ragged' as const } : room))
-    : placeRooms(r).map(room => ({ ...room, shape: shapeOf(world, depth, room) }))
-  for (const room of rooms) {
-    for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) carve(grid, x, y)
-    for (const c of shapeCut(room)) grid[c.y]![c.x] = '#'
-  }
-  const first =
-    layout === 'hall' ? joinToHall(grid, rooms, r)
-    : layout === 'ring' ? joinInRing(grid, rooms, r)
-    : layout === 'caverns' ? joinWinding(grid, rooms, r)
-    : joinRooms(grid, rooms, r)
-  if (layout === 'rooms' || layout === 'warrens') addLoops(grid, rooms, r)
-  addBranches(grid, rooms, r)
-  if (layout === 'warrens') addBranches(grid, rooms, r)
-  if (layout === 'caverns') fillRaggedEnds(grid, rooms)
-  const tiles = grid.map(row => row.join(''))
+  const plan = LAYOUT_PLANS[layoutOf(world, depth)]
+  const rooms = plan.rooms(r, world, depth)
+  carveRooms(grid, rooms)
+  const first = plan.join(grid, rooms, r)
+  plan.after(grid, rooms, r)
   const start = center(rooms[first]!)
-  const { dist } = walkDistances(tiles, start)
-  const far = rooms.reduce((best, room) => (dist[cellId(center(room))]! > dist[cellId(center(best))]! ? room : best), rooms[first]!)
-  const level = { tiles, rooms, start, stairs: center(far) }
+  const far = farthestRoom(grid, rooms, rooms[first]!, start)
+  const stairsRoom = depth % BIG_EVERY === 0 ? arenaOf(grid, rooms, far, start) : far
+  const level = { tiles: grid.map(row => row.join('')), rooms, start, stairs: center(stairsRoom) }
   levels.set(key, level)
   return level
 }
@@ -305,32 +386,71 @@ export const isFloor = (tiles: readonly string[], p: Pos) => tiles[p.y]?.[p.x] =
 
 export const same = (a: Pos, b: Pos) => a.x === b.x && a.y === b.y
 
+/** The open cells of `tiles` (floor), row-major at the grid's width. */
+const openCells = (tiles: readonly string[], width: number) => {
+  const open = new Uint8Array(width * tiles.length)
+  for (let y = 0; y < tiles.length; y += 1) for (let x = 0; x < width; x += 1) if (tiles[y]![x] === '.') open[y * width + x] = 1
+  return open
+}
+
+/** The cell a step `d` from (x, y) lands on, the way the hero walks: open floor, no wall corner cut; -1 where it cannot. */
+const stepFrom = (open: Uint8Array, width: number, height: number, x: number, y: number, d: Pos) => {
+  const nx = x + d.x
+  const ny = y + d.y
+  if (nx < 0 || ny < 0 || nx >= width || ny >= height || open[ny * width + nx] !== 1) return -1
+  if (d.x !== 0 && d.y !== 0 && (open[y * width + nx] !== 1 || open[ny * width + x] !== 1)) return -1
+  return ny * width + nx
+}
+
+const UNSEEN = -2
+
+/**
+ * Breadth first from `from` the way the hero walks (8-way, no wall corner cut), over typed arrays, cells row-major at
+ * the grid's width: where each cell was reached from (-1 the start, UNSEEN none) and its steps away (-1 none); stopped
+ * at `stop` once reached; `blocked` never entered; from a start off the floor only when `isAnyStart`.
+ */
+const search = (tiles: readonly string[], from: Pos, { stop, blocked, isAnyStart = false }: { stop?: Pos; blocked?: Pos; isAnyStart?: boolean } = {}) => {
+  const width = tiles[0]?.length ?? 0
+  const height = tiles.length
+  const open = openCells(tiles, width)
+  const came = new Int32Array(width * height).fill(UNSEEN)
+  const dist = new Int32Array(width * height).fill(-1)
+  const queue = new Int32Array(width * height)
+  const start = from.y * width + from.x
+  const skip = blocked === undefined ? -1 : blocked.y * width + blocked.x
+  let tail = 0
+  if (isAnyStart || open[start] === 1) {
+    came[start] = -1
+    dist[start] = 0
+    queue[tail++] = start
+  }
+  for (let head = 0; head < tail; head += 1) {
+    const at = queue[head]!
+    const x = at % width
+    const y = (at - x) / width
+    if (stop !== undefined && x === stop.x && y === stop.y) break
+    for (const d of STEPS) {
+      const next = stepFrom(open, width, height, x, y, d)
+      if (next === -1 || came[next] !== UNSEEN || next === skip) continue
+      came[next] = at
+      dist[next] = dist[at]! + 1
+      queue[tail++] = next
+    }
+  }
+  return { came, dist, reached: tail, width }
+}
+
 /**
  * Shortest 8-way path over floor from `from` to `to`, both ends included; null when cut off. A diagonal step needs
  * both cells beside it open, so no wall corner is cut. `blocked` is never entered, not even as `to`.
  */
 export const bfs = (tiles: readonly string[], from: Pos, to: Pos, blocked?: Pos): Pos[] | null => {
-  const width = tiles[0]?.length ?? 0
-  const id = (p: Pos) => p.y * width + p.x
-  const came = new Map<number, number>([[id(from), -1]])
-  const queue: Pos[] = [from]
-  for (let head = 0; head < queue.length; head += 1) {
-    const at = queue[head] as Pos
-    if (same(at, to)) break
-    for (const d of STEPS) {
-      const next = { x: at.x + d.x, y: at.y + d.y }
-      const isCornerFree = (d.x === 0 || d.y === 0) || (isFloor(tiles, { x: at.x + d.x, y: at.y }) && isFloor(tiles, { x: at.x, y: at.y + d.y }))
-      const isOpen = isFloor(tiles, next) && isCornerFree && !came.has(id(next)) && (blocked === undefined || !same(next, blocked))
-      if (isOpen) {
-        came.set(id(next), id(at))
-        queue.push(next)
-      }
-    }
-  }
-  if (!came.has(id(to))) return null
+  const { came, width } = search(tiles, from, { stop: to, blocked, isAnyStart: true })
+  const goal = to.y * width + to.x
+  if (goal < 0 || goal >= came.length || came[goal] === UNSEEN) return null
   const path: Pos[] = []
-  for (let cur = id(to); cur !== -1; cur = came.get(cur) ?? -1) path.unshift({ x: cur % width, y: Math.floor(cur / width) })
-  return path
+  for (let cur = goal; cur !== -1; cur = came[cur]!) path.push({ x: cur % width, y: Math.floor(cur / width) })
+  return path.reverse()
 }
 
 /**
@@ -339,33 +459,8 @@ export const bfs = (tiles: readonly string[], from: Pos, to: Pos, blocked?: Pos)
  * with it many times over.
  */
 export const walkDistances = (tiles: readonly string[], from: Pos) => {
-  const width = tiles[0]?.length ?? 0
-  const height = tiles.length
-  const open = new Uint8Array(width * height)
-  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) if (tiles[y]![x] === '.') open[y * width + x] = 1
-  const dist = new Int32Array(width * height).fill(-1)
-  const queue = new Int32Array(width * height)
-  let tail = 0
-  if (open[from.y * width + from.x] === 1) {
-    dist[from.y * width + from.x] = 0
-    queue[tail++] = from.y * width + from.x
-  }
-  for (let head = 0; head < tail; head += 1) {
-    const at = queue[head]!
-    const x = at % width
-    const y = (at - x) / width
-    for (const d of STEPS) {
-      const nx = x + d.x
-      const ny = y + d.y
-      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
-      const next = ny * width + nx
-      if (open[next] !== 1 || dist[next] !== -1) continue
-      if (d.x !== 0 && d.y !== 0 && (open[y * width + nx] !== 1 || open[ny * width + x] !== 1)) continue
-      dist[next] = dist[at]! + 1
-      queue[tail++] = next
-    }
-  }
-  return { dist, reached: tail }
+  const { dist, reached } = search(tiles, from)
+  return { dist, reached }
 }
 
 /** A level measured: steps from the start to every cell (-1 where none), to the stairs, floor reached, dead ends. */
@@ -401,25 +496,44 @@ export const CORRIDOR_SIGHT = 6
  * it, CORRIDOR_SIGHT cells and their walls, so what lies at the end of a branch shows from the room; else the cells
  * around.
  */
+type Box = { x: number; y: number; w: number; h: number }
+
+/** The way a cell of a room's wall ring looks out of the room, its side's; none for a corner or a cell inside. */
+const outwardOf = (c: Pos, box: Box): Pos | null => {
+  const isLeft = c.x === box.x
+  const isRight = c.x === box.x + box.w - 1
+  const isTop = c.y === box.y
+  const isBottom = c.y === box.y + box.h - 1
+  if ((isLeft || isRight) && (isTop || isBottom)) return null
+  if (isLeft) return { x: -1, y: 0 }
+  if (isRight) return { x: 1, y: 0 }
+  if (isTop) return { x: 0, y: -1 }
+  return isBottom ? { x: 0, y: 1 } : null
+}
+
+/** Down a corridor from an opening: CORRIDOR_SIGHT cells out while it is floor, each with the cells either side of it. */
+const corridorSight = (level: Level, c: Pos, out: Pos): Pos[] => {
+  const cells: Pos[] = []
+  for (let k = 1; k <= CORRIDOR_SIGHT; k += 1) {
+    const q = { x: c.x + out.x * k, y: c.y + out.y * k }
+    if (!isFloor(level.tiles, q)) break
+    cells.push(q, { x: q.x + out.y, y: q.y + out.x }, { x: q.x - out.y, y: q.y - out.x })
+  }
+  return cells
+}
+
 export const visibleFrom = (level: Level, p: Pos): Pos[] => {
   const room = roomAt(level, p)
   const box = room === undefined ? { x: p.x - 1, y: p.y - 1, w: 3, h: 3 } : { x: room.x - 1, y: room.y - 1, w: room.w + 2, h: room.h + 2 }
   const cells: Pos[] = []
   for (let y = box.y; y < box.y + box.h; y += 1) for (let x = box.x; x < box.x + box.w; x += 1) cells.push({ x, y })
+  // In a room, the openings in its wall ring, each looking outward from its side.
   if (room !== undefined) {
-    // Openings in the wall ring, each looking outward from its side of the room.
     const openings = cells.flatMap(c => {
-      const out = c.x === box.x ? { x: -1, y: 0 } : c.x === box.x + box.w - 1 ? { x: 1, y: 0 } : c.y === box.y ? { x: 0, y: -1 } : c.y === box.y + box.h - 1 ? { x: 0, y: 1 } : null
-      const isCorner = (c.x === box.x || c.x === box.x + box.w - 1) && (c.y === box.y || c.y === box.y + box.h - 1)
-      return out !== null && !isCorner && isFloor(level.tiles, c) ? [{ c, out }] : []
+      const out = outwardOf(c, box)
+      return out !== null && isFloor(level.tiles, c) ? [{ c, out }] : []
     })
-    for (const { c, out } of openings) {
-      for (let k = 1; k <= CORRIDOR_SIGHT; k += 1) {
-        const q = { x: c.x + out.x * k, y: c.y + out.y * k }
-        if (!isFloor(level.tiles, q)) break
-        cells.push(q, { x: q.x + out.y, y: q.y + out.x }, { x: q.x - out.y, y: q.y - out.x })
-      }
-    }
+    for (const { c, out } of openings) cells.push(...corridorSight(level, c, out))
   }
   return cells.filter(c => c.x >= 0 && c.y >= 0 && c.x < MAP_W && c.y < MAP_H)
 }
@@ -448,15 +562,22 @@ export const chestAt = (world: number, depth: number, level: Level, p: Pos): Che
 }
 
 /** The look of a stretch of depths: the same tiles, their ground recolored. */
-export type Theme = 'crypt' | 'flooded' | 'forge'
-const THEMES: readonly Theme[] = ['crypt', 'flooded', 'forge']
+export type Theme = 'crypt' | 'flooded' | 'fungal' | 'frozen' | 'forge'
+/** In this order a big boss, every tenth depth, meets each theme once in fifty depths. */
+const THEMES: readonly Theme[] = ['crypt', 'flooded', 'fungal', 'frozen', 'forge']
 /** Depths a theme lasts, then the next, and round again. */
 export const THEME_DEPTHS = 5
 export const themeOf = (depth: number): Theme => THEMES[Math.floor((depth - 1) / THEME_DEPTHS) % THEMES.length]!
 
 export type RoomKind = 'shrine' | 'library' | 'spring' | 'anvil' | 'vault'
 /** The themed rooms each theme can have: the crypt's two, and a third of the flooded halls' and the forge's own. */
-const KINDS: Readonly<Record<Theme, readonly RoomKind[]>> = { crypt: ['shrine', 'library', 'vault'], flooded: ['shrine', 'library', 'spring', 'vault'], forge: ['shrine', 'library', 'anvil', 'vault'] }
+const KINDS: Readonly<Record<Theme, readonly RoomKind[]>> = {
+  crypt: ['shrine', 'library', 'vault'],
+  flooded: ['shrine', 'library', 'spring', 'vault'],
+  fungal: ['shrine', 'spring', 'vault'],
+  frozen: ['shrine', 'library', 'vault'],
+  forge: ['shrine', 'library', 'anvil', 'vault'],
+}
 const themedOf = new WeakMap<Level, { room: Room; kind: RoomKind } | null>()
 
 /**
@@ -488,28 +609,26 @@ export const braziersOf = (world: number, depth: number, level: Level): Pos[] =>
 }
 
 /** What stands in the themed room at a cell: A an altar, B a brazier, R a lectern, L a shelf; ' ' elsewhere in it. */
+/** Two furnishings either side of a themed room's centrepiece, on its middle row. */
+const isFlanking = (p: Pos, mid: Pos) => p.y === mid.y && Math.abs(p.x - mid.x) === 2
+
+/** What each themed room holds, by cell: its centrepiece in the middle and its furnishings. */
+const THEMED: Readonly<Record<RoomKind, (p: Pos, mid: Pos, room: Room) => string>> = {
+  shrine: (p, mid) => (same(p, mid) ? 'A' : isFlanking(p, mid) ? 'B' : ' '),
+  spring: (p, mid) => (same(p, mid) ? 'S' : isFlanking(p, mid) ? 'Q' : ' '),
+  anvil: (p, mid) => (same(p, mid) ? 'N' : isFlanking(p, mid) ? 'F' : ' '),
+  // A vault: three piles of gold across the middle, a trap on each side of them, for whoever clicks in.
+  vault: (p, mid) => {
+    if (p.y !== mid.y) return ' '
+    const off = Math.abs(p.x - mid.x)
+    return off <= 2 && off % 2 === 0 ? '$' : off === 1 ? '^' : ' '
+  },
+  library: (p, mid, room) => (same(p, mid) ? 'R' : p.y === room.y && (p.x - room.x) % 2 === 0 ? 'L' : ' '),
+}
+
 const themedThing = (themed: { room: Room; kind: RoomKind }, p: Pos) => {
   const r = themed.room
-  const mid = { x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) }
-  if (themed.kind === 'shrine') {
-    if (same(p, mid)) return 'A'
-    if (p.y === mid.y && Math.abs(p.x - mid.x) === 2) return 'B'
-    return ' '
-  }
-  if (themed.kind === 'spring' || themed.kind === 'anvil') {
-    if (same(p, mid)) return themed.kind === 'spring' ? 'S' : 'N'
-    if (p.y === mid.y && Math.abs(p.x - mid.x) === 2) return themed.kind === 'spring' ? 'Q' : 'F'
-    return ' '
-  }
-  // A vault: three piles of gold across the middle, a trap on each side of them, for whoever clicks in.
-  if (themed.kind === 'vault') {
-    if (p.y === mid.y && Math.abs(p.x - mid.x) <= 2 && (p.x - mid.x) % 2 === 0) return '$'
-    if (p.y === mid.y && Math.abs(p.x - mid.x) === 1) return '^'
-    return ' '
-  }
-  if (same(p, mid)) return 'R'
-  if (p.y === r.y && (p.x - r.x) % 2 === 0) return 'L'
-  return ' '
+  return THEMED[themed.kind](p, { x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) }, r)
 }
 
 /**

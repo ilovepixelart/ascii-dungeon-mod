@@ -14,6 +14,8 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 | `hooks/chest.ts` | the stash |
 | `hooks/start.ts` | the start screen |
 | `hooks/sheet.ts` | the character sheet |
+| `hooks/settings.ts` | settings: New game, the view, effects, music and the volume |
+| `hooks/death.ts` | the death window |
 | `hooks/compact.ts` | the inventory for a pane 80 to 104 columns wide |
 
 ## The merchant
@@ -26,6 +28,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## Gotchas
 
+- Every bar is flat, one color, 2 px tall on a whole cell's top (`flatBar` in `hooks/pieces.ts`), its numbers text centred on it (`barLabel`): each character on the bar's color under it, in the ink that reads there (`inkOn`). The strip's HP and XP, the sheet's XP, the healer's HP and the elder's quest. The foe's bar on the map is 1 px and too short for a number.
 - Text goes in text boxes, not pixels: the pixel font is 5 px tall, fine for titles, labels and numbers, not for sentences. The window draws a box's frame and fill in pixels; the click layer writes its text on the same fill.
 - A text box is placed in cells (one pixel across, two down), so its frame lands on even pixel rows.
 - `place` scores a spot by what it hides (`coverage`, weights the window chooses) a thousand times over its distance from what the box is about: hiding less always wins over being nearer.
@@ -51,13 +54,22 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The start screen
 
-- The `start` panel: a first game opens on it (`openingGame` in `hooks/save.ts`), and New game in the character sheet (or `r` on the text dashboard) opens it. While it is open the dungeon waits: `apply` lets through only a new game, closing it and the view key, so tool calls change nothing.
+- The `start` panel: a first game opens on it (`openingGame` in `hooks/save.ts`), and New game in settings (or `r` on the text dashboard) opens it. While it is open the dungeon waits: `apply` lets through only a new game, closing it and the view key, so tool calls change nothing.
 - The title, then a card a hero: its portrait in its starting kit, its name, a pip a point of each attribute it starts with. The chosen card is framed white, its ability, lean and kit in the box under the cards.
 - A card chooses its hero; the chosen card clicked again, or Start (`s`), begins a new game as it. Back (`b`) and the close box leave the game as it was; Back shows only with a game under way (`isUnderWay`), since a first game has nothing to go back to. Keys `1` to `3` choose.
 
 ## The character sheet
 
-- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; New game, which opens the start screen.
+- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does. New game is in settings.
+
+## Settings
+
+- Opened from the gear in the strip, or Settings on the text dashboard. New game opens the start screen; View steps the view; Effects and Music each turn on or off; Volume steps a quarter at a time, from full round to a quarter, for every clip and the tune (`SoundSettings`, `nextSound`). Music turned on or off, or a new volume, restarts the tune at its level. The sound settings last the session; the `sound` and `music` options set them at its start.
+
+## The death window
+
+- Opened by the rules on every death (`die` sets `Game.fallen` and the `death` panel), but drawn only once the hero's fall has played on the map (`isFalling` in `register.tsx`); without the pixel map it shows at once. The killer's portrait as it stood (a big boss its 16 by 16 at its own size, `killerArt`), who and on which depth, the level, the deaths and the gold lost, the depth woken on, and Wake (`w`), which closes it like the close box.
+- A unique's name carries its own article ("the Rotking"), so the window names the killer from the kept foe (`killerName`), not from `Fallen.by`, the log's wording.
 
 ## The compact inventory
 

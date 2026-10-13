@@ -48,8 +48,8 @@ describe('what each says, from how the hero stands', () => {
   test('the guard: a guardian one depth off or nearer, a turn of the halls ahead, a fall, else the stairs', async () => {
     expect(first(hero({ depth: 4, bossSlain: 0 }), 'guard')).toBe('"A guardian holds the stairs of depth 5. Go ready."')
     expect(first(hero({ depth: 5, bossSlain: 0 }), 'guard')).toBe('"A guardian holds the stairs of depth 5. Go ready."')
-    // Its guardian slain, depth 10 gives onto depth 11, where the floods give way to the forges.
-    expect(first(hero({ depth: 10, deepest: 10, bossSlain: 10 }), 'guard')).toBe('"Past depth 10, they say, the halls turn to forges and slag."')
+    // Its guardian slain, depth 10 gives onto depth 11, where the floods give way to the fungal deep.
+    expect(first(hero({ depth: 10, deepest: 10, bossSlain: 10 }), 'guard')).toBe('"Past depth 10, they say, the halls turn to fungal caves."')
     expect(first(hero({ depth: 2, deaths: 1 }), 'guard')).toBe('"Fell down there and came back? Mind the stairs this time."')
     expect(first(hero({ depth: 2, deaths: 0 }), 'guard')).toBe('"The dungeon is through the portal. Mind the stairs."')
     expect(words(hero({ depth: 2, deepest: 7, deaths: 3 }), 'guard')[1]).toBe('Your deepest: depth 7. Times fallen: 3.')
@@ -146,4 +146,12 @@ describe('the window', () => {
     const inGold = px.slice(framed[0]!.y, framed[1]!.y).some(row => row.slice(4, 40).includes(GOLD_INK))
     expect(inGold).toBe(true)
   })
+})
+
+test('the healer shows the hero\'s HP and the elder the quest as text on a flat bar; the others have none', async () => {
+  const g = { ...newGame(4), hp: 12, maxHp: 30 }
+  const label = (who: Parameters<typeof talkOverlay>[1], game = g) => talkOverlay(game, who).find(b => b.role === 'label')?.lines[0]!.map(r => r.text).join('')
+  expect(label('healer')).toBe('12/30')
+  expect(label('guard')).toBeUndefined()
+  expect(label('elder', { ...g, quest: { kind: 'slay', depth: 6, need: 5, have: 2 } })).toBe('2/5')
 })

@@ -8,9 +8,9 @@ The hero is one of three classes, picked when a game starts: the character sheet
 
 | Class | Plays as | Stat lean | Starting kit | Wears (class items) |
 |---|---|---|---|---|
-| Knight | tank: blocks and outlasts | +2 Might, +1 Vigor | Short Sword, Buckler, Tunic, Hood | swords, maces, axes; shields; helms; chain and plate |
-| Mage | glass cannon: grows fast | +3 Insight, +1 Focus | Ash Staff, Tome of Sparks, Robe, Pointed Hat | staves, wands; tomes; hats; robes |
-| Rogue | crits and escapes | +3 Focus, +1 Might, +1 Vigor | Dagger, Parrying Dagger, Leather Coat, Cowl | daggers, short bows; off-hand daggers; cowls; leather and cloaks |
+| Knight | tank: blocks and outlasts | +2 Might, +1 Vigor | Short Sword, Buckler, Tunic, Hood | swords, maces, axes; bucklers, kite and tower shields; hoods and helms; tunics, chain and plate |
+| Mage | glass cannon: grows fast | +3 Insight, +1 Focus | Ash Staff, Tome of Sparks, Robe, Pointed Hat | staves, wands, scepters; tomes, orbs, grimoires; hats, circlets, hoods; robes, vestments, mantles |
+| Rogue | crits and escapes | +3 Focus, +1 Might, +1 Vigor | Dagger, Parrying Dagger, Leather Coat, Cowl | daggers, short bows, rapiers; off-hand daggers, throwing knives, quivers; cowls, masks, bandanas; leather, cloaks and jerkins |
 
 Each class has one ability, always on, each told by a log line when it acts (`counter`, `strike` and `siphon` in `hooks/game.ts`):
 
@@ -40,7 +40,7 @@ Each depth moves 1 point of weight from Common toward the higher tiers, down to 
 
 ## Wearables
 
-Seven slots. Each base has a size in the bag grid (columns x rows) and the classes that can wear it.
+Seven slots. Each base has a size in the bag grid (columns x rows) and the classes that can wear it. Each class has three bases of its own in weapon, off-hand, helm and armor and one pair of boots, so its pool (with the shared boots, rings and amulets) is 17 bases, the same for all three: drops come three in four from the hero's own pool, so equal pools give each class the same mix of slots. With the pools even, deaths per 100 tool calls over 200 simulated games a class (`tools/feel.ts`) were knight 0.63, mage 0.71, rogue 0.72, where they had been 0.58, 0.78 and 0.74.
 
 | Slot | Base | Class | Stats | Bag size | On the hero |
 |---|---|---|---|---|---|
@@ -49,23 +49,37 @@ Seven slots. Each base has a size in the bag grid (columns x rows) and the class
 | Weapon | War Axe | Knight | +4 atk | 2x3 | broad axe head |
 | Weapon | Ash Staff | Mage | +2 atk, +1 Insight | 1x3 | wooden staff, glowing tip |
 | Weapon | Wand | Mage | +1 atk, +10% crit | 1x2 | short rod, spark |
+| Weapon | Rune Scepter | Mage | +3 atk | 1x3 | gold rod, violet gem |
 | Weapon | Dagger | Rogue | +1 atk, +5% crit | 1x2 | short blade |
 | Weapon | Short Bow | Rogue | +3 atk | 1x3 | bow held up |
+| Weapon | Rapier | Rogue | +2 atk, +5% crit | 1x3 | thin blade, basket hilt |
 | Off-hand | Buckler | Knight | +1 def | 2x2 | small round shield |
 | Off-hand | Kite Shield | Knight | +2 def | 2x3 | tall, crest in the rarity color |
+| Off-hand | Tower Shield | Knight | +3 def | 2x3 | steel slab, red field, gold cross |
 | Off-hand | Tome of Sparks | Mage | +2 atk | 2x2 | open book |
+| Off-hand | Crystal Orb | Mage | +10% crit | 2x2 | glass orb on a stand |
+| Off-hand | Grimoire | Mage | +15% XP | 2x2 | dark book, gold eye |
 | Off-hand | Parrying Dagger | Rogue | +1 def, +5% crit | 1x2 | second blade |
+| Off-hand | Throwing Knives | Rogue | +2 atk | 1x2 | a pair of knives |
+| Off-hand | Quiver | Rogue | +10% crit | 1x3 | leather quiver |
 | Helm | Hood | Knight | +3 HP | 2x2 | leather hood |
 | Helm | Steel Helm | Knight | +1 def | 2x2 | visor slit |
 | Helm | Horned Helm | Knight | +2 def | 2x2 | horns |
 | Helm | Pointed Hat | Mage | +1 Insight | 2x2 | tall hat |
+| Helm | Silver Circlet | Mage | +1 atk, +1 def | 2x2 | silver band, gem |
+| Helm | Sage's Hood | Mage | +4 HP | 2x2 | violet hood, gold trim |
 | Helm | Cowl | Rogue | +1 Focus | 2x2 | dark hood over the eyes |
+| Helm | Thief's Mask | Rogue | +5% crit, +5% XP | 2x2 | domino mask |
+| Helm | Bandana | Rogue | +4 HP | 2x2 | red wrap |
 | Armor | Tunic | Knight | +4 HP | 2x3 | blue cloth (the current look) |
 | Armor | Chain Shirt | Knight | +2 def | 2x3 | grey mail |
 | Armor | Plate | Knight | +3 def | 2x3 | bright steel, shoulder plates |
 | Armor | Robe | Mage | +5 HP | 2x3 | long robe to the feet |
+| Armor | Silk Vestments | Mage | +10% XP, +3 HP | 2x3 | cream and gold robe |
+| Armor | Warded Mantle | Mage | +2 def, +2 HP | 2x3 | hooded blue mantle |
 | Armor | Leather Coat | Rogue | +1 def | 2x3 | brown |
 | Armor | Shadow Cloak | Rogue | +1 def, +5% crit | 2x3 | dark cloak |
+| Armor | Studded Jerkin | Rogue | +2 def, +2 HP | 2x3 | studded leather |
 | Boots | Leather Boots | all | +1 def | 2x2 | brown boots |
 | Boots | Iron Greaves | Knight | +2 def | 2x2 | steel boots |
 | Boots | Silk Slippers | Mage | +1 Insight | 2x2 | purple slippers |
@@ -95,17 +109,19 @@ Fixed names and stats, each with one effect no affix gives.
 
 Used from the belt, never worn. Using one always costs a turn, so each is strong. Vital ones are plentiful so they get used, not hoarded.
 
-Five kinds, each with a fixed belt slot (`KINDS` in `hooks/consumables.ts`, keys 1 to 5), so a pile of one kind never takes another's place. Each kind comes in three tiers, each tier stacking to 9 in its slot (`STACK_MAX`). A slot uses its strongest tier first and is drawn with that tier's icon, a gold pip under the count for each tier above the first, and the slot's total count. What each tier does is its entry in `CONSUMABLES`:
+Five kinds, each with a fixed belt slot (`KINDS` in `hooks/consumables.ts`, keys 1 to 5), so a pile of one kind never takes another's place. Each kind comes in three tiers, each tier stacking to 9 in its slot (`STACK_MAX`). A slot uses the tier chosen for it (`choose`, from its popover on the strip, kept in `BeltSlot.chosen` while the slot holds one of that tier), else its strongest, and is drawn with that tier's icon (`activeTier`), a gold pip under the count for each tier above the first, and the slot's total count. What each tier does is its entry in `CONSUMABLES`:
 
-| Slot | I | II | III |
-|---|---|---|---|
-| 1 health | Health Potion | Greater Health Potion | Elixir |
-| 2 regeneration | Regeneration Draught | Strong Draught | Troll Blood |
-| 3 fury | Scroll of Fury | Battle Hymn | Berserker's Oath |
-| 4 ward | Ward Scroll | Greater Ward | Aegis |
-| 5 smoke | Smoke Bomb | Shadow Step (heals too) | Scroll of Passage (reveals the level too) |
+| Slot | Form | I | II | III |
+|---|---|---|---|---|
+| 1 health | potions | Health Potion | Greater Health Potion | Elixir |
+| 2 regeneration | herbs | Healing Herb | Herbal Salve | Troll Moss |
+| 3 fury | scrolls | Scroll of Fury | Scroll of Battle | Scroll of the Berserker |
+| 4 ward | runes | Ward Rune | Greater Ward Rune | Aegis Rune |
+| 5 smoke | bombs | Smoke Bomb | Shadow Bomb (heals too) | Passage Bomb (reveals the level too) |
 
-Tier I does what each kind did before tiers, so a belt saved before them (version 7, `toVersion7` in `hooks/save.ts`) keeps its strength: the old Greater Health Potion became an Elixir, and the Scroll of Mapping a Scroll of Passage.
+Each kind is one form, its own icon, so no form is split across two slots: every potion is in slot 1, every scroll in slot 3.
+
+Tier I does what each kind did before tiers, so a belt saved before them (version 7, `toVersion7` in `hooks/save.ts`) keeps its strength: the old Greater Health Potion became an Elixir, and the Scroll of Mapping a Passage Bomb.
 
 ## Finding things
 
@@ -114,14 +130,25 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
 - A Rare or better from a kill rises as a beam of its tier's color where the foe fell, wider the rarer (Rare 2 px, Epic 4, Legendary 6; `drawBeam` in `hooks/pixels.ts`), for the blow's frames.
 - Bad-luck protection: after 10 items in a row without an Epic or better, each more raises the Epic and Legendary weights by a tenth, up to double at 20; the 30th is an Epic or better. One dropping resets the count.
 - Health potions keep a steady supply: a kill has a 40% potion chance, 10 points lower after a potion drops, 10 points higher after a kill without one. Otherwise 15% of kills leave one of the other kinds (smoke from depth 3).
-- A drop's tier goes by depth (`tierFor`): tier III 1 in 100 at depth 1, 2 more a depth, up to 30; tier II 4 a depth, up to 45; the rest tier I. A floor potion is tier I; the lectern gives a Scroll of Passage.
+- A drop's tier goes by depth (`tierFor`): tier III 1 in 100 at depth 1, 2 more a depth, up to 30; tier II 4 a depth, up to 45; the rest tier I. A floor potion is tier I; the lectern gives a Scroll of the Berserker.
 - With fixed slots no other kind crowds potions off a full belt, which makes the hero last longer; foes hit 1.2 times their plain sum (`FOE_ATK_SCALE`) to match. Over 300 simulated games of 1,000 steps that is 0.62, 0.81 and 0.74 deaths per 100 tool calls (Knight, Mage, Rogue). Making the higher tiers rarer barely moves it.
 - Which foe: any kind the depth has unlocked, up to two tiers past it (`foeTierWeights` in `hooks/game.ts`), so from depth 6 every kind can come. The theme's favorites come three times as often (the crypt rats, skeletons and wraiths; the flooded halls kobolds, rats and trolls; the forge goblins, orcs and dragons), the newest three kinds twice. Stats grow with depth whatever the kind (`foeHp`, `foeAtk` in `hooks/balance.ts`), so an old kind deep down is fodder beside a new one, not harmless. Over the simulated games a depth shows 3 kinds of foe, where picking by depth alone gave 1.5 and from depth 8 down nothing but dragons.
 - Death: the hero wakes on the first depth of the theme (1, 6, 11 and on) with half the gold and no fortune; the depths above are not walked again. Waking on depth 1 instead had a fifth more of a session spent below depths already reached.
 - Theme variants: the flooded halls and the forge draw some monsters their own way and name them so (a bog rat, a cinder goblin, a forge drake; `MONSTER_VARIANT` in `hooks/pixelart.ts`, `VARIANT_NAME` in `hooks/game.ts`): the art with palette keys swapped, the kind's trait unchanged.
-- Uniques: each band of five depths has one named monster of its theme on one of its middle depths (`UNIQUES`, `uniqueDepth`): Old Bones (crypt skeleton, pulls itself back together once), Mother Mire (flooded troll, rises whole by a sixth of her HP every third turn), Emberjaw (forge drake, glows one turn and breathes the next). The first foe on its depth, announced, half again its kind's HP and a tenth more attack, a gold crown; slain, it leaves an Epic or better and its band's is done (`Game.uniquesSlain`). At twice the HP and a third more attack deaths rose by half: one that wins is still there when the hero comes back.
+- Uniques: each band of five depths has one named monster of its theme on one of its middle depths (`UNIQUES`, `uniqueDepth`): Old Bones (crypt skeleton, pulls itself back together once), Mother Mire (flooded troll, rises whole by a sixth of her HP every third turn), the Rotking (fungal kobold, his spores slip past armor every other turn), Rimehide (frozen orc, gathers frost one turn and strikes double the next), Emberjaw (forge drake, glows one turn and breathes the next). Each is drawn as its own (`UNIQUE_ART`), its silhouette its own. The first foe on its depth, announced, half again its kind's HP and a tenth more attack, a gold crown; slain, it leaves an Epic or better and its band's is done (`Game.uniquesSlain`). At twice the HP and a third more attack deaths rose by half: one that wins is still there when the hero comes back.
 - Champions: from depth 2, one foe in ten (`championOf` in `hooks/game.ts`) carries one modifier, named first: Tough (60% more HP), Savage (half again as hard), Shielded (turns the first blow aside), Vampiric (heals by what it deals). Every champion has 1.5 times the HP and 1.25 times the attack of its kind, double XP, three times the gold, and always leaves an item: the better of two rolls, Uncommon at least. On the map its bar ends in a gold pip each side.
 - Bosses: every 5th depth (`isBossDepth` in `hooks/game.ts`) the first try to descend raises the stairs' guardian beside the hero instead (`bossOf`): the kind two tiers past the depth, at its strongest roll, 2.5 times the HP, 1.45 times its kind's attack (`BOSS_ATK`), 4 times the XP, its kind's trait at a boss's strength (below), gold pips on its bar like a champion and a gold crown over its head. The stairs stay shut while it lives; a task done in town steps back through the portal to meet it. It leaves five times the gold, an Elixir and the best of three item rolls, Rare at least. `Game.bossSlain` keeps the deepest one slain, so a hero who dies and climbs back down never meets it twice. 
+- Big bosses: every tenth depth (`isBigBossDepth`, `BIG_EVERY` in `hooks/map.ts`) the guardian is the theme's big boss (`BIG_BOSSES`, `bigBossOf`), drawn `&` on the text map and as a 16 by 16 sprite on the pixel map (`BOSS_ART`), standing on its tile with half a tile out each side and a tile up, a bar as wide over its head. The stairs room is grown to an arena of at least 14 by 8 (`arenaOf`), except on the few levels (about 1 in 200) where that would take in the start. Against the top kind at its strongest roll it has 4.5 times the HP (`BIG_HP`), 1.5 times the attack (`BIG_ATK`) and 8 times the XP; slain, it leaves what a guardian does with Epic at least. At half its HP it rages once (`phase: 2`), a turn spent roaring with no blow, and its moves (`MOVES` in `hooks/patterns.ts`) harden:
+
+| Boss | Moves | Raging |
+|---|---|---|
+| Bone King (crypt) | raises his greatsword, brings it down double the next turn | bones shield him as he raises it |
+| Drowned Queen (flooded) | the tide mends a tenth of her HP every third turn | drags the hero under, past armor, every other turn |
+| Hive Mother (fungal) | spores slip past armor every other turn | the swarm bites half again as hard |
+| Frost Lich (frozen) | the air freezes, then a frost nova double | ice armor every fourth turn |
+| Furnace Wyrm (forge) | draws a breath, then fire at two and a half times its attack, every third turn | every other turn |
+
+  Over 90 simulated games of 3,000 steps (`tools/simulate.ts`, `bigMet`, `bigSlain`, `bigDeaths`) a big boss slew the hero 0.35 times a meeting, against 0.25 for an overlord, with deaths per 1,000 steps and the deepest depth reached level with overlords in their place.
 - How each kind fights (`foeTurn` and `heroBlowOn` in `hooks/patterns.ts`), one trait a kind, the heavy blows announced a turn before:
 
 | Kind | Trait |
@@ -138,7 +165,7 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
   Over 300 simulated games of 1,000 steps: 2.1 deaths and 13.9 potions a game.
 - Drops are announced by toast only when they matter: a Legendary or an Epic by name, a champion's prize; a level-up takes precedence. Lesser drops are left to the bag.
 - Chests stand at the dead ends of the side branches (`chestAt` in `hooks/map.ts`), one each, seen from the room the branch leaves; walking onto one opens it (`openChest` in `hooks/game.ts`) and it stays open. Wooden: gold and, 60% of the time, an item. Iron, from depth 2: more gold and an item of Uncommon or better. Gilded, from depth 4 and likelier deeper: the most gold and an item of Rare or better. Auto-explore never passes them: they are the reward for a click.
-- The themed room: most levels give one room (`themedRoomOf` in `hooks/map.ts`; at least 5 wide, never the start's or the stairs') a purpose. A shrine: an altar in the middle, a brazier two cells each side; walking onto the altar heals a quarter of the hero's max HP, once. A library: a lectern in the middle, shelves along the top wall; walking onto the lectern gives a Scroll of Passage, once, and leaves it for later when the belt is full. The flooded halls (depths 6 to 10 and every 15 after) may have a spring instead, a third of the time each: a pool in the middle, reeds two cells each side; walking into it restores all HP, once, kept while the hero is unhurt. The forge (depths 11 to 15 and on) may have an old anvil: the town's anvil in the middle, embers two cells each side that light the room like braziers; walking up to it tempers the worn weapon once for nothing, waiting while it cannot take one. An unhurt hero passes the altar by in the same way. The furnishings stay drawn once used.
+- The themed room: most levels give one room (`themedRoomOf` in `hooks/map.ts`; at least 5 wide, never the start's or the stairs') a purpose. A shrine: an altar in the middle, a brazier two cells each side; walking onto the altar heals a quarter of the hero's max HP, once. A library: a lectern in the middle, shelves along the top wall; walking onto the lectern gives a Scroll of the Berserker, once, and leaves it for later when the belt is full. The flooded halls (depths 6 to 10 and every 15 after) may have a spring instead, a third of the time each: a pool in the middle, reeds two cells each side; walking into it restores all HP, once, kept while the hero is unhurt. The forge (depths 11 to 15 and on) may have an old anvil: the town's anvil in the middle, embers two cells each side that light the room like braziers; walking up to it tempers the worn weapon once for nothing, waiting while it cannot take one. An unhurt hero passes the altar by in the same way. The furnishings stay drawn once used.
 - Gold lies on floors in three sizes (coin, pile, bar by amount), is picked up by walking over it and never takes bag space.
 - Epic and Legendary drops send a short beam of their color up from the tile; a Legendary also gets its own log line. Nothing else ever beams.
 - The smith's tempering is the gold sink: each worn item takes up to 3 temperings, each +1 attack (a weapon, or a base made to strike) or +1 defense (the rest), for 60, 240, then 540 gold (`temperCost`). A reforge keeps the temper. Over 300 simulated games it takes about 18 temperings a game, leaves about 680 gold of the 2,800 earned, and cuts potions drunk from about 13 to about 9.

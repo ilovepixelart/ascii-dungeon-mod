@@ -36,7 +36,7 @@ describe('the beam', () => {
     const g = { ...plainHero(4), fresh: 0 }
     const foe = foeAhead(g, 1, { hp: 3 })
     const before = { ...g, foe }
-    const after = (lines: string[]): Game => ({ ...g, foe: null, log: [...g.log, `You slay the ${foe.name}! +5 XP, +1 gold.`, ...lines], fresh: 1 + lines.length })
+    const after = (lines: string[]): Game => ({ ...g, foe: null, xp: g.xp + 5, log: [...g.log, `You slay the ${foe.name}! +5 XP, +1 gold.`, ...lines], fresh: 1 + lines.length })
     const loot = (h: Hit[]) => h.filter(x => x.kind === 'loot')
     expect(loot(hitsBetween(before, after(['Loot: Band (Rare).'])))).toEqual([{ at: { x: foe.x, y: foe.y }, amount: 0, kind: 'loot', tier: 'rare' }])
     expect(loot(hitsBetween(before, after(['Loot: Health Potion.', 'Loot: Band (Rare).', 'Loot: Crown (Legendary).'])))[0]?.tier).toBe('legendary')

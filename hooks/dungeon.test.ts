@@ -3,8 +3,9 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 
-import { CLIP_MS } from './clips'
-import { MUSIC_GAIN, gainOf } from './sounds'
+import { CLIP_MS, TUNE_MS } from './clips'
+import { MUSIC_GAIN, TOWN_TUNE, gainOf } from './sounds'
+import { base64Of, bytesOf, readWav, sampleOf, wavOf } from './mixdown'
 import { BENCH_SEED, IDLE_BEFORE_BOB_MS, ambientAt, framesReport, toastFor } from './register'
 import { FRAME_MS } from './frames'
 
@@ -12,10 +13,10 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
-import { BELT_BELOW_Y, INSET, LINE2_Y, beltSlotX, hudLayout, portalSlotX } from './hud'
+import { BELT_BELOW_Y, INSET, LINE2_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
 import { cellId, floorThing, same } from './map'
 import type { Pos } from './map'
-import { TOWN_SPOTS } from './town'
+import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
 import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
@@ -97,7 +98,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ type: 'Text', text: '+--------+' })).toBeUndefined()
     await ui.press({ key: 'train-might' })
     expect(await ui.find({ type: 'Text', text: 'No stat points to spend. Level up first.' })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'sheet-new', text: 'New game...' })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'sheet-new' })).toBeUndefined()
     await ui.unmount()
   })
 }
@@ -116,8 +117,11 @@ const toasts = (on: On) => {
 /** The strip's cell over its content pixel x, y at the wide pane's width: INSET in, two pixels a cell down. */
 const stripCell = (x: number, y: number) => ({ x: INSET + x, y: Math.floor((INSET + y) / 2) })
 const INNER = WIDE.props.bodyColumns - 2 * INSET
-const clickStrip = async (ui: { pointer: (e: never) => Promise<unknown> }, x: number, y: number) =>
-  ui.pointer({ type: 'down', ...stripCell(x, y), button: 'left', in: 'hud-clicks' } as never)
+/** A click on the strip, as its click layer reads one: a press and its release in the same place. */
+const clickStrip = async (ui: { pointer: (e: never) => Promise<unknown> }, x: number, y: number) => {
+  await ui.pointer({ type: 'down', ...stripCell(x, y), button: 'left', in: 'hud-clicks' } as never)
+  await ui.pointer({ type: 'up', ...stripCell(x, y), button: 'left', in: 'hud-clicks' } as never)
+}
 /** Where the view's camera starts in a place: on the tile line nearest the hero, as the pane puts it. */
 const viewOf = (g: Pick<Game, 'x' | 'y'>, columns: number, rows: number) => tileCamera(null, { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, columns, rows * 2)
 
@@ -161,10 +165,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await ui.unmount()
   })
 
-  test(`the character sheet opens the start screen, which starts a new game as another class (${surface})`, async $ => {
+  test(`settings opens the start screen, which starts a new game as another class (${surface})`, async $ => {
     const ui = await $.ui.mount({ ...PANE, surface })
-    await ui.press({ key: 'sheet' })
-    await ui.press({ key: 'sheet-new' })
+    await ui.press({ key: 'settings' })
+    await ui.press({ key: 'settings-new' })
     expect(await ui.find({ type: 'Text', text: 'New game: choose your hero' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /^Knight: Shield block, / })).toBeDefined()
     await ui.press({ key: 'start-mage' })
@@ -179,8 +183,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
 test('on a wide pane the start screen is a pixel window over the map; a hero chosen and started, the map comes back', async $ => {
   const narrow = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  await narrow.press({ key: 'sheet' })
-  await narrow.press({ key: 'sheet-new' })
+  await narrow.press({ key: 'settings' })
+  await narrow.press({ key: 'settings-new' })
   await narrow.unmount()
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'start' })).toBeDefined()
@@ -347,6 +351,7 @@ test('outside the fullscreen layout the pane says clicking needs it', async $ =>
 test('on a pane of 80 to 104 columns the compact inventory takes the pane, and closes back to the map', async $ => {
   const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, bodyColumns: 90 }, surface: 'terminal' })
   await ui.pointer({ type: 'down', x: INSET + 5, y: Math.floor((INSET + 5) / 2), button: 'left', in: 'hud-clicks' } as never)
+  await ui.pointer({ type: 'up', x: INSET + 5, y: Math.floor((INSET + 5) / 2), button: 'left', in: 'hud-clicks' } as never)
   expect(await ui.find({ type: 'Raster', key: 'cbag' })).toBeDefined()
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeUndefined()
   expect(await ui.find({ type: 'Button', key: 'gear-weapon' })).toBeUndefined()
@@ -410,6 +415,7 @@ test('clicking the portrait in the strip opens the inventory', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Client', key: 'hud-clicks' })).toBeDefined()
   await ui.pointer({ type: 'down', x: 5, y: 2, button: 'left', in: 'hud-clicks' })
+  await ui.pointer({ type: 'up', x: 5, y: 2, button: 'left', in: 'hud-clicks' })
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
   await ui.unmount()
 })
@@ -536,8 +542,9 @@ test('no frame around the game: neither the map nor the inventory screen draws a
 test('the map takes every row the strip leaves, nothing for text rows or a frame', async $ => {
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 70 } }, surface: 'terminal' })
   const strip = hudLayout(WIDE.props.bodyColumns).height / 2
-  expect(strip).toBe(20)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(70 - 20)
+  // The strip: 28 px of content and 2 px of frame and room each side, 32 px, 16 rows.
+  expect(strip).toBe(16)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(70 - 16)
   await ui.unmount()
 })
 
@@ -675,6 +682,36 @@ describe('a click is carried out when the hero gets there, not when it is made',
     expect(said).toEqual([])
     await clock.advance(5000)
     expect(said).toEqual(['The healer finds nothing to mend.'])
+    await ui.unmount()
+  })
+
+  test('in town a click on the portal walks the hero to it, frame by frame, and only then steps through', async ($, on) => {
+    const clock = mock.clock(on)
+    const said = toasts(on)
+    let blits = 0
+    on('ui.blit', () => {
+      blits += 1
+      return { value: {} }
+    })
+    const ui = await $.ui.mount(TALL)
+    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    const map = await ui.find({ type: 'Raster', key: 'map' })
+    const columns = map?.props.columns as number
+    const rows = map?.props.rows as number
+    const town = apply(newGame(), { kind: 'portal' })
+    const portal = cellOf(town, TOWN_SPOTS.portal, columns, rows)
+    // Off to open ground first, so the portal is a walk away; two tiles, so the camera holds still and the cells hold.
+    const away = [2].flatMap(d => [{ x: TOWN_SPOTS.portal.x + d, y: TOWN_SPOTS.portal.y }, { x: TOWN_SPOTS.portal.x - d, y: TOWN_SPOTS.portal.y }, { x: TOWN_SPOTS.portal.x, y: TOWN_SPOTS.portal.y - d }]).find(p => isTownWalkable(p) && townSpotAt(p) === undefined)!
+    await ui.pointer({ type: 'down', ...cellOf(town, away, columns, rows), button: 'left', in: 'map-clicks' })
+    await clock.advance(5000)
+    said.length = 0
+    blits = 0
+    await ui.pointer({ type: 'down', ...portal, button: 'left', in: 'map-clicks' })
+    await clock.advance(FRAME_MS)
+    expect(said).toEqual([])
+    await clock.advance(5000)
+    expect(blits).toBeGreaterThan(2)
+    expect(said).toContain('You step back through the portal.')
     await ui.unmount()
   })
 
@@ -1182,9 +1219,9 @@ describe('footsteps and the portal', () => {
   const playedOnBench = async ($: Engine, on: On) => {
     const clock = mock.clock(on)
     const played: string[] = []
-    // The effects alone: the town's looping tune has a test of its own.
+    // The effects alone: the town's tune has a test of its own.
     on('audio.play', (_$, e) => {
-      if (e.clip.asset !== undefined && !e.shouldLoop) played.push(e.clip.asset)
+      if (e.clip.asset !== undefined && e.clip.asset !== TOWN_TUNE) played.push(e.clip.asset)
       return { value: undefined }
     })
     on('ui.blit', () => ({ value: {} }))
@@ -1205,6 +1242,56 @@ describe('footsteps and the portal', () => {
     expect(steps.slice(0, 3)).toEqual(['sounds/step1.wav', 'sounds/step2.wav', 'sounds/step1.wav'])
   })
 
+  test('with its clips read, a walk sounds as one clip: every footstep mixed in on its frame, none played alone', async ($, on) => {
+    const clock = mock.clock(on)
+    // Each clip a single sample, so the mix shows where each was laid.
+    on('fs.read', () => ({ value: { base64: base64Of(wavOf(Int16Array.from([1000]))) } }))
+    const played: { asset?: string; base64?: string }[] = []
+    on('audio.play', (_$, e) => {
+      if (e.clip.asset !== TOWN_TUNE) played.push(e.clip)
+      return { value: undefined }
+    })
+    on('ui.blit', () => ({ value: {} }))
+    const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clock.advance(1000)
+    await $.command.run({ command: 'dungeon-bench', args: '' } as never)
+    await clock.advance(40 * 4 * FRAME_MS + 1000)
+    await ui.unmount()
+    expect(played.filter(c => c.asset?.includes('step'))).toEqual([])
+    const mixes = played.filter(c => c.base64 !== undefined)
+    expect(mixes).toHaveLength(1)
+    const pcm = readWav(bytesOf(mixes[0]!.base64!))!
+    // Twenty footsteps, one every other tile from the first frame, each at its gain in the mix.
+    const laid = Array.from({ length: 20 }, (_, i) => pcm[sampleOf(1 + 8 * i)])
+    expect(laid).toEqual(Array(20).fill(1000 * gainOf('step1')))
+  })
+
+  test('an action that comes to several sounds plays them as one clip, each on a frame of its own: a fight\'s blows, deaths and drops', async ($, on) => {
+    const clock = mock.clock(on)
+    on('fs.read', () => ({ value: { base64: base64Of(wavOf(Int16Array.from([1000]))) } }))
+    on('tool.call', () => ({ result: { filePath: '/src/utils.ts' } as never }))
+    const mixes: Int16Array[] = []
+    on('audio.play', (_$, e) => {
+      if (e.clip.base64 !== undefined) mixes.push(readWav(bytesOf(e.clip.base64))!)
+      return { value: undefined }
+    })
+    on('ui.blit', () => ({ value: {} }))
+    const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+    await clock.advance(1000)
+    for (let i = 0; i < 40; i += 1) {
+      await $.tool.call({ tool: 'Edit', file_path: '/src/utils.ts', old_string: 'a', new_string: 'b' })
+      await clock.advance(3000)
+    }
+    await ui.unmount()
+    // The fights' own clips (a walk's start with a footstep on frame 1): each sound a single sample, laid on its frame.
+    const exchanges = mixes.filter(m => m[sampleOf(1)] === 0)
+    const onsets = exchanges.map(m => Array.from(m.keys()).filter(i => m[i] !== 0))
+    expect(onsets.some(o => o.length >= 2)).toBe(true)
+    const frames = new Set(Array.from({ length: 40 }, (_, f) => sampleOf(f)))
+    expect(onsets.every(o => o[0] === 0 && o.every(i => frames.has(i)))).toBe(true)
+  })
+
   test('with the sound option off, no footsteps and no portal', { options: { sound: false } }, async ($, on) => {
     expect(await playedOnBench($, on)).toEqual([])
   })
@@ -1213,9 +1300,9 @@ describe('footsteps and the portal', () => {
 describe('town music in the pane', () => {
   const plays = async ($: Engine, on: On) => {
     const clock = mock.clock(on)
-    const played: { asset?: string; shouldLoop: boolean }[] = []
+    const played: string[] = []
     on('audio.play', (_$, e) => {
-      played.push({ asset: e.clip.asset, shouldLoop: e.shouldLoop })
+      if (e.clip.asset === TOWN_TUNE) played.push(e.clip.asset)
       return { value: undefined }
     })
     on('ui.blit', () => ({ value: {} }))
@@ -1226,18 +1313,33 @@ describe('town music in the pane', () => {
       await clock.advance(1000)
     }
     await ui.unmount()
-    return played.filter(p => p.shouldLoop)
+    return played
   }
 
-  test('entering town starts the tune looping, leaving stops it, coming back starts it again', async ($, on) => {
-    expect(await plays($, on)).toEqual([{ asset: 'sounds/town.wav', shouldLoop: true }, { asset: 'sounds/town.wav', shouldLoop: true }])
+  test('entering town starts the tune, leaving stops it, coming back starts it again', async ($, on) => {
+    expect(await plays($, on)).toEqual([TOWN_TUNE, TOWN_TUNE])
+  })
+
+  test('the pane plays the tune a round at a time, each started as the last ends, never left to the host to loop', async ($, on) => {
+    const clock = mock.clock(on)
+    const rounds: boolean[] = []
+    on('audio.play', (_$, e) => {
+      if (e.clip.asset === TOWN_TUNE) rounds.push(e.shouldLoop === true)
+      return { value: undefined }
+    })
+    on('ui.blit', () => ({ value: {} }))
+    const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clock.advance(2 * TUNE_MS + 100)
+    await ui.unmount()
+    expect(rounds).toEqual([false, false, false])
   })
 
   test('walking about town keeps the one tune going, never a second over it', async ($, on) => {
     const clock = mock.clock(on)
     let loops = 0
     on('audio.play', (_$, e) => {
-      if (e.shouldLoop) loops += 1
+      if (e.clip.asset === TOWN_TUNE) loops += 1
       return { value: undefined }
     })
     on('ui.blit', () => ({ value: {} }))
@@ -1262,7 +1364,7 @@ describe('town music in the pane', () => {
 })
 
 describe('the mix in the pane', () => {
-  test('footsteps under the portal sound are dropped; every clip plays at its level in the mix', async ($, on) => {
+  test('footsteps play over the portal sound, nothing cut; every clip plays at its level in the mix', async ($, on) => {
     const clock = mock.clock(on)
     const played: { asset: string; gain?: number; at: number }[] = []
     on('audio.play', (_$, e) => {
@@ -1272,7 +1374,7 @@ describe('the mix in the pane', () => {
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
     const town = apply(newGame(), { kind: 'portal' })
-    // Through the portal and off at once to the healer: the walk's first steps fall inside the portal's sound.
+    // Through the portal and off at once to the healer: the walk's first steps sound while the portal's still does.
     await clickStrip(ui, portalSlotX(INNER) + 5, 5)
     const map = await ui.find({ type: 'Raster', key: 'map' })
     await ui.pointer({ type: 'down', ...cellOf(town, TOWN_SPOTS.healer, map?.props.columns as number, map?.props.rows as number), button: 'left', in: 'map-clicks' })
@@ -1280,10 +1382,41 @@ describe('the mix in the pane', () => {
     const portal = played.find(p => p.asset === 'sounds/portal.wav')!
     const steps = played.filter(p => p.asset.includes('step'))
     expect(steps.length).toBeGreaterThan(0)
-    expect(steps.every(s => s.at >= portal.at + CLIP_MS.portal)).toBe(true)
+    expect(steps.some(s => s.at < portal.at + CLIP_MS.portal)).toBe(true)
     expect(played.find(p => p.asset === 'sounds/town.wav')?.gain).toBe(MUSIC_GAIN)
     expect(portal.gain).toBe(gainOf('portal'))
     expect(steps.every(s => s.gain === gainOf('step1'))).toBe(true)
+    await ui.unmount()
+  })
+
+  test('settings set the sound: at a quarter volume the portal and the tune play at a quarter of their levels; with music off no tune', async ($, on) => {
+    const clock = mock.clock(on)
+    const played: { asset: string; gain?: number }[] = []
+    on('audio.play', (_$, e) => {
+      played.push({ asset: e.clip.asset ?? '', gain: e.gain })
+      return { value: undefined }
+    })
+    on('ui.blit', () => ({ value: {} }))
+    const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+    await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
+    // Full, then a quarter: one press goes round to it.
+    await ui.press({ key: 'settings-volume' })
+    await ui.press({ key: 'settings-close' })
+    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clock.advance(1000)
+    expect(played.find(p => p.asset === 'sounds/portal.wav')?.gain).toBe(gainOf('portal') / 4)
+    expect(played.find(p => p.asset === 'sounds/town.wav')?.gain).toBe(MUSIC_GAIN / 4)
+    // Back to the dungeon, music off, and into town again: no tune.
+    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clock.advance(1000)
+    await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
+    await ui.press({ key: 'settings-music' })
+    await ui.press({ key: 'settings-close' })
+    played.length = 0
+    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clock.advance(1000)
+    expect(played.some(p => p.asset === 'sounds/portal.wav')).toBe(true)
+    expect(played.some(p => p.asset === 'sounds/town.wav')).toBe(false)
     await ui.unmount()
   })
 })

@@ -3,26 +3,59 @@
 ## 0.3.0
 
 Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lost, and nothing needs doing. A save
-standing on a depth whose layout changed (save version 8) starts that depth again from its new start, gains kept.
+standing on a depth whose layout changed (save version 8), whose theme changed (save version 9) or that is now a big
+boss's arena (save version 10, every tenth depth) starts that depth again from its new start, gains kept.
 
 ### Changed behaviour
 
+- Sounds overlap and are never cut: one sound no longer silences another, and a sound that finds the host's four
+  places taken waits for the next instead of being lost. The town tune loops without a second's silence between rounds.
+- Closing the dungeon pane pauses the game only when no dungeon pane is left open: reopened with /dungeon, it plays on.
 - The belt has a slot a kind, 1 to 5: health, regeneration, fury, ward, smoke. Each kind has three tiers, each tier
   stacking to 9, and a slot uses its strongest tier first. Old stacks move to their kind's slot: a Greater Health
-  Potion becomes an Elixir, a Scroll of Mapping a Scroll of Passage (it now also escapes the foe).
+  Potion becomes an Elixir, a Scroll of Mapping a Passage Bomb (it now also escapes the foe).
 - Merchant wares are a kind at a tier: `{ kind: 'buy', ware: 'health1' }` where it was `ware: 'health'`. The shelf
-  sells Health Potion, Elixir, Regeneration Draught, Scroll of Fury, Ward Scroll, Smoke Bomb and Scroll of Passage.
-- Bosses leave an Elixir; the lectern gives a Scroll of Passage.
+  sells Health Potion, Greater Health Potion, Elixir, Healing Herb, Scroll of Fury, Ward Rune, Greater Ward Rune,
+  Smoke Bomb and Passage Bomb.
+- Bosses leave an Elixir; the lectern gives a Scroll of the Berserker.
+- Five themes where there were three: depths 11 to 15 are the fungal deep and 16 to 20 the frozen caverns; the forge
+  moves to 21 to 25, and the round starts again at 26.
+- Every tenth depth's guardian is a big boss (below) in place of an overlord.
 - Foes hit 1.2 times their plain sum (was 1.15), keeping deaths where they were now potions are no longer crowded off
   the belt.
 - Light is 8 levels a tile with colors on the terminal's own grid: rooms and corridors redraw fewer cells a step.
+- The HP and level after the strip's bars are terminal text, so the bars are longer; the camera pages instead of
+  moving a tile at a time.
 
 ### Added
 
+- Settings, from a gear in the strip: New game (moved off the character sheet), the view, sound effects and music each
+  on or off, and the volume.
+- A right-click on a belt slot opens a menu of the tiers it holds; a click on one uses that tier. `use` takes an
+  optional `tier`.
 - Level layouts: about half of depths past the first, boss depths aside, are a great hall, a ring round a core
   of rock, cramped warrens or ragged caverns, each theme favoring its own.
-- Tiered consumables: Greater Health Potion, Strong Draught, Troll Blood, Battle Hymn, Berserker's Oath, Greater Ward,
-  Aegis, Shadow Step. Belt slots show a gold pip per tier above the first.
+- Tiered consumables, each kind one form: potions (Health Potion, Greater Health Potion, Elixir), herbs (Healing
+  Herb, Herbal Salve, Troll Moss), scrolls (Scroll of Fury, of Battle, of the Berserker), runes (Ward Rune, Greater
+  Ward Rune, Aegis Rune), bombs (Smoke Bomb, Shadow Bomb, Passage Bomb). Belt slots show a gold pip per tier above
+  the first.
+- Two themes, the fungal deep and the frozen caverns, each with its own monster colors, favored kinds, layouts and a
+  unique: the Rotking and Rimehide.
+- Big bosses, one a theme, every tenth depth: the Bone King, the Drowned Queen, the Hive Mother, the Frost Lich and
+  the Furnace Wyrm. Each is drawn two tiles wide and two tall, waits in an arena, has its own moves and rages once at
+  half its HP, and leaves an Epic or better.
+- Every class finds three bases of its own in weapon, off-hand, helm and armor: Tower Shield for the knight; Rune
+  Scepter, Crystal Orb, Grimoire, Silver Circlet, Sage's Hood, Silk Vestments and Warded Mantle for the mage;
+  Rapier, Throwing Knives, Quiver, Thief's Mask, Bandana and Studded Jerkin for the rogue.
+- Sound for every event: blocks, misses, a foe's wind-up and its healing, a big boss's rage and its death, stolen
+  gold, each consumable picked up by its form (potions, herbs, scrolls, runes, bombs), gear picked up, selling, gear
+  taken off, the stash, destroying, marking, training, every heal, the dog, the mystic, a new quest, a depth's twist,
+  walls, and anything refused. A foe's death and the chest have new sounds.
+- An action's sounds play in the order they happen, mixed into one clip on their frames: the blow, the foe's answer,
+  what a kill leaves, then the fanfare. A walk is one clip: its footsteps and its pickups on their frames.
+- Deaths on the map: a slain foe crumbles to dust, a big boss cracks with gold light and bursts, and the hero topples
+  away from their killer as the map darkens. Then a death window: the killer's portrait, where, the toll (level,
+  deaths, gold lost) and the depth woken on, with Wake (`w`).
 - Frame stamps on the bench walk, and `tools/measure.py` reporting skipped, repeated and late frames and jitter.
 
 ## 0.2.0

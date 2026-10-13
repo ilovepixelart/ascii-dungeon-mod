@@ -115,9 +115,15 @@ const menuClick = (g: Game, ui: ShopUi, at: Pos): Outcome => {
     return { ui: { ...ui, menu: false }, actions: [] }
   }
   const item = chosenItem(g, ui)
-  if (item !== undefined && row === 0) return item.locked === true ? { ui, actions: [] } : { ui: { ...ui, menu: false }, actions: [{ kind: 'sell' }] }
-  if (item !== undefined && row === 1) return canWear(g, item) ? { ui: { ...ui, menu: false }, actions: [{ kind: 'equip' }] } : { ui, actions: [] }
-  return { ui: { ...ui, menu: false }, actions: [] }
+  return item === undefined ? { ui: { ...ui, menu: false }, actions: [] } : itemMenuClick(g, ui, item, row)
+}
+
+/** A row of a bag item's menu: Sell (not a locked one), Equip (only what the class wears); anywhere else closes it. */
+const itemMenuClick = (g: Game, ui: ShopUi, item: Item, row: number): Outcome => {
+  const closed = { ...ui, menu: false }
+  if (row === 0) return item.locked === true ? { ui, actions: [] } : { ui: closed, actions: [{ kind: 'sell' }] }
+  if (row === 1) return canWear(g, item) ? { ui: closed, actions: [{ kind: 'equip' }] } : { ui, actions: [] }
+  return { ui: closed, actions: [] }
 }
 
 const click = (g: Game, ui: ShopUi, at: Pos, button: string): Outcome => {

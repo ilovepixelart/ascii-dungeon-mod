@@ -1,26 +1,37 @@
 // The dashboard strip under the map, all in pixels: the hero's portrait, the HP and XP bars with their numbers, the
-// portal, the belt, and a line of gold, depth and the running effects.
+// settings and the portal, the belt, and a line of gold, depth and the running effects; a belt slot's menu of its tiers.
 import type { Game } from '../types'
 import { xpToLevel } from './balance'
 import { depthMod } from './game'
 import type { DepthMod } from './game'
-import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, canvas, canvasCells, digits, fill, frame, put } from './canvas'
+import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, canvasCells, digits, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
-import { bar, beltSlot } from './pieces'
+import { CURSOR, barLabel, beltSlot, flatBar } from './pieces'
+import { TIERS, activeTier, nameOf } from './consumables'
+import type { Tier } from './consumables'
+import type { Action } from './game'
+import { boxShape, drawBox } from './window'
+import type { Gesture, OverlayBox } from './window'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
 
 export const PORTRAIT = SLOT
 /** The top row beside the portrait: two lines of 5 px text a pixel apart, the bars centered on them. */
-export const HEART_X = PORTRAIT + 3
-export const BAR_X = HEART_X + 7
-export const HP_Y = 1
-export const HP_H = 3
-export const LINE2_Y = 6
-export const XP_Y = LINE2_Y + 2
+/** The marks stand a pixel past the portrait. */
+export const HEART_X = PORTRAIT + 1
+/** The bars start a pixel past their 5 px marks. */
+export const BAR_X = HEART_X + 6
+/** The marks' tops, and the bars on them, the marks' height: on odd rows of the strip, so each number fills a bar's middle. */
+export const HEART_Y = 1
+export const STAR_Y = 7
+export const HP_Y = HEART_Y
+export const HP_H = 4
+export const LINE2_Y = 7
+export const XP_Y = STAR_Y
 /** Where the belt's row starts, under the top row. */
-export const BELT_BELOW_Y = 14
+/** The belt's row: a pixel under the top row, whose star reaches a pixel below the portrait. */
+export const BELT_BELOW_Y = SLOT + 2
 /** Gold, depth and the effects, on a line under the belt. */
-export const SIDE_LINE_Y = BELT_BELOW_Y + SLOT + 2
+export const SIDE_LINE_Y = BELT_BELOW_Y + SLOT + 1
 /** Belt slots share their frame lines. */
 export const SLOT_STEP = BELT_SLOT_W - 1
 
@@ -40,10 +51,11 @@ export const GOLD_INK = '#ffd34d'
 /** The + after the level while stat points wait to be spent. */
 export const POINTS_INK = '#5ccf6a'
 
-/** Small 5 by 5 marks: a heart for HP, a star for XP, a coin for gold, steps for depth, one per effect, a crystal ball for a fortune. */
+/** Small marks, 5 across and 5 down (the heart and the star 4 down): a heart for HP, a star for XP, a coin for gold, steps for depth, one per effect, a crystal ball for a fortune. */
 export const MARK: Readonly<Record<'heart' | 'xp' | 'coin' | 'stairs' | 'regen' | 'ward' | 'fury' | 'fortune' | DepthMod, readonly string[]>> = {
-  heart: ['.r.r.', 'rwrrr', 'rrrrr', '.rrr.', '..r..'],
-  xp: ['..x..', '.xXx.', 'xXXXx', '.xXx.', '..x..'],
+  // The heart and the star are 4 px tall, and so are their bars, side by side.
+  heart: ['rr.rr', 'rwrrr', '.rrr.', '..r..'],
+  xp: ['..x..', 'xXXXx', '.xXx.', '.x.x.'],
   coin: ['.yyy.', 'yYyyy', 'yYyyy', 'yyyyo', '.yoo.'],
   stairs: ['....s', '...ss', '..sss', '.ssss', 'sssss'],
   regen: ['..g..', '..g..', 'ggggg', '..g..', '..g..'],
@@ -73,23 +85,28 @@ const label = (c: Canvas, text: string, x: number, y: number, ink: string) =>
 export const BELT_W = 5 * SLOT_STEP + 1
 
 /** The strip's height at any width: the top row, the belt, the side line. */
-export const contentLayout = (_width: number) => ({ height: SIDE_LINE_Y + 6 })
+/** The strip's height: the side line its last 5 px, a pixel of room and the metal under it. */
+export const contentLayout = (_width: number) => ({ height: SIDE_LINE_Y + 5 })
 
 /** The portal slot: flush right in the top row. */
 export const portalSlotX = (width: number) => width - SLOT
-
+/** The settings slot: left of the portal, a pixel apart. */
+export const settingsSlotX = (width: number) => portalSlotX(width) - SLOT - 1
 /**
- * The bars' length and where their numbers go: the numbers keep room for full HP and a level with its +, so the bars
- * hold still as the numbers change.
+ * A gear, for settings, weighing as the portal does: six pixels across in its eight with a pixel of room all round,
+ * eight teeth, its top half lit and its bottom half in shade, symmetric, a dark hole for its axle.
  */
-export const barsLayout = (g: Game, width: number) => {
-  const numW = Math.max(textW(`${g.maxHp}/${g.maxHp}`), textW(`LV${g.level}+`))
-  const barW = portalSlotX(width) - 3 - numW - 2 - BAR_X
-  return { barW, numX: BAR_X + barW + 2 }
+const GEAR: readonly string[] = ['........', '.S.SS.S.', '..SSSS..', '.SSKKSS.', '.ssKKss.', '..ssss..', '.s.ss.s.', '........']
+const GEAR_INK: Readonly<Record<string, string>> = { S: '#e4e8f0', s: '#a4acb8', K: '#141219' }
+
+/** The bars' length: from after the marks to a pixel short of the settings slot; their numbers are text on them. */
+export const barsLayout = (_g: Game, width: number) => {
+  const barW = settingsSlotX(width) - 1 - BAR_X
+  return { barW }
 }
 
-/** The iron frame's thickness, and how far in the contents sit: the frame and a pixel of room. */
-export const FRAME = 3
+/** The iron frame's thickness, the riveted metal band alone, and how far in the contents sit: it and a pixel of room. */
+export const FRAME = 1
 export const INSET = FRAME + 1
 
 /** The framed strip at `width`: its contents' layout, `2 * INSET` narrower, and the whole height with the frame. */
@@ -105,15 +122,13 @@ const PORTAL_SHUT = '#2e3440'
 
 /** The top row: heart, HP bar and HP; under them a star, the XP bar and the level, a green + after it while points wait. */
 const bars = (c: Canvas, g: Game, width: number) => {
-  const { barW, numX } = barsLayout(g, width)
-  mark(c, MARK.heart, HEART_X, 0)
-  mark(c, MARK.xp, HEART_X, LINE2_Y)
+  const { barW } = barsLayout(g, width)
+  mark(c, MARK.heart, HEART_X, HEART_Y)
+  mark(c, MARK.xp, HEART_X, STAR_Y)
   const share = Math.max(0, g.hp) / g.maxHp
-  bar(c, BAR_X, HP_Y, barW, HP_H, share, hpTones(share), HP_EMPTY)
-  label(c, `${Math.max(0, g.hp)}/${g.maxHp}`, numX, 0, NUM_INK)
-  bar(c, BAR_X, XP_Y, barW, 1, g.xp / xpToLevel(g.level), [XP_FILL, XP_FILL, XP_FILL], XP_EMPTY)
-  label(c, `LV${g.level}`, numX, LINE2_Y, LEVEL_INK)
-  if (g.points > 0) label(c, '+', numX + textW(`LV${g.level}`) + 1, LINE2_Y, POINTS_INK)
+  // One flat color, the tone's body: no lit top or shaded bottom.
+  flatBar(c, BAR_X, HP_Y, barW, share, hpTones(share)[1], HP_EMPTY)
+  flatBar(c, BAR_X, XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY)
 }
 
 const EFFECTS = ['fury', 'ward', 'regen'] as const
@@ -167,14 +182,17 @@ export const hudContent = (g: Game, width: number): Canvas => {
   fill(c, px + 1, 1, PX, PX, SLOT_BG)
   const isShut = g.where !== 'town' && g.foe !== null
   TOWN_THING_ART.portal.forEach((row, dy) => [...row].forEach((k, dx) => {
-    if (k !== '.') put(c, px + 1 + dx, 1 + dy, isShut ? PORTAL_SHUT : (PAL[k] ?? '#ff00ff'))
+    // Shut, its inside goes grey; its dark outline stays as it is, so the portal keeps its size.
+    if (k !== '.') put(c, px + 1 + dx, 1 + dy, isShut && k !== 'K' ? PORTAL_SHUT : (PAL[k] ?? '#ff00ff'))
   }))
+  const sx = settingsSlotX(width)
+  frame(c, sx, 0, SLOT, SLOT, GRID)
+  fill(c, sx + 1, 1, PX, PX, SLOT_BG)
+  GEAR.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, sx + 1 + dx, 1 + dy, GEAR_INK[k] ?? '#ff00ff')))
   sideLine(c, g)
   return c
 }
 
-const IRON_EDGE = '#0e0c12'
-const IRON_INNER = '#1a1820'
 const IRON_LIT = '#5a5f6b'
 const IRON_SHADE = '#3a3e48'
 const RIVET = '#c8ccd4'
@@ -186,8 +204,6 @@ const ironAt = (x: number, y: number, w: number, h: number) => {
   const sides = { top: y, left: x, bottom: h - 1 - y, right: w - 1 - x }
   const d = Math.min(sides.top, sides.left, sides.bottom, sides.right)
   if (d >= FRAME) return undefined
-  if (d === 0) return IRON_EDGE
-  if (d === FRAME - 1) return IRON_INNER
   const isLit = d === sides.top || d === sides.left
   const along = d === sides.top || d === sides.bottom ? x : y
   if (along % RIVET_STEP === RIVET_STEP / 2) return RIVET
@@ -195,7 +211,7 @@ const ironAt = (x: number, y: number, w: number, h: number) => {
 }
 
 /** The strip in its iron frame: `width` pixels across, the contents INSET from each edge. */
-export const hudPixels = (g: Game, width: number): Canvas => {
+export const hudPixels = (g: Game, width: number, boxes: readonly OverlayBox[] = []): Canvas => {
   const inner = hudContent(g, width - 2 * INSET)
   const h = inner.h + 2 * INSET
   const c = canvas(width, h)
@@ -204,26 +220,104 @@ export const hudPixels = (g: Game, width: number): Canvas => {
     if (iron !== undefined) put(c, x, y, iron)
   }
   inner.px.forEach((row, y) => row.forEach((p, x) => put(c, INSET + x, INSET + y, p)))
+  for (const b of boxes) drawBox(c, b)
   return c
 }
 
-export const hudCells = (g: Game, width: number) => canvasCells(hudPixels(g, width))
+export const hudCells = (g: Game, width: number, boxes: readonly OverlayBox[] = []) => canvasCells(hudPixels(g, width, boxes))
 
 /** What a click on the strip does: `x`, `y` in cells of the strip (a cell is one pixel across, two down). */
-export const hudHit = (width: number, click: { x: number; y: number }): { kind: 'panel'; panel: 'bag' | 'sheet' } | { kind: 'use'; slot: number } | { kind: 'portal' } | undefined => {
+export const hudHit = (width: number, click: { x: number; y: number }): { kind: 'panel'; panel: 'bag' | 'sheet' | 'settings' } | { kind: 'use'; slot: number } | { kind: 'portal' } | undefined => {
   // Clicks land on the framed strip; the contents start INSET in.
   const px = Math.floor(click.x) - INSET
   const py = Math.floor(click.y * 2) - INSET
   width -= 2 * INSET
   if (px < 0 || py < 0) return undefined
+  return topHit(px, py, width) ?? beltHit(px, py, width)
+}
+
+type HudAction = ReturnType<typeof hudHit>
+
+/** The strip's top: the portrait for the bag, the portal, the gear for settings, the XP bar's line for the character sheet. */
+const topHit = (px: number, py: number, width: number): HudAction => {
   if (px < PORTRAIT && py < PORTRAIT) return { kind: 'panel', panel: 'bag' }
   if (px >= portalSlotX(width) && px < width && py < SLOT) return { kind: 'portal' }
-  // The XP bar's line, the level at its end: the character sheet.
-  if (px >= HEART_X && px < portalSlotX(width) && py >= LINE2_Y && py < LINE2_Y + 5) return { kind: 'panel', panel: 'sheet' }
+  if (px >= settingsSlotX(width) && px < settingsSlotX(width) + SLOT && py < SLOT) return { kind: 'panel', panel: 'settings' }
+  if (px >= HEART_X && px < settingsSlotX(width) && py >= LINE2_Y && py < LINE2_Y + HP_H) return { kind: 'panel', panel: 'sheet' }
+  return undefined
+}
+
+/** A belt slot, used. */
+const beltHit = (px: number, py: number, width: number): HudAction => {
   if (py < BELT_BELOW_Y || py >= BELT_BELOW_Y + SLOT) return undefined
   for (let slot = 0; slot < 5; slot += 1) {
     const x = beltSlotX(width, slot)
     if (px >= x && px < x + BELT_SLOT_W) return { kind: 'use', slot }
   }
   return undefined
+}
+
+/** Two boxes, in cells, that share a cell. */
+const overlaps = (a: OverlayBox, b: OverlayBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+
+/** The strip's text boxes: its numbers, less any a box over it (the belt's menu) covers, then those boxes on top. */
+export const hudBoxes = (g: Game, width: number, over: readonly OverlayBox[]): OverlayBox[] => [
+  ...hudLabels(g, width).filter(l => !over.some(b => overlaps(l, b))),
+  ...over,
+]
+
+/** The belt slot whose menu is open on the strip, or none. */
+export type BeltMenu = number | null
+
+/** The tiers a slot holds, strongest first: what its menu lists. */
+const heldTiers = (g: Game, slot: number): Tier[] => {
+  const s = g.belt[slot]
+  return s === null || s === undefined ? [] : [...TIERS].reverse().filter(t => (s.tiers[t - 1] ?? 0) > 0)
+}
+
+/**
+ * A belt slot's menu, in cells of the strip: a line a tier it holds, strongest first, each its name and how many, the
+ * one the slot uses next marked; a
+ * popover standing on the slot, its left edge on the slot's, just above the belt, kept inside the strip. None for an
+ * empty slot.
+ */
+export const beltMenuBox = (g: Game, slot: number, width: number): OverlayBox<'belt'> | undefined => {
+  const s = g.belt[slot]
+  const tiers = heldTiers(g, slot)
+  if (s === null || s === undefined || tiers.length === 0) return undefined
+  const active = activeTier(s)
+  const box = boxShape('belt', tiers.map(t => [t === active ? { text: '> ', color: CURSOR, bold: true } : { text: '  ' }, { text: nameOf(s.kind, t), bold: t === active }, { text: ` x${s.tiers[t - 1]}`, dim: true }]), CURSOR)
+  return { ...box, x: Math.max(0, Math.min(INSET + beltSlotX(width, slot), width - box.w)), y: Math.max(0, Math.floor((INSET + BELT_BELOW_Y) / 2) - box.h) }
+}
+
+/**
+ * The strip's next menu and the game actions for one gesture: a right-click on a filled belt slot opens its menu; a
+ * click on a line of it chooses that tier for the slot, using nothing; any other click closes it and does what it does
+ * on the strip.
+ */
+export const hudGesture = (g: Game, menu: BeltMenu, gesture: Gesture, width: number): { menu: BeltMenu; actions: Action[] } => {
+  if (gesture.type === 'drag') return { menu, actions: [] }
+  const box = menu === null ? undefined : beltMenuBox(g, menu, width)
+  const at = gesture.at
+  if (box !== undefined && menu !== null && at.x >= box.x && at.x < box.x + box.w && at.y >= box.y && at.y < box.y + box.h) {
+    const tier = heldTiers(g, menu)[Math.floor(at.y) - box.y - 1]
+    return tier === undefined ? { menu, actions: [] } : { menu: null, actions: [{ kind: 'choose', slot: menu, tier }] }
+  }
+  const hit = hudHit(width, at)
+  if (gesture.button === 'right') return hit?.kind === 'use' && heldTiers(g, hit.slot).length > 0 ? { menu: hit.slot, actions: [] } : { menu: null, actions: [] }
+  return { menu: null, actions: hit === undefined ? [] : [hit] }
+}
+
+/**
+ * The HP and the level as text on their bars, in the strip's cells, like the inventory's cards: the HP on the HP bar's
+ * middle, the level (a + while points wait, in the level's own ink) on the XP bar, each character on the bar's color under it.
+ */
+export const hudLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
+  const { barW } = barsLayout(g, width - 2 * INSET)
+  const share = Math.max(0, g.hp) / g.maxHp
+  const level = `LV${g.level}${g.points > 0 ? '+' : ''}`
+  return [
+    barLabel(INSET + BAR_X, INSET + HP_Y, barW, share, hpTones(share)[1], HP_EMPTY, `${Math.max(0, g.hp)}/${g.maxHp}`),
+    barLabel(INSET + BAR_X, INSET + XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY, level),
+  ]
 }

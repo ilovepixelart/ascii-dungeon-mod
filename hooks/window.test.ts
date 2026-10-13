@@ -88,3 +88,15 @@ describe('placing text boxes', () => {
     expect(b.h).toBe(2 + 2)
   })
 })
+
+test('the close box is square, its X centred: a pixel of the box all round it inside the frame', async () => {
+  const c = windowPixels({ title: 'T', labels: [] }, [])
+  const [x, y, w, h] = CLOSE_BOX
+  expect(w).toBe(h)
+  const inkAt = (dx: number, dy: number) => c.px[y + dy]![x + dx] === CLOSE_INK
+  const lit: [number, number][] = []
+  for (let dy = 1; dy < h - 1; dy += 1) for (let dx = 1; dx < w - 1; dx += 1) if (inkAt(dx, dy)) lit.push([dx, dy])
+  const xs = lit.map(p => p[0])
+  const ys = lit.map(p => p[1])
+  expect([Math.min(...xs) - 1, w - 2 - Math.max(...xs), Math.min(...ys) - 1, h - 2 - Math.max(...ys)]).toEqual([1, 1, 1, 1])
+})

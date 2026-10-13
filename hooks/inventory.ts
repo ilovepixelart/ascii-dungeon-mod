@@ -1,6 +1,6 @@
 // The inventory screen in pixels: worn slots, the bag grid, the belt; and the selected item's card in text.
-import type { Game, Slot } from '../types'
-import { bestTier, countOf, nameOf } from './consumables'
+import type { Game, Item, Slot } from '../types'
+import { activeTier, countOf, nameOf } from './consumables'
 import type { Run } from './game'
 import { CELL, ICONS } from './icons'
 import { BAG_H, BAG_W, POWERS, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, priceOf, selected } from './items'
@@ -85,6 +85,12 @@ export const dropTarget = (g: Game, drag: Drag): DropTarget | undefined => {
 }
 
 /** A drag on the screen: the item's old place as a ghost, its target framed and tinted, the icon at the pointer. */
+/** Where a drag would drop: checkered in green where it fits, red where not, and framed. */
+const drawTarget = (c: Canvas, [tx, ty, tw, th]: readonly [number, number, number, number], fits: boolean) => {
+  for (let y = 0; y < th; y += 1) for (let x = 0; x < tw; x += 1) if ((x + y) % 2 === 0) put(c, tx + x, INV_TOP + ty + y, fits ? FITS_TINT : BLOCKED_TINT)
+  frame(c, tx - 1, INV_TOP + ty - 1, tw + 2, th + 2, fits ? CURSOR : OFF_CLASS)
+}
+
 const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
   const item = draggedItem(g, drag)
   if (item === undefined) return
@@ -98,11 +104,7 @@ const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
   const [gx, gy] = centered(rows, sx, INV_TOP + sy, sw, sh)
   art(c, rows, gx, gy, GHOST_INK)
   const target = dropTarget(g, drag)
-  if (target !== undefined) {
-    const [tx, ty, tw, th] = target.kind === 'slot' ? WORN_SLOTS[target.slot] : bagBox(target)
-    for (let y = 0; y < th; y += 1) for (let x = 0; x < tw; x += 1) if ((x + y) % 2 === 0) put(c, tx + x, INV_TOP + ty + y, target.fits ? FITS_TINT : BLOCKED_TINT)
-    frame(c, tx - 1, INV_TOP + ty - 1, tw + 2, th + 2, target.fits ? CURSOR : OFF_CLASS)
-  }
+  if (target !== undefined) drawTarget(c, target.kind === 'slot' ? WORN_SLOTS[target.slot] : bagBox(target), target.fits)
   const [ix, iy] = centered(rows, drag.at.x - drag.grab.x, drag.at.y - drag.grab.y, sw, sh)
   art(c, rows, ix, iy)
 }
@@ -125,29 +127,31 @@ export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly P
 export const inventoryScreenCells = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []) =>
   canvasCells({ w: INV_W, h: INV_TOP + INV_H, px: inventoryScreenPixels(g, drag, popovers) })
 
-/** The panel as Raster cells: INV_W columns by INV_H / 2 rows. */
-export const inventoryCells = (g: Game) => canvasCells({ w: INV_W, h: INV_H, px: inventoryPixels(g) })
-
 const SLOT_NAME: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 
 /** The selected item in words: name and tier, slot and class, bonuses, change against what is worn, power, price. */
+/** What wearing the item would change against what is worn there, gains in green, losses in red; none when nothing would. */
+const changeLine = (g: Game, item: Item): Run[] | undefined => {
+  const changes = deltaLines(g, item)
+  if (changes.length === 0) return undefined
+  const worn = g.gear[item.slot]
+  return [
+    { text: worn === undefined ? 'vs nothing worn: ' : `vs ${worn.name}: `, dim: true },
+    ...changes.flatMap((d, i) => [...(i > 0 ? [{ text: '  ' }] : []), { text: d.text, color: d.isGain ? UPGRADE : OFF_CLASS, bold: true }]),
+  ]
+}
+
 export const itemCard = (g: Game): Run[][] => {
   const item = selected(g)
   if (item === undefined) return [[{ text: g.bag.length === 0 ? 'Your bag is empty. Slay foes for loot.' : 'Press n to pick an item.', dim: true }]]
   const tier = RARITY_COLOR[item.rarity]
-  const worn = g.gear[item.slot]
   const lines: Run[][] = [
     [{ text: item.name, color: tier, bold: true }, { text: ` (${RARITY_NAME[item.rarity]})`, color: tier }],
     [{ text: `${SLOT_NAME[item.slot]}, `, dim: true }, canWear(g, item) ? { text: classLabel(item), dim: true } : { text: classLabel(item), color: OFF_CLASS, bold: true }],
     [{ text: describe(item) }],
   ]
-  const changes = deltaLines(g, item)
-  if (changes.length > 0) {
-    lines.push([
-      { text: worn === undefined ? 'vs nothing worn: ' : `vs ${worn.name}: `, dim: true },
-      ...changes.flatMap((d, i) => [...(i > 0 ? [{ text: '  ' }] : []), { text: d.text, color: d.isGain ? UPGRADE : OFF_CLASS, bold: true }]),
-    ])
-  }
+  const changes = changeLine(g, item)
+  if (changes !== undefined) lines.push(changes)
   if (item.power !== undefined) lines.push([{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }])
   lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: '#ffd34d' }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
   return lines
@@ -156,6 +160,6 @@ export const itemCard = (g: Game): Run[][] => {
 /** A belt button's label; its hotkey prints the slot number in front of it. */
 export const beltLabel = (g: Game, i: number) => {
   const slot = g.belt[i]
-  const tier = bestTier(slot)
+  const tier = activeTier(slot)
   return slot === null || slot === undefined || tier === undefined ? 'empty' : `${nameOf(slot.kind, tier)} x${countOf(slot)}`
 }

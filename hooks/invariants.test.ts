@@ -40,6 +40,14 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, foe: { ...foeAhead(g, 2), champion: 'shielded', shield: 0 } })).not.toContain('shield only on a shielded champion')
   })
 
+  test('a shield on a big boss that does not ward itself; the Bone King and the Frost Lich do', async () => {
+    const g = newGame(3)
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'king', shield: 1 } })).not.toContain('shield only on a shielded champion')
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'lich', shield: 1 } })).not.toContain('shield only on a shielded champion')
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'hive', shield: 1 } })).toContain('shield only on a shielded champion')
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'lich', shield: 2 } })).toContain('shield only on a shielded champion')
+  })
+
   test('an item tempered past the smith\'s limit, or by a fraction', async () => {
     const sword = { ...g.gear.weapon!, temper: 3 }
     expect(broke({ ...g, gear: { ...g.gear, weapon: sword } })).not.toContain('temper within 0 to 3')
@@ -202,6 +210,8 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, belt: [{ kind: 'health', tiers: [9, 9, 9] }, null, null, null, null] })).not.toContain('belt stacks')
     expect(broke({ ...g, belt: [{ kind: 'fury', tiers: [1, 0, 0] }, null, null, null, null] })).toContain('belt kinds in their slots')
     expect(broke({ ...g, belt: [null, null, { kind: 'fury', tiers: [1, 0, 0] }, null, null] })).not.toContain('belt kinds in their slots')
+    expect(broke({ ...g, belt: [{ kind: 'health', tiers: [1, 0, 0], chosen: 3 }, null, null, null, null] })).toContain('a chosen tier is held')
+    expect(broke({ ...g, belt: [{ kind: 'health', tiers: [1, 0, 1], chosen: 3 }, null, null, null, null] })).not.toContain('a chosen tier is held')
     expect(broke({ ...g, belt: [null, null, null, null] })).toContain('belt size')
   })
   test('the cursor on an item no longer in the bag', async () => {

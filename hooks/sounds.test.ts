@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game } from '../types'
 import { alongTheWay, apply, newGame } from './game'
 import { announce } from './register'
-import { MUSIC_GAIN, channel, gainOf, musicFor, soundFor, stepAt } from './sounds'
+import { MUSIC_GAIN, gainOf, musicFor, soundFor, soundsFor, stepAt } from './sounds'
 import type { Sound } from './sounds'
 import { CLIP_MS, CLIP_PEAK } from './clips'
 import type { Hit } from './pixels'
@@ -22,6 +22,8 @@ describe('which sound an action makes', () => {
     expect(soundFor(g, g, [hit('hit'), hit('hurt')])).toBe('hurt')
     expect(soundFor(g, g, [hit('hit')])).toBe('hit')
     expect(soundFor(g, said(g, 'You pick up 7 gold.'), [])).toBe('coin')
+    expect(soundFor(g, said(g, 'You find a Health Potion.'), [])).toBe('potionUp')
+    expect(soundFor(g, said(g, 'Your belt is full; the potion stays behind.'), [])).toBe('deny')
   })
   test('the pacing and the loot have their own: a nemesis over a beam, a beam over a chest, a peak over a kill, a calm under a blow taken', async () => {
     const loot: Hit = { at, amount: 0, kind: 'loot', tier: 'epic' }
@@ -71,26 +73,7 @@ describe('the town music', () => {
   })
 })
 
-describe('the effects channel', () => {
-  const playing = (sound: Sound, startedAt: number) => ({ sound, endsAt: startedAt + CLIP_MS[sound] })
-
-  test('an empty channel, or one whose effect has ended, plays whatever comes', async () => {
-    expect(channel(null, 'step1', 0)).toEqual({ play: true, cut: false })
-    expect(channel(playing('kill', 0), 'step1', CLIP_MS.kill)).toEqual({ play: true, cut: false })
-  })
-
-  test('a greater effect cuts a lesser one still sounding; a lesser one is dropped; a like one takes over', async () => {
-    expect(channel(playing('step1', 0), 'kill', 10)).toEqual({ play: true, cut: true })
-    expect(channel(playing('kill', 0), 'step1', 10)).toEqual({ play: false, cut: false })
-    expect(channel(playing('hit', 0), 'hit', 10)).toEqual({ play: true, cut: true })
-  })
-
-  test('the ranks, greatest first: portal, level-up, chest, kill, crit, a blow taken, hit, gold, footsteps', async () => {
-    const order: Sound[] = ['portal', 'level', 'chest', 'kill', 'crit', 'hurt', 'hit', 'coin', 'step1']
-    for (let i = 0; i + 1 < order.length; i += 1) expect(channel(playing(order[i + 1]!, 0), order[i]!, 1).cut).toBe(true)
-    expect(channel(playing('step1', 0), 'step2', 1).cut).toBe(true)
-  })
-
+describe('the mix', () => {
   test('the mix, as loud as each comes out (its peak times its gain): the music under the footsteps, the footsteps under every other effect', async () => {
     const out = (s: Sound) => CLIP_PEAK[s] * gainOf(s)
     const music = CLIP_PEAK.town * MUSIC_GAIN
@@ -106,17 +89,47 @@ describe('telling a walk tile by tile', () => {
   const plan = apply(g, { kind: 'goto', x: 55, y: 4 })
   const tiles = alongTheWay(g, plan)!
 
-  test('the coin rings on the tile with the gold, and not again on the tiles after it nor at the end', async () => {
+  test('the coin rings on the tile with the gold, the potion clinks on its own, and neither again after', async () => {
     let shown: Game | null = null
     const sounds = tiles.map(t => {
       const { sound } = announce(shown, shown ?? g, t, false, false, [])
       shown = t
       return sound
     })
-    expect(sounds).toEqual([undefined, 'coin', undefined, undefined, undefined, undefined, undefined])
+    expect(sounds).toEqual([undefined, 'coin', 'potionUp', undefined, undefined, undefined, undefined])
   })
 
-  test('with nothing shown on the way, the end tells it all', async () => {
-    expect(announce(null, g, plan, false, false, []).sound).toBe('coin')
+  test('with nothing shown on the way, the end tells it all: the gold and the potion', async () => {
+    expect(soundsFor(g, plan, []).sort()).toEqual(['coin', 'potionUp'])
+  })
+})
+
+describe('the sounds of what the rules do', () => {
+  /** The sound of an action as the rules carry it out, from their own log lines. */
+  const soundOf = (g: Game, action: Parameters<typeof apply>[1]) => soundFor(g, apply(g, action), [])
+  const town = (over: Partial<Game> = {}): Game => ({ ...apply(newGame(4), { kind: 'portal' }), gold: 500, ...over })
+
+  test('buying, drinking, reading a scroll, putting gear on, going down the stairs and a foe out of the dark', async () => {
+    expect(soundOf(town(), { kind: 'buy', ware: 'health1' })).toBe('buy')
+    const potion = { ...newGame(4), hp: 5, belt: [{ kind: 'health' as const, tiers: [1, 0, 0] as [number, number, number] }, null, null, null, null] }
+    expect(soundOf(potion, { kind: 'use', slot: 0 })).toBe('drink')
+    const ward = { ...newGame(4), belt: [null, null, null, { kind: 'ward' as const, tiers: [1, 0, 0] as [number, number, number] }, null] }
+    expect(soundOf(ward, { kind: 'use', slot: 3 })).toBe('scroll')
+    expect(soundOf(newGame(4), { kind: 'descend' })).toBe('descend')
+    expect(soundOf(newGame(4), { kind: 'summon', name: 'x.ts' })).toBe('foe')
+  })
+
+  test('the smith\'s anvil, a quest done, a guardian rising, a trap, and death over everything', async () => {
+    const worn = newGame(4).gear.weapon!
+    expect(soundOf(town({ gear: { ...newGame(4).gear, weapon: { ...worn, temper: 0 } } }), { kind: 'temper', slot: 'weapon' })).toBe('anvil')
+    expect(soundFor(newGame(4), said(newGame(4), 'Quest done: go back to the elder in town.'), [])).toBe('quest')
+    expect(soundFor(newGame(4), said(newGame(4), 'The wraith overlord (W) rises to bar the way down!'), [hit('hurt')])).toBe('boss')
+    expect(soundFor(newGame(4), said(newGame(4), 'A trap snaps at your ankle! -2 HP'), [])).toBe('trap')
+    expect(soundFor(newGame(4), { ...said(newGame(4), 'You were slain by a rat on depth 3. You wake on depth 1.'), level: 9 }, [hit('kill')])).toBe('death')
+  })
+
+  test('every sound has its clip, and its rank on the channel', async () => {
+    const all: Sound[] = ['death', 'portal', 'descend', 'level', 'nemesis', 'boss', 'loot', 'quest', 'chest', 'peak', 'kill', 'crit', 'hurt', 'trap', 'calm', 'drink', 'scroll', 'anvil', 'buy', 'equip', 'foe', 'hit', 'coin', 'step1', 'step2']
+    for (const s of all) expect(CLIP_MS[s as keyof typeof CLIP_MS]).toBeGreaterThan(0)
   })
 })

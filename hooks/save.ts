@@ -3,7 +3,11 @@ import type { BeltSlot, Consumable, Game, Item, Rarity } from '../types'
 import { KINDS, STACK_MAX, TIERS, emptyBelt, slotOf } from './consumables'
 import type { Tier } from './consumables'
 import { baseOf, repack, priceOf } from './items'
-import { layoutOf } from './map'
+import { BIG_EVERY, layoutOf, themeOf } from './map'
+import type { Theme } from './map'
+
+/** The theme of a depth before version 9 added the fungal deep and the frozen caverns: three themes, five depths each. */
+const themeBefore9 = (depth: number): Theme => (['crypt', 'flooded', 'forge'] as const)[Math.floor((depth - 1) / 5) % 3]!
 import { FOG, SAVE_VERSION, arrive, newGame } from './world'
 
 type LegacyItem = Omit<Item, 'base' | 'crit' | 'xp' | 'rarity'> & { rarity: string; base?: string; crit?: number; xp?: number }
@@ -86,8 +90,8 @@ export const toVersion7 = (belt: readonly (LegacySlot | BeltSlot | null)[]): (Be
   return out
 }
 
-const normalizeOnce = (game: Game): Game => {
-  const version = game.version ?? 1
+/** The save's fields brought to the current shape, each migration it is behind on run, stamped current. */
+const reshaped = (game: Game, version: number): Game => {
   let g: Game = { ...newGame(game.seed), ...game }
   // Before version 2 the saved view was the old default, not a choice: it opens on pixel art.
   if (version < 2) g = { ...g, zoom: 3 }
@@ -96,13 +100,28 @@ const normalizeOnce = (game: Game): Game => {
   // Version 4 added the town (`where`, `portal`): the new-game defaults spread above put an older save in the dungeon.
   // A view that no longer exists (4 was briefly a pixel view) opens on the pixel view.
   if (![1, 2, 3].includes(g.zoom)) g = { ...g, zoom: 3 }
-  g = { ...g, version: SAVE_VERSION }
+  return { ...g, version: SAVE_VERSION }
+}
+
+/**
+ * Whether the save's level is no longer the one it was saved on. Versions 5 and 6 rebuilt every level (6 gave rooms
+ * shapes); version 8 gave some depths another layout, version 9 another theme, version 10 every tenth depth a boss's
+ * arena.
+ */
+const isRebuiltSince = (g: Game, version: number) =>
+  version < 6 ||
+  (version < 8 && layoutOf(g.world, g.depth) !== 'rooms') ||
+  (version < 9 && themeBefore9(g.depth) !== themeOf(g.depth)) ||
+  (version < 10 && g.depth % BIG_EVERY === 0)
+
+const normalizeOnce = (game: Game): Game => {
+  const version = game.version ?? 1
+  const g = reshaped(game, version)
   const isCurrent = typeof game.world === 'number' && typeof game.y === 'number' && game.seen?.length === FOG.length
   if (!isCurrent) return { ...g, world: g.seed, ...arrive(g.seed, g.depth), foe: null }
-  // Versions 5 and 6 rebuilt every level (6 gave rooms shapes): an older position, fog and pickups belong to a layout
-  // that is gone, so the save re-enters its depth at the new start; in town only the portal's way back moves there.
-  // Version 8 gave some depths another layout: a save on one of those re-enters it the same way.
-  if (version < 6 || (version < 8 && layoutOf(g.world, g.depth) !== 'rooms')) {
+  // On a level rebuilt since, an older position, fog and pickups belong to a layout that is gone: the save re-enters its
+  // depth at the new start; in town only the portal's way back moves there.
+  if (isRebuiltSince(g, version)) {
     const fresh = arrive(g.world, g.depth)
     if (g.where === 'town') return { ...g, seen: fresh.seen, taken: fresh.taken, portal: { x: fresh.x, y: fresh.y }, foe: null }
     return { ...g, ...fresh, foe: null }

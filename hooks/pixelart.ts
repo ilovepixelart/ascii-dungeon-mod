@@ -1,4 +1,4 @@
-import type { Game, HeroClass } from '../types'
+import type { Foe, Game, HeroClass } from '../types'
 
 /** Pixels per tile edge: a tile is PX columns by PX / 2 rows of half-block cells, square on screen. */
 export const PX = 8
@@ -341,18 +341,155 @@ export const MONSTER_ART: Readonly<Record<string, readonly string[]>> = {
 }
 
 /** A theme's take on a monster: its art with some palette keys swapped, key for key. The crypt keeps the originals. */
-export const MONSTER_VARIANT: Readonly<Record<'flooded' | 'forge', Readonly<Record<string, Readonly<Record<string, string>>>>>> = {
+export const MONSTER_VARIANT: Readonly<Record<'flooded' | 'fungal' | 'frozen' | 'forge', Readonly<Record<string, Readonly<Record<string, string>>>>>> = {
   flooded: {
     r: { e: 't', E: 'm' },
+    g: { g: 't', G: 'm', n: 'C' },
     k: { j: 'C', n: 'm', N: 'M' },
+    o: { G: 'm', n: 'C', r: 'c' },
     s: { o: 'c', O: 'C' },
+    T: { t: 'l', m: 'L', n: 'C' },
+    W: { P: 'B', p: 'C', x: 'B' },
+    D: { r: 'C', R: 'B', y: 'c' },
+  },
+  fungal: {
+    r: { e: 'p', E: 'P', f: 'v' },
+    g: { g: 'p', G: 'P', n: 'x' },
+    k: { f: 'v', j: 'P', n: 'x', N: 'x' },
+    o: { G: 'p', n: 'P', r: 'v' },
+    s: { o: 'h', O: 'g', W: 'v' },
+    T: { t: 'v', m: 'p', M: 'P' },
+    W: { P: 'G', p: 'g', x: 'M', c: 'v' },
+    D: { r: 'p', R: 'P', y: 'v' },
+  },
+  frozen: {
+    r: { e: 'w', E: 'W', f: 'c' },
+    g: { g: 'C', G: 'B', n: 'W' },
+    k: { f: 'c', j: 'C', n: 'W', N: 'q' },
+    o: { G: 'C', n: 'W', r: 'c' },
+    s: { o: 'w', O: 'C', W: 'c' },
+    T: { t: 'w', m: 'C', M: 'B', n: 'W' },
+    W: { P: 'C', p: 'Z', x: 'B', c: 'w' },
+    D: { r: 'c', R: 'C', y: 'Z' },
   },
   forge: {
+    r: { e: 'u', E: 'R', f: 'i' },
     g: { g: 'I', G: 'd' },
-    o: { G: 'q', n: 'E' },
     k: { j: 'd', n: 'R' },
+    o: { G: 'q', n: 'E' },
+    s: { o: 'e', O: 'E', W: 'i' },
+    T: { t: 'f', m: 'u', M: 'R', o: 'i' },
+    W: { P: 'R', p: 'I', x: 'd', c: 'i' },
     D: { r: 'i', R: 'I' },
   },
+}
+
+/** The named foes, each drawn as its own, its silhouette its own: Old Bones cloaked with a bone club, Mother Mire under
+ * her moss, the Rotking under his toadstool cap, Rimehide in his ice mantle, Emberjaw horned with its jaw aglow. */
+export const UNIQUE_ART: Readonly<Record<'bones' | 'mire' | 'rot' | 'rime' | 'ember', readonly string[]>> = {
+  bones: ['..KKKK.o', '.KooooKo', '.KkooKko', 'PPKoOKPo', 'PKoKoKPW', 'PPoooOP.', '.PKoOKP.', '.Ko..oK.'],
+  mire: ['..lLlL..', '.lLlLlL.', 'lLKkKkLl', 'lKtoomKl', 'LKmmmmKL', 'lKmMmMKl', 'L.KmMK.L', '.MM..MM.'],
+  // The Rotking: a kobold under a toadstool cap, spores drifting off it.
+  rot: ['.vPPPPv.', 'vPvPPvPv', '..KxxK..', '.Kvkvve.', '..KxxKe.', '.KxPxvK.', 'v.xPx...', '...P.P.v'],
+  // Rimehide: an orc in a mantle of ice, icicle tusks, a frost axe.
+  rime: ['.c.KK.c.', '.KCCCCKZ', '.CcCCcCZ', '.KZCCZKZ', 'cKWWWWKc', 'CKWccWKC', '.KCC.CC.', '.BB..BB.'],
+  ember: ['I.I..I.I', '.II..II.', 'iRiKKiRi', 'iRiyykRi', '.KiIIiK.', '..KiyiK.', '.Ki..iK.', '.i....i.'],
+}
+
+/** The big bosses, 16 by 16, twice a foe each way: the Bone King crowned with his greatsword, the Drowned Queen in her
+ * seaweed gown with her trident, the Hive Mother's swollen body, the Frost Lich robed with his staff, the Furnace Wyrm
+ * reared with its molten belly. */
+export const BOSS_ART: Readonly<Record<'king' | 'queen' | 'hive' | 'lich' | 'wyrm', readonly string[]>> = {
+  king: [
+    '....y..y..y.....',
+    '....yyyyyyy.....',
+    '...KoooooooK....',
+    '..KooooooooOK...',
+    '..KokkKooKkkK..w',
+    '..KoooOKKOooK.wW',
+    '...KoKoKoKoK.wW.',
+    '.RRRKoooooKRRwW.',
+    'RRRKoKoOoKoKRnR.',
+    'RRKoKoOOOoKoKRR.',
+    'RRKoKoOOOoKoKRR.',
+    'RR.KKoOOOoKK.RR.',
+    '.R..KoKKKoK..R..',
+    '...KoK...KoK....',
+    '..KoK.....KoK...',
+    '.KOOK.....KOOK..',
+  ],
+  queen: [
+    '....c.Z.Z.c.....',
+    '....ccccccc.....',
+    '...BBbbbbbBB....',
+    '..BbBhhhhhBbB...',
+    '..BbhkhhkhhbB..y',
+    '.BbBhhhShhhBbB.y',
+    '.Bb.BhhhhhB.bByy',
+    'Bb..ggCCCgg..bBy',
+    'B..gCCcCCCCg..Gy',
+    '..gCCcCCcCCCg.y.',
+    '..gGCCCCCCCGg.y.',
+    '.gGgCCcCCCCgGgy.',
+    '.gGCCCCCcCCCGg..',
+    'gGgCCCCCCCCCgGg.',
+    'gGCCCcCCCCcCCGg.',
+    '.GGGGGGGGGGGGGG.',
+  ],
+  hive: [
+    '.....v....v.....',
+    '..pp..vKKv..pp..',
+    '.pZpp.KvvK.ppZp.',
+    '.ppppKvkkvKpppp.',
+    '..pp.KvvvvK.pp..',
+    '....KPPPPPPK....',
+    '..KKPpPvPpPPKK..',
+    '.K.KPPvPPvPPK.K.',
+    'K..KpPPPPPPpK..K',
+    '..KPPvPPPPvPPK..',
+    '.K.KPPPvvPPPK.K.',
+    'K..KPpPPPPpPK..K',
+    '...KPPPvPPPPK...',
+    '....KPPPPPPK....',
+    '.....KPPPPK.....',
+    '......KKKK......',
+  ],
+  lich: [
+    '....c..c..c.....',
+    '....ccZcZcc.....',
+    '...KwwwwwwwK...Z',
+    '...KwkcwwckK..cc',
+    '...KwwwWWwwK..cc',
+    '....KwKWKwK...n.',
+    '..CCBBBBBBBCC.n.',
+    '.CBBCBBBBBCBBCn.',
+    'CBBBCBBBBBCBBBwn',
+    'CBB.CBBCBBC.BBwn',
+    'wB..CBBCBBC..B.n',
+    '....CBBCBBC....n',
+    '...CBBBCBBBC...n',
+    '..CBBBBCBBBBC..n',
+    '.CBBBBBCBBBBBC.n',
+    '.BBBBBBBBBBBBBB.',
+  ],
+  wyrm: [
+    '...I.I..........',
+    '..IiKKiI........',
+    '.KRRRRRRK.......',
+    'KRRkRRRRRK..i...',
+    'KRRRRRRRRRK.Ii..',
+    '.KRRyyRRRRRKIi..',
+    '..KyiyyRRRRRK...',
+    '..IiIiyKRRRRRK..',
+    '.iIIi..KRRyyRRK.',
+    '..i...KRRyiiyRRK',
+    '......KRRyiiyRRK',
+    '.....KRRRyiiyRK.',
+    '...KKRRRRyyyRK..',
+    '..KRRRRRRRRRK...',
+    '.KRRRRK.KRRRRK..',
+    'KRRRK.....KRRRK.',
+  ],
 }
 
 const variantArt = new Map<string, readonly string[]>()
@@ -380,6 +517,10 @@ export const UNKNOWN_ART: readonly string[] = [
   '...e....',
   '........',
 ]
+
+/** A foe's art on a theme's depth: a big boss or a named foe its own, else its kind as the theme draws it. */
+export const foeArtOf = (foe: Pick<Foe, 'glyph' | 'unique' | 'big'>, theme: string): readonly string[] =>
+  (foe.big !== undefined ? BOSS_ART[foe.big] : foe.unique !== undefined ? UNIQUE_ART[foe.unique] : monsterArt(foe.glyph, theme)) ?? UNKNOWN_ART
 
 /** Things lying on the floor, drawn small so the floor shows around them. */
 export const THING_ART: Readonly<Record<string, readonly string[]>> = {
@@ -966,8 +1107,14 @@ export const POPUP_INK: Readonly<Record<PopupKind, string>> = {
 
 export const POPUP_OUTLINE = '#140c10'
 
-/** The text as rows of '#' and '.', glyphs a pixel apart. */
+/** Characters asked of the pixel font that it lacks (drawn as a space), for the assets audit. */
+export const missingGlyphs = new Set<string>()
+
+/** The text as rows of '#' and '.', glyphs a pixel apart; a character the font lacks is a space, and noted. */
 export const textMask = (text: string): string[] => {
-  const glyphs = [...text].map(ch => FONT[ch] ?? FONT[' '] ?? [])
+  const glyphs = [...text].map(ch => {
+    if (FONT[ch] === undefined) missingGlyphs.add(ch)
+    return FONT[ch] ?? FONT[' '] ?? []
+  })
   return Array.from({ length: 5 }, (_, y) => glyphs.map(g => g[y] ?? '').join('.'))
 }

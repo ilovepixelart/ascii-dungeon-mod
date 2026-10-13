@@ -1,0 +1,15 @@
+{
+  "name": "ascii-dungeon-mod",
+  "description": "Claude Code mods by ilovepixelart: ascii-dungeon, a roguelike in a pane driven by the session's coding.",
+  "owner": {
+    "name": "ilovepixelart",
+    "email": "ilovepixelart@users.noreply.github.com"
+  },
+  "plugins": [
+    {
+      "name": "ascii-dungeon",
+      "source": "./",
+      "description": "A roguelike in a pane, driven by the session's coding: each tool call moves the hero, a failure lets the foe hit back, a turn's end takes the stairs."
+    }
+  ]
+}

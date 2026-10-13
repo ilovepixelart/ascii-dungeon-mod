@@ -35,4 +35,4 @@ Any change to game rules (movement, combat, spawning, loot, items, consumables) 
 
 ## Gates
 
-`claude plugin validate .`, `claude plugin test .`, and the typecheck (the tsconfig header in the engine's `claude-code.d.ts`) must all pass.
+`node scripts/gates.mjs` runs every gate CI runs, in its order: the release check, `claude plugin validate --strict .`, `claude plugin test .` and the typecheck. All must pass.

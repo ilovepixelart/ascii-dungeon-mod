@@ -1,7 +1,24 @@
 {
   "name": "ascii-dungeon",
+  "displayName": "ASCII Dungeon",
   "version": "0.3.0",
-  "description": "Turns the session's coding activity into an interactive ASCII dungeon crawler pane",
+  "description": "A roguelike in a pane, driven by the session's coding: each tool call moves the hero, a failure lets the foe hit back, a turn's end takes the stairs.",
+  "author": {
+    "name": "ilovepixelart",
+    "email": "ilovepixelart@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/ilovepixelart/ascii-dungeon-mod#readme",
+  "repository": "https://github.com/ilovepixelart/ascii-dungeon-mod",
+  "license": "MIT",
+  "keywords": [
+    "game",
+    "roguelike",
+    "dungeon-crawler",
+    "pixel-art",
+    "tui",
+    "function-hooks",
+    "claude-code-mod"
+  ],
   "types": "./types/index.d.ts",
   "userConfig": {
     "sound": {

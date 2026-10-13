@@ -3,6 +3,8 @@
 // the same check CI makes.
 //
 //   node scripts/gates.mjs                 the gates
+//   node scripts/gates.mjs --typecheck     also the typecheck, locally: it needs the engine's type declarations,
+//                                          which Claude Code writes only in a logged-in session, so CI skips it
 //   node scripts/gates.mjs --tag <tag>     the release check also checks the tag
 //   node scripts/gates.mjs --load [n]      also run the tests n times at once (default 8),
 //                                          as a slower runner would, to catch timing flakes
@@ -16,6 +18,7 @@ const tagIndex = args.indexOf('--tag')
 const tag = tagIndex === -1 ? undefined : args[tagIndex + 1]
 const loadIndex = args.indexOf('--load')
 const load = loadIndex === -1 ? 0 : Number(args[loadIndex + 1] ?? 8) || 8
+const wantsTypecheck = args.includes('--typecheck')
 
 const TYPES = '.claude-plugin/types/claude-code/index.d.ts'
 
@@ -23,7 +26,7 @@ const gates = [
   ['release check', 'node', ['scripts/check-release.mjs', ...(tag === undefined ? [] : ['--tag', tag])]],
   ['validate', 'claude', ['plugin', 'validate', '--strict', '.']],
   ['test', 'claude', ['plugin', 'test', '.']],
-  ['typecheck', 'npx', ['-y', '-p', 'typescript', 'tsc', '-p', '.']],
+  ...(wantsTypecheck ? [['typecheck', 'npx', ['-y', '-p', 'typescript', 'tsc', '-p', '.']]] : []),
 ]
 
 const run = (name, command, argv) => {
@@ -39,8 +42,8 @@ const writeTypes = () => {
   if (existsSync(TYPES)) {
     return
   }
-  // the plugin load writes the declarations, then stops at the login check
-  // when there are no credentials, so its exit code is not the gate
+  // a logged-in load writes the declarations; with no login it stops first
+  // and writes none, so the declarations, not its exit code, are the gate
   console.log(`\n== type declarations: claude --plugin-dir . -p ping`)
   spawnSync('claude', ['--plugin-dir', '.', '-p', 'ping'], { stdio: 'inherit' })
   if (!existsSync(TYPES)) {

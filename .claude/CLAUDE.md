@@ -35,4 +35,4 @@ Any change to game rules (movement, combat, spawning, loot, items, consumables) 
 
 ## Gates
 
-`node scripts/gates.mjs` runs every gate CI runs, in its order: the release check, `claude plugin validate --strict .`, `claude plugin test .` and the typecheck. All must pass.
+`node scripts/gates.mjs --typecheck` runs every gate in its order: the release check, `claude plugin validate --strict .`, `claude plugin test .` and the typecheck. All must pass. CI runs it without `--typecheck`: the engine's type declarations are written only in a logged-in session.

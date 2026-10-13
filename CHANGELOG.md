@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.3.0
+All notable changes to ascii-dungeon are listed here. Versions follow
+[Semantic Versioning](https://semver.org/); while the version is 0.x, any
+release may change behaviour.
+
+## [0.3.0] - Unreleased
 
 Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lost, and nothing needs doing. A save
 standing on a depth whose layout changed (save version 8), whose theme changed (save version 9) or that is now a big
@@ -58,7 +62,7 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   deaths, gold lost) and the depth woken on, with Wake (`w`).
 - Frame stamps on the bench walk, and `tools/measure.py` reporting skipped, repeated and late frames and jitter.
 
-## 0.2.0
+## [0.2.0] - 2026-10-12
 
 Saves from 0.1.0 load as they were: every new field of the game starts at its default.
 

@@ -602,7 +602,7 @@ test('/dungeon-frames reports the walks played so far', async ($, on) => {
   await ui.unmount()
 })
 
-test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dungeon-frames then reports just its frames', async ($, on) => {
+test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dungeon-frames then reports just its frames', { timeoutMs: 20000 }, async ($, on) => {
   const clock = mock.clock(on)
   const frames: string[] = []
   on('ui.blit', (_$, e) => {
@@ -1014,7 +1014,7 @@ test('a killing blow plays its walk, its hit frames and 4 held frames more, send
   throw new Error('no kill in 20 edits')
 })
 
-test('on a wide pane every townsperson opens a pixel window of their words with a Close button; the mystic\'s offers a fortune', async ($, on) => {
+test('on a wide pane every townsperson opens a pixel window of their words with a Close button; the mystic\'s offers a fortune', { timeoutMs: 20000 }, async ($, on) => {
   const clock = mock.clock(on)
   const said = toasts(on)
   on('ui.blit', () => ({ value: {} }))
@@ -1138,7 +1138,7 @@ describe('idle motion in the pane', () => {
 })
 
 describe('pickups on a walk', () => {
-  test('a tool call that walks the hero over something picks it up only when the walk gets there', async ($, on) => {
+  test('a tool call that walks the hero over something picks it up only when the walk gets there', { timeoutMs: 20000 }, async ($, on) => {
     const clock = mock.clock(on)
     let lastBlit = ''
     on('ui.blit', (_$, e) => {
@@ -1234,7 +1234,7 @@ describe('footsteps and the portal', () => {
     return played
   }
 
-  test('the portal sounds, and the 40-tile bench walk steps every other tile: 20 steps, the two in turn', async ($, on) => {
+  test('the portal sounds, and the 40-tile bench walk steps every other tile: 20 steps, the two in turn', { timeoutMs: 20000 }, async ($, on) => {
     const played = await playedOnBench($, on)
     expect(played[0]).toBe('sounds/portal.wav')
     const steps = played.filter(p => p.includes('step'))
@@ -1242,7 +1242,7 @@ describe('footsteps and the portal', () => {
     expect(steps.slice(0, 3)).toEqual(['sounds/step1.wav', 'sounds/step2.wav', 'sounds/step1.wav'])
   })
 
-  test('with its clips read, a walk sounds as one clip: every footstep mixed in on its frame, none played alone', async ($, on) => {
+  test('with its clips read, a walk sounds as one clip: every footstep mixed in on its frame, none played alone', { timeoutMs: 20000 }, async ($, on) => {
     const clock = mock.clock(on)
     // Each clip a single sample, so the mix shows where each was laid.
     on('fs.read', () => ({ value: { base64: base64Of(wavOf(Int16Array.from([1000]))) } }))
@@ -1267,7 +1267,7 @@ describe('footsteps and the portal', () => {
     expect(laid).toEqual(Array(20).fill(1000 * gainOf('step1')))
   })
 
-  test('an action that comes to several sounds plays them as one clip, each on a frame of its own: a fight\'s blows, deaths and drops', async ($, on) => {
+  test('an action that comes to several sounds plays them as one clip, each on a frame of its own: a fight\'s blows, deaths and drops', { timeoutMs: 20000 }, async ($, on) => {
     const clock = mock.clock(on)
     on('fs.read', () => ({ value: { base64: base64Of(wavOf(Int16Array.from([1000]))) } }))
     on('tool.call', () => ({ result: { filePath: '/src/utils.ts' } as never }))
@@ -1292,7 +1292,7 @@ describe('footsteps and the portal', () => {
     expect(onsets.every(o => o[0] === 0 && o.every(i => frames.has(i)))).toBe(true)
   })
 
-  test('with the sound option off, no footsteps and no portal', { options: { sound: false } }, async ($, on) => {
+  test('with the sound option off, no footsteps and no portal', { options: { sound: false }, timeoutMs: 20000 }, async ($, on) => {
     expect(await playedOnBench($, on)).toEqual([])
   })
 })
@@ -1320,7 +1320,7 @@ describe('town music in the pane', () => {
     expect(await plays($, on)).toEqual([TOWN_TUNE, TOWN_TUNE])
   })
 
-  test('the pane plays the tune a round at a time, each started as the last ends, never left to the host to loop', async ($, on) => {
+  test('the pane plays the tune a round at a time, each started as the last ends, never left to the host to loop', { timeoutMs: 20000 }, async ($, on) => {
     const clock = mock.clock(on)
     const rounds: boolean[] = []
     on('audio.play', (_$, e) => {

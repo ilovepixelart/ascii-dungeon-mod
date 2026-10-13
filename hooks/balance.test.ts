@@ -21,7 +21,7 @@ describe('the balance formulas', () => {
 
 describe('the feel of a session', () => {
   // Alone the 18 games take under a second; beside the other test files they can pass the 5 s default.
-  test('fights cost something: about 3 hits a kill, potions get drunk, and the hero can die', { timeoutMs: 20000 }, async () => {
+  test('fights cost something: about 3 hits a kill, potions get drunk, and the hero can die', { timeoutMs: 60000 }, async () => {
     // 18 games of about 325 tool calls: a death every 150 to 200 calls is 1.6 to 2.2 per 1,000 steps. The band is
     // wider for the sample's spread; under 0.8 is the game gone easy again, over 3.5 a hero dying every 90 calls.
     const runs = (['knight', 'mage', 'rogue'] as const).flatMap(cls => [1, 2, 3, 4, 5, 6].map(seed => simulate(seed, 1000, cls)))

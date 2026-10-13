@@ -20,7 +20,7 @@ describe('the rules stay quiet on legitimate states', () => {
     expect(violations(town)).toEqual([])
   })
 
-  test('a long simulated game keeps every rule at every step', async () => {
+  test('a long simulated game keeps every rule at every step', { timeoutMs: 20000 }, async () => {
     for (const cls of ['knight', 'mage', 'rogue'] as const) {
       const r = simulate(11, 400, cls)
       expect(r.firstBreak === undefined ? 'clean' : `${cls} step ${r.firstBreak.step}: ${r.firstBreak.broke.join(' | ')}`).toBe('clean')

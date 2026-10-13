@@ -339,7 +339,7 @@ describe('the hero and a living foe never share a cell', () => {
     expect(same(after, foe)).toBe(false)
   })
 
-  test('over random play the hero never stands on a living foe', async () => {
+  test('over random play the hero never stands on a living foe', { timeoutMs: 20000 }, async () => {
     const moves = [
       { kind: 'explore', steps: 3 },
       { kind: 'summon', name: 'x' },

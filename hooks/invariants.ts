@@ -63,6 +63,13 @@ const RULES: Readonly<Record<string, Rule>> = {
   },
   'waypoint on a depth reached, never a boss depth': g => (g.waypoint === undefined || (Number.isInteger(g.waypoint) && g.waypoint >= 1 && g.waypoint <= g.deepest && !isBossDepth(g.waypoint)) ? undefined : `waypoint on depth ${g.waypoint}, deepest ${g.deepest}`),
   'loop count within its round': g => (g.looped === undefined || (Number.isInteger(g.looped) && g.looped >= 0 && g.looped < LOOP_KILLS) ? undefined : `${g.looped} kills toward the loop's heal`),
+  'recap counts whole, from a depth reached': g => {
+    const r = g.recap
+    if (r === undefined) return undefined
+    const counts = [r.calls, r.kills, r.champions, r.gold, r.deaths, r.tests, r.commits, r.pushes, r.prs]
+    if (!counts.every(n => Number.isInteger(n) && n >= 0) || r.champions > r.kills) return `recap counts ${counts.join(', ')}`
+    return r.depth >= 1 && r.depth <= g.deepest && r.level >= 1 && r.level <= g.level ? undefined : `recap from depth ${r.depth}, level ${r.level}`
+  },
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

@@ -177,6 +177,17 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, looped: -1 })).toContain(rule)
   })
 
+  test('a recap with a count that is no count, more champions than kills, or from a depth or level not reached', async () => {
+    const rule = 'recap counts whole, from a depth reached'
+    const r = { calls: 3, depth: 1, level: 1, kills: 2, champions: 1, gold: 5, deaths: 0, tests: 1, commits: 0, pushes: 0, prs: 0 }
+    expect(broke({ ...g, recap: r })).not.toContain(rule)
+    expect(broke({ ...g, recap: { ...r, gold: -1 } })).toContain(rule)
+    expect(broke({ ...g, recap: { ...r, calls: 1.5 } })).toContain(rule)
+    expect(broke({ ...g, recap: { ...r, champions: 3 } })).toContain(rule)
+    expect(broke({ ...g, recap: { ...r, depth: g.deepest + 1 } })).toContain(rule)
+    expect(broke({ ...g, recap: { ...r, level: g.level + 1 } })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

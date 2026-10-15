@@ -262,6 +262,13 @@ const toolCall = (d: (n: number) => number): Action[] => {
   return [start, { kind: 'outcome', ok, what: t.tool, ...(work === undefined ? {} : { work }) }]
 }
 
+/** The player's own action, as the pane takes it: a look first; a recap it opens is read and closed, and the action waits for the next turn. */
+function* byHand(g: () => Game, own: Action): Generator<Action> {
+  if (g().recap !== undefined) yield { kind: 'look' }
+  if (g().panel === 'recap') yield { kind: 'panel', panel: 'recap' }
+  else yield own
+}
+
 /** The session's next actions: a tool call is its start then its outcome; a turn ends by taking the stairs. */
 function* session(g: () => Game, d: (n: number) => number): Generator<Action> {
   for (;;) {
@@ -271,7 +278,7 @@ function* session(g: () => Game, d: (n: number) => number): Generator<Action> {
       for (let guard = 0; guard < 6; guard += 1) {
         const own = playerMove(g(), d)
         if (own === undefined) break
-        yield own
+        yield* byHand(g, own)
       }
       yield* toolCall(d)
     }

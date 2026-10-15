@@ -42,6 +42,9 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Added
 
+- A recap of what happened while you worked: after ten or more tool calls with no click or key on the pane, the next
+  one opens a window with the calls, depth and level gained, kills, gold, deaths, the work done and the best find
+  instead of doing what was asked. It never opens on its own. New `look` action; saves gain the optional `recap`.
 - Work is rewarded: tests that pass make the blow a sure critical; a commit kneels the hero at a shrine (full HP, and a
   fall deeper in the theme wakes on that depth); a push leaves an item of Rare or better, a pull request opened or
   merged one of Epic or better. Commits, pushes and pull requests count once a depth each. The `outcome` action takes

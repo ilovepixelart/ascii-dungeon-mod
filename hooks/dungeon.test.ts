@@ -79,6 +79,31 @@ test('a failing test run is no sure blow, and a commit the host does not report 
   expect(await ui.find({ type: 'Text', text: /^> The tests pass/ })).toBeUndefined()
 })
 
+test('after ten tool calls unseen, the next key opens the recap instead; Play on closes it and the key works again', async ($, on) => {
+  on('tool.call', () => ({ result: { file: { content: '' } } as never }))
+  for (let i = 0; i < 10; i += 1) await $.tool.call({ tool: 'Read', file_path: `/src/${i}.ts` })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const sprites = { type: 'Text', text: /d\[#\]-\+/ } as const
+  await ui.press({ key: 'zoom' })
+  expect(await ui.find({ type: 'Text', text: 'While you worked' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^10 tool calls, depth 1 to 1, level 1 to 1\./ })).toBeDefined()
+  await ui.press({ key: 'recap-play' })
+  expect(await ui.find({ type: 'Text', text: 'While you worked' })).toBeUndefined()
+  await ui.press({ key: 'zoom' })
+  expect(await ui.find(sprites)).toBeUndefined()
+  await ui.unmount()
+})
+
+test('after fewer tool calls, a key does what it says', async ($, on) => {
+  on('tool.call', () => ({ result: { file: { content: '' } } as never }))
+  for (let i = 0; i < 9; i += 1) await $.tool.call({ tool: 'Read', file_path: `/src/${i}.ts` })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'zoom' })
+  expect(await ui.find({ type: 'Text', text: 'While you worked' })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /\.@|@\./ })).toBeDefined()
+  await ui.unmount()
+})
+
 /** The plugin's store, kept in a map: what the hooks wrote, and what a later session reads back. */
 const storeIn = (on: On, kept = new Map<string, unknown>()) => {
   on('store.get', (_$, e) => ({ value: kept.get(e.key) }) as never)

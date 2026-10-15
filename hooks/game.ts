@@ -12,6 +12,7 @@ import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
 import type { TownPerson, TownSpot } from './town'
+import { TheFoe, capitalized, theFoe } from './names'
 
 export { normalize } from './save'
 export { SAVE_VERSION, levelOf, newGame } from './world'
@@ -142,7 +143,7 @@ const levelUp = (g: Game) => {
 }
 
 const die = (g: Game, killer: string) => {
-  const foe = g.foe !== null && killer === `the ${g.foe.name}` ? g.foe : undefined
+  const foe = g.foe !== null && killer === theFoe(g.foe) ? g.foe : undefined
   const depth = g.depth
   const at = { x: g.x, y: g.y }
   g.deaths += 1
@@ -289,7 +290,7 @@ const isNextTo = (a: Pos, b: Pos) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y 
  */
 const step = (g: Game, steps: number) => {
   if (g.foe !== null && isNextTo(g, g.foe)) {
-    say(g, `The ${g.foe.name} blocks your way.`)
+    say(g, `${TheFoe(g.foe)} blocks your way.`)
     return
   }
   const level = levelOf(g)
@@ -489,7 +490,7 @@ const remember = (g: Game) => {
     say(g, `${nemesisTitle(g.nemesis)} laughs, and goes deeper still. It waits on depth ${waits}.`)
   } else if (slayer.champion !== undefined && g.nemesis === null) {
     g.nemesis = { given: NEMESIS_NAMES[roll(g, NEMESIS_NAMES.length) - 1]!, kind: kindOf(slayer.glyph), glyph: slayer.glyph, mod: slayer.champion, depth: waits, wins: 1 }
-    say(g, `The ${slayer.name} will remember you. Now it is ${nemesisTitle(g.nemesis)}, and it waits on depth ${waits}.`)
+    say(g, `${TheFoe(slayer)} will remember you. Now it is ${nemesisTitle(g.nemesis)}, and it waits on depth ${waits}.`)
   }
 }
 
@@ -645,7 +646,7 @@ const slay = (g: Game, foe: Foe) => {
   g.foe = null
   g.xp += xp
   g.gold += coins
-  say(g, `You slay the ${foe.name}! +${xp} XP, +${coins} gold.`)
+  say(g, `You slay ${theFoe(foe)}! +${xp} XP, +${coins} gold.`)
   g.tension += KILL_TENSION
   if (g.cls === 'mage') siphon(g, foe.name)
   if (g.quest?.kind === 'slay' || (g.quest?.kind === 'champion' && foe.champion !== undefined)) advanceQuest(g)
@@ -687,7 +688,7 @@ const strike = (g: Game, isSure = false) => {
   if (foe === null || !charge(g, foe)) return
   if ((foe.shield ?? 0) > 0) {
     g.foe = { ...foe, shield: (foe.shield ?? 0) - 1 }
-    say(g, `The ${foe.name}'s shield turns your blow.`)
+    say(g, `${TheFoe(foe)}'s shield turns your blow.`)
     return
   }
   const { blow, isCrit, opened } = swing(g, foe, isSure)
@@ -701,13 +702,13 @@ const strike = (g: Game, isSure = false) => {
   const how = isCrit ? 'CRITICALLY hit' : 'hit'
   if (left > 0) {
     g.foe = { ...foe, hp: left, ...opened }
-    say(g, `You ${how} the ${foe.name} for ${dmg}.`)
+    say(g, `You ${how} ${theFoe(foe)} for ${dmg}.`)
     return
   }
   // Old Bones pulls itself together once, with a third of its HP.
   if (foe.unique === 'bones' && foe.risen === undefined) {
     g.foe = { ...foe, hp: Math.ceil(foe.maxHp / 3), risen: true, ...opened }
-    say(g, `You ${how} the ${foe.name} for ${dmg}. It clatters apart... and pulls itself back together!`)
+    say(g, `You ${how} ${theFoe(foe)} for ${dmg}. It clatters apart... and pulls itself back together!`)
     return
   }
   slay(g, foe)
@@ -740,12 +741,12 @@ const siphon = (g: Game, name: string) => {
 const isTurned = (g: Game, by: string) => {
   if (g.cls === 'knight' && g.foe !== null && g.foe.opened === undefined) {
     g.foe = { ...g.foe, opened: true }
-    say(g, `Your shield turns the ${by}'s blow.`)
+    say(g, `Your shield turns ${by}'s blow.`)
     return true
   }
   if (g.effects.ward <= 0) return false
   g.effects = { ...g.effects, ward: g.effects.ward - 1 }
-  say(g, `Your ward absorbs the ${by}'s blow.`)
+  say(g, `Your ward absorbs ${by}'s blow.`)
   return true
 }
 
@@ -755,11 +756,12 @@ const steal = (g: Game, by: string) => {
   const took = Math.min(g.gold, 2 * g.depth)
   g.gold -= took
   g.foe = { ...g.foe, stolen: took }
-  if (took > 0) say(g, `The ${by} snatches ${took} gold!`)
+  if (took > 0) say(g, `${capitalized(by)} snatches ${took} gold!`)
 }
 
 const counter = (g: Game, what: string) => {
-  const by = g.foe?.name ?? `${what} imp`
+  // Who strikes, as a sentence names them: the foe, or with none an imp of the tool.
+  const by = g.foe === null ? `the ${what} imp` : theFoe(g.foe)
   const turn = g.foe === null ? undefined : foeTurn(g, g.foe)
   if (turn !== undefined) {
     g.foe = turn.foe
@@ -769,21 +771,21 @@ const counter = (g: Game, what: string) => {
   if (isTurned(g, by)) return
   const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
   const dmg = Math.max(1, Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust) - (turn?.pierces === true ? 0 : defense(g)))
-  say(g, `The ${by} strikes you for ${dmg}.`)
+  say(g, `${capitalized(by)} strikes you for ${dmg}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
   if (g.foe?.champion === 'vampiric') g.foe = { ...g.foe, hp: Math.min(g.foe.maxHp, g.foe.hp + dmg) }
-  hurt(g, dmg, `the ${by}`)
+  hurt(g, dmg, by)
 }
 
 const descend = (g: Game) => {
   if (g.foe !== null) {
-    say(g, `The ${g.foe.name} guards the stairs.`)
+    say(g, `${TheFoe(g.foe)} guards the stairs.`)
     return
   }
   if (isBossDepth(g.depth) && g.bossSlain < g.depth) {
     g.foe = isBigBossDepth(g.depth) ? bigBossOf(g) : bossOf(g)
-    say(g, `The ${g.foe.name} (${g.foe.glyph}) rises to bar the way down!`)
+    say(g, `${TheFoe(g.foe)} (${g.foe.glyph}) rises to bar the way down!`)
     return
   }
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
@@ -881,7 +883,7 @@ const fail = (g: Game, what: string) => {
   const staff = wornPower(g, 'stackTrace')
   const deaths = g.deaths
   if (staff !== undefined && g.foe !== null) {
-    say(g, `Your ${staff.name} turns the failure on the ${g.foe.name}.`)
+    say(g, `Your ${staff.name} turns the failure on ${theFoe(g.foe)}.`)
     strike(g)
     if (g.foe !== null) counter(g, what)
   } else counter(g, what)
@@ -953,14 +955,14 @@ const walkWay = (g: Game, path: readonly Pos[], isFoe: boolean) => {
   const deaths = g.deaths
   for (const p of path.slice(1, isFoe ? -1 : undefined)) {
     if (g.foe !== null && same(p, g.foe)) {
-      say(g, `The ${g.foe.name} blocks your way.`)
+      say(g, `${TheFoe(g.foe)} blocks your way.`)
       return false
     }
     const wasNextToFoe = g.foe !== null && isNextTo(g, g.foe)
     moveTo(g, p)
     if (g.deaths !== deaths) return false
     if (g.foe !== null && isNextTo(g, g.foe) && !wasNextToFoe && !isFoe) {
-      say(g, `The ${g.foe.name} blocks your way.`)
+      say(g, `${TheFoe(g.foe)} blocks your way.`)
       return false
     }
   }
@@ -1093,7 +1095,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
 /** The portal from the dungeon: only with no foe alive on the level; it remembers the tile it was opened on. */
 const openPortal = (g: Game) => {
   if (g.foe !== null) {
-    say(g, `The portal will not open while the ${g.foe.name} lives.`)
+    say(g, `The portal will not open while ${theFoe(g.foe)} lives.`)
     return
   }
   g.portal = { x: g.x, y: g.y }

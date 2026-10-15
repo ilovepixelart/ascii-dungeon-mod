@@ -46,7 +46,7 @@ const RULES: readonly [Sound, (s: Seen) => boolean][] = [
   ['crit', s => s.hits.some(h => h.kind === 'crit')],
   ['whiff', s => s.said(l => l.endsWith(' darts aside.') || l.endsWith('your blow passes through.') || l === 'You swing at the darkness.')],
   ['hurt', s => s.hits.some(h => h.kind === 'hurt')],
-  ['block', s => s.said(l => l.endsWith(' shield turns your blow.') || l.startsWith('Your shield turns the ') || l.startsWith('Your ward absorbs the '))],
+  ['block', s => s.said(l => l.endsWith(' shield turns your blow.') || l.startsWith('Your shield turns ') || l.startsWith('Your ward absorbs '))],
   ['windup', s => s.said(l => l.endsWith('...'))],
   ['foeHeal', s => s.said(l => / wounds knit\.| gulps a foul brew\.|^The tide mends | sinks into the mud and rises whole\.|pulls itself back together!$/.test(l))],
   ['steal', s => s.said(l => / snatches \d+ gold!$/.test(l))],

@@ -3,6 +3,7 @@
 // Adding a tier or changing one is an entry in CONSUMABLES; a kind has its fixed place on the belt (KINDS).
 import type { BeltSlot, Consumable, Game } from '../types'
 import { pick, roll } from './rng'
+import { TheFoe } from './names'
 
 export const BELT_SIZE = 5
 /** The most of one tier a slot holds. */
@@ -23,10 +24,10 @@ type Entry = { name: string; about: string; use: (g: Game) => string }
 /** The foe left behind in smoke, then what more the tier does; with no foe, only the more. */
 const escape = (g: Game, then: (g: Game) => string) => {
   if (g.foe === null) return then(g) || 'Smoke drifts away; nothing was hunting you.'
-  const name = g.foe.name
+  const named = TheFoe(g.foe)
   g.foe = null
   const more = then(g)
-  return `You vanish in smoke. The ${name} loses you.${more === '' ? '' : ` ${more}`}`
+  return `You vanish in smoke. ${named} loses you.${more === '' ? '' : ` ${more}`}`
 }
 
 const regen = (g: Game, fights: number) => {

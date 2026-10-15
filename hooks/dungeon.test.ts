@@ -152,6 +152,17 @@ test('a stat trained by hand is saved at once, and a later session opens on it',
   await ui.unmount()
 })
 
+test('an order changed in settings is kept with the game, and said on its key', async ($, on) => {
+  const kept = storeIn(on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'settings' })
+  expect(await ui.find({ type: 'Button', key: 'settings-drink' })).toMatchObject({ props: { label: 'Drink at quarter HP' } })
+  await ui.press({ key: 'settings-drink' })
+  expect(await ui.find({ type: 'Button', key: 'settings-drink' })).toMatchObject({ props: { label: 'Drink at half HP' } })
+  expect((kept.get('save') as Game).orders?.drink).toBe(50)
+  await ui.unmount()
+})
+
 test('a session starts with the sound saved before, not the defaults', async ($, on) => {
   storeIn(on, new Map<string, unknown>([['sound', { effects: false, music: false, volume: 2 }], ['save', newGame()]]))
   on('command.register', () => ({ value: undefined }) as never)

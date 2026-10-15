@@ -1,7 +1,7 @@
-import type { Attribute, ChampionMod, Foe, Fortune, Game, HeroClass, Item, Nemesis, Panel, Quest, Rarity, Slot, Work } from '../types'
+import type { Attribute, ChampionMod, Foe, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
-import { addToBelt, chooseTier, healingSlot, killConsumable, nameOf, tickEffects, useBelt, wareOf } from './consumables'
+import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
 import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, cycle, destroy, equip, gearBonus, makeItem, wornPower, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
@@ -60,6 +60,8 @@ export type Action =
   | { kind: 'sell' }
   /** The last sale bought back at what it fetched. */
   | { kind: 'buyBack' }
+  /** One of the hero's standing orders stepped to its next choice. */
+  | { kind: 'order'; order: keyof Orders }
   /** The player looks at the pane: a click or a key, before what it does. */
   | { kind: 'look' }
   /** The smith's last reforge taken back: the piece kept as it was. */
@@ -165,6 +167,28 @@ const die = (g: Game, killer: string) => {
 const hurt = (g: Game, amount: number, by: string) => {
   g.hp -= amount
   if (g.hp <= 0) die(g, by)
+  else obey(g)
+}
+
+/** The orders a game keeps until the player changes them: drink under a quarter of max HP, no smoke, take every item. */
+export const DEFAULT_ORDERS: Orders = { drink: 25, smoke: false, leave: 'common' }
+export const ordersOf = (g: Pick<Game, 'orders'>) => g.orders ?? DEFAULT_ORDERS
+
+/** The hero's orders after a blow: a healing potion under the drink line; with none, smoke when under a quarter and a foe is near. */
+const obey = (g: Game) => {
+  const orders = ordersOf(g)
+  const healing = healingSlot(g)
+  if (healing >= 0 && g.hp * 100 < orders.drink * g.maxHp) say(g, useBelt(g, healing))
+  else if (orders.smoke && healing < 0 && g.foe !== null && g.hp * 4 < g.maxHp && countOf(g.belt[slotOf('smoke')]) > 0) say(g, useBelt(g, slotOf('smoke')))
+}
+
+/** Each order's choices in the order a click steps through them. */
+const ORDER_STEPS: { [K in keyof Orders]: readonly Orders[K][] } = { drink: [25, 50, 0], smoke: [false, true], leave: ['common', 'uncommon', 'rare'] }
+
+const order = (g: Game, which: keyof Orders) => {
+  const orders = ordersOf(g)
+  const steps = ORDER_STEPS[which] as readonly unknown[]
+  g.orders = { ...orders, [which]: steps[(steps.indexOf(orders[which]) + 1) % steps.length] }
 }
 
 /** Furnishings: braziers, shelves, reeds and embers, nothing to take. */
@@ -533,6 +557,8 @@ const announce = (g: Game, item: Item, champion?: string) => {
   else if (champion !== undefined) g.toast = `Champion slain: ${champion} left ${item.name}.`
 }
 
+const RARITY_RANK: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
+
 /** The percent chance a kill leaves an item: 35 and 1 a depth, at most 55. */
 export const itemChance = (depth: number) => Math.min(55, 35 + depth)
 
@@ -562,6 +588,10 @@ const loot = (g: Game, isChampion = false) => {
   }
   const item = makeItem(g, isRareDue ? 'rare' : isChampion ? 'uncommon' : 'common', isChampion ? 2 : 1)
   if (item.rarity === 'common' || item.rarity === 'uncommon') g.sinceRare += 1
+  if (RARITY_RANK.indexOf(item.rarity) < RARITY_RANK.indexOf(ordersOf(g).leave)) {
+    say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
+    return
+  }
   announce(g, item, isChampion ? g.log.at(-1)?.match(/^You slay the (.+)! \+/)?.[1] : undefined)
   stashOrLeave(g, item)
 }
@@ -1024,6 +1054,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
     g.panel = g.panel === a.panel ? 'none' : a.panel
   },
   look: g => look(g),
+  order: (g, a) => order(g, a.order),
   cycle: g => cycle(g),
   place: (g, a) => {
     const said = place(g, a.id, a.x, a.y)

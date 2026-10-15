@@ -48,6 +48,9 @@ export type Fortune = { kind: 'luck' | 'riches' | 'insight'; depth: number }
 /** What tool calls did while the player looked away: counted from `depth` and `level`, the best find Rare or better. */
 export type Recap = { calls: number; depth: number; level: number; kills: number; champions: number; gold: number; deaths: number; tests: number; commits: number; pushes: number; prs: number; best?: Item }
 
+/** What the hero does on their own: drink a healing potion under `drink` percent of max HP (0, never); throw a smoke bomb when low with no healing left; leave a kill's items below `leave` on the floor. */
+export type Orders = { drink: 0 | 25 | 50; smoke: boolean; leave: Rarity }
+
 /** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
 export type Work = 'tests' | 'commit' | 'push' | 'pr'
 
@@ -151,6 +154,8 @@ export type Game = {
   looped?: number
   /** The Whisper of the Linter's last blow was a critical: the next is one too. */
   chain?: true
+  /** The hero's standing orders; absent, the defaults (`DEFAULT_ORDERS`). */
+  orders?: Orders
   /** What the tool calls since the player's last click or key came to; absent when none have. */
   recap?: Recap
   /** The depth each once-a-depth reward for work was last given on. */

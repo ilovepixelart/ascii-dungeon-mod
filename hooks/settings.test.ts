@@ -21,16 +21,35 @@ const keyRows = (px: string[][]) => {
 }
 
 describe('the settings window', () => {
-  test('has five buttons, top to bottom: New game, View, Effects, Music, Volume, each doing its own', async () => {
+  test('has eight buttons, top to bottom: New game, View, Effects, Music, Volume, then the orders Drink, Smoke, Leave, each doing its own', async () => {
     const g = hero()
     const rows = keyRows(settingsPixels(g, ON))
-    expect(rows).toHaveLength(5)
+    expect(rows).toHaveLength(8)
     const at = (i: number) => settingsGesture(g, ON, tap(6, rows[i]! + 1))
     expect(at(0)).toEqual({ actions: [{ kind: 'panel', panel: 'start' }], sound: ON })
     expect(at(1)).toEqual({ actions: [{ kind: 'zoom' }], sound: ON })
     expect(at(2)).toEqual({ actions: [], sound: { ...ON, effects: false } })
     expect(at(3)).toEqual({ actions: [], sound: { ...ON, music: false } })
     expect(at(4)).toEqual({ actions: [], sound: { ...ON, volume: 1 } })
+    expect(at(5)).toEqual({ actions: [{ kind: 'order', order: 'drink' }], sound: ON })
+    expect(at(6)).toEqual({ actions: [{ kind: 'order', order: 'smoke' }], sound: ON })
+    expect(at(7)).toEqual({ actions: [{ kind: 'order', order: 'leave' }], sound: ON })
+  })
+
+  test('the orders stand apart under their own rule, below the sound', async () => {
+    const rows = keyRows(settingsPixels(hero(), ON))
+    const step = rows[1]! - rows[0]!
+    expect(rows[5]! - rows[4]!).toBeGreaterThan(step)
+    expect(rows[6]! - rows[5]!).toBe(step)
+  })
+
+  test('each order button says the order as it stands', async () => {
+    const px = (orders: Game['orders']) => settingsPixels(hero({ orders }), ON)
+    const base = { drink: 25, smoke: false, leave: 'common' } as const
+    expect(px(base)).toEqual(px(undefined))
+    expect(px(base)).not.toEqual(px({ ...base, drink: 50 }))
+    expect(px(base)).not.toEqual(px({ ...base, smoke: true }))
+    expect(px(base)).not.toEqual(px({ ...base, leave: 'rare' }))
   })
 
   test('the volume steps a quarter up, from full back round to a quarter; effects and music flip and flip back', async () => {

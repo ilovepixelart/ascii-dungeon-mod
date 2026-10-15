@@ -34,6 +34,19 @@ The 12th kill without a Rare or better leaves one (see `items.md`, Finding thing
 
 A champion that slays the hero becomes their nemesis (`remember` in `hooks/game.ts`): named ("Grak the Butcher", the title from its modifier), it waits 4 to 7 depths below where it won (`Game.nemesis`). On that depth or deeper the next foe is it, announced and toasted, a champion of its kind at the depth's strongest, a fifth stronger in HP and attack for each win (`NEMESIS_GROWTH`), with red pips and a red crown on the map. Winning again it gains a win and goes deeper still; slain, it leaves a trophy of Epic or better and is gone. One at a time: another champion's win makes none while one waits. Met about once in 210 tool calls; the death rate is where it was without it.
 
+## Work
+
+What a tool call came to, beyond succeeding, is rewarded (`workOf` in `hooks/work.ts`, `reward` in `hooks/game.ts`). Commits, pushes and pull requests are read from what the host reports on a shell call's record (`gitOperation`), never from the command, so a quiet `git commit -q`, which the host does not report, earns nothing. A test run is read from the command: a runner, or a build tool's `test`.
+
+| Work | Reward | How often |
+|---|---|---|
+| Tests that pass | the blow is a sure critical | every run |
+| A commit | a shrine: full HP, and the depth marked as the one to wake on after a fall deeper in its band; on a boss depth, the HP alone | once a depth |
+| A push | a cache: an item, Rare or better | once a depth |
+| A pull request opened or merged | a hoard: an item, Epic or better | once a depth |
+
+Only real outcomes pay: an amend, a cherry-pick or a comment on a pull request does not, and a failure takes nothing away that it did not before. Once a depth keeps a run of commits from being a fountain of HP. Over 60 simulated games a class, with a commit in eleven shell calls, a push in twenty-two and a pull request in ninety: deaths per 1,000 steps 2.30, where they were 2.22. The shrine's HP alone brings them to 1.86; waking deeper brings them back, and the hero gets half a depth deeper. Rare or better is 37% of what drops, where it was 33%.
+
 ## Where it stands
 
 | | Before | Now |

@@ -160,6 +160,23 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, petted: 0.5 })).toContain('petted a count')
   })
 
+  test('a waypoint on a depth not reached, a boss depth or no depth', async () => {
+    const rule = 'waypoint on a depth reached, never a boss depth'
+    expect(broke({ ...g, deepest: 7 })).not.toContain(rule)
+    expect(broke({ ...g, deepest: 7, waypoint: 7 })).not.toContain(rule)
+    expect(broke({ ...g, deepest: 7, waypoint: 8 })).toContain(rule)
+    expect(broke({ ...g, deepest: 7, waypoint: 5 })).toContain(rule)
+    expect(broke({ ...g, deepest: 7, waypoint: 0 })).toContain(rule)
+  })
+
+  test("the loop's kill count outside its round", async () => {
+    const rule = 'loop count within its round'
+    expect(broke({ ...g, looped: 0 })).not.toContain(rule)
+    expect(broke({ ...g, looped: 4 })).not.toContain(rule)
+    expect(broke({ ...g, looped: 5 })).toContain(rule)
+    expect(broke({ ...g, looped: -1 })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

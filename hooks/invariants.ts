@@ -5,7 +5,7 @@ import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
 import { BAG_H, BAG_W, RARE_KILLS, SLOTS, TEMPER_MAX, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
-import { STASH_SIZE, isBossDepth } from './game'
+import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
 import { CALM_CALLS } from './balance'
 import { levelOf } from './world'
 
@@ -61,6 +61,8 @@ const RULES: Readonly<Record<string, Rule>> = {
     const off = g.uniquesSlain.find(b => !Number.isInteger(b) || b < 0 || b > Math.floor((g.deepest - 1) / 5))
     return off === undefined ? undefined : `a unique slain in band ${off}, deepest ${g.deepest}`
   },
+  'waypoint on a depth reached, never a boss depth': g => (g.waypoint === undefined || (Number.isInteger(g.waypoint) && g.waypoint >= 1 && g.waypoint <= g.deepest && !isBossDepth(g.waypoint)) ? undefined : `waypoint on depth ${g.waypoint}, deepest ${g.deepest}`),
+  'loop count within its round': g => (g.looped === undefined || (Number.isInteger(g.looped) && g.looped >= 0 && g.looped < LOOP_KILLS) ? undefined : `${g.looped} kills toward the loop's heal`),
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

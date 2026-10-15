@@ -101,8 +101,8 @@ export const POWERS: Readonly<Record<string, string>> = {
   tripleCrit: 'Critical hits deal triple damage.',
   duck: 'Half again as much XP from kills.',
   failHeal: 'A failed tool call heals 1 HP.',
-  loopHeal: 'Every fifth fight heals 3 HP.',
-  greenBlock: 'A successful shell command blocks the next hit.',
+  loopHeal: 'Every fifth kill heals 3 HP.',
+  greenBlock: 'A passing test run wards off the next hit.',
   stackTrace: 'A failed tool call strikes the foe as well.',
   chainCrit: 'A critical hit makes the next hit critical too.',
 }

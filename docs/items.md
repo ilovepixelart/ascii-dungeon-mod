@@ -93,17 +93,17 @@ Affixes keep the current names (Sharp, Sturdy, Hearty, Linted, Refactored; of th
 
 ## Legendaries
 
-Fixed names and stats, each with one effect no affix gives.
+Fixed names and stats, each with one effect no affix gives (`wornPower` in `hooks/items/equipment.ts`, read by the rules in `hooks/game.ts`).
 
 | Item | Slot | Stats | Effect |
 |---|---|---|---|
 | Segfault, the Null Blade | weapon | +8 atk | crits deal triple |
 | Rubber Duck of Insight | amulet | +2 atk +2 def +10 HP | +50% XP |
 | Mantle of the Monorepo | armor | +6 def +10 HP | failed tool calls heal 1 HP |
-| Band of the Endless Loop | ring | +4 atk +4 HP | every 5th turn heals 3 HP |
-| Aegis of Green Builds | off-hand (Knight) | +4 def | a passing test run (`Bash` that succeeds) blocks the next hit |
-| Staff of Stack Traces | weapon (Mage) | +6 atk | a failed tool call deals its damage to the foe as well |
-| Whisper of the Linter | weapon (Rogue) | +5 atk | a crit makes the next hit a crit too |
+| Band of the Endless Loop | ring | +4 atk +4 HP | every fifth kill heals 3 HP |
+| Aegis of Green Builds | off-hand (Knight) | +4 def | a passing test run wards off the next hit |
+| Staff of Stack Traces | weapon (Mage) | +6 atk | a failed tool call strikes the foe first; a foe it slays hits no more |
+| Whisper of the Linter | weapon (Rogue) | +5 atk | a crit makes the next hit a crit too; that one chains no further |
 
 ## Consumables
 
@@ -133,7 +133,7 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
 - A drop's tier goes by depth (`tierFor`): tier III 1 in 100 at depth 1, 2 more a depth, up to 30; tier II 4 a depth, up to 45; the rest tier I. A floor potion is tier I; the lectern gives a Scroll of the Berserker.
 - With fixed slots no other kind crowds potions off a full belt, which makes the hero last longer; foes hit 1.2 times their plain sum (`FOE_ATK_SCALE`) to match. Over 300 simulated games of 1,000 steps that is 0.62, 0.81 and 0.74 deaths per 100 tool calls (Knight, Mage, Rogue). Making the higher tiers rarer barely moves it.
 - Which foe: any kind the depth has unlocked, up to two tiers past it (`foeTierWeights` in `hooks/game.ts`), so from depth 6 every kind can come. The theme's favorites come three times as often (the crypt rats, skeletons and wraiths; the flooded halls kobolds, rats and trolls; the forge goblins, orcs and dragons), the newest three kinds twice. Stats grow with depth whatever the kind (`foeHp`, `foeAtk` in `hooks/balance.ts`), so an old kind deep down is fodder beside a new one, not harmless. Over the simulated games a depth shows 3 kinds of foe, where picking by depth alone gave 1.5 and from depth 8 down nothing but dragons.
-- Death: the hero wakes on the first depth of the theme (1, 6, 11 and on) with half the gold and no fortune; the depths above are not walked again. Waking on depth 1 instead had a fifth more of a session spent below depths already reached.
+- Death: the hero wakes on the first depth of the theme (1, 6, 11 and on), or on the depth a commit marked in it (`Game.waypoint`, `pacing.md`), with half the gold and no fortune; the depths above are not walked again. Waking on depth 1 instead had a fifth more of a session spent below depths already reached.
 - Theme variants: the flooded halls and the forge draw some monsters their own way and name them so (a bog rat, a cinder goblin, a forge drake; `MONSTER_VARIANT` in `hooks/pixelart.ts`, `VARIANT_NAME` in `hooks/game.ts`): the art with palette keys swapped, the kind's trait unchanged.
 - Uniques: each band of five depths has one named monster of its theme on one of its middle depths (`UNIQUES`, `uniqueDepth`): Old Bones (crypt skeleton, pulls itself back together once), Mother Mire (flooded troll, rises whole by a sixth of her HP every third turn), the Rotking (fungal kobold, his spores slip past armor every other turn), Rimehide (frozen orc, gathers frost one turn and strikes double the next), Emberjaw (forge drake, glows one turn and breathes the next). Each is drawn as its own (`UNIQUE_ART`), its silhouette its own. The first foe on its depth, announced, half again its kind's HP and a tenth more attack, a gold crown; slain, it leaves an Epic or better and its band's is done (`Game.uniquesSlain`). At twice the HP and a third more attack deaths rose by half: one that wins is still there when the hero comes back.
 - Champions: from depth 2, one foe in ten (`championOf` in `hooks/game.ts`) carries one modifier, named first: Tough (60% more HP), Savage (half again as hard), Shielded (turns the first blow aside), Vampiric (heals by what it deals). Every champion has 1.5 times the HP and 1.25 times the attack of its kind, double XP, three times the gold, and always leaves an item: the better of two rolls, Uncommon at least. On the map its bar ends in a gold pip each side.

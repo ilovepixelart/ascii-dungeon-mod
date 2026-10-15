@@ -45,6 +45,9 @@ export type Quest = { kind: 'slay' | 'champion' | 'depth'; depth: number; need: 
 /** The mystic's blessing, good while the hero stays on `depth`. */
 export type Fortune = { kind: 'luck' | 'riches' | 'insight'; depth: number }
 
+/** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
+export type Work = 'tests' | 'commit' | 'push' | 'pr'
+
 export type ChampionMod = 'tough' | 'savage' | 'shielded' | 'vampiric'
 
 export type Slot = 'weapon' | 'offhand' | 'helm' | 'armor' | 'boots' | 'ring' | 'amulet'
@@ -139,6 +142,14 @@ export type Game = {
   /** The mystic's fortune in force; null when none, or once the hero changes depth. */
   fortune: Fortune | null
   deepest: number
+  /** The depth a commit marked: a fall on it or deeper in its band wakes there. Absent before the first, never a boss depth. */
+  waypoint?: number
+  /** Kills toward the Band of the Endless Loop's heal, 0 to 4; absent, none. */
+  looped?: number
+  /** The Whisper of the Linter's last blow was a critical: the next is one too. */
+  chain?: true
+  /** The depth each once-a-depth reward for work was last given on. */
+  boons?: Partial<Record<Exclude<Work, 'tests'>, number>>
   deaths: number
   /** How the hero last fell, for the death window; absent before the first death. */
   fallen?: Fallen

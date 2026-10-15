@@ -38,6 +38,8 @@ import { PX } from './pixelart'
 import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
+import { workOf } from './work'
+import type { GitOperation } from './work'
 import { HOST_PLACES, MUSIC_GAIN, cuesFor, gainOf, mixFor, musicFor, soundAsset, soundsFor, stepAt } from './sounds'
 import type { Player, Sound } from './sounds'
 import { CLIP_MS, TUNE_MS } from './clips'
@@ -531,6 +533,10 @@ const targetOf = (e: ToolCallInput) => {
   if (e.tool === 'NotebookEdit') return e.notebook_path
   return undefined
 }
+
+/** The work a successful shell call came to: the git work the host reports on its record, or a test run. */
+const workDone = (e: ToolCallInput, result: unknown) =>
+  e.tool === 'Bash' ? workOf(e.command, (result as { gitOperation?: GitOperation } | undefined)?.gitOperation) : undefined
 
 /** The sound as set in settings, started from the `sound` and `music` options, each on unless turned off. */
 let soundSettings: SoundSettings = { effects: true, music: true, volume: VOLUME_STEPS }
@@ -1593,7 +1599,8 @@ export const register: Register = (on, options) => {
     await act($, onToolStart(String(e.tool), targetOf(e)))
     const ran = await next(e)
     const ok = ran.deny === undefined && ran.isError !== true
-    await act($, { kind: 'outcome', ok, what: String(e.tool) })
+    const work = ok ? workDone(e, ran.result) : undefined
+    await act($, { kind: 'outcome', ok, what: String(e.tool), ...(work === undefined ? {} : { work }) })
 
     return ran
   }).catch(($, e, next) => next(e))

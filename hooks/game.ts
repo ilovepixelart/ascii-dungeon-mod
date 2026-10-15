@@ -7,6 +7,7 @@ import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, 
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
+import { look, noted } from './recap'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -59,6 +60,8 @@ export type Action =
   | { kind: 'sell' }
   /** The last sale bought back at what it fetched. */
   | { kind: 'buyBack' }
+  /** The player looks at the pane: a click or a key, before what it does. */
+  | { kind: 'look' }
   /** The smith's last reforge taken back: the piece kept as it was. */
   | { kind: 'keepOld' }
   | { kind: 'train'; stat: Attribute }
@@ -1016,8 +1019,11 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   sellJunk: g => say(g, sellJunk(g)),
   arrange: g => say(g, arrange(g)),
   panel: (g, a) => {
+    // Whatever replaces the recap, what it told is told.
+    if (g.panel === 'recap') delete g.recap
     g.panel = g.panel === a.panel ? 'none' : a.panel
   },
+  look: g => look(g),
   cycle: g => cycle(g),
   place: (g, a) => {
     const said = place(g, a.id, a.x, a.y)
@@ -1360,12 +1366,17 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
 /** What the start screen lets through: the dungeon waits behind it, whatever the tool calls do. */
 const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['restart', 'panel', 'zoom'])
 
+/** What tool calls do, counted for the recap; the player's own clicks and keys are not. */
+const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend'])
+
 export const apply = (game: Game, action: Action): Game => {
   if (action.kind === 'restart') return newGame(game.seed, action.cls ?? game.cls ?? 'knight')
   if (game.panel === 'start' && !ON_THE_START_SCREEN.has(action.kind)) return game
-  const g: Game = { ...normalize(game), log: [...game.log], toast: null, fresh: 0, walked: [] }
+  const before = normalize(game)
+  const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)
+  if (TOOL_DRIVEN.has(action.kind)) g.recap = noted(before, g, action)
   return g
 }
 

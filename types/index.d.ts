@@ -45,6 +45,9 @@ export type Quest = { kind: 'slay' | 'champion' | 'depth'; depth: number; need: 
 /** The mystic's blessing, good while the hero stays on `depth`. */
 export type Fortune = { kind: 'luck' | 'riches' | 'insight'; depth: number }
 
+/** What tool calls did while the player looked away: counted from `depth` and `level`, the best find Rare or better. */
+export type Recap = { calls: number; depth: number; level: number; kills: number; champions: number; gold: number; deaths: number; tests: number; commits: number; pushes: number; prs: number; best?: Item }
+
 /** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
 export type Work = 'tests' | 'commit' | 'push' | 'pr'
 
@@ -89,7 +92,7 @@ export type Item = {
 export type Attribute = 'might' | 'focus' | 'vigor' | 'insight'
 
 /** What is open over the map; 'start' is the start screen, where the dungeon waits. */
-export type Panel = 'none' | 'start' | 'death' | 'settings' | 'bag' | 'sheet' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
+export type Panel = 'none' | 'start' | 'death' | 'recap' | 'settings' | 'bag' | 'sheet' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
 
 /** The five kinds of consumable, a belt slot each, each in three tiers. */
 export type Consumable = 'health' | 'regen' | 'fury' | 'ward' | 'smoke'
@@ -148,6 +151,8 @@ export type Game = {
   looped?: number
   /** The Whisper of the Linter's last blow was a critical: the next is one too. */
   chain?: true
+  /** What the tool calls since the player's last click or key came to; absent when none have. */
+  recap?: Recap
   /** The depth each once-a-depth reward for work was last given on. */
   boons?: Partial<Record<Exclude<Work, 'tests'>, number>>
   deaths: number

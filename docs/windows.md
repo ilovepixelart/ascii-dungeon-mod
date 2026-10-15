@@ -71,6 +71,11 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 - Opened by the rules on every death (`die` sets `Game.fallen` and the `death` panel), but drawn only once the hero's fall has played on the map (`isFalling` in `register.tsx`); without the pixel map it shows at once. The killer's portrait as it stood (a big boss its 16 by 16 at its own size, `killerArt`), who and on which depth, the level, the deaths and the gold lost, the depth woken on, and Wake (`w`), which closes it like the close box.
 - A unique's name carries its own article ("the Rotking"), so the window names the killer from the kept foe (`killerName`), not from `Fallen.by`, the log's wording.
 
+## The recap
+
+- What the tool calls came to since the player last clicked or pressed a key (`Game.recap`, counted by `noted` in `hooks/recap.ts` in `apply`, for tool-driven actions only). The next click or key is a look (`isRecapShown` in `register.tsx`): after `RECAP_CALLS` calls or more it opens the `recap` panel instead of doing what was asked; after fewer, what was counted is forgotten. It never opens on its own, and never over the death window.
+- Drawn by `hooks/recapwindow.ts`: the hero's portrait, tool calls, depth and level from and to, kills, gold gained, champions and deaths, the work done (green test runs, commits, pushes, pull requests), and the best find of Rare or better with its name wrapped to even lines. A section with nothing to say is left out. Play on (`p`) and the close box close it; closing it, or any window opened over it, forgets what it told.
+
 ## The compact inventory
 
 - A pane 80 to 104 columns wide cannot hold the worn slots beside the bag. There the bag and the belt are pixels as in the full screen and what is worn is a text list beside them, two rows a slot; a click on a worn row takes it off. Bag items are chosen, compared, opened and dragged as in the full screen; there is no drag onto the list (Equip is in the menu).

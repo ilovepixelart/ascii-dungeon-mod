@@ -11,6 +11,7 @@ import type { FrameSummary, TickStats } from './frames'
 import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
+import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
@@ -502,6 +503,8 @@ const startAmbient = ($: EngineInterface) => {
 const act = async ($: EngineInterface, action: Action, byHand = false) => {
   // Paused, the coding goes on without the game: nothing it does moves the hero.
   if (isPaused) return
+  // A click or a key is a look at the pane: when enough happened unseen, the recap opens instead of what was asked.
+  if (byHand && (await isRecapShown($))) return
   void loadClips($)
   lastActive = await nowOr($, lastActive)
   startAmbient($)
@@ -703,6 +706,14 @@ const syncMusic = ($: EngineInterface, g: Game) => {
 }
 
 /** Each action in turn, as the player's own. */
+/** Looks at the pane, when tool calls have been counted since the last look: whether the recap opened. */
+const isRecapShown = async ($: EngineInterface) => {
+  const g = await current($)
+  if (g.recap === undefined || g.panel === 'recap') return false
+  await act($, { kind: 'look' })
+  return (await current($)).panel === 'recap'
+}
+
 const actAll = async ($: EngineInterface, actions: readonly Action[]) => {
   for (const action of actions) await act($, action, true)
 }
@@ -776,6 +787,8 @@ const onHudClick = async ($: EngineInterface, data: unknown) => {
 
 const onDeathClick = async ($: EngineInterface, data: unknown) => actAll($, deathGesture(await current($), data as Gesture))
 
+const onRecapClick = async ($: EngineInterface, data: unknown) => actAll($, recapGesture(await current($), data as Gesture))
+
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
   const outcome = settingsGesture(g, soundSettings, data as Gesture)
@@ -819,6 +832,9 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'death-clicks':
       await onDeathClick($, data)
+      return true
+    case 'recap-clicks':
+      await onRecapClick($, data)
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -972,6 +988,7 @@ const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane) => {
   ]
 }
 
+const playOnKey = ({ Button, press }: Pane, hotkey?: string) => <Button key="recap-play" label="Play on" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'recap' })} />
 const wakeKey = ({ Button, press }: Pane) => <Button key="death-wake" label="Wake" hotkey="w" plain onPress={press({ kind: 'panel', panel: 'death' })} />
 
 /** A pixel window over the whole pane: its raster and click layer, the keys under it, the last two log lines. */
@@ -1220,6 +1237,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'start', draw: startScreen },
   { is: (_, l) => l.isCompactBag, draw: compactBag },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)]) },
+  { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
@@ -1428,6 +1446,23 @@ const textDeath = (p: Pane) => {
   )
 }
 
+/** The recap as text: what the tool calls came to, in a line or two; Play on closes it (the dashboard's p is a potion here). */
+const textRecap = (p: Pane) => {
+  const { g, Box, Text } = p
+  const r = g.recap
+  if (r === undefined) return <Box />
+  const work = [r.tests > 0 ? `${r.tests} green test runs` : '', r.commits > 0 ? `${r.commits} commits` : '', r.pushes > 0 ? `${r.pushes} pushes` : '', r.prs > 0 ? `${r.prs} PRs` : ''].filter(s => s !== '')
+  return (
+    <Box flexDirection="column">
+      <Text bold>While you worked</Text>
+      <Text>{`${r.calls} tool calls, depth ${r.depth} to ${g.depth}, level ${r.level} to ${g.level}. ${r.kills} kills, +${r.gold} gold, ${r.deaths} deaths.`}</Text>
+      {work.length > 0 && <Text>{`Your work: ${work.join(', ')}.`}</Text>}
+      {r.best !== undefined && <Text>{'Best find: '}<Text color={RARITY_COLOR[r.best.rarity]}>{r.best.name}</Text></Text>}
+      <Box columnGap={2}>{playOnKey(p)}</Box>
+    </Box>
+  )
+}
+
 const textSettings = (p: Pane) => {
   const { Box, Text } = p
   return (
@@ -1515,6 +1550,7 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: (p, l) => p.g.panel === 'bag' && !l.isPixelBag && !l.isCompactBag, draw: textBag },
   { is: p => p.g.panel === 'sheet', draw: textSheet },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined, draw: textDeath },
+  { is: p => p.g.panel === 'recap', draw: textRecap },
   { is: p => p.g.panel === 'settings', draw: textSettings },
   { is: p => p.g.panel === 'shop', draw: textShop },
   { is: p => p.g.panel === 'forge', draw: textForge },

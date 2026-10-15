@@ -75,6 +75,15 @@ const RULES: Readonly<Record<string, Rule>> = {
     if (o === undefined) return undefined
     return [0, 25, 50].includes(o.drink) && typeof o.smoke === 'boolean' && ['common', 'uncommon', 'rare'].includes(o.leave) ? undefined : `orders ${JSON.stringify(o)}`
   },
+  'codex counts whole, each entry once, never behind the hero': g => {
+    const c = g.codex
+    if (c === undefined) return undefined
+    const counts = [c.kills, c.bosses, c.deaths, c.gold]
+    if (!counts.every(n => Number.isInteger(n) && n >= 0) || c.bosses > c.kills) return `codex counts ${counts.join(', ')}`
+    const twice = [c.uniques, c.bigs, c.legendaries].find(list => new Set<string>(list).size !== list.length)
+    if (twice !== undefined) return `the codex lists ${twice.join(', ')}`
+    return c.deepest >= g.deepest && c.level >= g.level && c.deaths >= g.deaths ? undefined : `codex deepest ${c.deepest}, level ${c.level}, deaths ${c.deaths}; the hero's ${g.deepest}, ${g.level}, ${g.deaths}`
+  },
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

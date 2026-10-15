@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
-import { SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
+import { CODEX_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
@@ -24,6 +24,15 @@ describe('the character sheet', () => {
     expect(sheetGesture(g, tap(x + 2, y + 2))).toEqual([{ kind: 'panel', panel: 'sheet' }])
     expect(sheetGesture(g, { type: 'drag', from: { x: 5, y: 30 }, at: { x: 40, y: 30 } })).toEqual([])
     for (let py = 0; py < SHEET_H; py += 2) expect(sheetGesture(g, tap(5, py))).not.toContainEqual({ kind: 'panel', panel: 'start' })
+  })
+
+  test('Codex opens the codex, under the attribute rows and inside the window', async () => {
+    const r = CODEX_RECT
+    expect(sheetGesture(hero(), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'codex' }])
+    expect(r.y).toBeGreaterThan(plusRect(3).y + 11)
+    expect(r.y + r.h).toBeLessThanOrEqual(SHEET_H)
+    const lit = sheetPixels(hero()).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + 8).includes(GOLD_INK))
+    expect(lit).toBe(true)
   })
 
   test('the + keys are lit only with points to spend', async () => {

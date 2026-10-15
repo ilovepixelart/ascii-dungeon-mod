@@ -19,6 +19,7 @@ import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
 import { wareRect } from './shop'
 import { PX } from './pixelart'
+import { CLOSE_BOX } from './window'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
@@ -333,6 +334,32 @@ test('on a wide pane the strip\'s XP line opens the character sheet as a pixel w
   await ui.press({ key: 'sheet-close' })
   expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('the sheet\'s Codex opens the codex as a pixel window; its close box closes it back to the map', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-codex' })
+  expect(await ui.find({ type: 'Raster', key: 'codex' })).toBeDefined()
+  expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeUndefined()
+  const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
+  await ui.pointer({ type: 'down', ...close, button: 'left', in: 'codex-clicks' } as never)
+  await ui.pointer({ type: 'up', ...close, button: 'left', in: 'codex-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'codex' })).toBeUndefined()
+  expect(await ui.find({ type: 'Raster', key: 'map' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('as text the codex says what is in each row and the records, and closes', async $ => {
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  await ui.press({ key: 'sheet-codex' })
+  expect(await ui.find({ type: 'Text', text: 'Uniques 0/5: none yet' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'Legendaries 0/7: none yet' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^Deepest 1, level 1, 0 kills, 0 bosses, 0 deaths, 0 gold\.$/ })).toBeDefined()
+  await ui.press({ key: 'codex-close' })
+  expect(await ui.find({ type: 'Text', text: /^Uniques / })).toBeUndefined()
   await ui.unmount()
 })
 

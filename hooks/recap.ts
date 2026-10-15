@@ -20,19 +20,23 @@ const better = (held: Item | undefined, found: Item) => {
 /** A recap begun where the hero stands. */
 export const begun = (g: Game): Recap => ({ calls: 0, depth: g.depth, level: g.level, kills: 0, champions: 0, gold: 0, deaths: 0, tests: 0, commits: 0, pushes: 0, prs: 0 })
 
+/** The foe an action took `before` to `after` slew: gone with the hero standing and paid in XP; else undefined. */
+export const slain = (before: Game, after: Game) =>
+  after.deaths === before.deaths && before.foe !== null && after.foe === null && (after.xp !== before.xp || after.level !== before.level) ? before.foe : undefined
+
 /** The recap after a tool-driven action took `before` to `after`: a call for each outcome, a foe slain, gold gained, a fall, work done, the best find. */
 export const noted = (before: Game, after: Game, action: Action): Recap => {
   const r = before.recap ?? begun(before)
   const deaths = after.deaths - before.deaths
-  const foe = before.foe
-  const isKill = deaths === 0 && foe !== null && after.foe === null && (after.xp !== before.xp || after.level !== before.level)
+  const foe = slain(before, after)
+  const isKill = foe !== undefined
   const work = action.kind === 'outcome' && action.ok ? action.work : undefined
   const best = after.bag.filter(i => RANK.indexOf(i.rarity) >= RANK.indexOf('rare') && !before.bag.some(b => b.id === i.id)).reduce(better, r.best)
   return {
     ...r,
     calls: r.calls + (action.kind === 'outcome' ? 1 : 0),
     kills: r.kills + (isKill ? 1 : 0),
-    champions: r.champions + (isKill && foe.champion !== undefined ? 1 : 0),
+    champions: r.champions + (foe?.champion !== undefined ? 1 : 0),
     gold: r.gold + Math.max(0, after.gold - before.gold),
     deaths: r.deaths + deaths,
     ...(work === undefined ? {} : { [WORK_COUNT[work]]: r[WORK_COUNT[work]] + 1 }),

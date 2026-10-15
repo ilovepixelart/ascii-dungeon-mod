@@ -46,6 +46,11 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Added
 
+- A codex, from Codex on the character sheet: the uniques, big bosses and Legendaries met so far, lit, with what is
+  still missing drawn as a dark shape, and records (deepest depth, top level, kills, bosses, deaths, gold found). It
+  is kept through a new game. Slaying all five uniques pays an Epic or better, all five big bosses a Legendary, once a
+  save. Saves gain the optional `codex`; an older save begins it from its uniques, bosses and Legendaries, with kills
+  and gold from 0.
 - Hero orders in settings: drink a healing potion under a quarter of max HP (on by default), under half, or never;
   throw a smoke bomb when low with no healing left (off by default); leave a kill's Commons, or anything below Rare, on
   the floor (off by default). New `order` action; saves gain the optional `orders`, older saves taking the defaults.

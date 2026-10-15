@@ -1,4 +1,4 @@
-import type { Attribute, ChampionMod, Foe, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
+import type { Attribute, ChampionMod, Codex, Foe, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
@@ -8,6 +8,7 @@ import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, sam
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
 import { look, noted } from './recap'
+import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -1395,6 +1396,49 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   },
 }
 
+/**
+ * The codex of a save kept before there was one: the uniques and big bosses its hero slew (every big boss depth up to
+ * the deepest boss slain, as each guards the way down), the Legendaries they own, how deep and high they came and
+ * their falls. Kills and gold were never counted.
+ */
+export const firstCodex = (g: Game): Codex => {
+  const bigDepths = Array.from({ length: Math.floor(g.bossSlain / BIG_EVERY) }, (_, i) => (i + 1) * BIG_EVERY)
+  return {
+    ...EMPTY_CODEX,
+    uniques: [...new Set(g.uniquesSlain.map(band => UNIQUES[themeOf(band * THEME_DEPTHS + 1)].key))],
+    bigs: [...new Set(bigDepths.map(d => BIG_BOSSES[themeOf(d)].key))],
+    legendaries: legendariesOwned(g),
+    deepest: g.deepest,
+    level: g.level,
+    bosses: Math.floor(g.bossSlain / BOSS_EVERY),
+    deaths: g.deaths,
+  }
+}
+
+/** What a set of the codex pays the moment it is made whole, once a save: every unique an Epic or better, every big boss a Legendary. */
+const CODEX_SETS: readonly { count: (c: Codex) => number; of: number; prize: Rarity; said: string }[] = [
+  { count: c => c.uniques.length, of: Object.keys(UNIQUES).length, prize: 'epic', said: 'Every unique is slain' },
+  { count: c => c.bigs.length, of: Object.keys(BIG_BOSSES).length, prize: 'legendary', said: 'Every big boss is slain' },
+]
+
+/** Pays for each set `now` makes whole that `was` had not: whether any was paid. */
+const paySets = (g: Game, was: Codex, now: Codex) => {
+  const made = CODEX_SETS.filter(s => s.count(was) < s.of && s.count(now) >= s.of)
+  for (const s of made) {
+    const item = makeItem(g, s.prize, 2)
+    say(g, stash(g, item) ? `${s.said}. The codex pays: ${item.name} (${RARITY_NAME[item.rarity]}).` : `${s.said}. Your bag is full: the ${item.name} stays on the floor.`)
+    g.toast = `${s.said}!`
+  }
+  return made.length > 0
+}
+
+/** The codex after `before` became `g`, with what a set made whole paid into the bag first, so a Legendary paid is found. */
+const record = (before: Game, g: Game) => {
+  const was = before.codex ?? firstCodex(before)
+  const now = recorded(was, before, g)
+  return paySets(g, was, now) ? recorded(was, before, g) : now
+}
+
 /** Pure: the game after `action`, never mutating `game`. */
 /** What the start screen lets through: the dungeon waits behind it, whatever the tool calls do. */
 const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['restart', 'panel', 'zoom'])
@@ -1403,13 +1447,15 @@ const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>
 const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend'])
 
 export const apply = (game: Game, action: Action): Game => {
-  if (action.kind === 'restart') return newGame(game.seed, action.cls ?? game.cls ?? 'knight')
+  // A new hero keeps the codex: it is the save's, not one hero's.
+  if (action.kind === 'restart') return { ...newGame(game.seed, action.cls ?? game.cls ?? 'knight'), codex: game.codex ?? firstCodex(normalize(game)) }
   if (game.panel === 'start' && !ON_THE_START_SCREEN.has(action.kind)) return game
   const before = normalize(game)
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)
   if (TOOL_DRIVEN.has(action.kind)) g.recap = noted(before, g, action)
+  g.codex = record(before, g)
   return g
 }
 

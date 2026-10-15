@@ -1,5 +1,5 @@
 // The character sheet's window: the hero's portrait in what they wear, who they are and what they have to spend,
-// their XP toward the next level, a row an attribute (its value, a + to train it, what it does). New game is in settings.
+// their XP toward the next level, a row an attribute (its value, a + to train it, what it does), and Codex. New game is in settings.
 // Pure: the click layer reports whole gestures, this decides the game actions they make.
 import type { Game } from '../types'
 import type { Action, Run } from './game'
@@ -32,9 +32,13 @@ const NAMES = ['MIGHT', 'FOCUS', 'VIGOR', 'INSIGHT'] as const
 const rowRect = (i: number): Rect => ({ x: PAD, y: top + ROWS_Y + i * ROW_H, w: WINDOW_W - 2 * PAD, h: ROW_H - 1 })
 export const plusRect = (i: number): Rect => ({ x: 44, y: rowRect(i).y, w: buttonW(String(i + 1), '+'), h: BUTTON_H })
 
+/** The Codex button, under the attribute rows: it opens the codex. */
+export const CODEX_KEY = { key: 'X', label: 'CODEX' }
+export const CODEX_RECT: Rect = { x: PAD, y: top + ROWS_Y + ATTRIBUTES.length * ROW_H + 2, w: buttonW(CODEX_KEY.key, CODEX_KEY.label), h: BUTTON_H }
+
 /** The window's height in pixels. */
 export const SHEET_H = (() => {
-  const end = top + ROWS_Y + ATTRIBUTES.length * ROW_H + 2
+  const end = CODEX_RECT.y + CODEX_RECT.h + 3
   return Math.ceil(end / 2) * 2
 })()
 
@@ -86,13 +90,14 @@ export const sheetPixels = (g: Game): string[][] => {
     const p = plusRect(i)
     button(body, String(i + 1), '+', p.x, p.y - top, g.points > 0 ? 'ready' : 'off')
   })
+  button(body, CODEX_KEY.key, CODEX_KEY.label, CODEX_RECT.x, CODEX_RECT.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)
   // A bar's numbers lie on the bar: no frame of their own.
   for (const b of sheetOverlay(g)) if (b.role !== 'label') drawBox(c, b)
   return c.px
 }
 
-/** The game actions for one gesture: a + trains its attribute while there are points; the close box closes. */
+/** The game actions for one gesture: a + trains its attribute while there are points; Codex opens the codex; the close box closes. */
 export const sheetGesture = (g: Game, gesture: Gesture): Action[] => {
   if (gesture.type === 'drag') return []
   const from = pixel(gesture.from)
@@ -101,5 +106,6 @@ export const sheetGesture = (g: Game, gesture: Gesture): Action[] => {
   const inside = (r: Rect) => isInside(at, r.x, r.y, r.w, r.h)
   const trained = ATTRIBUTES.findIndex((_, i) => inside(plusRect(i)))
   if (trained >= 0) return g.points > 0 ? [{ kind: 'train', stat: ATTRIBUTES[trained]!.stat }] : []
+  if (inside(CODEX_RECT)) return [{ kind: 'panel', panel: 'codex' }]
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'sheet' }] : []
 }

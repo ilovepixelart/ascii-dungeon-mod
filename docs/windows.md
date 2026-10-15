@@ -60,7 +60,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The character sheet
 
-- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does. New game is in settings.
+- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex. New game is in settings.
 
 ## Settings
 
@@ -77,6 +77,13 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 - What the tool calls came to since the player last clicked or pressed a key (`Game.recap`, counted by `noted` in `hooks/recap.ts` in `apply`, for tool-driven actions only). The next click or key is a look (`isRecapShown` in `register.tsx`): after `RECAP_CALLS` calls or more it opens the `recap` panel instead of doing what was asked; after fewer, what was counted is forgotten. It never opens on its own, and never over the death window.
 - Drawn by `hooks/recapwindow.ts`: the hero's portrait, tool calls, depth and level from and to, kills, gold gained, champions and deaths, the work done (green test runs, commits, pushes, pull requests), and the best find of Rare or better with its name wrapped to even lines. A section with nothing to say is left out. Play on (`p`) and the close box close it; closing it, or any window opened over it, forgets what it told.
+
+## The codex
+
+- What every hero of the save has done (`Game.codex`, kept through a new game by `apply`'s `restart`): the uniques and big bosses slain and the Legendaries come to hand, and the records: deepest depth, top level, kills, bosses slain, deaths and gold found in the dungeon. `recorded` in `hooks/codex.ts` adds what each action did, compared before and after, so no rule has to report to it. A Legendary counts once it is in the bag, the stash or worn; one left on the floor of a full bag is not found.
+- A save from before the codex begins one at its first action (`firstCodex` in `hooks/game.ts`): uniques from `uniquesSlain`, every big boss up to `bossSlain` (each guards the way down), the Legendaries owned, the deepest depth, level and deaths. Kills and gold were never counted, so they start at 0.
+- A set made whole pays once a save, the moment it is (`paySets`): all five uniques an Epic or better, all five big bosses a Legendary. A save whose set was whole when the codex began is not paid for it. Over 30 simulated games a class at 8,000 steps the prizes take deaths per 1,000 steps from 2.72 to 2.27 and the deepest depth from 74 to 79; a run that rolls the prizes and withholds them stays at 2.74. Below depth 25 nothing changes.
+- Drawn by `hooks/codexwindow.ts`: a row each with its count, an entry lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag; the records under a rule. The close box and Close (`c`) close it. As text, each row names what is in it.
 
 ## The compact inventory
 

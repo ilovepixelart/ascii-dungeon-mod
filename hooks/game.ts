@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, healingSlot, killConsumable, nameOf, tickEffects, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, cycle, destroy, equip, gearBonus, makeItem, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, cycle, destroy, equip, gearBonus, makeItem, wornPower, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -93,6 +93,9 @@ export const xpGain = (g: Game, xp: number) => {
 
 /** Points of crit chance a fortune of luck adds. */
 export const LUCK_CRIT = 15
+/** The Band of the Endless Loop heals LOOP_HEAL HP on every LOOP_KILLS-th kill. */
+export const LOOP_KILLS = 5
+export const LOOP_HEAL = 3
 /** How much more gold (riches) or XP (insight) a fortune brings. */
 export const FORTUNE_MORE = 1.5
 
@@ -614,7 +617,18 @@ const slay = (g: Game, foe: Foe) => {
   if (g.cls === 'mage') siphon(g, foe.name)
   if (g.quest?.kind === 'slay' || (g.quest?.kind === 'champion' && foe.champion !== undefined)) advanceQuest(g)
   spoils(g, foe)
+  loop(g)
   levelUp(g)
+}
+
+/** The Band of the Endless Loop: every fifth kill while it is worn heals 3 HP. */
+const loop = (g: Game) => {
+  if (wornPower(g, 'loopHeal') === undefined) return
+  const looped = (g.looped ?? 0) + 1
+  g.looped = looped % LOOP_KILLS
+  if (g.looped !== 0) return
+  g.hp = Math.min(g.maxHp, g.hp + LOOP_HEAL)
+  say(g, `The loop comes round: +${LOOP_HEAL} HP.`)
 }
 
 /**
@@ -623,10 +637,15 @@ const slay = (g: Game, foe: Foe) => {
  */
 const swing = (g: Game, foe: Foe, isSure: boolean) => {
   const isAmbush = g.cls === 'rogue' && foe.opened === undefined
-  const isCrit = roll(g, 100) <= critChance(g) || isAmbush || isSure
+  const isChained = g.chain === true && wornPower(g, 'chainCrit') !== undefined
+  const isCrit = roll(g, 100) <= critChance(g) || isAmbush || isSure || isChained
+  // The Whisper of the Linter: a critical makes the next blow one, but a chained one chains no further.
+  delete g.chain
+  if (isCrit && !isChained && wornPower(g, 'chainCrit') !== undefined) g.chain = true
   const isFury = g.effects.fury > 0
   if (isFury) g.effects = { ...g.effects, fury: g.effects.fury - 1 }
-  const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? 2 : 1) * (isFury ? 2 : 1))
+  const critTimes = wornPower(g, 'tripleCrit') === undefined ? 2 : 3
+  const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? critTimes : 1) * (isFury ? 2 : 1))
   return { blow, isCrit, opened: isAmbush ? { opened: true as const } : {} }
 }
 
@@ -802,13 +821,41 @@ const summon = (g: Game, name: string) => {
  */
 const outcome = (g: Game, ok: boolean, what: string, work: Work | undefined) => {
   if (ok) {
-    if (work === 'tests' && g.foe !== null) say(g, 'The tests pass: your blow is sure.')
+    if (work === 'tests') greenBuild(g)
     strike(g, work === 'tests')
     if (g.foe !== null) counter(g, what)
-  } else counter(g, what)
+  } else fail(g, what)
   const regen = tickEffects(g)
   if (regen !== undefined) say(g, regen)
   if (ok) reward(g, work)
+}
+
+/** Tests that pass: the blow is sure, and the Aegis of Green Builds wards off the next hit. */
+const greenBuild = (g: Game) => {
+  const aegis = wornPower(g, 'greenBlock')
+  if (aegis !== undefined) {
+    g.effects = { ...g.effects, ward: Math.max(g.effects.ward, 1) }
+    say(g, `Your ${aegis.name} hums: the next blow will be turned.`)
+  }
+  if (g.foe !== null) say(g, 'The tests pass: your blow is sure.')
+}
+
+/**
+ * A failure: the foe's hit, or an imp's with no foe. The Staff of Stack Traces strikes the foe first, and a foe it
+ * slays hits no more; the Mantle of the Monorepo mends 1 HP after.
+ */
+const fail = (g: Game, what: string) => {
+  const staff = wornPower(g, 'stackTrace')
+  const deaths = g.deaths
+  if (staff !== undefined && g.foe !== null) {
+    say(g, `Your ${staff.name} turns the failure on the ${g.foe.name}.`)
+    strike(g)
+    if (g.foe !== null) counter(g, what)
+  } else counter(g, what)
+  const mantle = wornPower(g, 'failHeal')
+  if (mantle === undefined || g.deaths !== deaths || g.hp >= g.maxHp) return
+  g.hp += 1
+  say(g, `The ${mantle.name} mends 1 HP.`)
 }
 
 /** A commit's shrine: full HP, and the depth marked to wake on, unless a guardian waits on it. */

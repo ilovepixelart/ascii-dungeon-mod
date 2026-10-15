@@ -55,7 +55,7 @@ const RULES: readonly [Sound, (s: Seen) => boolean][] = [
   ['calm', s => s.said(l => l === 'The dungeon falls quiet.')],
   ['drink', s => s.said(l => l.startsWith('You drink ') && !l.startsWith('You drink from the spring'))],
   ['scroll', s => s.said(l => /^(Fury fills you|A ward shimmers|You vanish in smoke|Warmth spreads)/.test(l))],
-  ['heal', s => s.said(l => /^(The healer tends your wounds|You drink from the spring|You pray at the altar|A companion joins the fight|You catch your breath|You regenerate|You draw on the fallen|You kneel at a shrine)/.test(l))],
+  ['heal', s => s.said(l => /^(The healer tends your wounds|You drink from the spring|You pray at the altar|A companion joins the fight|You catch your breath|You regenerate|You draw on the fallen|You kneel at a shrine|The loop comes round)/.test(l))],
   ['anvil', s => s.said(l => /^The smith (tempers|reforges) /.test(l) || l.startsWith('The old anvil still rings'))],
   ['fortune', s => s.said(l => l.startsWith('The mystic reads your fortune'))],
   ['questNew', s => s.said(l => l.startsWith('A new quest: '))],

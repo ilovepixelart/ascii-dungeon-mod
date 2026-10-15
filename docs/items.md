@@ -93,17 +93,17 @@ Affixes keep the current names (Sharp, Sturdy, Hearty, Linted, Refactored; of th
 
 ## Legendaries
 
-Fixed names and stats, each with one effect no affix gives.
+Fixed names and stats, each with one effect no affix gives (`wornPower` in `hooks/items/equipment.ts`, read by the rules in `hooks/game.ts`).
 
 | Item | Slot | Stats | Effect |
 |---|---|---|---|
 | Segfault, the Null Blade | weapon | +8 atk | crits deal triple |
 | Rubber Duck of Insight | amulet | +2 atk +2 def +10 HP | +50% XP |
 | Mantle of the Monorepo | armor | +6 def +10 HP | failed tool calls heal 1 HP |
-| Band of the Endless Loop | ring | +4 atk +4 HP | every 5th turn heals 3 HP |
-| Aegis of Green Builds | off-hand (Knight) | +4 def | a passing test run (`Bash` that succeeds) blocks the next hit |
-| Staff of Stack Traces | weapon (Mage) | +6 atk | a failed tool call deals its damage to the foe as well |
-| Whisper of the Linter | weapon (Rogue) | +5 atk | a crit makes the next hit a crit too |
+| Band of the Endless Loop | ring | +4 atk +4 HP | every fifth kill heals 3 HP |
+| Aegis of Green Builds | off-hand (Knight) | +4 def | a passing test run wards off the next hit |
+| Staff of Stack Traces | weapon (Mage) | +6 atk | a failed tool call strikes the foe first; a foe it slays hits no more |
+| Whisper of the Linter | weapon (Rogue) | +5 atk | a crit makes the next hit a crit too; that one chains no further |
 
 ## Consumables
 

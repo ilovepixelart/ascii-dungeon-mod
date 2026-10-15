@@ -8,6 +8,9 @@ import type { Stats } from './stats'
 export const gearBonus = (g: Game, stat: keyof Stats) =>
   SLOTS.reduce((sum, slot) => sum + (g.gear[slot]?.[stat] ?? 0), 0)
 
+/** The Legendary worn that carries `power`, if any. */
+export const wornPower = (g: Pick<Game, 'gear'>, power: string) => SLOTS.map(slot => g.gear[slot]).find(item => item?.power === power)
+
 export const canWear = (g: Pick<Game, 'cls'>, item: Item) => item.cls === undefined || item.cls === g.cls
 
 export const classLabel = (item: Item) => (item.cls === undefined ? 'Any class' : `${CLASS_NAME[item.cls]} only`)

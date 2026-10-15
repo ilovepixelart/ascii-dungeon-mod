@@ -144,6 +144,10 @@ export type Game = {
   deepest: number
   /** The depth a commit marked: a fall on it or deeper in its band wakes there. Absent before the first, never a boss depth. */
   waypoint?: number
+  /** Kills toward the Band of the Endless Loop's heal, 0 to 4; absent, none. */
+  looped?: number
+  /** The Whisper of the Linter's last blow was a critical: the next is one too. */
+  chain?: true
   /** The depth each once-a-depth reward for work was last given on. */
   boons?: Partial<Record<Exclude<Work, 'tests'>, number>>
   deaths: number

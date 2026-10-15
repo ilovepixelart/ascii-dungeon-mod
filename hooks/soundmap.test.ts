@@ -55,6 +55,7 @@ describe('every event has its sound', () => {
     ['You catch your breath. +2 HP', 'heal'],
     ['You regenerate 3 HP.', 'heal'],
     ['You kneel at a shrine: your work is kept. Full HP; you will wake on depth 13.', 'heal'],
+    ['The loop comes round: +3 HP.', 'heal'],
     ['Your work goes out, and a cache opens.', 'loot'],
     ['Your pull request opens a hoard.', 'loot'],
     ['The dog wags its tail and leans into your hand.', 'bark'],

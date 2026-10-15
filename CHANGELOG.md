@@ -12,6 +12,11 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Changed behaviour
 
+- Legendary powers take effect; they were shown on the item card but did nothing. Segfault triples critical damage,
+  the Mantle of the Monorepo mends 1 HP after a failed call, the Band of the Endless Loop heals 3 HP every fifth kill
+  (was described as every fifth fight), the Aegis of Green Builds wards off the next hit after a passing test run (was
+  described as any successful shell command), the Staff of Stack Traces strikes the foe on a failed call, and the
+  Whisper of the Linter makes the blow after a critical one critical too. The Rubber Duck's XP already counted.
 - Sounds overlap and are never cut: one sound no longer silences another, and a sound that finds the host's four
   places taken waits for the next instead of being lost. The town tune loops without a second's silence between rounds.
 - Closing the dungeon pane pauses the game only when no dungeon pane is left open: reopened with /dungeon, it plays on.

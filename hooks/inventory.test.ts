@@ -141,7 +141,7 @@ describe('the item card', () => {
     const g = knight()
     const band = put(g, 'ring', 'legendary', 0, 0, { name: 'Band of the Endless Loop', power: 'loopHeal' })
     g.cursor = band.id
-    expect(text(itemCard(g))).toContain('Every fifth fight heals 3 HP.')
+    expect(text(itemCard(g))).toContain('Every fifth kill heals 3 HP.')
   })
 })
 

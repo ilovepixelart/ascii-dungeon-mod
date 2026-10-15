@@ -79,6 +79,68 @@ test('a failing test run is no sure blow, and a commit the host does not report 
   expect(await ui.find({ type: 'Text', text: /^> The tests pass/ })).toBeUndefined()
 })
 
+/** The plugin's store, kept in a map: what the hooks wrote, and what a later session reads back. */
+const storeIn = (on: On, kept = new Map<string, unknown>()) => {
+  on('store.get', (_$, e) => ({ value: kept.get(e.key) }) as never)
+  on('store.set', (_$, e) => {
+    kept.set(e.key, e.value)
+    return { value: undefined } as never
+  })
+  return kept
+}
+
+test('a sound setting changed is saved', async ($, on) => {
+  const kept = storeIn(on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'settings' })
+  await ui.press({ key: 'settings-effects' })
+  await ui.press({ key: 'settings-volume' })
+  expect(kept.get('sound')).toEqual({ effects: false, music: true, volume: 1 })
+  await ui.unmount()
+})
+
+test('what is done by hand between turns is saved at once: the view, a potion drunk', async ($, on) => {
+  const kept = storeIn(on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'zoom' })
+  const zoomed = kept.get('save') as Game | undefined
+  await ui.press({ key: 'potion' })
+  const drunk = kept.get('save') as Game | undefined
+  expect(zoomed?.zoom).toBe(1)
+  expect(drunk?.belt[0]).toBeNull()
+  expect(drunk?.zoom).toBe(1)
+  await ui.unmount()
+})
+
+test('a stat trained by hand is saved at once, and a later session opens on it', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), points: 1 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const might = newGame().stats.might
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  await ui.press({ key: 'train-might' })
+  const saved = kept.get('save') as Game
+  expect([saved.stats.might, saved.points]).toEqual([might + 1, 0])
+  await ui.unmount()
+})
+
+test('a session starts with the sound saved before, not the defaults', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['sound', { effects: false, music: false, volume: 2 }], ['save', newGame()]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'settings' })
+  expect(await ui.find({ type: 'Button', key: 'settings-effects' })).toMatchObject({ props: { label: 'Effects: off' } })
+  expect(await ui.find({ type: 'Button', key: 'settings-music' })).toMatchObject({ props: { label: 'Music: off' } })
+  expect(await ui.find({ type: 'Button', key: 'settings-volume' })).toMatchObject({ props: { label: 'Volume: 50%' } })
+  await ui.unmount()
+})
+
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`the pane draws the map and its buttons act (${surface})`, async $ => {
     const ui = await $.ui.mount({ ...PANE, surface })

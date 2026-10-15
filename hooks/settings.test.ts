@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
-import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels } from './settings'
+import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, soundFrom } from './settings'
 import type { SoundSettings } from './settings'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
@@ -60,5 +60,20 @@ describe('the settings window', () => {
     expect(px.length).toBe(SETTINGS_H)
     expect(SETTINGS_H % 2).toBe(0)
     for (const row of px) expect(row.length).toBe(WINDOW_W)
+  })
+})
+
+describe('the sound as saved', () => {
+  const OFF: SoundSettings = { effects: false, music: false, volume: 1 }
+
+  test('a saved sound is taken as it was saved', async () => {
+    expect(soundFrom({ effects: false, music: true, volume: 2 }, ON)).toEqual({ effects: false, music: true, volume: 2 })
+    expect(soundFrom(OFF, ON)).toEqual(OFF)
+  })
+
+  test('nothing saved, or anything that is no sound, gives the defaults', async () => {
+    for (const saved of [undefined, null, 'loud', [], {}, { effects: false, music: true }, { effects: 'no', music: true, volume: 2 }, { effects: false, music: true, volume: 0 }, { effects: false, music: true, volume: VOLUME_STEPS + 1 }, { effects: false, music: true, volume: 1.5 }]) {
+      expect(soundFrom(saved, ON)).toEqual(ON)
+    }
   })
 })

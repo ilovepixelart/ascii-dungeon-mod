@@ -31,6 +31,13 @@ const buttons = (g: Game, sound: SoundSettings): { key: string; label: string; d
   { key: 'L', label: `VOLUME ${(100 * sound.volume) / VOLUME_STEPS}`, does: 'volume' },
 ]
 
+/** The sound as saved, or `defaults` when nothing was saved or what was is no sound: each switch on or off, the volume a step of VOLUME_STEPS. */
+export const soundFrom = (saved: unknown, defaults: SoundSettings): SoundSettings => {
+  const s = saved as Partial<SoundSettings> | null | undefined
+  const isSound = typeof s?.effects === 'boolean' && typeof s.music === 'boolean' && Number.isInteger(s.volume) && s.volume! >= 1 && s.volume! <= VOLUME_STEPS
+  return isSound ? { effects: s.effects!, music: s.music!, volume: s.volume! } : defaults
+}
+
 /** The sound after a sound button: effects or music flipped, or the volume a quarter up, from full back to a quarter. */
 export const nextSound = (s: SoundSettings, does: 'effects' | 'music' | 'volume'): SoundSettings =>
   does === 'effects' ? { ...s, effects: !s.effects } : does === 'music' ? { ...s, music: !s.music } : { ...s, volume: (s.volume % VOLUME_STEPS) + 1 }

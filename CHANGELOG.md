@@ -12,6 +12,8 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Changed behaviour
 
+- A unique is named by its own name in the log, toasts and the death window: "Old Bones strikes you", "The Rotking
+  loses you", where it read "The Old Bones strikes you" and "The the Rotking loses you".
 - The hero drinks a healing potion on their own after a blow that leaves them under a quarter of max HP. Turn it off
   with the Drink order in settings.
 - The game is saved after every change, where it was saved only when a turn ended: stats trained, gear changed,

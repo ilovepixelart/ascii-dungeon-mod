@@ -6,6 +6,7 @@ import { foeAtk, foeHp } from './balance'
 import { plainHero } from './fixtures'
 import { foeTurn } from './patterns'
 import { arrive } from './world'
+import { killerName } from './death'
 import { CHAMPION_MARK, frameOf, hexToInt } from './pixels'
 
 const WORLD = 4
@@ -107,5 +108,44 @@ describe('their tricks', () => {
     expect(won.uniquesSlain).toEqual([4])
     expect(won.log.some(l => /^Emberjaw is no more\. It leaves .+ \((Epic|Legendary)\)\.$/.test(l))).toBe(true)
     expect(won.toast).toBe('Emberjaw slain!')
+  })
+})
+
+describe('how a unique is named in the log', () => {
+  /** "the" or "The" put before a unique's own name: "the the Rotking", "The Old Bones". */
+  const WRONG = new RegExp(`\\b[Tt]he (${Object.values(UNIQUES).map(u => u.name.replace(/^the /, 'the ')).join('|')})\\b`)
+  const SMOKE = { kind: 'smoke' as const, tiers: [3, 0, 0] as [number, number, number] }
+
+  /** A long fight with each theme's unique: blows both ways, the hero's own attack, a smoke escape, and a fall. */
+  const fights = () => [0, 1, 2, 3, 4].flatMap(band => {
+    let g = summon(at(uniqueDepth(WORLD, band), { maxHp: 999, hp: 999 }))
+    const lines = [...g.log]
+    for (let i = 0; i < 30; i += 1) {
+      g = apply({ ...g, hp: 999 }, i % 3 === 2 ? { kind: 'attack' } : { kind: 'outcome', ok: i % 2 === 0, what: 'Bash' })
+      lines.push(...g.log.slice(g.log.length - g.fresh))
+    }
+    const met = summon(at(uniqueDepth(WORLD, band)))
+    const smoked = apply({ ...met, belt: met.belt.map((s, i) => (i === 4 ? SMOKE : s)) }, { kind: 'use', slot: 4 })
+    const fell = apply({ ...met, hp: 1, foe: met.foe === null ? null : { ...met.foe, atk: 999, opened: true } }, { kind: 'outcome', ok: false, what: 'Bash' })
+    return [...lines, ...smoked.log.slice(-smoked.fresh), ...fell.log.slice(-fell.fresh), fell.toast ?? '']
+  })
+
+  test('no line puts "the" before a unique\'s own name', async () => {
+    const all = fights()
+    expect(all.length).toBeGreaterThan(150)
+    expect(all.filter(l => WRONG.test(l))).toEqual([])
+  })
+
+  test('a fall to a unique keeps it for the death window, named as it names itself', async () => {
+    const met = summon(at(uniqueDepth(WORLD, 2)))
+    const fell = apply({ ...met, hp: 1, foe: { ...met.foe!, atk: 999, opened: true } }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect(fell.fallen?.foe?.unique).toBe('rot')
+    expect(killerName(fell.fallen!)).toBe('the Rotking')
+  })
+
+  test('a sentence that starts with the Rotking capitalizes its article, and the others read bare', async () => {
+    const all = fights()
+    expect(all.some(l => l.startsWith('The Rotking '))).toBe(true)
+    expect(all.some(l => /^(Old Bones|Mother Mire|Rimehide|Emberjaw) /.test(l))).toBe(true)
   })
 })

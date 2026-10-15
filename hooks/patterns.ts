@@ -1,6 +1,7 @@
 // How each kind of foe fights: one trait a kind, the dangerous ones announced a turn before they land.
 import type { Foe, Game } from '../types'
 import { roll } from './rng'
+import { TheFoe, theFoe } from './names'
 
 /** What the foe's turn comes to before its blow: lines to say, a changed foe, whether it strikes, and how. */
 export type FoeTurn = { foe: Foe; said: string[]; strikes: boolean; times: number; pierces: boolean; steals: boolean }
@@ -31,18 +32,18 @@ const KIND_MOVES: Readonly<Record<string, (t: Turn) => FoeTurn>> = {
   k: ({ foe, plain, share }) => {
     if (share > 0.5 || foe.used !== undefined) return plain
     const healed = Math.min(foe.maxHp - foe.hp, Math.ceil(foe.maxHp * 0.3))
-    return { ...plain, foe: { ...foe, hp: foe.hp + healed, used: true }, said: [`The ${foe.name} gulps a foul brew. +${healed} HP`], strikes: false }
+    return { ...plain, foe: { ...foe, hp: foe.hp + healed, used: true }, said: [`${TheFoe(foe)} gulps a foul brew. +${healed} HP`], strikes: false }
   },
   g: ({ foe, plain }) => ({ ...plain, steals: foe.stolen === undefined }),
-  o: ({ foe, plain, share }) => (share <= 0.4 ? { ...plain, times: 1.25, said: [`The ${foe.name} roars in rage!`] } : plain),
+  o: ({ foe, plain, share }) => (share <= 0.4 ? { ...plain, times: 1.25, said: [`${TheFoe(foe)} roars in rage!`] } : plain),
   T: ({ foe, plain }) => {
     const healed = Math.min(foe.maxHp - foe.hp, Math.ceil(foe.maxHp * 0.02))
-    return healed > 0 ? { ...plain, foe: { ...foe, hp: foe.hp + healed }, said: [`The ${foe.name}'s wounds knit. +${healed} HP`] } : plain
+    return healed > 0 ? { ...plain, foe: { ...foe, hp: foe.hp + healed }, said: [`${TheFoe(foe)}'s wounds knit. +${healed} HP`] } : plain
   },
-  W: ({ foe, plain, turn }) => (turn % 3 === 0 ? { ...plain, pierces: true, said: [`The ${foe.name}'s chill touch passes through your armor!`] } : plain),
+  W: ({ foe, plain, turn }) => (turn % 3 === 0 ? { ...plain, pierces: true, said: [`${TheFoe(foe)}'s chill touch passes through your armor!`] } : plain),
   D: ({ foe, plain, turn }) => {
-    if (turn % 3 === 2) return { ...plain, said: [`The ${foe.name} draws a deep breath...`] }
-    return turn % 3 === 0 ? { ...plain, times: isOverlord(foe) ? 2.5 : 1.5, said: [`The ${foe.name} breathes fire!`] } : plain
+    if (turn % 3 === 2) return { ...plain, said: [`${TheFoe(foe)} draws a deep breath...`] }
+    return turn % 3 === 0 ? { ...plain, times: isOverlord(foe) ? 2.5 : 1.5, said: [`${TheFoe(foe)} breathes fire!`] } : plain
   },
 }
 
@@ -82,29 +83,29 @@ type Move = (foe: Foe, plain: FoeTurn, turn: number, isRaging: boolean) => FoeTu
 
 const MOVES: Readonly<Record<NonNullable<Foe['big']>, Move>> = {
   king: (foe, plain, turn, isRaging) => {
-    if (turn % 3 === 2) return { ...plain, foe: isRaging ? { ...foe, shield: 1 } : foe, said: [`The ${foe.name} raises his greatsword...`, ...(isRaging ? ['Bones rise to shield him.'] : [])] }
-    return turn % 3 === 0 ? { ...plain, times: 2, said: [`The ${foe.name} brings his greatsword down!`] } : plain
+    if (turn % 3 === 2) return { ...plain, foe: isRaging ? { ...foe, shield: 1 } : foe, said: [`${TheFoe(foe)} raises his greatsword...`, ...(isRaging ? ['Bones rise to shield him.'] : [])] }
+    return turn % 3 === 0 ? { ...plain, times: 2, said: [`${TheFoe(foe)} brings his greatsword down!`] } : plain
   },
   queen: (foe, plain, turn, isRaging) => {
-    if (isRaging && turn % 2 === 0) return { ...plain, pierces: true, said: [`The ${foe.name} drags you under!`] }
+    if (isRaging && turn % 2 === 0) return { ...plain, pierces: true, said: [`${TheFoe(foe)} drags you under!`] }
     if (turn % 3 !== 0) return plain
     const healed = Math.min(foe.maxHp - foe.hp, Math.ceil(foe.maxHp / 10))
-    return { ...plain, foe: { ...foe, hp: foe.hp + healed }, said: [`The tide mends the ${foe.name}. +${healed} HP`] }
+    return { ...plain, foe: { ...foe, hp: foe.hp + healed }, said: [`The tide mends ${theFoe(foe)}. +${healed} HP`] }
   },
   hive: (foe, plain, turn, isRaging) => {
     const isSpores = turn % 2 === 0
-    const said = isSpores ? [`The ${foe.name}'s spores slip past your armor!`] : isRaging ? ['The swarm bites!'] : []
+    const said = isSpores ? [`${TheFoe(foe)}'s spores slip past your armor!`] : isRaging ? ['The swarm bites!'] : []
     return { ...plain, pierces: isSpores, times: isRaging ? 1.5 : 1, said }
   },
   lich: (foe, plain, turn, isRaging) => {
-    if (isRaging && turn % 4 === 1) return { ...plain, foe: { ...foe, shield: 1 }, said: [`Ice armor forms on the ${foe.name}.`] }
+    if (isRaging && turn % 4 === 1) return { ...plain, foe: { ...foe, shield: 1 }, said: [`Ice armor forms on ${theFoe(foe)}.`] }
     if (turn % 3 === 2) return { ...plain, said: ['The air freezes around you...'] }
-    return turn % 3 === 0 ? { ...plain, times: 2, said: [`The ${foe.name} looses a frost nova!`] } : plain
+    return turn % 3 === 0 ? { ...plain, times: 2, said: [`${TheFoe(foe)} looses a frost nova!`] } : plain
   },
   wyrm: (foe, plain, turn, isRaging) => {
     const every = isRaging ? 2 : 3
-    if (turn % every === every - 1) return { ...plain, said: [`The ${foe.name} draws a deep breath...`] }
-    return turn % every === 0 ? { ...plain, times: 2.5, said: [`The ${foe.name} breathes fire!`] } : plain
+    if (turn % every === every - 1) return { ...plain, said: [`${TheFoe(foe)} draws a deep breath...`] }
+    return turn % every === 0 ? { ...plain, times: 2.5, said: [`${TheFoe(foe)} breathes fire!`] } : plain
   },
 }
 
@@ -116,8 +117,8 @@ const bigTurn = (foe: Foe, plain: FoeTurn, turn: number, share: number): FoeTurn
 
 /** The hero's blow as the foe's kind takes it: dodged, blunted, or passing through. */
 export const heroBlowOn = (g: Game, foe: Foe, dmg: number): { dmg: number; said?: string } => {
-  if (foe.glyph === 'r' && roll(g, 5) === 1) return { dmg: 0, said: `The ${foe.name} darts aside.` }
+  if (foe.glyph === 'r' && roll(g, 5) === 1) return { dmg: 0, said: `${TheFoe(foe)} darts aside.` }
   if (foe.glyph === 's') return { dmg: Math.max(1, dmg - 1) }
-  if (foe.glyph === 'W' && isOverlord(foe) && (foe.turn ?? 0) % 4 === 3) return { dmg: 0, said: `The ${foe.name} fades into the dark; your blow passes through.` }
+  if (foe.glyph === 'W' && isOverlord(foe) && (foe.turn ?? 0) % 4 === 3) return { dmg: 0, said: `${TheFoe(foe)} fades into the dark; your blow passes through.` }
   return { dmg }
 }

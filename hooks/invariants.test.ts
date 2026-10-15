@@ -188,6 +188,14 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, recap: { ...r, level: g.level + 1 } })).toContain(rule)
   })
 
+  test('orders outside their choices', async () => {
+    const rule = 'orders among their choices'
+    const o = { drink: 25, smoke: false, leave: 'common' } as const
+    expect(broke({ ...g, orders: o })).not.toContain(rule)
+    expect(broke({ ...g, orders: { ...o, drink: 30 as never } })).toContain(rule)
+    expect(broke({ ...g, orders: { ...o, leave: 'epic' } })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

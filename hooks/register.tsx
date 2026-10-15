@@ -12,7 +12,7 @@ import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
-import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
+import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
@@ -987,7 +987,12 @@ const bagActions = ({ Box, Button, press }: Pane) => (
   </Box>
 )
 
-const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane) => {
+/** The settings' keys; the orders' hotkeys only where the window has the pane to itself, the dashboard's d and k being taken. */
+const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane, isWindow = false) => {
+  const orderKey = (which: 'drink' | 'smoke' | 'leave', hotkey: string) => {
+    const word = orderWord(g, which).toLowerCase().replace(/\bhp\b/, 'HP')
+    return <Button key={`settings-${which}`} label={word[0]!.toUpperCase() + word.slice(1)} hotkey={isWindow ? hotkey : undefined} plain onPress={press({ kind: 'order', order: which })} />
+  }
   const soundKey = (does: 'effects' | 'music' | 'volume') => () => {
     setSoundTo(nextSound(soundSettings, does))
     redraw()
@@ -998,6 +1003,9 @@ const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane) => {
     <Button key="settings-effects" label={soundSettings.effects ? 'Effects: on' : 'Effects: off'} hotkey="e" plain onPress={soundKey('effects')} />,
     <Button key="settings-music" label={soundSettings.music ? 'Music: on' : 'Music: off'} hotkey="m" plain onPress={soundKey('music')} />,
     <Button key="settings-volume" label={`Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`} hotkey="l" plain onPress={soundKey('volume')} />,
+    orderKey('drink', 'd'),
+    orderKey('smoke', 'f'),
+    orderKey('leave', 'k'),
     <Button key="settings-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'settings' })} />,
   ]
 }
@@ -1252,7 +1260,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: (_, l) => l.isCompactBag, draw: compactBag },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)]) },
   { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
-  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p)) },
+  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },

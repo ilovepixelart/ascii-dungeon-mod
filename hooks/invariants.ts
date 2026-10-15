@@ -70,6 +70,11 @@ const RULES: Readonly<Record<string, Rule>> = {
     if (!counts.every(n => Number.isInteger(n) && n >= 0) || r.champions > r.kills) return `recap counts ${counts.join(', ')}`
     return r.depth >= 1 && r.depth <= g.deepest && r.level >= 1 && r.level <= g.level ? undefined : `recap from depth ${r.depth}, level ${r.level}`
   },
+  'orders among their choices': g => {
+    const o = g.orders
+    if (o === undefined) return undefined
+    return [0, 25, 50].includes(o.drink) && typeof o.smoke === 'boolean' && ['common', 'uncommon', 'rare'].includes(o.leave) ? undefined : `orders ${JSON.stringify(o)}`
+  },
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

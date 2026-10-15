@@ -12,6 +12,8 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Changed behaviour
 
+- The hero drinks a healing potion on their own after a blow that leaves them under a quarter of max HP. Turn it off
+  with the Drink order in settings.
 - The game is saved after every change, where it was saved only when a turn ended: stats trained, gear changed,
   potions drunk or wares bought by hand between turns survive the session's end.
 - Sound settings (effects, music, volume) are kept across sessions and reloads; they went back to the defaults every
@@ -42,6 +44,9 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Added
 
+- Hero orders in settings: drink a healing potion under a quarter of max HP (on by default), under half, or never;
+  throw a smoke bomb when low with no healing left (off by default); leave a kill's Commons, or anything below Rare, on
+  the floor (off by default). New `order` action; saves gain the optional `orders`, older saves taking the defaults.
 - A recap of what happened while you worked: after ten or more tool calls with no click or key on the pane, the next
   one opens a window with the calls, depth and level gained, kills, gold, deaths, the work done and the best find
   instead of doing what was asked. It never opens on its own. New `look` action; saves gain the optional `recap`.

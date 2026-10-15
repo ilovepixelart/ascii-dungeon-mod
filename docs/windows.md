@@ -60,7 +60,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The character sheet
 
-- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex. New game is in settings.
+- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex, and Retire (`r`) beside it the retire window, lit once the hero has slain a big boss (`canRetire`). New game is in settings.
 
 ## Settings
 
@@ -81,9 +81,16 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 ## The codex
 
 - What every hero of the save has done (`Game.codex`, kept through a new game by `apply`'s `restart`): the uniques and big bosses slain and the Legendaries come to hand, and the records: deepest depth, top level, kills, bosses slain, deaths and gold found in the dungeon. `recorded` in `hooks/codex.ts` adds what each action did, compared before and after, so no rule has to report to it. A Legendary counts once it is in the bag, the stash or worn; one left on the floor of a full bag is not found.
-- A save from before the codex begins one at its first action (`firstCodex` in `hooks/game.ts`): uniques from `uniquesSlain`, every big boss up to `bossSlain` (each guards the way down), the Legendaries owned, the deepest depth, level and deaths. Kills and gold were never counted, so they start at 0.
+- A save from before the codex begins one at its first action (`firstCodex` in `hooks/game.ts`): uniques from `uniquesSlain`, every big boss up to `bossSlain` (each guards the way down), the Legendaries owned, the deepest depth, level and deaths. Kills and gold were never counted, so they start at 0. `Codex.retired` counts the heroes retired; a codex from before retiring has none.
 - A set made whole pays once a save, the moment it is (`paySets`): all five uniques an Epic or better, all five big bosses a Legendary. A save whose set was whole when the codex began is not paid for it. Over 30 simulated games a class at 8,000 steps the prizes take deaths per 1,000 steps from 2.72 to 2.27 and the deepest depth from 74 to 79; a run that rolls the prizes and withholds them stays at 2.74. Below depth 25 nothing changes.
-- Drawn by `hooks/codexwindow.ts`: a row each with its count, an entry lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag; the records under a rule. The close box and Close (`c`) close it. As text, each row names what is in it.
+- Drawn by `hooks/codexwindow.ts`: a row each with its count, an entry lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag; the records under a rule, four lines of them ending the window on the map's height. The close box and Close (`c`) close it. As text, each row names what is in it.
+
+## Retiring and the heirloom
+
+- A hero who has slain a big boss may retire (`retire` action, `whyNotRetire` in `hooks/game.ts`), passing down one piece they wear as the save's heirloom (`Game.heirloom`, `heirloomOf` in `hooks/items/loot.ts`). The game becomes a new one on the start screen with the codex (one more retired) and the heirloom; no Back, as nothing is under way.
+- Every new hero after that, by the start screen or New game, sets out with the heirloom (`newHero`): worn when the class can wear it, its kit piece going to the bag, at full HP; in the bag when it cannot. The next retirement replaces it.
+- An heirloom keeps its name, tier, look and Legendary power; its stats are its base's plain ones, untempered, unlocked, not junk. The Rubber Duck's power is its +50% XP, so that stat stays. With the stats as found on depth 1, simulated deaths in the first 1,000 steps (60 games a class) fell from 2.26 to 0.50 with the Duck; as built they are 1.92 with the Duck, 2.17 with the Band of the Endless Loop and 2.06 with a Rare chain.
+- Drawn by `hooks/retirewindow.ts`: the portrait, level, class, deepest depth and big bosses slain; the worn pieces in a row, the chosen one framed white (the first worn until one is clicked; `w` steps through them); its name and what passing it down means; Retire (`r`, dark until a big boss is slain) and Back (`b`, to the sheet). As text, a button a worn piece retires passing it down.
 
 ## The compact inventory
 

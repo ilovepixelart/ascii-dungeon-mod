@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass } from '../types'
 import { TOWN_TALK } from './town'
-import { BIG_BOSSES, STASH_SIZE, UNIQUES, firstCodex, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
+import { BIG_BOSSES, STASH_SIZE, UNIQUES, canRetire, firstCodex, whyNotRetire, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -13,6 +13,8 @@ import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { codexGesture, codexHeight, codexPixels } from './codexwindow'
+import { retireGesture, retireHeight, retirePixels } from './retirewindow'
+import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
@@ -91,6 +93,8 @@ let beltMenu: BeltMenu = null
 let hudWidth = 0
 let shopUi: ShopUi = SHOP_UI_IDLE
 let forgeUi: ForgeUi = FORGE_UI_IDLE
+/** The piece the retire window has chosen to pass down. */
+let retireUi: RetireUi = FORGE_UI_IDLE
 let chestUi: ChestUi = CHEST_UI_IDLE
 let startUi: StartUi | null = null
 /** The pixel map's mounted size, which a repaint must match. */
@@ -779,6 +783,13 @@ const onForgeClick = async ($: EngineInterface, data: unknown) => {
   $.ui.invalidate('ui.render')
 }
 
+const onRetireClick = async ($: EngineInterface, data: unknown) => {
+  const outcome = retireGesture(await current($), retireUi, data as Gesture)
+  retireUi = outcome.ui
+  await actAll($, outcome.actions)
+  $.ui.invalidate('ui.render')
+}
+
 const onChestClick = async ($: EngineInterface, data: unknown) => {
   const outcome = chestGesture(await current($), chestUi, data as Gesture)
   chestUi = outcome.ui
@@ -853,6 +864,9 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'codex-clicks':
       await onCodexClick($, data)
+      return true
+    case 'retire-clicks':
+      await onRetireClick($, data)
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -1184,8 +1198,27 @@ const sheetWindow = (p: Pane) => {
   return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), sheetOverlay(g), [
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
     <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
+    retireKey(p, 'r'),
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
   ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined)
+}
+
+/** Retire on the sheet: dimmed, and doing nothing, until the hero has slain a big boss. */
+const retireKey = ({ g, Button, press }: Pane, hotkey?: string) => (
+  <Button key="sheet-retire" label="Retire" hotkey={hotkey} plain dimColor={!canRetire(g)} onPress={canRetire(g) ? press({ kind: 'panel', panel: 'retire' }) : () => undefined} />
+)
+
+const retireWindow = (p: Pane) => {
+  const { redraw, g, Button, press } = p
+  const slot = chosenSlot(g, retireUi)
+  return pixelWindow(p, 'retire', retireHeight(g, retireUi), retirePixels(g, retireUi), [], [
+    <Button key="retire-go" label="Retire" hotkey="r" plain dimColor={slot === undefined || whyNotRetire(g, slot) !== undefined} onPress={slot === undefined ? () => undefined : press({ kind: 'retire', slot })} />,
+    <Button key="retire-next" label="Next piece" hotkey="w" plain onPress={() => {
+      retireUi = nextWorn(g, retireUi)
+      redraw()
+    }} />,
+    <Button key="retire-back" label="Back" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
+  ], 'Click a piece you wear to pass it down.')
 }
 
 const forgeWindow = (p: Pane) => {
@@ -1269,6 +1302,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
+  { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
   { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
@@ -1310,27 +1344,31 @@ const textBelt = ({ g, Box, Button, press }: Pane) => (
   </Box>
 )
 
-const textSheet = ({ g, Box, Text, Button, press }: Pane) => (
-  <Box flexDirection="column">
-    <Text bold>
-      Level {g.level} adventurer, {g.points} unspent point{g.points === 1 ? '' : 's'}
-    </Text>
-    {ATTRIBUTES.map((a, i) => (
-      <Box>
-        <Button key={`train-${a.stat}`} label="+" hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />
-        <Text>
-          {' '}
-          {a.label} {String(g.stats[a.stat]).padStart(2)}{'  '}
-        </Text>
-        <Text dimColor>{a.effect(g)}</Text>
+const textSheet = (p: Pane) => {
+  const { g, Box, Text, Button, press } = p
+  return (
+    <Box flexDirection="column">
+      <Text bold>
+        Level {g.level} adventurer, {g.points} unspent point{g.points === 1 ? '' : 's'}
+      </Text>
+      {ATTRIBUTES.map((a, i) => (
+        <Box>
+          <Button key={`train-${a.stat}`} label="+" hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />
+          <Text>
+            {' '}
+            {a.label} {String(g.stats[a.stat]).padStart(2)}{'  '}
+          </Text>
+          <Text dimColor>{a.effect(g)}</Text>
+        </Box>
+      ))}
+      <Box marginTop={1} columnGap={2}>
+        <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
+        {retireKey(p)}
+        <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
       </Box>
-    ))}
-    <Box marginTop={1} columnGap={2}>
-      <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
-      <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
     </Box>
-  </Box>
-)
+  )
+}
 
 const textShop = ({ g, Box, Text, Button, press }: Pane) => (
   <Box flexDirection="column">
@@ -1516,6 +1554,18 @@ const textCodex = (p: Pane) => {
   )
 }
 
+/** The retire window as text: a button a worn piece, each retiring the hero and passing that piece down; Back. */
+const textRetire = ({ g, Box, Text, Button, press }: Pane) => (
+  <Box flexDirection="column">
+    <Text bold>Retire: choose the heirloom every new hero starts with, its power kept, its stats plain</Text>
+    {SLOTS.flatMap(slot => {
+      const item = g.gear[slot]
+      return item === undefined ? [] : [<Button key={`retire-${slot}`} plain dimColor={whyNotRetire(g, slot) !== undefined} onPress={press({ kind: 'retire', slot })}>{'Pass down '}<Text color={RARITY_COLOR[item.rarity]}>{item.name}</Text></Button>]
+    })}
+    <Button key="retire-back" label="Back" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
+  </Box>
+)
+
 const textSettings = (p: Pane) => {
   const { Box, Text } = p
   return (
@@ -1605,6 +1655,7 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined, draw: textDeath },
   { is: p => p.g.panel === 'recap', draw: textRecap },
   { is: p => p.g.panel === 'codex', draw: textCodex },
+  { is: p => p.g.panel === 'retire', draw: textRetire },
   { is: p => p.g.panel === 'settings', draw: textSettings },
   { is: p => p.g.panel === 'shop', draw: textShop },
   { is: p => p.g.panel === 'forge', draw: textForge },
@@ -1652,6 +1703,7 @@ const drawPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
   if (g.panel !== 'bag') bagUi = BAG_UI_IDLE
   if (g.panel !== 'shop') shopUi = SHOP_UI_IDLE
   if (g.panel !== 'forge') forgeUi = FORGE_UI_IDLE
+  if (g.panel !== 'retire') retireUi = FORGE_UI_IDLE
   if (g.panel !== 'stash') chestUi = CHEST_UI_IDLE
   if (g.panel !== 'start') startUi = null
   const p = paneOf($, e, g)

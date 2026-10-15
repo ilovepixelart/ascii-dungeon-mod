@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, cycle, destroy, equip, gearBonus, makeItem, wornPower, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, makeItem, wornPower, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -68,6 +68,8 @@ export type Action =
   | { kind: 'look' }
   /** The smith's last reforge taken back: the piece kept as it was. */
   | { kind: 'keepOld' }
+  /** The hero retires, passing down the piece they wear in `slot`; the start screen opens for the next. */
+  | { kind: 'retire'; slot: Slot }
   | { kind: 'train'; stat: Attribute }
   | { kind: 'zoom' }
 
@@ -1057,6 +1059,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
     g.panel = g.panel === a.panel ? 'none' : a.panel
   },
   look: g => look(g),
+  retire: (g, a) => say(g, whyNotRetire(g, a.slot) ?? ''),
   order: (g, a) => order(g, a.order),
   cycle: g => cycle(g),
   place: (g, a) => {
@@ -1439,6 +1442,41 @@ const record = (before: Game, g: Game) => {
   return paySets(g, was, now) ? recorded(was, before, g) : now
 }
 
+/** Whether the hero may retire: once a big boss is slain. */
+export const canRetire = (g: Pick<Game, 'bossSlain'>) => g.bossSlain >= BIG_EVERY
+
+/** Why the hero cannot retire passing down what they wear in `slot`, or undefined when they can. */
+export const whyNotRetire = (g: Game, slot: Slot) => {
+  if (!canRetire(g)) return 'A hero retires once they have slain a big boss.'
+  return g.gear[slot] === undefined ? 'Choose a piece you wear to pass down.' : undefined
+}
+
+/** The hero retired: counted in the codex, the piece in `slot` the heirloom, and a new hero to choose on the start screen. */
+const retiredFrom = (g: Game, slot: Slot): Game => {
+  const codex = g.codex ?? firstCodex(g)
+  return { ...newGame(g.seed, g.cls), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
+}
+
+/** A new hero for the save of `game`: its codex and heirloom kept, the heirloom worn when the class can, else in the bag. */
+const newHero = (game: Game, cls: HeroClass): Game => {
+  const g: Game = { ...newGame(game.seed, cls), codex: game.codex ?? firstCodex(normalize(game)) }
+  if (game.heirloom === undefined) return g
+  const item = { ...game.heirloom, id: g.nextId }
+  g.heirloom = game.heirloom
+  g.nextId += 1
+  stash(g, item)
+  if (!canWear(g, item)) {
+    say(g, `Your heirloom, the ${item.name}, waits in your bag.`)
+    return g
+  }
+  g.cursor = item.id
+  equip(g)
+  g.cursor = null
+  g.hp = g.maxHp
+  say(g, `You set out in your heirloom, the ${item.name}.`)
+  return g
+}
+
 /** Pure: the game after `action`, never mutating `game`. */
 /** What the start screen lets through: the dungeon waits behind it, whatever the tool calls do. */
 const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['restart', 'panel', 'zoom'])
@@ -1447,10 +1485,11 @@ const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>
 const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend'])
 
 export const apply = (game: Game, action: Action): Game => {
-  // A new hero keeps the codex: it is the save's, not one hero's.
-  if (action.kind === 'restart') return { ...newGame(game.seed, action.cls ?? game.cls ?? 'knight'), codex: game.codex ?? firstCodex(normalize(game)) }
+  // A new hero keeps the codex and the heirloom: they are the save's, not one hero's.
+  if (action.kind === 'restart') return newHero(game, action.cls ?? game.cls ?? 'knight')
   if (game.panel === 'start' && !ON_THE_START_SCREEN.has(action.kind)) return game
   const before = normalize(game)
+  if (action.kind === 'retire' && whyNotRetire(before, action.slot) === undefined) return retiredFrom(before, action.slot)
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)

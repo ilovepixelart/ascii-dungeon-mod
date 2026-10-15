@@ -84,6 +84,10 @@ const RULES: Readonly<Record<string, Rule>> = {
     if (twice !== undefined) return `the codex lists ${twice.join(', ')}`
     return c.deepest >= g.deepest && c.level >= g.level && c.deaths >= g.deaths ? undefined : `codex deepest ${c.deepest}, level ${c.level}, deaths ${c.deaths}; the hero's ${g.deepest}, ${g.level}, ${g.deaths}`
   },
+  'heirloom untempered, unlocked, not junk': g => {
+    const h = g.heirloom
+    return h === undefined || (h.temper === undefined && h.locked === undefined && h.junk === undefined) ? undefined : `the heirloom ${h.name} kept tempered ${h.temper}, locked ${h.locked}, junk ${h.junk}`
+  },
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

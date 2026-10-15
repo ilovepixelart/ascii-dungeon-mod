@@ -20,6 +20,7 @@ import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
 import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
+import { retireButtons } from './retirewindow'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
@@ -360,6 +361,55 @@ test('as text the codex says what is in each row and the records, and closes', a
   expect(await ui.find({ type: 'Text', text: /^Deepest 1, level 1, 0 kills, 0 bosses, 0 deaths, 0 gold\.$/ })).toBeDefined()
   await ui.press({ key: 'codex-close' })
   expect(await ui.find({ type: 'Text', text: /^Uniques / })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a hero who slew a big boss retires from the sheet, and the next hero sets out in the heirloom', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), bossSlain: 10, deepest: 12 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  await ui.press({ key: 'sheet-retire' })
+  await ui.press({ key: 'retire-weapon' })
+  expect((kept.get('save') as Game).panel).toBe('start')
+  await ui.press({ key: 'start-mage' })
+  await ui.press({ key: 'start-go' })
+  const hero = kept.get('save') as Game
+  expect([hero.cls, hero.level, hero.codex?.retired, hero.heirloom?.base]).toEqual(['mage', 1, 1, 'sword'])
+  expect(hero.bag.some(i => i.base === 'sword')).toBe(true)
+  expect(await ui.find({ type: 'Text', text: /^> Your heirloom, the Short Sword, waits in your bag\.$/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet', async ($, on) => {
+  const saved = { ...newGame(), bossSlain: 10, deepest: 12 }
+  storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-retire' })
+  expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeDefined()
+  const back = retireButtons({ ...saved, panel: 'retire' }, { slot: null }).back
+  const at = { x: back.x + 2, y: Math.floor((back.y + 4) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'retire-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'retire-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeUndefined()
+  expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('before a big boss falls, Retire on the sheet does nothing', async $ => {
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  await ui.press({ key: 'sheet-retire' })
+  expect(await ui.find({ type: 'Button', key: 'retire-back' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'sheet-close' })).toBeDefined()
   await ui.unmount()
 })
 

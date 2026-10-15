@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
-import { CODEX_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
+import { CODEX_RECT, RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
@@ -33,6 +33,17 @@ describe('the character sheet', () => {
     expect(r.y + r.h).toBeLessThanOrEqual(SHEET_H)
     const lit = sheetPixels(hero()).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + 8).includes(GOLD_INK))
     expect(lit).toBe(true)
+  })
+
+  test('Retire opens the retire window once a big boss is slain, lit; before, it is dark and does nothing', async () => {
+    const r = RETIRE_RECT
+    const lit = (g: Game) => sheetPixels(g).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + 8).includes(GOLD_INK))
+    expect(sheetGesture(hero({ bossSlain: 10 }), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'retire' }])
+    expect(lit(hero({ bossSlain: 10 }))).toBe(true)
+    expect(sheetGesture(hero({ bossSlain: 5 }), tap(r.x + 2, r.y + 4))).toEqual([])
+    expect(lit(hero({ bossSlain: 5 }))).toBe(false)
+    expect(r.x).toBeGreaterThan(CODEX_RECT.x + CODEX_RECT.w)
+    expect(r.x + r.w).toBeLessThanOrEqual(WINDOW_W)
   })
 
   test('the + keys are lit only with points to spend', async () => {

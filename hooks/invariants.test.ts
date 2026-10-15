@@ -209,6 +209,15 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...at, codex: { ...c, deaths: 1 } })).toContain(rule)
   })
 
+  test('an heirloom kept tempered, locked or as junk', async () => {
+    const rule = 'heirloom untempered, unlocked, not junk'
+    const h = g.gear.weapon!
+    expect(broke({ ...g, heirloom: { ...h, temper: undefined, locked: undefined, junk: undefined } })).not.toContain(rule)
+    expect(broke({ ...g, heirloom: { ...h, temper: 1 } })).toContain(rule)
+    expect(broke({ ...g, heirloom: { ...h, locked: true } })).toContain(rule)
+    expect(broke({ ...g, heirloom: { ...h, junk: true } })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

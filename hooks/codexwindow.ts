@@ -59,9 +59,9 @@ const layout = (c: Codex) => {
     { label: 'BIG BOSSES', found: c.bigs.length, of: bigs.length, y: 33 },
     { label: 'LEGENDARIES', found: c.legendaries.filter(n => LEGENDARIES.some(l => l.name === n)).length, of: LEGENDARIES.length, y: 64 },
   ]
-  const rule = 99
-  // Even, so the window ends on a whole cell.
-  return { rows, rule, records: rule + 4, height: Math.ceil((rule + 4 + 3 * LINE + 1) / 2) * 2 }
+  const rule = 97
+  // Even, so the window ends on a whole cell; four lines of records end it on the map's height.
+  return { rows, rule, records: rule + 3, height: Math.ceil((rule + 3 + 4 * LINE + 1) / 2) * 2 }
 }
 
 /** The records, two to a line: where each goes and its ink. */
@@ -72,6 +72,7 @@ const recordLines = (c: Codex, y: number) => [
   { text: `BOSSES ${c.bosses}`, x: COL2, y: y + LINE, ink: SAY },
   { text: `DEATHS ${c.deaths}`, x: PAD, y: y + 2 * LINE, ink: DIM },
   { text: `GOLD ${c.gold}`, x: COL2, y: y + 2 * LINE, ink: GOLD },
+  { text: `RETIRED ${c.retired ?? 0}`, x: PAD, y: y + 3 * LINE, ink: DIM },
 ]
 
 /** Every line the window says: each row's name and count, then the records. */

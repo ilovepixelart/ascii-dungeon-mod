@@ -522,9 +522,9 @@ const corridorSight = (level: Level, c: Pos, out: Pos): Pos[] => {
   return cells
 }
 
-export const visibleFrom = (level: Level, p: Pos): Pos[] => {
+export const visibleFrom = (level: Level, p: Pos, reach = 1): Pos[] => {
   const room = roomAt(level, p)
-  const box = room === undefined ? { x: p.x - 1, y: p.y - 1, w: 3, h: 3 } : { x: room.x - 1, y: room.y - 1, w: room.w + 2, h: room.h + 2 }
+  const box = room === undefined ? { x: p.x - reach, y: p.y - reach, w: 2 * reach + 1, h: 2 * reach + 1 } : { x: room.x - 1, y: room.y - 1, w: room.w + 2, h: room.h + 2 }
   const cells: Pos[] = []
   for (let y = box.y; y < box.y + box.h; y += 1) for (let x = box.x; x < box.x + box.w; x += 1) cells.push({ x, y })
   // In a room, the openings in its wall ring, each looking outward from its side.

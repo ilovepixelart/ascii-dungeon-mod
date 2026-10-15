@@ -7,6 +7,7 @@ import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
 import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
 import { CALM_CALLS } from './balance'
+import { TALENT_EVERY } from './talents'
 import { levelOf } from './world'
 
 type Rule = (g: Game) => string | undefined
@@ -88,6 +89,11 @@ const RULES: Readonly<Record<string, Rule>> = {
     const h = g.heirloom
     return h === undefined || (h.temper === undefined && h.locked === undefined && h.junk === undefined) ? undefined : `the heirloom ${h.name} kept tempered ${h.temper}, locked ${h.locked}, junk ${h.junk}`
   },
+  'talents each once, no more than earned': g => {
+    const t = g.talents ?? []
+    return new Set(t).size === t.length && t.length <= Math.floor(g.level / TALENT_EVERY) ? undefined : `talents ${t.join(', ')} at level ${g.level}`
+  },
+  'second wind on a depth reached': g => (g.wind === undefined || (g.wind >= 1 && g.wind <= g.deepest) ? undefined : `second wind on depth ${g.wind}, deepest ${g.deepest}`),
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

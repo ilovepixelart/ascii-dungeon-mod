@@ -36,7 +36,7 @@ const beltRect = (i: number): Rect => beltSlotRect(BELT_X, BODY_TOP + BELT_Y, i)
 
 /** Why a ware cannot be bought now, or undefined when it can. */
 export const whyNot = (g: Game, ware: Ware) =>
-  g.gold < priceOfWare(ware) ? 'not enough gold' : !hasRoom(g, wareOf(ware).kind, wareOf(ware).tier) ? 'no room on your belt' : undefined
+  g.gold < priceOfWare(ware, g) ? 'not enough gold' : !hasRoom(g, wareOf(ware).kind, wareOf(ware).tier) ? 'no room on your belt' : undefined
 
 const chosenItem = (g: Game, ui: ShopUi) => (ui.ware === null ? g.bag.find(i => i.id === g.cursor) : undefined)
 
@@ -46,7 +46,7 @@ export const shopPixels = (g: Game, ui: ShopUi, boxes: readonly OverlayBox[] = [
   WARES.forEach((ware, i) => {
     const r = wareRect(i)
     const { kind, tier } = wareOf(ware)
-    wareTag(body, consumableIcon(kind, tier), priceOfWare(ware), r.x, r.y - BODY_TOP, g.gold >= priceOfWare(ware), ui.ware === ware)
+    wareTag(body, consumableIcon(kind, tier), priceOfWare(ware, g), r.x, r.y - BODY_TOP, g.gold >= priceOfWare(ware, g), ui.ware === ware)
   })
   // With a ware chosen no bag item is: the game's cursor is drawn only while the bag has the choice.
   itemGrid(body, ui.ware === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
@@ -67,12 +67,12 @@ const shown = (g: Game): Weighted[] => [
 const entry = (key: string, label: string, why?: string): Run[] =>
   why === undefined ? [{ text: key, color: KEY_INK, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
 
-const wareMenu = (g: Game, ware: Ware): Run[][] => [entry('b', `Buy for ${priceOfWare(ware)}`, whyNot(g, ware))]
+const wareMenu = (g: Game, ware: Ware): Run[][] => [entry('b', `Buy for ${priceOfWare(ware, g)}`, whyNot(g, ware))]
 const itemMenu = (g: Game, item: Item): Run[][] => [entry('s', `Sell for ${priceOf(item)}`, item.locked === true ? 'locked' : undefined), entry('e', 'Equip', canWear(g, item) ? undefined : classLabel(item))]
 
 const wareCard = (g: Game, ware: Ware): Run[][] => {
   const { kind, tier } = wareOf(ware)
-  const price = priceOfWare(ware)
+  const price = priceOfWare(ware, g)
   return [
     [{ text: CONSUMABLES[kind][tier].name, bold: true }],
     [{ text: CONSUMABLES[kind][tier].about }],

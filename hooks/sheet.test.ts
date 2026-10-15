@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
-import { CODEX_RECT, RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
+import { CODEX_RECT, RETIRE_RECT, SHEET_H, TALENT_RECT, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
@@ -44,6 +44,16 @@ describe('the character sheet', () => {
     expect(lit(hero({ bossSlain: 5 }))).toBe(false)
     expect(r.x).toBeGreaterThan(CODEX_RECT.x + CODEX_RECT.w)
     expect(r.x + r.w).toBeLessThanOrEqual(WINDOW_W)
+  })
+
+  test('Talent opens the talent window, framed white while one is owed, under Codex and inside the window', async () => {
+    const r = TALENT_RECT
+    expect(sheetGesture(hero(), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'talent' }])
+    const edge = (g: Game) => sheetPixels(g)[r.y]![r.x + 4]
+    expect(edge(hero({ level: 10 }))).toBe('#ffffff')
+    expect(edge(hero({ level: 9 }))).not.toBe('#ffffff')
+    expect(r.y).toBeGreaterThan(CODEX_RECT.y + CODEX_RECT.h)
+    expect(r.y + r.h).toBeLessThanOrEqual(SHEET_H)
   })
 
   test('the + keys are lit only with points to spend', async () => {

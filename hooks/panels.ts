@@ -1,6 +1,6 @@
 import type { Attribute, Game } from '../types'
 import { countOf, slotOf } from './consumables'
-import { attackBonus, bar, critChance, defense, levelOf, runsOf, threat, xpToLevel } from './game'
+import { attackBonus, bar, critChance, defense, levelOf, runsOf, sightOf, threat, xpToLevel } from './game'
 import type { Run } from './game'
 import { BAG_H, BAG_W, GLYPH, RARITY_COLOR, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, floorThing, isFloor, roomAt, same, visibleFrom } from './map'
@@ -133,7 +133,7 @@ const mapCell = (tile: Tile): Run => {
 /** The first of `span` cells a window of `span` shows along an axis of `size`, `at` as near its middle as the edges allow. */
 export const windowStart = (at: number, span: number, size: number) => Math.max(0, Math.min(at - Math.floor(span / 2), size - span))
 
-export const visibleSet = (g: Game, level: Level) => new Set(visibleFrom(level, g).map(cellId))
+export const visibleSet = (g: Game, level: Level) => new Set(visibleFrom(level, g, sightOf(g)).map(cellId))
 
 /** The map from above, `columns` by `rows`, the window following the hero. */
 const TOWN_CHAR: Readonly<Record<string, Run>> = {

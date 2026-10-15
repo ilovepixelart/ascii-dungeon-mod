@@ -14,6 +14,8 @@ import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { codexGesture, codexHeight, codexPixels } from './codexwindow'
 import { retireGesture, retireHeight, retirePixels } from './retirewindow'
+import { talentGesture, talentHeight, talentPixels } from './talentwindow'
+import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
@@ -783,6 +785,8 @@ const onForgeClick = async ($: EngineInterface, data: unknown) => {
   $.ui.invalidate('ui.render')
 }
 
+const onTalentClick = async ($: EngineInterface, data: unknown) => actAll($, talentGesture(await current($), data as Gesture))
+
 const onRetireClick = async ($: EngineInterface, data: unknown) => {
   const outcome = retireGesture(await current($), retireUi, data as Gesture)
   retireUi = outcome.ui
@@ -867,6 +871,9 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'retire-clicks':
       await onRetireClick($, data)
+      return true
+    case 'talent-clicks':
+      await onTalentClick($, data)
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -1199,6 +1206,7 @@ const sheetWindow = (p: Pane) => {
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
     <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     retireKey(p, 'r'),
+    talentKey(p, 't'),
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
   ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined)
 }
@@ -1207,6 +1215,17 @@ const sheetWindow = (p: Pane) => {
 const retireKey = ({ g, Button, press }: Pane, hotkey?: string) => (
   <Button key="sheet-retire" label="Retire" hotkey={hotkey} plain dimColor={!canRetire(g)} onPress={canRetire(g) ? press({ kind: 'panel', panel: 'retire' }) : () => undefined} />
 )
+
+/** Talent on the sheet: marked while a talent is owed. */
+const talentKey = ({ g, Button, press }: Pane, hotkey?: string) => (
+  <Button key="sheet-talent" label={owed(g) > 0 ? `Talent (${owed(g)})` : 'Talent'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'talent' })} />
+)
+
+/** The talents offered, a key each; the window's own close. */
+const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => [
+  ...offer(g).map((t, i) => <Button key={`talent-${t}`} label={`${TALENTS[t].name}: ${TALENTS[t].does}`} hotkey={isWindow ? String(i + 1) : undefined} plain onPress={press({ kind: 'talent', talent: t })} />),
+  <Button key="talent-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
+]
 
 const retireWindow = (p: Pane) => {
   const { redraw, g, Button, press } = p
@@ -1303,6 +1322,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
+  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g), talentPixels(p.g), [], talentKeys(p, true)) },
   { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
@@ -1364,6 +1384,7 @@ const textSheet = (p: Pane) => {
       <Box marginTop={1} columnGap={2}>
         <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
         {retireKey(p)}
+        {talentKey(p)}
         <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
       </Box>
     </Box>
@@ -1377,7 +1398,7 @@ const textShop = ({ g, Box, Text, Button, press }: Pane) => (
       <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
     </Text>
     {WARES.map(ware => (
-      <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware)} gold`} plain dimColor={g.gold < priceOfWare(ware)} onPress={press({ kind: 'buy', ware })} />
+      <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware, g)} gold`} plain dimColor={g.gold < priceOfWare(ware, g)} onPress={press({ kind: 'buy', ware })} />
     ))}
     <Button key="shop-undo" label={undoLabel(g)} plain dimColor={whyNotBuyBack(g) !== undefined} onPress={press({ kind: 'buyBack' })} />
     <Button key="shop-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
@@ -1566,6 +1587,19 @@ const textRetire = ({ g, Box, Text, Button, press }: Pane) => (
   </Box>
 )
 
+/** The talent window as text: the talents offered, a button each, or those taken and the level of the next. */
+const textTalent = (p: Pane) => {
+  const { g, Box, Text } = p
+  const taken = (g.talents ?? []).map(t => TALENTS[t].name).join(', ')
+  const next = TALENT_EVERY * ((g.talents?.length ?? 0) + 1)
+  return (
+    <Box flexDirection="column">
+      <Text bold>{owed(g) > 0 ? `Level ${next}: choose a talent` : offer({ ...g, level: next }).length === 0 ? `Talents: ${taken}. Every talent is taken.` : `Talents: ${taken || 'none yet'}. The next at level ${next}.`}</Text>
+      <Box flexDirection="column">{talentKeys(p, false)}</Box>
+    </Box>
+  )
+}
+
 const textSettings = (p: Pane) => {
   const { Box, Text } = p
   return (
@@ -1656,6 +1690,7 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: p => p.g.panel === 'recap', draw: textRecap },
   { is: p => p.g.panel === 'codex', draw: textCodex },
   { is: p => p.g.panel === 'retire', draw: textRetire },
+  { is: p => p.g.panel === 'talent', draw: textTalent },
   { is: p => p.g.panel === 'settings', draw: textSettings },
   { is: p => p.g.panel === 'shop', draw: textShop },
   { is: p => p.g.panel === 'forge', draw: textForge },

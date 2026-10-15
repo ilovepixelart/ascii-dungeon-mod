@@ -54,6 +54,9 @@ export type Orders = { drink: 0 | 25 | 50; smoke: boolean; leave: Rarity }
 /** What every hero of this save has done, kept through a new game: the uniques and big bosses slain and the Legendaries found, by key and name, the records, and the heroes retired (absent, none). */
 export type Codex = { uniques: NonNullable<Foe['unique']>[]; bigs: NonNullable<Foe['big']>[]; legendaries: string[]; deepest: number; level: number; kills: number; bosses: number; deaths: number; gold: number; retired?: number }
 
+/** A talent by key: one picked of three every tenth level, each changing a rule (`TALENTS` in hooks/talents.ts). */
+export type Talent = 'testDriven' | 'cleanCommit' | 'shipIt' | 'rubberDucking' | 'secondWind' | 'opener' | 'bloodletting' | 'grudge' | 'scavenger' | 'ironStomach' | 'haggler' | 'pathfinder'
+
 /** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
 export type Work = 'tests' | 'commit' | 'push' | 'pr'
 
@@ -98,7 +101,7 @@ export type Item = {
 export type Attribute = 'might' | 'focus' | 'vigor' | 'insight'
 
 /** What is open over the map; 'start' is the start screen, where the dungeon waits. */
-export type Panel = 'none' | 'start' | 'death' | 'recap' | 'settings' | 'bag' | 'sheet' | 'codex' | 'retire' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
+export type Panel = 'none' | 'start' | 'death' | 'recap' | 'settings' | 'bag' | 'sheet' | 'codex' | 'retire' | 'talent' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
 
 /** The five kinds of consumable, a belt slot each, each in three tiers. */
 export type Consumable = 'health' | 'regen' | 'fury' | 'ward' | 'smoke'
@@ -161,6 +164,10 @@ export type Game = {
   orders?: Orders
   /** What the tool calls since the player's last click or key came to; absent when none have. */
   recap?: Recap
+  /** The talents picked, in the order picked; absent, none. */
+  talents?: Talent[]
+  /** The depth Second Wind last saved the hero on: once a depth. */
+  wind?: number
   /** The worn piece the last hero to retire passed down, at depth 1 strength: every new hero starts with it. Absent before the first retirement. */
   heirloom?: Item
   /** What every hero of this save has done; absent until the first action after a load, then begun from the game (`firstCodex`). */

@@ -218,6 +218,19 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, heirloom: { ...h, junk: true } })).toContain(rule)
   })
 
+  test('a talent twice, or more talents than levels earned', async () => {
+    const rule = 'talents each once, no more than earned'
+    expect(broke({ ...g, level: 20, talents: ['grudge', 'opener'] })).not.toContain(rule)
+    expect(broke({ ...g, level: 20, talents: ['grudge', 'grudge'] })).toContain(rule)
+    expect(broke({ ...g, level: 19, talents: ['grudge', 'opener'] })).toContain(rule)
+  })
+
+  test('a second wind on a depth not reached', async () => {
+    const rule = 'second wind on a depth reached'
+    expect(broke({ ...g, deepest: 7, wind: 7 })).not.toContain(rule)
+    expect(broke({ ...g, deepest: 7, wind: 8 })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

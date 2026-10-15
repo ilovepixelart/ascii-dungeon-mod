@@ -12,6 +12,7 @@ import { workOf } from './work'
 import type { GitOperation } from './work'
 import { FRAMES_PER_TILE, walkingGame } from './pixels'
 import { levelOf, newGame } from './world'
+import { offer } from './talents'
 import { TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
 
 export type StepRecord = {
@@ -236,8 +237,16 @@ const fidget = (g: Game, d: Dice): Action | undefined => {
   return d(100) <= 4 ? STEPS_BY_HAND[d(4) - 1] : undefined
 }
 
+/** A talent owed, picked from the offer at random: each is taken by some game. */
+const learnTalent = (g: Game, d: Dice): Action | undefined => {
+  const offered = offer(g)
+  return offered.length === 0 ? undefined : { kind: 'talent', talent: offered[d(offered.length) - 1]! }
+}
+
 /** What the simulated player does on its own before the next tool call, if anything. */
 const playerMove = (g: Game, d: Dice): Action | undefined => {
+  const learnt = learnTalent(g, d)
+  if (learnt !== undefined) return learnt
   if (g.where === 'town') return townMove(g, d)
   return leaveWhenClear(g, d) ?? keepAlive(g) ?? clearBag(g, d) ?? fidget(g, d)
 }

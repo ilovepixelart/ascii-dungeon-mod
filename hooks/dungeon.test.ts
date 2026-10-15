@@ -21,6 +21,8 @@ import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
 import { retireButtons } from './retirewindow'
+import { offer } from './talents'
+import { talentCards } from './talentwindow'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
@@ -401,6 +403,41 @@ test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet'
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'retire-clicks' } as never)
   expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('a talent owed is picked from the sheet, saved, and the sheet says when none is', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  expect(await ui.find({ type: 'Button', key: 'sheet-talent', text: /Talent \(1\)/ })).toBeDefined()
+  await ui.press({ key: 'sheet-talent' })
+  const first = offer({ ...newGame(), level: 10 })[0]!
+  await ui.press({ key: `talent-${first}` })
+  expect((kept.get('save') as Game).talents).toEqual([first])
+  expect(await ui.find({ type: 'Text', text: /^Talents: .+\. The next at level 20\.$/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('on a wide pane a talent card, clicked, takes that talent', async ($, on) => {
+  const saved = { ...newGame(), level: 10 }
+  const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-talent' })
+  const card = talentCards({ ...saved, panel: 'talent' })[2]!
+  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 6) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'talent-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'talent-clicks' } as never)
+  expect((kept.get('save') as Game).talents).toEqual([card.talent])
   await ui.unmount()
 })
 

@@ -1,4 +1,4 @@
-import type { Attribute, ChampionMod, Codex, Foe, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
+import type { Attribute, ChampionMod, Codex, Foe, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
@@ -9,6 +9,7 @@ import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
+import { TALENTS, TALENT_EVERY, hasTalent, offer, owed } from './talents'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -70,6 +71,8 @@ export type Action =
   | { kind: 'keepOld' }
   /** The hero retires, passing down the piece they wear in `slot`; the start screen opens for the next. */
   | { kind: 'retire'; slot: Slot }
+  /** One of the talents offered, picked. */
+  | { kind: 'talent'; talent: Talent }
   | { kind: 'train'; stat: Attribute }
   | { kind: 'zoom' }
 
@@ -142,6 +145,7 @@ const levelUp = (g: Game) => {
     g.points += POINTS_PER_LEVEL
     g.toast = `Level up! You are now level ${g.level}.`
     say(g, `*** Level ${g.level}! HP restored, +${POINTS_PER_LEVEL} stat points (open the character sheet). ***`)
+    if (g.level % TALENT_EVERY === 0 && owed(g) > 0) say(g, 'A talent to choose: open the character sheet.')
   }
 }
 
@@ -170,6 +174,11 @@ const die = (g: Game, killer: string) => {
 
 const hurt = (g: Game, amount: number, by: string) => {
   g.hp -= amount
+  if (g.hp <= 0 && hasTalent(g, 'secondWind') && g.wind !== g.depth) {
+    g.hp = 1
+    g.wind = g.depth
+    say(g, 'Second wind: you stand, at 1 HP.')
+  }
   if (g.hp <= 0) die(g, by)
   else obey(g)
 }
@@ -274,11 +283,14 @@ const openChest = (g: Game, kind: ChestKind) => {
   say(g, `You open the ${kind} chest: ${coins} gold${found}.`)
 }
 
+/** How far the hero sees in a corridor: a tile around, two with Pathfinder. */
+export const sightOf = (g: Pick<Game, 'talents'>) => (hasTalent(g, 'pathfinder') ? 2 : 1)
+
 const moveTo = (g: Game, p: Pos) => {
   g.x = p.x
   g.y = p.y
   g.walked = [...g.walked, { x: p.x, y: p.y }]
-  g.seen = reveal(g.seen, visibleFrom(levelOf(g), p))
+  g.seen = reveal(g.seen, visibleFrom(levelOf(g), p, sightOf(g)))
   pickUp(g)
 }
 
@@ -686,6 +698,23 @@ const swing = (g: Game, foe: Foe, isSure: boolean) => {
   return { blow, isCrit, opened: isAmbush ? { opened: true as const } : {} }
 }
 
+/**
+ * Grudge's share more damage to a champion (a nemesis among them) or a unique, and Opener's to a foe at full HP; Bloodletting's
+ * HP from a critical. Simulated from the first step, half again for either took deaths per 1,000 steps from 2.28 to
+ * 1.1 and 1.3; a quarter, to 1.8 and 1.9, with the other talents.
+ */
+const GRUDGE = 1.25
+const OPENER = 1.25
+const BLOODLETTING = 2
+
+/** What the hero's talents multiply a blow on `foe` by. */
+const talentTimes = (g: Game, foe: Foe) => {
+  // A nemesis is a champion too.
+  const isGrudge = hasTalent(g, 'grudge') && (foe.champion !== undefined || foe.unique !== undefined)
+  const isOpener = hasTalent(g, 'opener') && foe.hp === foe.maxHp
+  return (isGrudge ? GRUDGE : 1) * (isOpener ? OPENER : 1)
+}
+
 const strike = (g: Game, isSure = false) => {
   const foe = g.foe
   if (foe === null || !charge(g, foe)) return
@@ -700,7 +729,8 @@ const strike = (g: Game, isSure = false) => {
     say(g, blow.said)
     return
   }
-  const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1))
+  const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1) * talentTimes(g, foe))
+  if (isCrit && hasTalent(g, 'bloodletting')) g.hp = Math.min(g.maxHp, g.hp + BLOODLETTING)
   const left = foe.hp - dmg
   const how = isCrit ? 'CRITICALLY hit' : 'hit'
   if (left > 0) {
@@ -876,6 +906,10 @@ const greenBuild = (g: Game) => {
     say(g, `Your ${aegis.name} hums: the next blow will be turned.`)
   }
   if (g.foe !== null) say(g, 'The tests pass: your blow is sure.')
+  if (hasTalent(g, 'testDriven')) {
+    g.effects = { ...g.effects, fury: g.effects.fury + 2 }
+    say(g, 'Test driven: 2 blows of fury.')
+  }
 }
 
 /**
@@ -890,6 +924,11 @@ const fail = (g: Game, what: string) => {
     strike(g)
     if (g.foe !== null) counter(g, what)
   } else counter(g, what)
+  if (hasTalent(g, 'rubberDucking') && g.deaths === deaths) {
+    g.xp += g.depth
+    say(g, `Rubber ducking: +${g.depth} XP.`)
+    levelUp(g)
+  }
   const mantle = wornPower(g, 'failHeal')
   if (mantle === undefined || g.deaths !== deaths || g.hp >= g.maxHp) return
   g.hp += 1
@@ -899,6 +938,10 @@ const fail = (g: Game, what: string) => {
 /** A commit's shrine: full HP, and the depth marked to wake on, unless a guardian waits on it. */
 const shrine = (g: Game) => {
   g.hp = g.maxHp
+  if (hasTalent(g, 'cleanCommit')) {
+    g.effects = { ...g.effects, ward: Math.max(g.effects.ward, 1) }
+    say(g, 'A clean commit: the next blow will be turned.')
+  }
   if (isBossDepth(g.depth)) {
     say(g, 'You kneel at a shrine: your work is kept. Full HP.')
     return
@@ -911,7 +954,7 @@ const shrine = (g: Game) => {
 /** Found by work: an item of `atLeast` or better, best of two rolls, into the bag. */
 const cache = (g: Game, said: string, atLeast: Rarity) => {
   say(g, said)
-  const item = makeItem(g, atLeast, 2)
+  const item = makeItem(g, atLeast, hasTalent(g, 'shipIt') ? 4 : 2)
   stashOrLeave(g, item)
   g.toast = `${RARITY_NAME[item.rarity]}! ${item.name}`
 }
@@ -1060,6 +1103,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   },
   look: g => look(g),
   retire: (g, a) => say(g, whyNotRetire(g, a.slot) ?? ''),
+  talent: (g, a) => learn(g, a.talent),
   order: (g, a) => order(g, a.order),
   cycle: g => cycle(g),
   place: (g, a) => {
@@ -1243,13 +1287,16 @@ const retrieve = (g: Game, id: number) => {
 /** What the merchant sells and asks for it, in shelf order: gold's one way out besides the smith. */
 export const SHOP_PRICES = { health1: 25, health2: 50, health3: 80, regen1: 45, fury1: 50, ward1: 50, ward2: 75, smoke1: 35, smoke3: 60 } as const satisfies Partial<Record<Ware, number>>
 const PRICES: Readonly<Partial<Record<Ware, number>>> = SHOP_PRICES
-/** A ware's price; one the merchant does not sell has none. */
-export const priceOfWare = (ware: Ware) => PRICES[ware] ?? Infinity
+/** A ware's price, a fifth less for a Haggler; one the merchant does not sell has none. */
+export const priceOfWare = (ware: Ware, g?: Pick<Game, 'talents'>) => {
+  const price = PRICES[ware] ?? Infinity
+  return g !== undefined && hasTalent(g, 'haggler') ? Math.ceil(price * 0.8) : price
+}
 
 const buy = (g: Game, ware: Ware) => {
   const { kind, tier } = wareOf(ware)
   const name = nameOf(kind, tier)
-  const price = priceOfWare(ware)
+  const price = priceOfWare(ware, g)
   if (price === Infinity) say(g, `The merchant has no ${name} to sell.`)
   else if (g.gold < price) say(g, `Not enough gold: a ${name} costs ${price}.`)
   else if (!addToBelt(g, kind, tier)) say(g, `Your belt has no room for a ${name}.`)
@@ -1440,6 +1487,16 @@ const record = (before: Game, g: Game) => {
   const was = before.codex ?? firstCodex(before)
   const now = recorded(was, before, g)
   return paySets(g, was, now) ? recorded(was, before, g) : now
+}
+
+/** A talent picked: only one offered, while one is owed. */
+const learn = (g: Game, t: Talent) => {
+  if (!offer(g).includes(t)) {
+    say(g, owed(g) === 0 ? `No talent to choose until level ${TALENT_EVERY * ((g.talents?.length ?? 0) + 1)}.` : `${TALENTS[t].name} is not on offer.`)
+    return
+  }
+  g.talents = [...(g.talents ?? []), t]
+  say(g, `You learn ${TALENTS[t].name}: ${TALENTS[t].does}`)
 }
 
 /** Whether the hero may retire: once a big boss is slain. */

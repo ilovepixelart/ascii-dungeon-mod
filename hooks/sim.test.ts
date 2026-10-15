@@ -15,3 +15,9 @@ describe('what the map draws against what the strip and log tell', () => {
     for (const cls of ['knight', 'mage', 'rogue'] as const) for (const seed of [1, 2]) expect(simulate(seed, 600, cls).stats).toMatchObject({ drawnUntold: 0, cutsAstray: 0 })
   })
 })
+
+test('the simulated player picks a talent once one is owed', async () => {
+  const run = simulate(1, 1500, 'knight')
+  expect(run.final.level).toBeGreaterThanOrEqual(10)
+  expect(run.final.talents?.length).toBe(Math.floor(run.final.level / 10))
+})

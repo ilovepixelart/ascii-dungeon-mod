@@ -55,6 +55,11 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   the heirloom, and every new hero sets out wearing it (in the bag when the class cannot wear it), its name, look and
   Legendary power kept, its stats its base's plain ones. The next retirement replaces it; the codex counts heroes
   retired. New `retire` action; saves gain the optional `heirloom` and `codex.retired`.
+- Talents, from Talent on the character sheet: one picked of three at every tenth level, twelve in all. Test Driven,
+  Clean Commit, Ship It and Rubber Ducking reward work (fury on passing tests, a ward with a commit's shrine, a push's
+  or pull request's item rolled four times, XP from a failed call); Second Wind, Opener, Bloodletting, Grudge,
+  Scavenger, Iron Stomach, Haggler and Pathfinder change fights, potions, prices and sight. A hero already past level
+  10 has the picks it earned waiting. New `talent` action; saves gain the optional `talents` and `wind`.
 - Hero orders in settings: drink a healing potion under a quarter of max HP (on by default), under half, or never;
   throw a smoke bomb when low with no healing left (off by default); leave a kill's Commons, or anything below Rare, on
   the floor (off by default). New `order` action; saves gain the optional `orders`, older saves taking the defaults.

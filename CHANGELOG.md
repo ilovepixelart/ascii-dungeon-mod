@@ -12,6 +12,10 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Changed behaviour
 
+- The game is saved after every change, where it was saved only when a turn ended: stats trained, gear changed,
+  potions drunk or wares bought by hand between turns survive the session's end.
+- Sound settings (effects, music, volume) are kept across sessions and reloads; they went back to the defaults every
+  time the mod loaded.
 - Legendary powers take effect; they were shown on the item card but did nothing. Segfault triples critical damage,
   the Mantle of the Monorepo mends 1 HP after a failed call, the Band of the Endless Loop heals 3 HP every fifth kill
   (was described as every fifth fight), the Aegis of Green Builds wards off the next hit after a passing test run (was

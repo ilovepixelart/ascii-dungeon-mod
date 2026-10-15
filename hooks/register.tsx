@@ -12,7 +12,7 @@ import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
-import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, volumeShare } from './settings'
+import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
@@ -52,6 +52,8 @@ const PANE = 'dungeon'
 /** Docked, the pane asks to be wide enough for the pixel inventory window and the dashboard with its belt beside the bars. */
 const OPEN = { id: PANE, title: 'Dungeon', columns: 112 }
 const SAVE = 'save'
+/** The sound as set in settings, kept across sessions and reloads. */
+const SOUND = 'sound'
 /** How long the bench walk is: long enough for the camera to scroll and the torch to move many times. */
 const BENCH_TILES = 40
 /** The bench's level: a fixed one, every tile explored, so each run crosses the same lit ground whatever the save holds. */
@@ -367,9 +369,18 @@ const followWalk = ($: EngineInterface, before: Game, next: Game, isWalkShown: b
   else if (walk !== null) walk = { ...walk, start: { ...walk.start, foe: next.foe }, game: pending === null ? next : walk.game }
 }
 
+/** The saves under way, one after another, so a later game never lands before an earlier one. */
+let saving: Promise<unknown> = Promise.resolve()
+
+/** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. */
+const save = ($: EngineInterface, g: Game) => {
+  saving = saving.then(() => $.store.set(SAVE, g)).catch(() => undefined)
+}
+
 const commit = async ($: EngineInterface, action: Action, byHand: boolean, isWalkShown: boolean, shown?: Game) => {
   const before = normalize(await read($, game))
   const next = normalize(await update($, game, g => apply(g, action)))
+  if (next !== before) save($, next)
   followWalk($, before, next, isWalkShown)
   const hits = hitsBetween(before, next)
   // A death plays on the level the hero fell on, not the one they woke on.
@@ -664,6 +675,7 @@ const walkClip = (start: Game, game: Game, tileCount: number, tiles: Game[] | nu
 const setSound = ($: EngineInterface, g: Game, next: SoundSettings) => {
   const isTuneChanged = next.music !== soundSettings.music || next.volume !== soundSettings.volume
   soundSettings = next
+  void $.store.set(SOUND, next).catch(() => undefined)
   if (!isTuneChanged) return
   music?.stop()
   music = null
@@ -861,6 +873,8 @@ const startBench = async ($: EngineInterface) => {
 
 /** The session begun: the commands, the idle motion, the saved game opened if the session has none yet, the pane. */
 const beginSession = async ($: EngineInterface) => {
+  // A load starts the sound from the options; what was set in settings since is kept, and wins.
+  soundSettings = soundFrom(await $.store.get(SOUND).catch(() => undefined), soundSettings)
   await $.command.register({
     name: 'dungeon',
     description: 'Open the ASCII dungeon your coding session crawls through',

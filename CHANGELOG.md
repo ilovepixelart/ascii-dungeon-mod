@@ -33,6 +33,10 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
 
 ### Added
 
+- Work is rewarded: tests that pass make the blow a sure critical; a commit kneels the hero at a shrine (full HP, and a
+  fall deeper in the theme wakes on that depth); a push leaves an item of Rare or better, a pull request opened or
+  merged one of Epic or better. Commits, pushes and pull requests count once a depth each. The `outcome` action takes
+  an optional `work`; saves gain the optional `waypoint` and `boons`, and older saves load as they are.
 - Settings, from a gear in the strip: New game (moved off the character sheet), the view, sound effects and music each
   on or off, and the volume.
 - A right-click on a belt slot opens a menu of the tiers it holds; a click on one uses that tier. `use` takes an

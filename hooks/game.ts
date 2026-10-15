@@ -1,4 +1,4 @@
-import type { Attribute, ChampionMod, Foe, Fortune, Game, HeroClass, Item, Nemesis, Panel, Quest, Rarity, Slot } from '../types'
+import type { Attribute, ChampionMod, Foe, Fortune, Game, HeroClass, Item, Nemesis, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, healingSlot, killConsumable, nameOf, tickEffects, useBelt, wareOf } from './consumables'
@@ -19,7 +19,8 @@ export type Action =
   | { kind: 'explore'; steps: number }
   | { kind: 'summon'; name: string }
   | { kind: 'ally' }
-  | { kind: 'outcome'; ok: boolean; what: string }
+  /** A tool call's end: whether it succeeded, and what work it came to when it did. */
+  | { kind: 'outcome'; ok: boolean; what: string; work?: Work }
   | { kind: 'quest'; text: string }
   | { kind: 'descend' }
   | { kind: 'attack' }
@@ -138,8 +139,9 @@ const die = (g: Game, killer: string) => {
   const at = { x: g.x, y: g.y }
   g.deaths += 1
   g.toast = `Slain by ${killer} on depth ${g.depth}.`
-  // Back to the first depth of the theme: what was won below it stays won, and the depths above are not walked again.
-  const wake = Math.floor((g.depth - 1) / THEME_DEPTHS) * THEME_DEPTHS + 1
+  // Back to the first depth of the theme, or the depth a commit marked in it: what was won below it stays won, and the depths above are not walked again.
+  const first = Math.floor((g.depth - 1) / THEME_DEPTHS) * THEME_DEPTHS + 1
+  const wake = g.waypoint !== undefined && g.waypoint >= first && g.waypoint <= g.depth ? g.waypoint : first
   say(g, `You were slain by ${killer} on depth ${g.depth}. You wake on depth ${wake}.`)
   remember(g)
   Object.assign(g, arrive(g.world, wake), { walked: [], fortune: null, tension: 0, calm: 0, lastSold: null })
@@ -619,16 +621,16 @@ const slay = (g: Game, foe: Foe) => {
  * The hero's swing at the foe: a crit by chance, or sure in the rogue's ambush (the first strike of each fight); a
  * hit of fury doubled, one fewer left; then what the foe's kind makes of it (`heroBlowOn`).
  */
-const swing = (g: Game, foe: Foe) => {
+const swing = (g: Game, foe: Foe, isSure: boolean) => {
   const isAmbush = g.cls === 'rogue' && foe.opened === undefined
-  const isCrit = roll(g, 100) <= critChance(g) || isAmbush
+  const isCrit = roll(g, 100) <= critChance(g) || isAmbush || isSure
   const isFury = g.effects.fury > 0
   if (isFury) g.effects = { ...g.effects, fury: g.effects.fury - 1 }
   const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? 2 : 1) * (isFury ? 2 : 1))
   return { blow, isCrit, opened: isAmbush ? { opened: true as const } : {} }
 }
 
-const strike = (g: Game) => {
+const strike = (g: Game, isSure = false) => {
   const foe = g.foe
   if (foe === null || !charge(g, foe)) return
   if ((foe.shield ?? 0) > 0) {
@@ -636,7 +638,7 @@ const strike = (g: Game) => {
     say(g, `The ${foe.name}'s shield turns your blow.`)
     return
   }
-  const { blow, isCrit, opened } = swing(g, foe)
+  const { blow, isCrit, opened } = swing(g, foe, isSure)
   if (blow.said !== undefined) {
     g.foe = { ...foe, ...opened }
     say(g, blow.said)
@@ -794,14 +796,53 @@ const summon = (g: Game, name: string) => {
   say(g, `A ${g.foe.name} (${g.foe.glyph}) emerges from the dark!`)
 }
 
-/** A tool call settles one exchange: a success hits the foe and a foe that survives hits back; a failure only takes the foe's hit. */
-const outcome = (g: Game, ok: boolean, what: string) => {
+/**
+ * A tool call settles one exchange: a success hits the foe and a foe that survives hits back; a failure only takes the
+ * foe's hit. Tests that pass make the blow a sure critical; other work is rewarded after (`reward`).
+ */
+const outcome = (g: Game, ok: boolean, what: string, work: Work | undefined) => {
   if (ok) {
-    strike(g)
+    if (work === 'tests' && g.foe !== null) say(g, 'The tests pass: your blow is sure.')
+    strike(g, work === 'tests')
     if (g.foe !== null) counter(g, what)
   } else counter(g, what)
   const regen = tickEffects(g)
   if (regen !== undefined) say(g, regen)
+  if (ok) reward(g, work)
+}
+
+/** A commit's shrine: full HP, and the depth marked to wake on, unless a guardian waits on it. */
+const shrine = (g: Game) => {
+  g.hp = g.maxHp
+  if (isBossDepth(g.depth)) {
+    say(g, 'You kneel at a shrine: your work is kept. Full HP.')
+    return
+  }
+  g.waypoint = g.depth
+  say(g, `You kneel at a shrine: your work is kept. Full HP; you will wake on depth ${g.depth}.`)
+  g.toast = `Shrine: you will wake on depth ${g.depth}.`
+}
+
+/** Found by work: an item of `atLeast` or better, best of two rolls, into the bag. */
+const cache = (g: Game, said: string, atLeast: Rarity) => {
+  say(g, said)
+  const item = makeItem(g, atLeast, 2)
+  stashOrLeave(g, item)
+  g.toast = `${RARITY_NAME[item.rarity]}! ${item.name}`
+}
+
+/** What a commit, a push and a pull request each give, once a depth. */
+const REWARDS: Readonly<Record<Exclude<Work, 'tests'>, (g: Game) => void>> = {
+  commit: shrine,
+  push: g => cache(g, 'Your work goes out, and a cache opens.', 'rare'),
+  pr: g => cache(g, 'Your pull request opens a hoard.', 'epic'),
+}
+
+/** Work's reward, once a depth for each kind: tests are their blow alone. */
+const reward = (g: Game, work: Work | undefined) => {
+  if (work === undefined || work === 'tests' || g.boons?.[work] === g.depth) return
+  g.boons = { ...g.boons, [work]: g.depth }
+  REWARDS[work](g)
 }
 
 const ally = (g: Game) => {
@@ -907,7 +948,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   explore: (g, a) => step(g, a.steps),
   summon: (g, a) => summon(g, a.name),
   ally: g => ally(g),
-  outcome: (g, a) => outcome(g, a.ok, a.what),
+  outcome: (g, a) => outcome(g, a.ok, a.what, a.work),
   quest: (g, a) => say(g, `A new quest: "${a.text.slice(0, 48)}"`),
   descend: g => descend(g),
   attack: g => attack(g),
@@ -1239,7 +1280,9 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   explore: rest,
   summon: rest,
   ally: rest,
-  outcome: () => undefined,
+  outcome: (g, a) => {
+    if (a.ok) reward(g, a.work)
+  },
   attack: g => say(g, 'No foes here.'),
   walk: g => say(g, NO_STAIRS),
   stairs: g => say(g, NO_STAIRS),

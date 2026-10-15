@@ -8,6 +8,8 @@ import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from '.
 import { MAP_H, MAP_W, chestAt, floorThing, isFloor } from './map'
 import type { Level, Pos } from './map'
 import { violations } from './invariants'
+import { workOf } from './work'
+import type { GitOperation } from './work'
 import { FRAMES_PER_TILE, walkingGame } from './pixels'
 import { levelOf, newGame } from './world'
 import { TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
@@ -92,7 +94,17 @@ const TOOLS: readonly { tool: string; weight: number; failPct: number }[] = [
   { tool: 'WebSearch', weight: 2, failPct: 5 },
 ]
 const FILES = ['src/auth.ts', 'src/db/pool.ts', 'README.md', 'src/api/routes.ts', 'test/auth.test.ts']
-const COMMANDS = ['npm test', 'git status', 'tsc -p .', 'npm run lint', 'ls src']
+/** Shell commands by how often a session runs them, with the git work the host would report on each. */
+const COMMANDS: readonly { command: string; weight: number; git?: GitOperation }[] = [
+  { command: 'npm test', weight: 24 },
+  { command: 'git status', weight: 16 },
+  { command: 'tsc -p .', weight: 12 },
+  { command: 'npm run lint', weight: 12 },
+  { command: 'ls src', weight: 12 },
+  { command: 'git commit -m wip', weight: 8, git: { commit: { kind: 'committed' } } },
+  { command: 'git push', weight: 4, git: { push: {} } },
+  { command: 'gh pr create', weight: 1, git: { pr: { action: 'created' } } },
+]
 
 /** The nearest seen floor cell beside floor not yet seen: where an opening leads somewhere new. */
 const frontier = (g: Game) => {
@@ -230,13 +242,24 @@ const playerMove = (g: Game, d: Dice): Action | undefined => {
   return leaveWhenClear(g, d) ?? keepAlive(g) ?? clearBag(g, d) ?? fidget(g, d)
 }
 
-const pickTool = (d: (n: number) => number) => {
-  let n = d(TOOLS.reduce((sum, t) => sum + t.weight, 0))
-  for (const t of TOOLS) {
+/** One of `choices`, each as likely as its weight. */
+const pick = <T extends { weight: number }>(d: (n: number) => number, choices: readonly T[]) => {
+  let n = d(choices.reduce((sum, t) => sum + t.weight, 0))
+  for (const t of choices) {
     n -= t.weight
     if (n <= 0) return t
   }
-  return TOOLS[0]!
+  return choices[0]!
+}
+
+/** One tool call, as its start and its outcome: a shell call's work as the host would report it when it succeeds. */
+const toolCall = (d: (n: number) => number): Action[] => {
+  const t = pick(d, TOOLS)
+  const shell = t.tool === 'Bash' ? pick(d, COMMANDS) : undefined
+  const start = onToolStart(t.tool, shell?.command ?? FILES[d(FILES.length) - 1])
+  const ok = d(100) > t.failPct
+  const work = ok && shell !== undefined ? workOf(shell.command, shell.git) : undefined
+  return [start, { kind: 'outcome', ok, what: t.tool, ...(work === undefined ? {} : { work }) }]
 }
 
 /** The session's next actions: a tool call is its start then its outcome; a turn ends by taking the stairs. */
@@ -250,10 +273,7 @@ function* session(g: () => Game, d: (n: number) => number): Generator<Action> {
         if (own === undefined) break
         yield own
       }
-      const t = pickTool(d)
-      const target = t.tool === 'Bash' ? COMMANDS[d(COMMANDS.length) - 1] : FILES[d(FILES.length) - 1]
-      yield onToolStart(t.tool, target)
-      yield { kind: 'outcome', ok: d(100) > t.failPct, what: t.tool }
+      yield* toolCall(d)
     }
     yield { kind: 'descend' }
   }

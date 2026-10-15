@@ -54,6 +54,31 @@ test("a failing shell command costs the hero HP, once the knight's shield has tu
   expect(await ui.find({ type: 'Text', text: /^\[ +HP 30\/30 +\]/ })).toBeUndefined()
 })
 
+const SHELL_DONE = { stdout: '', stderr: '', interrupted: false }
+
+test('a commit the host reports kneels the hero at a shrine', async ($, on) => {
+  on('tool.call', () => ({ result: { ...SHELL_DONE, gitOperation: { commit: { sha: 'abc1234', kind: 'committed' } } } as never }))
+  await $.tool.call({ tool: 'Bash', command: 'git commit -m "fix the build"' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /^> You kneel at a shrine: your work is kept\./ })).toBeDefined()
+})
+
+test('a passing test run makes the blow sure', async ($, on) => {
+  on('tool.call', () => ({ result: SHELL_DONE as never }))
+  await $.tool.call({ tool: 'Bash', command: 'bun test' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /^> The tests pass: your blow is sure\.$/ })).toBeDefined()
+})
+
+test('a failing test run is no sure blow, and a commit the host does not report no shrine', async ($, on) => {
+  on('tool.call', (_$, e) => (e.tool === 'Bash' && e.command === 'bun test' ? { result: { stdout: '', stderr: 'boom' } as never, isError: true } : { result: SHELL_DONE as never }))
+  await $.tool.call({ tool: 'Bash', command: 'git commit -qm "fix the build"' })
+  await $.tool.call({ tool: 'Bash', command: 'bun test' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /^> You kneel at a shrine/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /^> The tests pass/ })).toBeUndefined()
+})
+
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`the pane draws the map and its buttons act (${surface})`, async $ => {
     const ui = await $.ui.mount({ ...PANE, surface })

@@ -2,6 +2,7 @@
 
 A Claude Code mod: the session's coding activity drives a pixel roguelike drawn in a pane. Each tool call moves the
 hero: a read explores, an edit or a shell command meets a foe, a failure lets it hit back, a turn's end takes the stairs.
+Real work pays: passing tests strike a sure critical, a commit kneels at a shrine, a push or a pull request opens a cache.
 Click the map to walk, open the inventory from the hero's portrait, and visit the town through the portal: a merchant,
 a smith, a healer, a stash, an elder with quests, a mystic with fortunes.
 

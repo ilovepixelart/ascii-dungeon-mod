@@ -3,7 +3,7 @@ import type { Game, Item, Slot } from '../types'
 import { activeTier, countOf, nameOf } from './consumables'
 import type { Run } from './game'
 import { CELL, ICONS } from './icons'
-import { BAG_H, BAG_W, POWERS, TRIGGERS, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
+import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
 import { GRID, SLOT, SLOT_BG, art, canvas, canvasCells, fill, frame, put } from './canvas'
 import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid } from './pieces'
 import { BODY_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
@@ -153,6 +153,10 @@ export const itemCard = (g: Game): Run[][] => {
   const changes = changeLine(g, item)
   if (changes !== undefined) lines.push(changes)
   if (item.power !== undefined) lines.push([{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }])
+  if (item.set !== undefined) {
+    const set = SETS[item.set]
+    lines.push([{ text: `${set.name}, ${setWorn(g, item.set)} of ${set.pieces.length} worn: `, color: SET_COLOR, bold: true }, { text: `2, ${set.twoSaid}; ${set.pieces.length}, ${set.three}`, dim: true }])
+  }
   if (item.trigger !== undefined) lines.push([{ text: `${TRIGGERS[item.trigger].name}: `, color: RARITY_COLOR[item.rarity], bold: true }, { text: TRIGGERS[item.trigger].does, dim: true }, ...(isTriggerWornElsewhere(g, item) ? [{ text: '  same trigger as worn: no effect', color: OFF_CLASS }] : [])])
   lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: '#ffd34d' }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
   return lines

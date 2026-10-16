@@ -1,7 +1,7 @@
 // Making items: a plain base, a class's starting kit, and a rolled drop.
-import type { Game, HeroClass, Item, Rarity, Trigger } from '../../types'
+import type { ClassSet, Game, HeroClass, Item, Rarity, Trigger } from '../../types'
 import { hash, pick, roll } from '../rng'
-import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, RARE_TRIGGER_SHARE, STARTING_KIT, SUFFIXES, TRIGGERS, baseOf } from './catalog'
+import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, RARE_TRIGGER_SHARE, SETS, STARTING_KIT, SUFFIXES, TRIGGERS, baseOf } from './catalog'
 import type { Base } from './catalog'
 import { NO_STATS, STAT_KEYS, plus } from './stats'
 import type { Stats } from './stats'
@@ -107,9 +107,12 @@ export const reforgeItem = (g: Game, item: Item): Item => {
   const base = baseOf(item.base) ?? BASES[0]!
   const { name, stats } = affixed(g, base, AFFIX_COUNT[item.rarity])
   const stat = temperStat(item)
+  const tempered = { ...stats, [stat]: stats[stat] + (item.temper ?? 0) }
+  // A set piece keeps its name, and its set is its power: no trigger.
+  if (item.set !== undefined) return { ...item, ...tempered }
   const { trigger: _trigger, ...kept } = item
   const trigger = triggerFor(item.rarity, roll(g, 100) - 1, roll(g, ALL_TRIGGERS.length) - 1)
-  return { ...kept, name, ...stats, [stat]: stats[stat] + (item.temper ?? 0), ...(trigger === undefined ? {} : { trigger }) }
+  return { ...kept, name, ...tempered, ...(trigger === undefined ? {} : { trigger }) }
 }
 
 const ALL_TRIGGERS = Object.keys(TRIGGERS) as Trigger[]
@@ -149,6 +152,19 @@ const legendaryOf = (g: Game): Item => {
   const bonus = Math.floor(g.depth / 3)
   const grown = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, typeof v === 'number' && v > 0 && STAT_KEYS.includes(k as never) ? v + (k === 'hp' ? bonus * 2 : bonus) : v]))
   return { ...plainItem(g, base, 'legendary'), name, power, ...plus(NO_STATS, grown) }
+}
+
+/**
+ * A piece of the set: an Epic of its base with its affixes' stats as rolled, its own name and no trigger. Of the
+ * pieces, one the hero has nowhere (bag, stash or worn) comes first; which, by the depth and the world.
+ */
+export const setPiece = (g: Game, set: ClassSet): Item => {
+  const owned = [...g.bag, ...g.stashed, ...Object.values(g.gear)].filter(i => i?.set === set).map(i => i!.base)
+  const missing = SETS[set].pieces.filter(p => !owned.includes(p.base))
+  const from = missing.length > 0 ? missing : SETS[set].pieces
+  const piece = from[hash(g.depth, g.world, 37) % from.length]!
+  const { stats } = affixed(g, baseOf(piece.base) ?? BASES[0]!, AFFIX_COUNT.epic)
+  return { ...plainItem(g, piece.base, 'epic'), name: piece.name, ...stats, set }
 }
 
 export const makeItem = (g: Game, atLeast: Rarity = 'common', rolls = 1): Item => {

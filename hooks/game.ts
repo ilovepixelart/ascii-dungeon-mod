@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, makeItem, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -630,7 +630,8 @@ const loot = (g: Game, isChampion = false) => {
 /** A boss's hoard: the best of three rolls, Rare at least (a big boss's Epic at least), and an Elixir; the way down opens. */
 const bossLoot = (g: Game, name: string, isBig = false) => {
   say(g, addToBelt(g, 'health', 3) ? 'Loot: Elixir.' : 'Your belt is full. The Elixir stays on the floor.')
-  const item = makeItem(g, isBig ? 'epic' : 'rare', 3)
+  // Half a big boss's Epics, by the depth and the world, are a piece of the hero's class's set.
+  const item = isBig && hash(g.depth, g.world, 41) < SET_SHARE ? setPiece(g, setOf(g.cls)) : makeItem(g, isBig ? 'epic' : 'rare', 3)
   stashOrLeave(g, item)
   if (item.rarity !== 'legendary' && item.rarity !== 'epic') g.toast = `The ${name} falls: ${item.name}. The way down is open.`
   else announce(g, item)
@@ -718,8 +719,11 @@ const swing = (g: Game, foe: Foe, isSure: boolean) => {
   if (isFury) g.effects = { ...g.effects, fury: g.effects.fury - 1 }
   const critTimes = wornPower(g, 'tripleCrit') === undefined ? 2 : 3
   const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? critTimes : 1) * (isFury ? 2 : 1))
-  return { blow, isCrit, opened: isAmbush ? { opened: true as const } : {} }
+  return { blow, isCrit, opened: isAmbush ? openingPlayed(g, foe) : {} }
 }
+
+/** The class's opening played against the foe: done, or with a whole set and the first of two played, braced for the second. */
+const openingPlayed = (g: Game, foe: Foe): Pick<Foe, 'opened' | 'braced'> => (isSetWhole(g) && foe.braced === undefined ? { braced: true } : { opened: true })
 
 /**
  * Grudge's share more damage to a champion (a nemesis among them) or a unique, and Opener's to a foe at full HP; Bloodletting's
@@ -793,9 +797,9 @@ export const classAbout = (cls: HeroClass) => {
   return `${CLASS_NAME[cls]}: ${CLASS_ABILITY[cls]}. ${lean}. ${kit}.`
 }
 
-/** The mage's siphon: a fifth of max HP back from every kill. */
+/** The mage's siphon: a fifth of max HP back from every kill, a quarter with the whole Archivist's set. */
 const siphon = (g: Game, name: string) => {
-  const healed = Math.min(g.maxHp - g.hp, Math.ceil(g.maxHp / 5))
+  const healed = Math.min(g.maxHp - g.hp, Math.ceil(g.maxHp / (isSetWhole(g) ? 4 : 5)))
   if (healed <= 0) return
   g.hp += healed
   say(g, `You draw on the fallen ${name}. +${healed} HP`)
@@ -803,8 +807,8 @@ const siphon = (g: Game, name: string) => {
 
 /** The foe's blow turned aside: the knight's shield takes the first of each fight, else a ward the next. */
 const isTurned = (g: Game, by: string) => {
-  if (g.cls === 'knight' && g.foe !== null && g.foe.opened === undefined) {
-    g.foe = { ...g.foe, opened: true }
+  if (g.cls === 'knight' && g.foe !== null && g.foe.opened === undefined && g.foe.braced === undefined) {
+    g.foe = { ...g.foe, ...openingPlayed(g, g.foe) }
     say(g, `Your shield turns ${by}'s blow.`)
     return true
   }
@@ -833,8 +837,8 @@ const counter = (g: Game, what: string) => {
     if (!turn.strikes) return
   }
   if (isTurned(g, by)) return
-  const { dmg, isBulwark } = foeBlow(g, turn)
-  say(g, `${capitalized(by)} strikes you for ${dmg}${isBulwark ? ', half of it turned' : ''}.`)
+  const { dmg, halved } = foeBlow(g, turn)
+  say(g, `${capitalized(by)} strikes you for ${dmg}${HALVED_SAID[halved]}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
   if (g.foe?.champion === 'vampiric') g.foe = { ...g.foe, hp: Math.min(g.foe.maxHp, g.foe.hp + dmg) }
@@ -842,12 +846,22 @@ const counter = (g: Game, what: string) => {
   landed(g, dmg)
 }
 
-/** The foe's blow (an imp's with no foe) after the hero's defense, its turn and the depth's twist; the first of a fight to land halved by Bulwark, rounded up. */
+/** What the log adds to a blow halved once or twice. */
+const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned'] as const
+
+/**
+ * The foe's blow (an imp's with no foe) after the hero's defense, its turn and the depth's twist, halved (rounded up)
+ * for the first of a fight to land with Bulwark worn, and for the knight's braced shield: with the whole Oathbound set
+ * the shield turns the first blow and halves the second, which spends the opening.
+ */
 const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
   const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
   const blow = Math.max(1, Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust) - (turn?.pierces === true ? 0 : defense(g)))
   const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
-  return { dmg: isBulwark ? Math.ceil(blow / 2) : blow, isBulwark }
+  const isBraced = g.cls === 'knight' && g.foe?.braced === true && g.foe.opened === undefined
+  if (isBraced && g.foe !== null) g.foe = { ...g.foe, opened: true }
+  const once = isBulwark ? Math.ceil(blow / 2) : blow
+  return { dmg: isBraced ? Math.ceil(once / 2) : once, halved: (isBulwark ? 1 : 0) + (isBraced ? 1 : 0) }
 }
 
 /** A blow landed and the hero standing (a death takes the foe away with it): the foe has landed one, and Thorns answers it. */

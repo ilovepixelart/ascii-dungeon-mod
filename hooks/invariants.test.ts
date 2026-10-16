@@ -80,6 +80,9 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, cls: 'mage', foe })).toContain('opening only by a class that has one')
     expect(broke({ ...g, cls: 'knight', foe })).not.toContain('opening only by a class that has one')
     expect(broke({ ...g, cls: 'rogue', foe })).not.toContain('opening only by a class that has one')
+    const braced = { ...foe, opened: undefined, braced: true as const }
+    expect(broke({ ...g, cls: 'mage', foe: braced })).toContain('opening only by a class that has one')
+    expect(broke({ ...g, cls: 'knight', foe: braced })).not.toContain('opening only by a class that has one')
   })
 
   test('a quest done more times than it asks, or asking for nothing', async () => {
@@ -224,6 +227,17 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, level: 20, talents: ['grudge', 'opener'] })).not.toContain(rule)
     expect(broke({ ...g, level: 20, talents: ['grudge', 'grudge'] })).toContain(rule)
     expect(broke({ ...g, level: 19, talents: ['grudge', 'opener'] })).toContain(rule)
+  })
+
+  test('a set piece not Epic, with a trigger, or not one of its set', async () => {
+    const rule = 'set pieces Epic, untriggered, each of its set by base and name'
+    const piece = (over: Partial<ReturnType<typeof plainItem>> = {}) => ({ ...plainItem(g, 'plate', 'epic'), name: 'Oathbound Plate', set: 'oathbound' as const, ...over })
+    expect(broke({ ...g, stashed: [piece()] })).not.toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ rarity: 'rare' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ trigger: 'thorns' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ name: 'Oathbound Helm' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ set: 'archivist' })] })).toContain(rule)
+    expect(broke({ ...g, heirloom: piece({ rarity: 'rare' }) })).toContain(rule)
   })
 
   test('a trigger on a tier that rolls none, or one unknown', async () => {

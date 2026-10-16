@@ -60,6 +60,11 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   or pull request's item rolled four times, XP from a failed call); Second Wind, Opener, Bloodletting, Grudge,
   Scavenger, Iron Stomach, Haggler and Pathfinder change fights, potions, prices and sight. A hero already past level
   10 has the picks it earned waiting. New `talent` action; saves gain the optional `talents` and `wind`.
+- Class sets: three Epic pieces a class, half a big boss's Epics being one of the hero's class. Two worn add a stat
+  (Oathbound +2 def, Archivist's +10% XP, Nightglass +5% crit); three strengthen the class's ability (the knight's
+  shield turns the first blow of a fight and halves the second, the mage's siphon restores a quarter of max HP, the
+  rogue's first two strikes of a fight are sure criticals). The card shows the set and its bonuses. Saves gain the
+  optional `set` on items and `braced` on the foe.
 - Triggers on Rares and Epics: every Epic and about a third of Rares carry one of eight rules while worn (Thorns,
   Leeching, Momentum, Bulwark, Executioner, Prospector, and Quick Study and Fresh Start for passing tests and
   commits), shown on the item card. The same trigger on two pieces counts once. Items already in a save carry none

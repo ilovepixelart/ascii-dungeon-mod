@@ -15,6 +15,8 @@ export type Foe = {
   boss?: true
   /** The hero's class has played its opening against it: the knight's block or the rogue's ambush. */
   opened?: true
+  /** A full class set's first opening is played: the knight's first block, the rogue's first ambush; the second marks `opened`. */
+  braced?: true
   /** One of its blows has landed this fight: Bulwark halves only the first. */
   landed?: true
   /** Its turns so far this fight, for the traits that come round every few. */
@@ -63,6 +65,9 @@ export type Mark = 'steady' | 'mild' | 'brittle' | 'ironclad' | 'frenzied' | 'le
 /** A trigger by key: a rule a Rare or Epic changes while worn, once however many pieces carry it. */
 export type Trigger = 'thorns' | 'leeching' | 'momentum' | 'bulwark' | 'executioner' | 'prospector' | 'quickStudy' | 'freshStart'
 
+/** A class's set: three Epic pieces, a bonus at two worn and its class's ability strengthened at three. */
+export type ClassSet = 'oathbound' | 'archivist' | 'nightglass'
+
 export type Talent = 'testDriven' | 'cleanCommit' | 'shipIt' | 'rubberDucking' | 'secondWind' | 'opener' | 'bloodletting' | 'grudge' | 'scavenger' | 'ironStomach' | 'haggler' | 'pathfinder'
 
 /** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
@@ -98,6 +103,8 @@ export type Item = {
   power?: string
   /** A Rare's or an Epic's trigger, a rule it changes while worn (`TRIGGERS` in hooks/items/catalog.ts). */
   trigger?: Trigger
+  /** The class set it is a piece of (`SETS` in hooks/items/catalog.ts); absent, none. */
+  set?: ClassSet
   junk?: boolean
   /** Kept whatever happens: not sold, marked as junk or destroyed until unlocked. */
   locked?: true

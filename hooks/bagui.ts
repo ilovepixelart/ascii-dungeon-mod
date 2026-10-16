@@ -5,7 +5,7 @@ import type { Action, Run } from './game'
 import { CELL } from './icons'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, dropTarget } from './inventory'
 import type { Drag } from './inventory'
-import { POWERS, RARITY_COLOR, RARITY_NAME, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf } from './items'
+import { POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
 import { wrap } from './talk'
 import type { Pos } from './map'
 import { beltSlotRect } from './pieces'
@@ -50,11 +50,21 @@ export const card = (g: Game, item: Item, title: string | undefined, compare: bo
   ...statLines(g, item, compare),
   ...(item.power === undefined ? [] : [[{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }]]),
   ...triggerLines(g, item),
+  ...setLines(g, item),
   [{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: KEY_INK }],
 ]
 
 /** A card's text width for what a trigger does, so the card stays as narrow as its other lines. */
 const TRIGGER_W = 29
+
+/** A set piece's lines on a card: the set and how many of it are worn, then each bonus, in the set's color once worn to it. */
+const setLines = (g: Game, item: Item): Run[][] => {
+  if (item.set === undefined) return []
+  const set = SETS[item.set]
+  const worn = setWorn(g, item.set)
+  const bonus = (at: number, said: string) => wrap([[{ text: `${at}: ${said}`, ...(worn >= at ? { color: SET_COLOR } : { dim: true }) }]], TRIGGER_W + 2)
+  return [[{ text: `${set.name}, ${worn} of ${set.pieces.length} worn`, color: SET_COLOR, bold: true }], ...bonus(2, set.twoSaid), ...bonus(set.pieces.length, set.three)]
+}
 
 /** A trigger's lines on a card: its name in the item's tier color, what it does wrapped under it, and a note when another worn piece has it. */
 const triggerLines = (g: Game, item: Item): Run[][] => {

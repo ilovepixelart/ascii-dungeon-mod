@@ -2,7 +2,7 @@
 // Each returns a sentence naming what broke, or nothing.
 import type { Game } from '../types'
 import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
-import { BAG_H, BAG_W, RARE_KILLS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
+import { BAG_H, BAG_W, RARE_KILLS, SETS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
 import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
@@ -35,7 +35,7 @@ const RULES: Readonly<Record<string, Rule>> = {
   },
   'boss only on a boss depth': g => (g.foe?.boss === true && !isBossDepth(g.depth) ? `the ${g.foe.name} guards depth ${g.depth}` : undefined),
   'boss slain on a boss depth reached': g => (g.bossSlain === 0 || (isBossDepth(g.bossSlain) && g.bossSlain <= g.deepest) ? undefined : `boss of depth ${g.bossSlain} slain, deepest ${g.deepest}`),
-  'opening only by a class that has one': g => (g.foe?.opened === true && g.cls !== 'knight' && g.cls !== 'rogue' ? `the ${g.foe.name} met a ${g.cls}'s opening` : undefined),
+  'opening only by a class that has one': g => ((g.foe?.opened === true || g.foe?.braced === true) && g.cls !== 'knight' && g.cls !== 'rogue' ? `the ${g.foe.name} met a ${g.cls}'s opening` : undefined),
   'quest within its count': g => {
     const q = g.quest
     return q === null || (q.need >= 1 && q.have >= 0 && q.have <= q.need && q.depth >= 1) ? undefined : `quest ${q.kind}: ${q.have} of ${q.need} on depth ${q.depth}`
@@ -90,6 +90,11 @@ const RULES: Readonly<Record<string, Rule>> = {
     const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
     const wrong = all.find(i => i.trigger !== undefined && (!(i.rarity === 'rare' || i.rarity === 'epic') || TRIGGERS[i.trigger] === undefined))
     return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} carries ${wrong.trigger}`
+  },
+  'set pieces Epic, untriggered, each of its set by base and name': g => {
+    const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
+    const wrong = all.find(i => i.set !== undefined && (i.rarity !== 'epic' || i.trigger !== undefined || !SETS[i.set]?.pieces.some(p => p.base === i.base && p.name === i.name)))
+    return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} (${wrong.base}) of set ${wrong.set}${wrong.trigger === undefined ? '' : ` with ${wrong.trigger}`}`
   },
   'heirloom untempered, unlocked, not junk': g => {
     const h = g.heirloom

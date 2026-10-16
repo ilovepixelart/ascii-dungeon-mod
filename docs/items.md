@@ -124,6 +124,20 @@ A Rare or Epic may carry a trigger, a rule it changes while worn (`TRIGGERS` in 
 - The card shows its name in the item's tier color and what it does wrapped under it (`triggerLines` in `hooks/bagui.ts`); as text, on one line.
 - Balance: each trigger forced on from the first step (60 simulated games a class, 3,000 steps), deaths a depth reached are 0.125 with none, 0.110 Thorns, 0.117 Bulwark and Quick Study, 0.119 Executioner and Fresh Start, 0.125 Leeching, 0.127 Momentum, 0.130 Prospector; rolled as they drop, 0.120.
 
+## Class sets
+
+Each class has a set of three Epic pieces (`SETS` in `hooks/items/catalog.ts`), each with its own name, its affixes' stats rolled as any Epic's, and no trigger: the set is its power. Two worn add a stat (in `gearBonus`); three strengthen the class's ability (`isSetWhole` in `hooks/items/equipment.ts`).
+
+| Set | Class | Pieces | Two worn | Three worn |
+|---|---|---|---|---|
+| Oathbound | Knight | Blade (sword), Plate, Helm (horned helm) | +2 def | the shield turns the first blow of a fight and halves the second |
+| Archivist's | Mage | Scepter, Vestments, Circlet | +10% XP | siphon restores a quarter of max HP, not a fifth |
+| Nightglass | Rogue | Rapier, Cloak, Cowl | +5% crit | Ambush makes the first two strikes of a fight sure criticals |
+
+- A whole set's two openings: the first marks the foe `braced`, the second `opened` (`openingPlayed`, `foeBlow` in `hooks/game.ts`). Simulated with each whole set from the first step (60 games a class, 3,000 steps), deaths a depth reached go from 0.118 to 0.095 for the knight, 0.117 to 0.102 for the mage, 0.125 to 0.106 for the rogue; with the shield turning the first two blows the knight's fell to 0.085. Unforced 8,000-step games (20 a class): 2.24 deaths per 1,000 steps before sets, 2.29 with.
+- Half a big boss's Epics are a piece of the hero's class's set (`SET_SHARE`, drawn from the depth and the world, so the dice fall as before), one the hero has nowhere first (`setPiece` in `hooks/items/loot.ts`). A reforge rolls its stats and keeps its name and set; an heirloom keeps its set.
+- The card shows the set in its own color (`SET_COLOR`, teal, no tier's), how many pieces are worn, and each bonus, in the set's color once reached and dim until then (`setLines` in `hooks/bagui.ts`).
+
 ## Consumables
 
 Used from the belt, never worn. Using one always costs a turn, so each is strong. Vital ones are plentiful so they get used, not hoarded.

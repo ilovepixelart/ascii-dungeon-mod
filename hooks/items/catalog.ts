@@ -1,5 +1,5 @@
 // The item catalog: data only. Adding a base, an affix or a Legendary is one entry here; no logic changes.
-import type { HeroClass, Rarity, Slot, Trigger } from '../../types'
+import type { ClassSet, HeroClass, Rarity, Slot, Trigger } from '../../types'
 import type { Stats } from './stats'
 
 export const SLOTS: readonly Slot[] = ['weapon', 'offhand', 'helm', 'armor', 'boots', 'ring', 'amulet']
@@ -122,6 +122,38 @@ export const TRIGGERS: Readonly<Record<Trigger, { name: string; does: string; wo
 export const RARE_TRIGGER_SHARE = 34
 /** What a trigger adds to an item's worth. */
 export const TRIGGER_WORTH = 3
+
+/** Each class's set: its pieces (base and name), what two worn add, and what three do to the class's ability. */
+export const SETS: Readonly<Record<ClassSet, { name: string; cls: HeroClass; pieces: readonly { base: string; name: string }[]; two: Partial<Stats>; twoSaid: string; three: string }>> = {
+  oathbound: {
+    name: 'Oathbound',
+    cls: 'knight',
+    pieces: [{ base: 'sword', name: 'Oathbound Blade' }, { base: 'plate', name: 'Oathbound Plate' }, { base: 'hornedHelm', name: 'Oathbound Helm' }],
+    two: { def: 2 },
+    twoSaid: '+2 def',
+    three: 'Shield block turns the first blow of a fight and halves the second.',
+  },
+  archivist: {
+    name: "Archivist's",
+    cls: 'mage',
+    pieces: [{ base: 'scepter', name: "Archivist's Scepter" }, { base: 'vestments', name: "Archivist's Vestments" }, { base: 'circlet', name: "Archivist's Circlet" }],
+    two: { xp: 10 },
+    twoSaid: '+10% XP',
+    three: 'Siphon restores a quarter of max HP, not a fifth.',
+  },
+  nightglass: {
+    name: 'Nightglass',
+    cls: 'rogue',
+    pieces: [{ base: 'rapier', name: 'Nightglass Rapier' }, { base: 'cloak', name: 'Nightglass Cloak' }, { base: 'cowl', name: 'Nightglass Cowl' }],
+    two: { crit: 5 },
+    twoSaid: '+5% crit',
+    three: 'Ambush makes the first two strikes of a fight sure criticals.',
+  },
+}
+/** A set's own color: no tier uses it. */
+export const SET_COLOR = '#3cc8c8'
+/** Of the big bosses' Epics, this many in a hundred are a set piece. */
+export const SET_SHARE = 50
 
 export const STARTING_KIT: Readonly<Record<HeroClass, readonly string[]>> = {
   knight: ['sword', 'buckler', 'tunic', 'hood'],

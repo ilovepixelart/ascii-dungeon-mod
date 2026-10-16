@@ -196,6 +196,19 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, orders: { ...o, leave: 'epic' } })).toContain(rule)
   })
 
+  test('a codex with a count that is no count, more bosses than kills, an entry twice, or behind the hero', async () => {
+    const rule = 'codex counts whole, each entry once, never behind the hero'
+    const c = { uniques: ['bones' as const], bigs: [], legendaries: [], deepest: 7, level: 3, kills: 10, bosses: 1, deaths: 2, gold: 50 }
+    const at = { ...g, deepest: 7, level: 3, deaths: 2 }
+    expect(broke({ ...at, codex: c })).not.toContain(rule)
+    expect(broke({ ...at, codex: { ...c, gold: -1 } })).toContain(rule)
+    expect(broke({ ...at, codex: { ...c, bosses: 11 } })).toContain(rule)
+    expect(broke({ ...at, codex: { ...c, uniques: ['bones', 'bones'] } })).toContain(rule)
+    expect(broke({ ...at, codex: { ...c, deepest: 6 } })).toContain(rule)
+    expect(broke({ ...at, codex: { ...c, level: 2 } })).toContain(rule)
+    expect(broke({ ...at, codex: { ...c, deaths: 1 } })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass } from '../types'
 import { TOWN_TALK } from './town'
-import { STASH_SIZE, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
+import { BIG_BOSSES, STASH_SIZE, UNIQUES, firstCodex, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -12,6 +12,7 @@ import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
+import { codexGesture, codexHeight, codexPixels } from './codexwindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
@@ -32,7 +33,7 @@ import { SHEET_H, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { COMPACT_H, COMPACT_W, compactGesture, compactOverlay, compactPixels } from './compact'
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkOverlay, talkPixels } from './talk'
 import type { Speaker } from './talk'
-import { CLASS_NAME, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
+import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
 import { MAP_H, MAP_W } from './map'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
@@ -801,6 +802,8 @@ const onDeathClick = async ($: EngineInterface, data: unknown) => actAll($, deat
 
 const onRecapClick = async ($: EngineInterface, data: unknown) => actAll($, recapGesture(await current($), data as Gesture))
 
+const onCodexClick = async ($: EngineInterface, data: unknown) => actAll($, codexGesture(await current($), data as Gesture))
+
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
   const outcome = settingsGesture(g, soundSettings, data as Gesture)
@@ -847,6 +850,9 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'recap-clicks':
       await onRecapClick($, data)
+      return true
+    case 'codex-clicks':
+      await onCodexClick($, data)
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -1177,6 +1183,7 @@ const sheetWindow = (p: Pane) => {
   const { g, Button, press } = p
   return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), sheetOverlay(g), [
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
+    <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
   ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined)
 }
@@ -1262,6 +1269,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },
@@ -1318,6 +1326,7 @@ const textSheet = ({ g, Box, Text, Button, press }: Pane) => (
       </Box>
     ))}
     <Box marginTop={1} columnGap={2}>
+      <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
       <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
     </Box>
   </Box>
@@ -1485,6 +1494,28 @@ const textRecap = (p: Pane) => {
   )
 }
 
+const codexClose = ({ Button, press }: Pane, hotkey?: string) => <Button key="codex-close" label="Close" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'codex' })} />
+
+/** The codex as text: each row's count and what is in it, then the records. */
+const textCodex = (p: Pane) => {
+  const { g, Box, Text } = p
+  const c = g.codex ?? firstCodex(g)
+  const named = <T extends string>(keys: readonly T[], all: readonly { key: T; name: string }[]) => all.filter(a => keys.includes(a.key)).map(a => a.name).join(', ')
+  const uniques = Object.values(UNIQUES)
+  const bigs = Object.values(BIG_BOSSES)
+  const legendaries = LEGENDARIES.filter(l => c.legendaries.includes(l.name))
+  return (
+    <Box flexDirection="column">
+      <Text bold>Codex</Text>
+      <Text>{`Uniques ${c.uniques.length}/${uniques.length}: ${named(c.uniques, uniques) || 'none yet'}`}</Text>
+      <Text>{`Big bosses ${c.bigs.length}/${bigs.length}: ${named(c.bigs, bigs) || 'none yet'}`}</Text>
+      <Text>{`Legendaries ${legendaries.length}/${LEGENDARIES.length}: ${legendaries.map(l => l.name).join(', ') || 'none yet'}`}</Text>
+      <Text dimColor>{`Deepest ${c.deepest}, level ${c.level}, ${c.kills} kills, ${c.bosses} bosses, ${c.deaths} deaths, ${c.gold} gold.`}</Text>
+      <Box columnGap={2}>{codexClose(p)}</Box>
+    </Box>
+  )
+}
+
 const textSettings = (p: Pane) => {
   const { Box, Text } = p
   return (
@@ -1573,6 +1604,7 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: p => p.g.panel === 'sheet', draw: textSheet },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined, draw: textDeath },
   { is: p => p.g.panel === 'recap', draw: textRecap },
+  { is: p => p.g.panel === 'codex', draw: textCodex },
   { is: p => p.g.panel === 'settings', draw: textSettings },
   { is: p => p.g.panel === 'shop', draw: textShop },
   { is: p => p.g.panel === 'forge', draw: textForge },

@@ -18,6 +18,13 @@ Any kind the depth has unlocked can come, the theme's favorites and the newest m
 
 From depth 2, about 40 depths in 100 (boss depths aside) have a twist (`depthMod` in `hooks/game.ts`), drawn from the world and the depth so a depth keeps its own: Gloom (foes hit a fifth harder, kills pay half again the gold), Horde (foes a quarter more HP, kills half again the XP), Champions' den (one foe in four a champion), Barren (no potions drop, gear drops more often), Bloodlust (the hero and the foes both hit a quarter harder), Hoard (gold on the floor and in chests doubled, foes a sixth harder). It is said in full and toasted on arrival, by stairs or on waking after a death, and its mark stands after the depth on the strip's side line.
 
+## Tiers past depth 50
+
+Past `DEEP_FROM` (50) the depths come in tiers of ten (`tierOf` in `hooks/deep.ts`), each ending at its big boss, each with a mark read where its rule lives (`markHere`: `spawn`, `killPay` and `loot` in `hooks/game.ts`, `killConsumable`). Easier: Steady (nothing), Mild (foes hit a fifth softer, kills pay a third less gold), Brittle (foes a fifth less HP, a fifth harder hits). Harder: Ironclad (foes half again the HP, a sixth harder hits, a kill's items rolled twice), Frenzied (one foe in four a champion, a sixth harder hits), Lean (healing potions a quarter as often, gold doubled). A mark stacks with the depth's twist.
+
+- The fork: when a tier's big boss falls (`announceFork`), the next tier is chosen of two (`pairOf`, fixed by the world and the tier): one easier, one harder. The choice can change until the stairs; unchosen then, the stairs take the easier (`enterTier`), so an absent player never gets the harder by accident. `forkTier` is the tier still to settle: after the deepest big boss slain from 50 on, while the hero has not gone into it. A tier the hero went into before its fork was offered stays Steady, so an old save past 50 sees its first fork at the next big boss.
+- Balance: each mark forced on every depth from the first (60 simulated games a class, 3,000 steps), deaths a depth reached are 0.131 Steady, 0.116 Mild, 0.123 Brittle, 0.139 Lean, 0.159 Frenzied, 0.162 Ironclad. The rewards outweigh the risks unless the risk is steep: as first drawn, a third fewer foes left the hero under-levelled at the bosses (0.191, the deadliest), a third more HP with items rolled twice came to 0.118, one champion in four alone to 0.124 (champions drop Rare or better), and half the potions with double gold to 0.120 (gold buys potions).
+
 ## Rooms
 
 Besides the shrine, the library, the flooded halls' spring and the forge's anvil, any theme can have a vault (`themedThing` in `hooks/map.ts`): three gold piles across its middle, a trap each side of the middle one, for whoever clicks in.

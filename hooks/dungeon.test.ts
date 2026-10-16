@@ -23,6 +23,9 @@ import { CLOSE_BOX } from './window'
 import { retireButtons } from './retirewindow'
 import { offer } from './talents'
 import { talentCards } from './talentwindow'
+import { pairOf } from './deep'
+import { deepCards } from './deepwindow'
+import { arrive } from './world'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
@@ -438,6 +441,48 @@ test('on a wide pane a talent card, clicked, takes that talent', async ($, on) =
   await ui.pointer({ type: 'down', ...at, button: 'left', in: 'talent-clicks' } as never)
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'talent-clicks' } as never)
   expect((kept.get('save') as Game).talents).toEqual([card.talent])
+  await ui.unmount()
+})
+
+/** A hero at depth 60 with its big boss slain: the fork for tier II waits. */
+const atFork = () => {
+  const g = newGame()
+  return { ...g, ...arrive(g.world, 60), deepest: 60, bossSlain: 60 }
+}
+
+test('a fork waiting is chosen from the sheet, saved, and said', async ($, on) => {
+  const saved = atFork()
+  const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Deep \(choose\)/ })).toBeDefined()
+  await ui.press({ key: 'sheet-deep' })
+  const hard = pairOf(saved.world, 2)[1]
+  await ui.press({ key: `deep-${hard}` })
+  expect((kept.get('save') as Game).marks).toEqual({ 2: hard })
+  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Deep \(choose\)/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('on a wide pane a mark card, clicked, chooses that mark', async ($, on) => {
+  const saved = atFork()
+  const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-deep' })
+  const card = deepCards({ ...saved, panel: 'deep' })[1]!
+  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 6) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'deep-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'deep-clicks' } as never)
+  expect((kept.get('save') as Game).marks).toEqual({ 2: card.mark })
   await ui.unmount()
 })
 

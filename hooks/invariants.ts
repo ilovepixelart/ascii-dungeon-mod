@@ -8,6 +8,7 @@ import { isTownWalkable } from './town'
 import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
 import { CALM_CALLS } from './balance'
 import { TALENT_EVERY } from './talents'
+import { pairOf, tierStart } from './deep'
 import { levelOf } from './world'
 
 type Rule = (g: Game) => string | undefined
@@ -92,6 +93,13 @@ const RULES: Readonly<Record<string, Rule>> = {
   'talents each once, no more than earned': g => {
     const t = g.talents ?? []
     return new Set(t).size === t.length && t.length <= Math.floor(g.level / TALENT_EVERY) ? undefined : `talents ${t.join(', ')} at level ${g.level}`
+  },
+  'marks each of its fork, on a fork reached': g => {
+    const wrong = Object.entries(g.marks ?? {}).find(([t, mark]) => {
+      const tier = Number(t)
+      return !Number.isInteger(tier) || tier < 1 || tierStart(tier) - 1 > g.bossSlain || !pairOf(g.world, tier).includes(mark)
+    })
+    return wrong === undefined ? undefined : `tier ${wrong[0]} marked ${wrong[1]}, deepest boss slain ${g.bossSlain}`
   },
   'second wind on a depth reached': g => (g.wind === undefined || (g.wind >= 1 && g.wind <= g.deepest) ? undefined : `second wind on depth ${g.wind}, deepest ${g.deepest}`),
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),

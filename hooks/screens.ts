@@ -1,5 +1,5 @@
 // Every interface the game draws, in many states: each window for every class and rarity, the strip, the shop, the
-// smith, the stash, settings, the start screen, the codex, retiring, every talent, and every townsperson. Pure, for the assets audit and its test.
+// smith, the stash, settings, the start screen, the codex, retiring, every talent and mark, and every townsperson. Pure, for the assets audit and its test.
 import type { Game, HeroClass, Rarity, Talent } from '../types'
 import { apply, newGame } from './game'
 import { hudPixels } from './hud'
@@ -19,6 +19,9 @@ import { codexPixels } from './codexwindow'
 import { retirePixels } from './retirewindow'
 import { TALENTS } from './talents'
 import { talentPixels } from './talentwindow'
+import { pairOf } from './deep'
+import { deepPixels } from './deepwindow'
+import { arrive } from './world'
 
 export const CLASSES: readonly HeroClass[] = ['knight', 'mage', 'rogue']
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
@@ -46,7 +49,7 @@ const kitted = (cls: HeroClass, rarity: Rarity): Game => {
   return { ...g, bag, cursor: bag[0]?.id ?? null, belt }
 }
 
-/** The windows of a hero's long game: the codex, retiring, the talents offered three by three. */
+/** The windows of a hero's long game: the codex, retiring, the talents offered three by three, the deep at every pair of marks. */
 const heroShots = (g: Game): Shot[] => {
   const out: Shot[] = [
     { name: 'codex', px: codexPixels({ ...g, codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }) },
@@ -54,6 +57,12 @@ const heroShots = (g: Game): Shot[] => {
   ]
   const all = Object.keys(TALENTS) as Talent[]
   for (let i = 0; i < all.length; i += 3) out.push({ name: `talent-${i / 3}`, px: talentPixels({ ...g, level: 200, talents: all.filter((_, j) => j < i || j >= i + 3) }) })
+  const pairs = new Map<string, Game>()
+  for (let world = 1; pairs.size < 9 && world < 500; world += 1) {
+    const at = { ...g, world, ...arrive(world, 60), deepest: 60, bossSlain: 60 }
+    pairs.set(pairOf(world, 2).join('-'), at)
+  }
+  for (const [pair, at] of pairs) out.push({ name: `deep-${pair}`, px: deepPixels(at) })
   return out
 }
 

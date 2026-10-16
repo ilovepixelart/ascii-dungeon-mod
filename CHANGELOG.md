@@ -60,6 +60,10 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   or pull request's item rolled four times, XP from a failed call); Second Wind, Opener, Bloodletting, Grudge,
   Scavenger, Iron Stomach, Haggler and Pathfinder change fights, potions, prices and sight. A hero already past level
   10 has the picks it earned waiting. New `talent` action; saves gain the optional `talents` and `wind`.
+- Tiers past depth 50: ten depths each, ending at a big boss, each with a mark. When a tier's big boss falls, the next
+  tier's mark is chosen from Deep on the character sheet, of two offered: an easier (Steady, Mild, Brittle) and a
+  harder that pays more (Ironclad, Frenzied, Lean). Unchosen when the hero takes the stairs into the tier, it takes the
+  easier. A tier a hero went into before this release is Steady. New `mark` action; saves gain the optional `marks`.
 - Hero orders in settings: drink a healing potion under a quarter of max HP (on by default), under half, or never;
   throw a smoke bomb when low with no healing left (off by default); leave a kill's Commons, or anything below Rare, on
   the floor (off by default). New `order` action; saves gain the optional `orders`, older saves taking the defaults.

@@ -5,6 +5,7 @@ import { foeAhead } from './fixtures'
 import { apply, levelOf, newGame } from './game'
 import { plainItem } from './items'
 import { violations } from './invariants'
+import { pairOf } from './deep'
 import { simulate } from './sim'
 
 const broke = (g: Game) => violations(g).map(v => v.split(':')[0])
@@ -223,6 +224,17 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, level: 20, talents: ['grudge', 'opener'] })).not.toContain(rule)
     expect(broke({ ...g, level: 20, talents: ['grudge', 'grudge'] })).toContain(rule)
     expect(broke({ ...g, level: 19, talents: ['grudge', 'opener'] })).toContain(rule)
+  })
+
+  test('a mark not of its fork, or on a fork not reached', async () => {
+    const rule = 'marks each of its fork, on a fork reached'
+    const [easy, hard] = pairOf(g.world, 2)
+    const other = (['steady', 'mild', 'brittle', 'ironclad', 'frenzied', 'lean'] as const).find(m => m !== easy && m !== hard)!
+    expect(broke({ ...g, bossSlain: 60, marks: { 2: easy } })).not.toContain(rule)
+    expect(broke({ ...g, bossSlain: 60, marks: { 2: hard } })).not.toContain(rule)
+    expect(broke({ ...g, bossSlain: 60, marks: { 2: other } })).toContain(rule)
+    expect(broke({ ...g, bossSlain: 59, marks: { 2: easy } })).toContain(rule)
+    expect(broke({ ...g, bossSlain: 60, marks: { 0: pairOf(g.world, 0)[0] } })).toContain(rule)
   })
 
   test('a second wind on a depth not reached', async () => {

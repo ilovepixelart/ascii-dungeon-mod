@@ -61,7 +61,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The character sheet
 
-- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex, Retire (`r`) beside it the retire window, lit once the hero has slain a big boss (`canRetire`), and Talent (`t`) under them the talent window, framed white while a talent is owed. New game is in settings.
+- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex, Retire (`r`) beside it the retire window, lit once the hero has slain a big boss (`canRetire`), and Talent (`t`) under them the talent window, framed white while a talent is owed, Deep (`d`) beside it the deep window, framed white while a fork waits. New game is in settings.
 
 ## Settings
 
@@ -98,6 +98,10 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 - A talent is earned at every tenth level (`owed` in `hooks/talents.ts`), and picked from three offered (`offer`): none already taken, the three fixed by the world and the picks so far, so reopening shows the same cards. The `talent` action takes one on offer; reaching a tenth level says one is waiting. Each talent is read where its rule lives (`hasTalent`): Test Driven and Clean Commit in `greenBuild` and `shrine`, Ship It in `cache`, Rubber Ducking in `fail`, Second Wind in `hurt` (`Game.wind`, once a depth), Opener and Grudge in `talentTimes`, Bloodletting in `strike`, Scavenger and Iron Stomach in `consumables.ts`, Haggler in `priceOfWare`, Pathfinder in `sightOf` (corridor sight, `visibleFrom`'s `reach`).
 - Balance: simulated with each talent from the first step (30 games a class, 1,000 steps), deaths per 1,000 steps are 2.28 with none and 1.8 to 2.4 with any one. Grudge and Opener at half again the damage gave 1.1 and 1.3, so they give a quarter. With the simulated player picking at random, 8,000-step games are 2.27 without talents and 2.37 with (noise), the deepest depth 79 and 82.
 - Drawn by `hooks/talentwindow.ts`: while one is owed, the level that earned it and a card each offered talent (its number key, its name, green for those that reward work, what it does); a card clicked, or its number, takes it. With none owed, the talents taken and the level of the next. As text, a button each offered talent.
+
+## The deep
+
+- Drawn by `hooks/deepwindow.ts`: the depth and its tier, the tiers reached with their depths and marks (the last three, two while a fork waits; the one the hero is in framed white, its mark green if easier, orange if harder), and while a fork waits the next tier's two marks as cards (`A` the easier, `B` the harder; the chosen one framed white), a click or its letter choosing one (`mark` action). Without a fork it names the depth of the next. As text, a button each mark of the fork. The rules are in [pacing.md](pacing.md#tiers-past-depth-50).
 
 ## The compact inventory
 

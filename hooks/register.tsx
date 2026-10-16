@@ -16,6 +16,8 @@ import { codexGesture, codexHeight, codexPixels } from './codexwindow'
 import { retireGesture, retireHeight, retirePixels } from './retirewindow'
 import { talentGesture, talentHeight, talentPixels } from './talentwindow'
 import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
+import { deepGesture, deepHeight, deepPixels } from './deepwindow'
+import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
@@ -786,6 +788,7 @@ const onForgeClick = async ($: EngineInterface, data: unknown) => {
 }
 
 const onTalentClick = async ($: EngineInterface, data: unknown) => actAll($, talentGesture(await current($), data as Gesture))
+const onDeepClick = async ($: EngineInterface, data: unknown) => actAll($, deepGesture(await current($), data as Gesture))
 
 const onRetireClick = async ($: EngineInterface, data: unknown) => {
   const outcome = retireGesture(await current($), retireUi, data as Gesture)
@@ -874,6 +877,9 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'talent-clicks':
       await onTalentClick($, data)
+      return true
+    case 'deep-clicks':
+      await onDeepClick($, data)
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -1207,6 +1213,7 @@ const sheetWindow = (p: Pane) => {
     <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     retireKey(p, 'r'),
     talentKey(p, 't'),
+    deepKey(p, 'd'),
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
   ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined)
 }
@@ -1220,6 +1227,23 @@ const retireKey = ({ g, Button, press }: Pane, hotkey?: string) => (
 const talentKey = ({ g, Button, press }: Pane, hotkey?: string) => (
   <Button key="sheet-talent" label={owed(g) > 0 ? `Talent (${owed(g)})` : 'Talent'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'talent' })} />
 )
+
+/** Deep on the sheet: marked while a fork waits. */
+const deepKey = ({ g, Button, press }: Pane, hotkey?: string) => (
+  <Button key="sheet-deep" label={isForkOpen(g) ? 'Deep (choose)' : 'Deep'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'deep' })} />
+)
+
+/** The fork's two marks, a key each, the easier first; the window's own close. */
+const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
+  const fork = forkTier(g)
+  const chosen = fork === undefined ? undefined : g.marks?.[fork]
+  return [
+    ...(fork === undefined ? [] : pairOf(g.world, fork)).map((m, i) => (
+      <Button key={`deep-${m}`} label={`${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
+    )),
+    <Button key="deep-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'deep' })} />,
+  ]
+}
 
 /** The talents offered, a key each; the window's own close. */
 const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => [
@@ -1323,6 +1347,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
   { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g), talentPixels(p.g), [], talentKeys(p, true)) },
+  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [], deepKeys(p, true)) },
   { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
@@ -1385,6 +1410,7 @@ const textSheet = (p: Pane) => {
         <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
         {retireKey(p)}
         {talentKey(p)}
+        {deepKey(p)}
         <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
       </Box>
     </Box>
@@ -1587,6 +1613,24 @@ const textRetire = ({ g, Box, Text, Button, press }: Pane) => (
   </Box>
 )
 
+/** The deep window as text: the tier the hero is in and its mark, the tiers reached, and the fork's two marks while one waits. */
+const textDeep = (p: Pane) => {
+  const { g, Box, Text } = p
+  const fork = forkTier(g)
+  const here = g.where === 'dungeon' ? tierOf(g.depth) : 0
+  const reached = Array.from({ length: tierOf(g.deepest) }, (_, i) => `${roman(i + 1)} ${MARKS[markOf(g, i + 1)].name}`).join(', ')
+  const head = fork !== undefined
+    ? `Choose the mark of tier ${roman(fork)}. None chosen, the stairs take ${MARKS[pairOf(g.world, fork)[0]].name}.`
+    : here > 0 ? `Depth ${g.depth}, tier ${roman(here)}: ${MARKS[markOf(g, here)].name}. ${MARKS[markOf(g, here)].does}` : `The tiers begin past depth ${DEEP_FROM}.`
+  return (
+    <Box flexDirection="column">
+      <Text bold>{head}</Text>
+      {reached === '' ? null : <Text dimColor>Tiers: {reached}</Text>}
+      <Box flexDirection="column">{deepKeys(p, false)}</Box>
+    </Box>
+  )
+}
+
 /** The talent window as text: the talents offered, a button each, or those taken and the level of the next. */
 const textTalent = (p: Pane) => {
   const { g, Box, Text } = p
@@ -1691,6 +1735,7 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: p => p.g.panel === 'codex', draw: textCodex },
   { is: p => p.g.panel === 'retire', draw: textRetire },
   { is: p => p.g.panel === 'talent', draw: textTalent },
+  { is: p => p.g.panel === 'deep', draw: textDeep },
   { is: p => p.g.panel === 'settings', draw: textSettings },
   { is: p => p.g.panel === 'shop', draw: textShop },
   { is: p => p.g.panel === 'forge', draw: textForge },

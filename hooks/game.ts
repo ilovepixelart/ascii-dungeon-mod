@@ -1,4 +1,4 @@
-import type { Attribute, ChampionMod, Codex, Foe, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
+import type { Attribute, ChampionMod, Codex, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
@@ -10,6 +10,7 @@ import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, hasTalent, offer, owed } from './talents'
+import { MARKS, forkTier, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -73,6 +74,8 @@ export type Action =
   | { kind: 'retire'; slot: Slot }
   /** One of the talents offered, picked. */
   | { kind: 'talent'; talent: Talent }
+  /** One of the two marks the next tier is chosen of, chosen. */
+  | { kind: 'mark'; mark: Mark }
   | { kind: 'train'; stat: Attribute }
   | { kind: 'zoom' }
 
@@ -370,6 +373,17 @@ const BARREN_ITEMS = 15
 const BLOODLUST = 1.25
 const HOARD_ATK = 1.15
 const HOARD_GOLD = 2
+/** What a tier's mark makes of a foe's HP and attack (`MARKS` in hooks/deep.ts): Ironclad's and Frenzied's hit a sixth harder. */
+const MARK_TIMES: Readonly<Record<Mark, { hp: number; atk: number }>> = {
+  steady: { hp: 1, atk: 1 },
+  mild: { hp: 1, atk: 0.8 },
+  brittle: { hp: 0.8, atk: 1.2 },
+  ironclad: { hp: 1.5, atk: 7 / 6 },
+  frenzied: { hp: 1, atk: 7 / 6 },
+  lean: { hp: 1, atk: 1 },
+}
+const MILD_GOLD = 2 / 3
+const LEAN_GOLD = 2
 
 /** A depth's twist, the same every time it is drawn: picked from the world and the depth, none on depth 1 or a boss depth. */
 export const depthMod = (world: number, depth: number): DepthMod | undefined => {
@@ -417,17 +431,18 @@ const spawn = (g: Game, origin: string): Foe => {
   const tier = pickTier(g)
   const kind = BESTIARY[tier] ?? { glyph: '?', name: 'horror' }
   const mod = modHere(g)
-  const maxHp = Math.round(foeHp(g.depth, tier, roll(g, 4)) * (mod === 'horde' ? HORDE_HP : 1))
+  const mark = markHere(g)
+  const maxHp = Math.round(foeHp(g.depth, tier, roll(g, 4)) * (mod === 'horde' ? HORDE_HP : 1) * MARK_TIMES[mark].hp)
   const foe: Foe = {
     glyph: kind.glyph,
     name: `${kindName(kind.glyph, g.depth)} of ${origin}`,
     hp: maxHp,
     maxHp,
-    atk: Math.round(foeAtk(g.depth, tier, roll(g, 2)) * (mod === 'gloom' ? GLOOM_ATK : mod === 'hoard' ? HOARD_ATK : 1)),
+    atk: Math.round(foeAtk(g.depth, tier, roll(g, 2)) * (mod === 'gloom' ? GLOOM_ATK : mod === 'hoard' ? HOARD_ATK : 1) * MARK_TIMES[mark].atk),
     xp: foeXp(g.depth, tier),
     ...foeSpot(g),
   }
-  if (g.depth >= 2 && roll(g, mod === 'den' ? DEN_ODDS : CHAMPION_ODDS) === 1) return championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
+  if (g.depth >= 2 && roll(g, mod === 'den' || mark === 'frenzied' ? DEN_ODDS : CHAMPION_ODDS) === 1) return championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
   return foe
 }
 
@@ -602,7 +617,7 @@ const loot = (g: Game, isChampion = false) => {
     g.sinceRare += 1
     return
   }
-  const item = makeItem(g, isRareDue ? 'rare' : isChampion ? 'uncommon' : 'common', isChampion ? 2 : 1)
+  const item = makeItem(g, isRareDue ? 'rare' : isChampion ? 'uncommon' : 'common', (isChampion ? 2 : 1) * (markHere(g) === 'ironclad' ? 2 : 1))
   if (item.rarity === 'common' || item.rarity === 'uncommon') g.sinceRare += 1
   if (RARITY_RANK.indexOf(item.rarity) < RARITY_RANK.indexOf(ordersOf(g).leave)) {
     say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
@@ -635,7 +650,8 @@ const charge = (g: Game, foe: Foe) => {
 const killPay = (g: Game, foe: Foe) => {
   const found = roll(g, 3) * g.depth * (foe.boss === true || foe.unique !== undefined ? 5 : foe.champion === undefined ? 1 : 3)
   const mod = modHere(g)
-  const paid = mod === 'gloom' ? Math.floor(found * MOD_MORE) : found
+  const mark = markHere(g)
+  const paid = Math.floor(found * (mod === 'gloom' ? MOD_MORE : 1) * (mark === 'mild' ? MILD_GOLD : mark === 'lean' ? LEAN_GOLD : 1))
   const coins = (g.fortune?.kind === 'riches' ? Math.floor(paid * FORTUNE_MORE) : paid) + (foe.stolen ?? 0)
   const xp = Math.floor(xpGain(g, foe.xp) * (mod === 'horde' ? MOD_MORE : 1))
   return { coins, xp }
@@ -646,6 +662,7 @@ const spoils = (g: Game, foe: Foe) => {
   if (foe.boss === true) {
     g.bossSlain = g.depth
     bossLoot(g, foe.name, foe.big !== undefined)
+    announceFork(g)
   } else if (foe.nemesis === true && g.nemesis !== null) trophy(g, g.nemesis)
   else if (foe.unique !== undefined) {
     g.uniquesSlain = [...g.uniquesSlain, bandOf(g.depth)]
@@ -821,6 +838,7 @@ const descend = (g: Game) => {
     say(g, `${TheFoe(g.foe)} (${g.foe.glyph}) rises to bar the way down!`)
     return
   }
+  const fork = forkTier(g)
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
   g.hp = Math.min(g.maxHp, g.hp + Math.ceil(g.maxHp / 4))
   if (g.depth > g.deepest) {
@@ -829,6 +847,7 @@ const descend = (g: Game) => {
   }
   if (g.quest?.kind === 'depth') advanceQuest(g)
   say(g, `Task done. You find stairs > and descend to depth ${g.depth}.`)
+  enterTier(g, fork)
   announceTwist(g)
 }
 
@@ -1104,6 +1123,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   look: g => look(g),
   retire: (g, a) => say(g, whyNotRetire(g, a.slot) ?? ''),
   talent: (g, a) => learn(g, a.talent),
+  mark: (g, a) => chooseMark(g, a.mark),
   order: (g, a) => order(g, a.order),
   cycle: g => cycle(g),
   place: (g, a) => {
@@ -1497,6 +1517,40 @@ const learn = (g: Game, t: Talent) => {
   }
   g.talents = [...(g.talents ?? []), t]
   say(g, `You learn ${TALENTS[t].name}: ${TALENTS[t].does}`)
+}
+
+/** A boss slain that opens a fork (a big boss from depth 50 on: no other leaves the hero short of a tier): the next tier's choice said. */
+const announceFork = (g: Game) => {
+  const tier = forkTier(g)
+  if (tier === undefined) return
+  const [easy, hard] = pairOf(g.world, tier).map(m => MARKS[m].name)
+  say(g, `The deep forks: tier ${roman(tier)} will be ${easy} or ${hard}. Choose on the character sheet.`)
+}
+
+/** Into a tier's first depth from the fork before it: the mark taken (the easier, if none was chosen), and said. */
+const enterTier = (g: Game, fork: number | undefined) => {
+  if (fork === undefined || g.depth !== tierStart(fork)) return
+  if (g.marks?.[fork] === undefined) {
+    g.marks = { ...g.marks, [fork]: pairOf(g.world, fork)[0] }
+    say(g, `Unchosen, tier ${roman(fork)} takes the easier mark.`)
+  }
+  const mark = MARKS[markOf(g, fork)]
+  say(g, `Tier ${roman(fork)}, ${mark.name}: ${mark.does}`)
+}
+
+/** One of the next tier's two marks chosen, while its fork is open; a choice made may be changed until the stairs. */
+const chooseMark = (g: Game, mark: Mark) => {
+  const tier = forkTier(g)
+  if (tier === undefined) {
+    say(g, 'The deep has no fork to choose now.')
+    return
+  }
+  if (!pairOf(g.world, tier).includes(mark)) {
+    say(g, `${MARKS[mark].name} is not on offer for tier ${roman(tier)}.`)
+    return
+  }
+  g.marks = { ...g.marks, [tier]: mark }
+  say(g, `Tier ${roman(tier)} will be ${MARKS[mark].name}: ${MARKS[mark].does}`)
 }
 
 /** Whether the hero may retire: once a big boss is slain. */

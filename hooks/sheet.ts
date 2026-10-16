@@ -1,10 +1,11 @@
 // The character sheet's window: the hero's portrait in what they wear, who they are and what they have to spend,
-// their XP toward the next level, a row an attribute (its value, a + to train it, what it does), Codex, Retire and Talent. New game is in settings.
+// their XP toward the next level, a row an attribute (its value, a + to train it, what it does), Codex, Retire, Talent and Deep. New game is in settings.
 // Pure: the click layer reports whole gestures, this decides the game actions they make.
 import type { Game } from '../types'
 import type { Action, Run } from './game'
 import { attackBonus, canRetire, critChance, defense, xpToLevel } from './game'
 import { owed } from './talents'
+import { isForkOpen } from './deep'
 import { CLASS_NAME } from './items'
 import { canvas, digits, fill, frame } from './canvas'
 import { ATTRIBUTES } from './panels'
@@ -42,6 +43,9 @@ export const RETIRE_RECT: Rect = { x: CODEX_RECT.x + CODEX_RECT.w + 4, y: CODEX_
 /** The Talent button, under Codex: it opens the talent window, lit while a talent is owed. */
 export const TALENT_KEY = { key: 'T', label: 'TALENT' }
 export const TALENT_RECT: Rect = { x: PAD, y: CODEX_RECT.y + BUTTON_H + 2, w: buttonW(TALENT_KEY.key, TALENT_KEY.label), h: BUTTON_H }
+/** The Deep button, beside Talent: it opens the deep window, lit while a fork waits. */
+export const DEEP_KEY = { key: 'D', label: 'DEEP' }
+export const DEEP_RECT: Rect = { x: TALENT_RECT.x + TALENT_RECT.w + 4, y: TALENT_RECT.y, w: buttonW(DEEP_KEY.key, DEEP_KEY.label), h: BUTTON_H }
 
 /** The window's height in pixels. */
 export const SHEET_H = (() => {
@@ -100,6 +104,7 @@ export const sheetPixels = (g: Game): string[][] => {
   button(body, CODEX_KEY.key, CODEX_KEY.label, CODEX_RECT.x, CODEX_RECT.y - top, 'ready')
   button(body, RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, canRetire(g) ? 'ready' : 'off')
   button(body, TALENT_KEY.key, TALENT_KEY.label, TALENT_RECT.x, TALENT_RECT.y - top, owed(g) > 0 ? 'armed' : 'ready')
+  button(body, DEEP_KEY.key, DEEP_KEY.label, DEEP_RECT.x, DEEP_RECT.y - top, isForkOpen(g) ? 'armed' : 'ready')
   const c = windowPixels(CHROME, body.px)
   // A bar's numbers lie on the bar: no frame of their own.
   for (const b of sheetOverlay(g)) if (b.role !== 'label') drawBox(c, b)
@@ -117,6 +122,7 @@ export const sheetGesture = (g: Game, gesture: Gesture): Action[] => {
   if (trained >= 0) return g.points > 0 ? [{ kind: 'train', stat: ATTRIBUTES[trained]!.stat }] : []
   if (inside(CODEX_RECT)) return [{ kind: 'panel', panel: 'codex' }]
   if (inside(TALENT_RECT)) return [{ kind: 'panel', panel: 'talent' }]
+  if (inside(DEEP_RECT)) return [{ kind: 'panel', panel: 'deep' }]
   if (inside(RETIRE_RECT)) return canRetire(g) ? [{ kind: 'panel', panel: 'retire' }] : []
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'sheet' }] : []
 }

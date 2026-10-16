@@ -60,6 +60,10 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   or pull request's item rolled four times, XP from a failed call); Second Wind, Opener, Bloodletting, Grudge,
   Scavenger, Iron Stomach, Haggler and Pathfinder change fights, potions, prices and sight. A hero already past level
   10 has the picks it earned waiting. New `talent` action; saves gain the optional `talents` and `wind`.
+- Triggers on Rares and Epics: every Epic and about a third of Rares carry one of eight rules while worn (Thorns,
+  Leeching, Momentum, Bulwark, Executioner, Prospector, and Quick Study and Fresh Start for passing tests and
+  commits), shown on the item card. The same trigger on two pieces counts once. Items already in a save carry none
+  until the smith reforges them. Saves gain the optional `trigger` on items and `momentum`.
 - Tiers past depth 50: ten depths each, ending at a big boss, each with a mark. When a tier's big boss falls, the next
   tier's mark is chosen from Deep on the character sheet, of two offered: an easier (Steady, Mild, Brittle) and a
   harder that pays more (Ironclad, Frenzied, Lean). Unchosen when the hero takes the stairs into the tier, it takes the

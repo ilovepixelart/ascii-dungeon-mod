@@ -1,5 +1,5 @@
 // The item catalog: data only. Adding a base, an affix or a Legendary is one entry here; no logic changes.
-import type { HeroClass, Rarity, Slot } from '../../types'
+import type { HeroClass, Rarity, Slot, Trigger } from '../../types'
 import type { Stats } from './stats'
 
 export const SLOTS: readonly Slot[] = ['weapon', 'offhand', 'helm', 'armor', 'boots', 'ring', 'amulet']
@@ -106,6 +106,22 @@ export const POWERS: Readonly<Record<string, string>> = {
   stackTrace: 'A failed tool call strikes the foe as well.',
   chainCrit: 'A critical hit makes the next hit critical too.',
 }
+
+/** Every trigger: its name, what it does, and whether it rewards the player's work. */
+export const TRIGGERS: Readonly<Record<Trigger, { name: string; does: string; work?: true }>> = {
+  thorns: { name: 'Thorns', does: 'A foe that hits you takes a tenth of the blow back.' },
+  leeching: { name: 'Leeching', does: 'A kill heals 1 HP.' },
+  momentum: { name: 'Momentum', does: 'After a kill, the next blow deals a quarter more.' },
+  bulwark: { name: 'Bulwark', does: 'The first blow that lands each fight is halved.' },
+  executioner: { name: 'Executioner', does: 'A blow on a foe under a quarter HP deals half again.' },
+  prospector: { name: 'Prospector', does: 'Kills pay a fifth more gold.' },
+  quickStudy: { name: 'Quick Study', does: 'A passing test run gives 1 XP a depth.', work: true },
+  freshStart: { name: 'Fresh Start', does: "A commit's shrine also gives 1 blow of fury.", work: true },
+}
+/** Of the Rares, this many in a hundred carry a trigger; every Epic does. */
+export const RARE_TRIGGER_SHARE = 34
+/** What a trigger adds to an item's worth. */
+export const TRIGGER_WORTH = 3
 
 export const STARTING_KIT: Readonly<Record<HeroClass, readonly string[]>> = {
   knight: ['sword', 'buckler', 'tunic', 'hood'],

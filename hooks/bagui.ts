@@ -5,7 +5,8 @@ import type { Action, Run } from './game'
 import { CELL } from './icons'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, dropTarget } from './inventory'
 import type { Drag } from './inventory'
-import { POWERS, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, priceOf } from './items'
+import { POWERS, RARITY_COLOR, RARITY_NAME, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf } from './items'
+import { wrap } from './talk'
 import type { Pos } from './map'
 import { beltSlotRect } from './pieces'
 import { CLICK_SLOP, boxShape, coverage as coverageOf, isInside, pixel, place } from './window'
@@ -48,8 +49,23 @@ export const card = (g: Game, item: Item, title: string | undefined, compare: bo
   [{ text: `${RARITY_NAME[item.rarity]} ${SLOT_WORD[item.slot]}`, color: RARITY_COLOR[item.rarity] }, ...(canWear(g, item) ? [] : [{ text: `  ${classLabel(item)}`, color: OFF_CLASS, bold: true }])],
   ...statLines(g, item, compare),
   ...(item.power === undefined ? [] : [[{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }]]),
+  ...triggerLines(g, item),
   [{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: KEY_INK }],
 ]
+
+/** A card's text width for what a trigger does, so the card stays as narrow as its other lines. */
+const TRIGGER_W = 29
+
+/** A trigger's lines on a card: its name in the item's tier color, what it does wrapped under it, and a note when another worn piece has it. */
+const triggerLines = (g: Game, item: Item): Run[][] => {
+  if (item.trigger === undefined) return []
+  const t = TRIGGERS[item.trigger]
+  return [
+    [{ text: t.name, color: RARITY_COLOR[item.rarity], bold: true }],
+    ...wrap([[{ text: t.does, dim: true }]], TRIGGER_W),
+    ...(isTriggerWornElsewhere(g, item) ? [[{ text: 'Same trigger as worn: no effect', color: OFF_CLASS }]] : []),
+  ]
+}
 
 /** The screen's height in cells. */
 const ROWS = (INV_TOP + INV_H) / 2

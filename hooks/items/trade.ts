@@ -1,10 +1,10 @@
 // Turning items into gold: their price, selling one, and marking and selling junk.
 import type { Game, Item } from '../../types'
 import { fit, selected, take } from './bag'
-import { PRICE } from './catalog'
+import { PRICE, TRIGGER_WORTH } from './catalog'
 import { worth } from './stats'
 
-export const priceOf = (item: Item) => PRICE[item.rarity] * (1 + Math.ceil(worth(item)))
+export const priceOf = (item: Item) => PRICE[item.rarity] * (1 + Math.ceil(worth(item)) + (item.trigger === undefined ? 0 : TRIGGER_WORTH))
 
 export const sell = (g: Game): string => {
   const item = selected(g)

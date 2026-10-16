@@ -226,6 +226,16 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, level: 19, talents: ['grudge', 'opener'] })).toContain(rule)
   })
 
+  test('a trigger on a tier that rolls none, or one unknown', async () => {
+    const rule = 'triggers only on Rares and Epics, each a known one'
+    const item = (rarity: 'rare' | 'epic' | 'uncommon' | 'legendary', trigger: string) => ({ ...plainItem(g, 'sword', rarity), trigger: trigger as never })
+    expect(broke({ ...g, bag: [item('rare', 'thorns')], stashed: [item('epic', 'bulwark')] })).not.toContain(rule)
+    expect(broke({ ...g, bag: [item('uncommon', 'thorns')] })).toContain(rule)
+    expect(broke({ ...g, stashed: [item('legendary', 'thorns')] })).toContain(rule)
+    expect(broke({ ...g, gear: { ...g.gear, weapon: item('epic', 'wings') } })).toContain(rule)
+    expect(broke({ ...g, heirloom: item('uncommon', 'leeching') })).toContain(rule)
+  })
+
   test('a mark not of its fork, or on a fork not reached', async () => {
     const rule = 'marks each of its fork, on a fork reached'
     const [easy, hard] = pairOf(g.world, 2)

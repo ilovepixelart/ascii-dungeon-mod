@@ -105,6 +105,25 @@ Fixed names and stats, each with one effect no affix gives (`wornPower` in `hook
 | Staff of Stack Traces | weapon (Mage) | +6 atk | a failed tool call strikes the foe first; a foe it slays hits no more |
 | Whisper of the Linter | weapon (Rogue) | +5 atk | a crit makes the next hit a crit too; that one chains no further |
 
+## Triggers
+
+A Rare or Epic may carry a trigger, a rule it changes while worn (`TRIGGERS` in `hooks/items/catalog.ts`, `wornTrigger` in `hooks/items/equipment.ts`, read by the rules in `hooks/game.ts`). Every Epic carries one and about a third of Rares (`RARE_TRIGGER_SHARE`); Commons, Uncommons and Legendaries none. The same trigger on two worn pieces counts once, and the card says so of a piece whose trigger another worn slot already has.
+
+| Trigger | Effect | Read in |
+|---|---|---|
+| Thorns | a foe whose blow lands takes a tenth of it back, rounded up, never the last of its HP | `thorns` |
+| Leeching | a kill heals 1 HP | `slay` |
+| Momentum | after a kill, the next blow deals a quarter more (`Game.momentum`) | `slay`, `strike` |
+| Bulwark | the first blow that lands each fight is halved, rounded up (`Foe.landed`); a knight's shield turns the first before it | `counter` |
+| Executioner | a blow on a foe under a quarter HP deals half again | `triggerTimes` |
+| Prospector | kills pay a fifth more gold | `killPay` |
+| Quick Study | a passing test run gives 1 XP a depth | `greenBuild` |
+| Fresh Start | a commit's shrine also gives 1 blow of fury | `shrine` |
+
+- A new item's trigger is drawn from its id and the world (`hash`), not the game's dice, so every roll after it falls as it did before triggers existed. A reforge rolls it anew with the dice; an heirloom keeps it. A trigger adds 3 to an item's worth when sold.
+- The card shows its name in the item's tier color and what it does wrapped under it (`triggerLines` in `hooks/bagui.ts`); as text, on one line.
+- Balance: each trigger forced on from the first step (60 simulated games a class, 3,000 steps), deaths a depth reached are 0.125 with none, 0.110 Thorns, 0.117 Bulwark and Quick Study, 0.119 Executioner and Fresh Start, 0.125 Leeching, 0.127 Momentum, 0.130 Prospector; rolled as they drop, 0.120.
+
 ## Consumables
 
 Used from the belt, never worn. Using one always costs a turn, so each is strong. Vital ones are plentiful so they get used, not hoarded.

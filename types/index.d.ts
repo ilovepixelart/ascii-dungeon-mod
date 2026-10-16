@@ -15,6 +15,8 @@ export type Foe = {
   boss?: true
   /** The hero's class has played its opening against it: the knight's block or the rogue's ambush. */
   opened?: true
+  /** One of its blows has landed this fight: Bulwark halves only the first. */
+  landed?: true
   /** Its turns so far this fight, for the traits that come round every few. */
   turn?: number
   /** A once-a-fight trait spent: the kobold's brew. */
@@ -58,6 +60,9 @@ export type Codex = { uniques: NonNullable<Foe['unique']>[]; bigs: NonNullable<F
 /** A tier's mark past depth 50: easier (steady, mild, brittle) or harder for more (ironclad, frenzied, lean) (`MARKS` in hooks/deep.ts). */
 export type Mark = 'steady' | 'mild' | 'brittle' | 'ironclad' | 'frenzied' | 'lean'
 
+/** A trigger by key: a rule a Rare or Epic changes while worn, once however many pieces carry it. */
+export type Trigger = 'thorns' | 'leeching' | 'momentum' | 'bulwark' | 'executioner' | 'prospector' | 'quickStudy' | 'freshStart'
+
 export type Talent = 'testDriven' | 'cleanCommit' | 'shipIt' | 'rubberDucking' | 'secondWind' | 'opener' | 'bloodletting' | 'grudge' | 'scavenger' | 'ironStomach' | 'haggler' | 'pathfinder'
 
 /** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
@@ -91,6 +96,8 @@ export type Item = {
   cls?: HeroClass
   /** A Legendary's fixed power, by key. */
   power?: string
+  /** A Rare's or an Epic's trigger, a rule it changes while worn (`TRIGGERS` in hooks/items/catalog.ts). */
+  trigger?: Trigger
   junk?: boolean
   /** Kept whatever happens: not sold, marked as junk or destroyed until unlocked. */
   locked?: true
@@ -171,6 +178,8 @@ export type Game = {
   talents?: Talent[]
   /** The depth Second Wind last saved the hero on: once a depth. */
   wind?: number
+  /** The hero's last blow slew its foe while Momentum is worn: the next blow deals a quarter more. */
+  momentum?: true
   /** Each tier's chosen mark, by tier number (tier 1 is depths 51 to 60); a tier absent here is Steady. Absent, none chosen. */
   marks?: Record<number, Mark>
   /** The worn piece the last hero to retire passed down, at depth 1 strength: every new hero starts with it. Absent before the first retirement. */

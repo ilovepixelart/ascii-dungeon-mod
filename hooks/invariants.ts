@@ -2,7 +2,7 @@
 // Each returns a sentence naming what broke, or nothing.
 import type { Game } from '../types'
 import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
-import { BAG_H, BAG_W, RARE_KILLS, SLOTS, TEMPER_MAX, itemAt } from './items'
+import { BAG_H, BAG_W, RARE_KILLS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
 import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
@@ -85,6 +85,11 @@ const RULES: Readonly<Record<string, Rule>> = {
     const twice = [c.uniques, c.bigs, c.legendaries].find(list => new Set<string>(list).size !== list.length)
     if (twice !== undefined) return `the codex lists ${twice.join(', ')}`
     return c.deepest >= g.deepest && c.level >= g.level && c.deaths >= g.deaths ? undefined : `codex deepest ${c.deepest}, level ${c.level}, deaths ${c.deaths}; the hero's ${g.deepest}, ${g.level}, ${g.deaths}`
+  },
+  'triggers only on Rares and Epics, each a known one': g => {
+    const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
+    const wrong = all.find(i => i.trigger !== undefined && (!(i.rarity === 'rare' || i.rarity === 'epic') || TRIGGERS[i.trigger] === undefined))
+    return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} carries ${wrong.trigger}`
   },
   'heirloom untempered, unlocked, not junk': g => {
     const h = g.heirloom

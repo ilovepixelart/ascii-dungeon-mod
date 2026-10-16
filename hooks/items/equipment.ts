@@ -1,5 +1,5 @@
 // What the hero wears: who can wear what, the bonuses it gives, and swapping between bag and body.
-import type { Game, Item, Slot } from '../../types'
+import type { Game, Item, Slot, Trigger } from '../../types'
 import { stash, selected, take } from './bag'
 import { CLASS_NAME, SLOTS } from './catalog'
 import { STAT_KEYS, worth } from './stats'
@@ -10,6 +10,13 @@ export const gearBonus = (g: Game, stat: keyof Stats) =>
 
 /** The Legendary worn that carries `power`, if any. */
 export const wornPower = (g: Pick<Game, 'gear'>, power: string) => SLOTS.map(slot => g.gear[slot]).find(item => item?.power === power)
+
+/** Whether another worn piece, in another slot, already carries the item's trigger: then the item's adds nothing. */
+export const isTriggerWornElsewhere = (g: Pick<Game, 'gear'>, item: Item) =>
+  item.trigger !== undefined && SLOTS.some(slot => slot !== item.slot && g.gear[slot]?.trigger === item.trigger)
+
+/** Whether a worn piece carries the trigger: once however many do. */
+export const wornTrigger = (g: Pick<Game, 'gear'>, trigger: Trigger) => SLOTS.some(slot => g.gear[slot]?.trigger === trigger)
 
 export const canWear = (g: Pick<Game, 'cls'>, item: Item) => item.cls === undefined || item.cls === g.cls
 

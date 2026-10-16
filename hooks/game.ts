@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, makeItem, wornPower, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, makeItem, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -646,13 +646,17 @@ const charge = (g: Game, foe: Foe) => {
   return true
 }
 
+/** Prospector's share more of a kill's gold. */
+const PROSPECTOR = 1.2
+
 /** What a kill pays: gold by the depth and the foe (a boss or unique five times, a champion three), its stolen gold back; XP by its own. The depth's twist and the fortune add theirs. */
 const killPay = (g: Game, foe: Foe) => {
   const found = roll(g, 3) * g.depth * (foe.boss === true || foe.unique !== undefined ? 5 : foe.champion === undefined ? 1 : 3)
   const mod = modHere(g)
   const mark = markHere(g)
   const paid = Math.floor(found * (mod === 'gloom' ? MOD_MORE : 1) * (mark === 'mild' ? MILD_GOLD : mark === 'lean' ? LEAN_GOLD : 1))
-  const coins = (g.fortune?.kind === 'riches' ? Math.floor(paid * FORTUNE_MORE) : paid) + (foe.stolen ?? 0)
+  const prospected = wornTrigger(g, 'prospector') ? Math.floor(paid * PROSPECTOR) : paid
+  const coins = (g.fortune?.kind === 'riches' ? Math.floor(prospected * FORTUNE_MORE) : prospected) + (foe.stolen ?? 0)
   const xp = Math.floor(xpGain(g, foe.xp) * (mod === 'horde' ? MOD_MORE : 1))
   return { coins, xp }
 }
@@ -681,6 +685,8 @@ const slay = (g: Game, foe: Foe) => {
   say(g, `You slay ${theFoe(foe)}! +${xp} XP, +${coins} gold.`)
   g.tension += KILL_TENSION
   if (g.cls === 'mage') siphon(g, foe.name)
+  if (wornTrigger(g, 'leeching')) g.hp = Math.min(g.maxHp, g.hp + 1)
+  if (wornTrigger(g, 'momentum')) g.momentum = true
   if (g.quest?.kind === 'slay' || (g.quest?.kind === 'champion' && foe.champion !== undefined)) advanceQuest(g)
   spoils(g, foe)
   loop(g)
@@ -723,6 +729,13 @@ const swing = (g: Game, foe: Foe, isSure: boolean) => {
 const GRUDGE = 1.25
 const OPENER = 1.25
 const BLOODLETTING = 2
+/** Executioner's blow on a foe under a quarter HP; Momentum's after a kill. */
+const EXECUTIONER = 1.5
+const MOMENTUM = 1.25
+
+/** What the hero's worn triggers multiply a blow on `foe` by. */
+const triggerTimes = (g: Game, foe: Foe) =>
+  (wornTrigger(g, 'executioner') && foe.hp * 4 < foe.maxHp ? EXECUTIONER : 1) * (g.momentum === true && wornTrigger(g, 'momentum') ? MOMENTUM : 1)
 
 /** What the hero's talents multiply a blow on `foe` by. */
 const talentTimes = (g: Game, foe: Foe) => {
@@ -746,7 +759,8 @@ const strike = (g: Game, isSure = false) => {
     say(g, blow.said)
     return
   }
-  const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1) * talentTimes(g, foe))
+  const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1) * talentTimes(g, foe) * triggerTimes(g, foe))
+  delete g.momentum
   if (isCrit && hasTalent(g, 'bloodletting')) g.hp = Math.min(g.maxHp, g.hp + BLOODLETTING)
   const left = foe.hp - dmg
   const how = isCrit ? 'CRITICALLY hit' : 'hit'
@@ -819,13 +833,36 @@ const counter = (g: Game, what: string) => {
     if (!turn.strikes) return
   }
   if (isTurned(g, by)) return
-  const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
-  const dmg = Math.max(1, Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust) - (turn?.pierces === true ? 0 : defense(g)))
-  say(g, `${capitalized(by)} strikes you for ${dmg}.`)
+  const { dmg, isBulwark } = foeBlow(g, turn)
+  say(g, `${capitalized(by)} strikes you for ${dmg}${isBulwark ? ', half of it turned' : ''}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
   if (g.foe?.champion === 'vampiric') g.foe = { ...g.foe, hp: Math.min(g.foe.maxHp, g.foe.hp + dmg) }
   hurt(g, dmg, by)
+  landed(g, dmg)
+}
+
+/** The foe's blow (an imp's with no foe) after the hero's defense, its turn and the depth's twist; the first of a fight to land halved by Bulwark, rounded up. */
+const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
+  const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
+  const blow = Math.max(1, Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust) - (turn?.pierces === true ? 0 : defense(g)))
+  const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
+  return { dmg: isBulwark ? Math.ceil(blow / 2) : blow, isBulwark }
+}
+
+/** A blow landed and the hero standing (a death takes the foe away with it): the foe has landed one, and Thorns answers it. */
+const landed = (g: Game, dmg: number) => {
+  if (g.foe === null) return
+  g.foe = { ...g.foe, landed: true }
+  thorns(g, dmg)
+}
+
+/** Thorns: a foe whose blow landed takes a tenth of it back, rounded up, never the last of its HP. */
+const thorns = (g: Game, dmg: number) => {
+  if (g.foe === null || !wornTrigger(g, 'thorns') || g.foe.hp <= 1) return
+  const back = Math.min(g.foe.hp - 1, Math.ceil(dmg / 10))
+  g.foe = { ...g.foe, hp: g.foe.hp - back }
+  say(g, `Thorns: ${theFoe(g.foe)} takes ${back}.`)
 }
 
 const descend = (g: Game) => {
@@ -929,6 +966,11 @@ const greenBuild = (g: Game) => {
     g.effects = { ...g.effects, fury: g.effects.fury + 2 }
     say(g, 'Test driven: 2 blows of fury.')
   }
+  if (wornTrigger(g, 'quickStudy')) {
+    g.xp += g.depth
+    say(g, `Quick study: +${g.depth} XP.`)
+    levelUp(g)
+  }
 }
 
 /**
@@ -960,6 +1002,10 @@ const shrine = (g: Game) => {
   if (hasTalent(g, 'cleanCommit')) {
     g.effects = { ...g.effects, ward: Math.max(g.effects.ward, 1) }
     say(g, 'A clean commit: the next blow will be turned.')
+  }
+  if (wornTrigger(g, 'freshStart')) {
+    g.effects = { ...g.effects, fury: g.effects.fury + 1 }
+    say(g, 'A fresh start: 1 blow of fury.')
   }
   if (isBossDepth(g.depth)) {
     say(g, 'You kneel at a shrine: your work is kept. Full HP.')

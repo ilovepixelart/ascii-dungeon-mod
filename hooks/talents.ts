@@ -12,7 +12,7 @@ export const OFFERED = 3
 /** Every talent, in the order the list shows them: its name, what it does, and whether it rewards the player's work. */
 export const TALENTS: Readonly<Record<Talent, { name: string; does: string; work?: true }>> = {
   testDriven: { name: 'Test Driven', does: 'A passing test run also gives 2 blows of fury.', work: true },
-  cleanCommit: { name: 'Clean Commit', does: "A commit's shrine also wards off the next blow.", work: true },
+  cleanCommit: { name: 'Clean Commit', does: 'A commit also wards off the next blow.', work: true },
   shipIt: { name: 'Ship It', does: 'A push or PR rolls its item four times, not two.', work: true },
   rubberDucking: { name: 'Rubber Ducking', does: 'A failed tool call gives 1 XP a depth.', work: true },
   secondWind: { name: 'Second Wind', does: 'Once a depth, a killing blow leaves you at 1 HP.' },

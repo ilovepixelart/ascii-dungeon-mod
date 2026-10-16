@@ -32,7 +32,7 @@ const BOX_H = 23
 const BOX_STEP = 14
 const RETIRE = { key: 'R', label: 'RETIRE' }
 const BACK = { key: 'B', label: 'BACK' }
-const TELL = 'EVERY NEW HERO STARTS WEARING IT: ITS POWER KEPT, ITS STATS PLAIN'
+const TELL = 'EVERY NEW HERO STARTS WEARING IT WITH ITS POWER KEPT AND ITS STATS PLAIN'
 
 /** The piece the window has chosen: the one picked, else the first worn. */
 export type RetireUi = ForgeUi

@@ -1,6 +1,6 @@
 // Every interface the game draws, in many states: each window for every class and rarity, the strip, the shop, the
-// smith, the stash, settings, the start screen and every townsperson. Pure, for the assets audit and its test.
-import type { Game, HeroClass, Rarity } from '../types'
+// smith, the stash, settings, the start screen, the codex, retiring, every talent, and every townsperson. Pure, for the assets audit and its test.
+import type { Game, HeroClass, Rarity, Talent } from '../types'
 import { apply, newGame } from './game'
 import { hudPixels } from './hud'
 import { BASES } from './items/catalog'
@@ -15,6 +15,10 @@ import { sheetPixels } from './sheet'
 import { settingsPixels } from './settings'
 import { startPixels } from './start'
 import { deathPixels } from './death'
+import { codexPixels } from './codexwindow'
+import { retirePixels } from './retirewindow'
+import { TALENTS } from './talents'
+import { talentPixels } from './talentwindow'
 
 export const CLASSES: readonly HeroClass[] = ['knight', 'mage', 'rogue']
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
@@ -42,6 +46,17 @@ const kitted = (cls: HeroClass, rarity: Rarity): Game => {
   return { ...g, bag, cursor: bag[0]?.id ?? null, belt }
 }
 
+/** The windows of a hero's long game: the codex, retiring, the talents offered three by three. */
+const heroShots = (g: Game): Shot[] => {
+  const out: Shot[] = [
+    { name: 'codex', px: codexPixels({ ...g, codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }) },
+    { name: 'retire', px: retirePixels({ ...g, bossSlain: 10, deepest: 12, gear: { weapon: g.bag[0]! } }, { slot: 'weapon' }) },
+  ]
+  const all = Object.keys(TALENTS) as Talent[]
+  for (let i = 0; i < all.length; i += 3) out.push({ name: `talent-${i / 3}`, px: talentPixels({ ...g, level: 200, talents: all.filter((_, j) => j < i || j >= i + 3) }) })
+  return out
+}
+
 export const shots = (): Shot[] => {
   const out: Shot[] = []
   const town = { ...apply(newGame(4), { kind: 'portal' }), gold: 300 }
@@ -67,6 +82,7 @@ export const shots = (): Shot[] => {
     const fallen = { by: killer === undefined ? 'a trap' : `the ${killer.name}`, ...(killer === undefined ? {} : { foe: { ...foe, ...killer } }), at: { x: 0, y: 0 }, depth: 30, wake: 26, lost: 120 }
     out.push({ name: `death-${name}`, px: deathPixels({ ...town, fallen, panel: 'death' }) })
   }
+  out.push(...heroShots(kitted('knight', 'epic')))
   for (const who of SPEAKERS) out.push({ name: `talk-${who}`, px: talkPixels({ ...town, quest: who === 'elder' ? { kind: 'slay', depth: 6, need: 5, have: 2 } : null }, who) })
   return out
 }

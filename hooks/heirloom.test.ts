@@ -132,7 +132,7 @@ describe('the retire window', () => {
   const helm = piece('steelHelm', { name: 'Steel Helm of Fast Feedback' })
   const g = veteran(helm, { panel: 'retire' })
   const IDLE = { slot: null }
-  const TELL = ['EVERY NEW HERO STARTS', 'WEARING IT: ITS POWER', 'KEPT, ITS STATS PLAIN']
+  const TELL = ['EVERY NEW HERO STARTS', 'WEARING IT WITH ITS POWER', 'KEPT AND ITS STATS PLAIN']
 
   test('says who the hero was, asks for the heirloom, names the chosen piece and what passing it down means', async () => {
     const texts = retireLines(g, { slot: 'helm' }).map(l => l.text)

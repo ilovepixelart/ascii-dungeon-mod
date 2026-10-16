@@ -7,7 +7,7 @@ import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import { button } from './pieces'
 import { canvas, fill, frame } from './canvas'
 import { wrap } from './recapwindow'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawable, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, Rect } from './window'
 
 const CHROME: Chrome = { title: 'TALENT', labels: [] }
@@ -35,7 +35,7 @@ const layout = (g: Game) => {
   const offered = offer(g)
   let y = top + 11
   const cards: Card[] = offered.map(talent => {
-    const lines = wrap(TALENTS[talent].does.toUpperCase(), TEXT_W)
+    const lines = wrap(drawable(TALENTS[talent].does.toUpperCase()), TEXT_W)
     const rect = { x: PAD, y, w: WINDOW_W - 2 * PAD, h: 15 + lines.length * LINE + 1 }
     y += rect.h + 3
     return { talent, rect, lines }

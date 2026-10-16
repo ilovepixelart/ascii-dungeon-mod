@@ -30,6 +30,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 - Every bar is flat, one color, 2 px tall on a whole cell's top (`flatBar` in `hooks/pieces.ts`), its numbers text centred on it (`barLabel`): each character on the bar's color under it, in the ink that reads there (`inkOn`). The strip's HP and XP, the sheet's XP, the healer's HP and the elder's quest. The foe's bar on the map is 1 px and too short for a number.
 - Text goes in text boxes, not pixels: the pixel font is 5 px tall, fine for titles, labels and numbers, not for sentences. The window draws a box's frame and fill in pixels; the click layer writes its text on the same fill.
+- The pixel font has no full stop or comma (`drawable` in `hooks/window.ts` drops them from a card's text), nor a colon or an apostrophe: text drawn in a window is written without them, which the assets test holds every window in `hooks/screens.ts` to.
 - A text box is placed in cells (one pixel across, two down), so its frame lands on even pixel rows.
 - `place` scores a spot by what it hides (`coverage`, weights the window chooses) a thousand times over its distance from what the box is about: hiding less always wins over being nearer.
 

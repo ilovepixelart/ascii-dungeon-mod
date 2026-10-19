@@ -6,7 +6,7 @@ import { foeAhead } from './fixtures'
 import { arrive } from './world'
 import { MAP_H, MAP_W, cellId, floorThing, generate, isFloor, roomAt, same, themedRoomOf, visibleFrom } from './map'
 import { CANVAS, INK } from './palette'
-import { MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, TOWN_BIG_ART, TOWN_TERRAIN, TOWN_THING_ART, TREE_ALT, heroArt, torch } from './pixelart'
+import { GROUND, MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, TOWN_BIG_ART, TOWN_TERRAIN, TOWN_THING_ART, TREE_ALT, heroArt, torch } from './pixelart'
 import { TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
 import { TOWN_PX_W, townImage } from './townpixels'
 import { DECAL_ART, FRAMES_PER_TILE, lightStep, pixelMap, stampCells, stampOf, walkState, hitFramesFor, hitFreeze, isStrideFrame, strideOf, wallTorchesOf, HIT_FRAMES, decalAt, themeOf, themed, benchRoute, hitColor, hitRise, hitsBetween, clickToTile, deadZone, followCamera, tileCamera, frameOf, torchColor, wallFaceLight, hexToInt, originAt, rasterCells, viewOrigin, walkPosition, walkingGame, windowOrigin, worldSize } from './pixels'
@@ -94,9 +94,12 @@ describe('the frame', () => {
     const room = roomAt(generate(21, 1), g)
     if (room === undefined) throw new Error('the start lies in a room')
     const frame = frameOf(g, W, H)
+    const bare = frameOf(g, W, H, { isLit: false })
     const near = screen(g, (g.x + 1) * PX + 6, g.y * PX + 6)
     const far = screen(g, room.x * PX + 6, g.y * PX + 6)
-    expect(luma(at(frame, near.x, near.y))).toBeGreaterThan(luma(at(frame, far.x, far.y)))
+    // Each pixel's light against its own unlit ground, so the slab's pattern does not decide.
+    const lit = (p: { x: number; y: number }) => luma(at(frame, p.x, p.y)) / luma(at(bare, p.x, p.y))
+    expect(lit(near)).toBeGreaterThan(lit(far))
   })
 
   test('a creature casts a shadow on the ground under it', async () => {
@@ -111,10 +114,10 @@ describe('the frame', () => {
   })
 })
 
-test('every theme\'s floor is its own tint of the slab, whatever themes were drawn over the same cells before it', async () => {
+test('every theme\'s floor is its own, whatever themes were drawn over the same cells before it', async () => {
   // A depth of each theme, world 5. Before one is checked, every other is drawn with its hero on the same cell, so the
   // same cells pass through the ground's cache under each theme. Torchlight off, a plain floor cell in the hero's room,
-  // with nothing on it and floor on all four sides (so no wall shades it), is then the slab tinted by its theme.
+  // with nothing on it and floor on all four sides (so no wall shades it), is then its theme's floor (`GROUND`).
   const depths = [2, 7, 12, 17, 22]
   expect(depths.map(d => themeOf(d))).toEqual(['crypt', 'flooded', 'fungal', 'frozen', 'forge'])
   const at5 = (depth: number): Game => {
@@ -131,7 +134,7 @@ test('every theme\'s floor is its own tint of the slab, whatever themes were dra
     expect(inView.length).toBeGreaterThan(0)
     for (const p of inView) {
       const o = screen(g, p.x * PX, p.y * PX)
-      for (const [lx, ly] of [[2, 3], [5, 5]] as const) expect(at(frame, o.x + lx, o.y + ly)).toBe(themed(hexToInt(TERRAIN.floor(p.x * PX + lx, p.y * PX + ly)), themeOf(depth)))
+      for (const [lx, ly] of [[2, 3], [5, 5]] as const) expect(at(frame, o.x + lx, o.y + ly)).toBe(hexToInt(GROUND[themeOf(depth)].floor(p.x * PX + lx, p.y * PX + ly)))
     }
   }
 })
@@ -709,7 +712,7 @@ describe('themes by depth', () => {
     expect(themed(0x605040, 'forge')).toBe((101 << 16) | (52 << 8) | 35)
   })
 
-  test('on screen: a floor pixel of a flooded depth is the floor texture in the flooded colors', async () => {
+  test('on screen: a floor pixel of a flooded depth is the flooded halls\' own floor', async () => {
     const level = generate(newGame(21).world, 7)
     const g = { ...newGame(21), depth: 7, ...level.start, seen: '1'.repeat(64 * 18) }
     // A floor tile beside the hero with floor all round, so no wall shading reaches its middle.
@@ -719,7 +722,7 @@ describe('themes by depth', () => {
     const o = viewOrigin(g, W, H)
     const wx = t.x * PX + 3
     const wy = t.y * PX + 3
-    expect(frame[(wy - o.y) * W + wx - o.x]).toBe(themed(hexToInt(TERRAIN.floor(wx, wy)), 'flooded'))
+    expect(frame[(wy - o.y) * W + wx - o.x]).toBe(hexToInt(GROUND.flooded.floor(wx, wy)))
   })
 })
 

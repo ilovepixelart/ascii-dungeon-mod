@@ -11,7 +11,7 @@ import { TOWN_H, TOWN_W } from './town'
 import { TOWN_PX_H, TOWN_PX_W, townImage } from './townpixels'
 import { BOSS_HOLD, BOSS_KEYS, FOE_HOLD, FOE_KEYS, HERO_HOLD, HERO_KEYS, HERO_REST, bossFall, fallDim, foeFall, heroFall } from './fall'
 import type { Pixel } from './fall'
-import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, TERRAIN, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
+import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, GROUND, TERRAIN, pillarShaft, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
 
 const HALF_BLOCK = 0x2580
 const SPACE = 0x20
@@ -179,13 +179,21 @@ export const themed = (n: number, theme: Theme) => {
 const groundCache = new Map<number, Uint32Array>()
 const TERRAIN_KINDS = Object.keys(TERRAIN) as (keyof typeof TERRAIN)[]
 const THEME_ORDER: readonly Theme[] = ['crypt', 'flooded', 'fungal', 'frozen', 'forge']
+/** A ground pixel in its theme: floor and wall the theme's own (`GROUND`), a pillar standing on its floor, the rest tinted. */
+export const groundPixel = (kind: keyof typeof TERRAIN, x: number, y: number, theme: Theme) => {
+  if (kind === 'floor' || kind === 'wall') return hexToInt(GROUND[theme][kind](x, y))
+  if (kind !== 'pillar') return themed(hexToInt(TERRAIN[kind](x, y)), theme)
+  const shaft = pillarShaft(x, y)
+  return shaft === undefined ? hexToInt(GROUND[theme].floor(x, y)) : themed(hexToInt(shaft), theme)
+}
+
 const groundTexture = (kind: keyof typeof TERRAIN, p: Pos, theme: Theme = 'crypt') => {
   // A number for the kind, the cell (one tile of room each way past the map) and the theme.
   const key = ((((p.y + 1) * (MAP_W + 2) + p.x + 1) * TERRAIN_KINDS.length + TERRAIN_KINDS.indexOf(kind)) * THEME_ORDER.length) + THEME_ORDER.indexOf(theme)
   let tex = groundCache.get(key)
   if (tex === undefined) {
     tex = new Uint32Array(PX * PX)
-    for (let ly = 0; ly < PX; ly += 1) for (let lx = 0; lx < PX; lx += 1) tex[ly * PX + lx] = themed(hexToInt(TERRAIN[kind](p.x * PX + lx, p.y * PX + ly)), theme)
+    for (let ly = 0; ly < PX; ly += 1) for (let lx = 0; lx < PX; lx += 1) tex[ly * PX + lx] = groundPixel(kind, p.x * PX + lx, p.y * PX + ly, theme)
     groundCache.set(key, tex)
   }
   return tex

@@ -1,4 +1,5 @@
 import type { Foe, Game, HeroClass } from '../types'
+import type { Theme } from './map'
 
 /** Pixels per tile edge: a tile is PX columns by PX / 2 rows of half-block cells, square on screen. */
 export const PX = 8
@@ -624,47 +625,189 @@ const pixelHash = (x: number, y: number) => {
 
 const MORTAR = '#1c1a20'
 
-/** A room's floor slab, by world pixel. */
-const floorSlab = (x: number, y: number) => {
-  const lx = x % PX
-  const ly = y % PX
+/** A hash of a pixel in [0, 1), finer than `pixelHash`'s hundredths, for accents rarer than one pixel in a hundred. */
+const groundHash = (x: number, y: number) => {
+  let h = (x * 374761393 + y * 668265263) >>> 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+type Tex = (x: number, y: number) => string
+
+// CRYPT. Floor: irregular flagstones. Wall: ashlar blocks 7 by 3, lit along the top, one in five worn darker.
+const cryptFloor: Tex = (x, y) => {
+  // Irregular flagstones: each tile two or three slabs, their seams jogged per tile so no grout runs straight through.
   const tx = Math.floor(x / PX)
   const ty = Math.floor(y / PX)
-  if (lx === PX - 1 || ly === PX - 1) return '#40362c'
-  if (lx === 0 || ly === 0) return '#6a5c49'
-  if (isCracked(tx, ty) && CRACK.some(([cx, cy]) => cx === lx && cy === ly)) return CRACK_INK
-  const stone = pixelHash(tx * 7, ty * 13)
-  const base = stone < 0.33 ? '#574b3c' : stone < 0.66 ? '#5c5040' : '#615443'
-  return pixelHash(x, y) < 0.08 ? '#51463a' : base
+  const lx = x % PX
+  const ly = y % PX
+  const cut = 3 + Math.floor(groundHash(tx, ty) * 3)
+  const isRow = groundHash(ty, tx) < 0.5
+  const across = isRow ? ly : lx
+  const along = isRow ? lx : ly
+  const jog = 2 + Math.floor(groundHash(tx * 3, ty * 5) * 4)
+  const grout = lx === PX - 1 || ly === PX - 1 || across === cut || (across > cut && along === jog)
+  if (grout) return '#3c3329'
+  const slab = across < cut ? 0 : along < jog ? 1 : 2
+  const lit = lx === 0 || ly === 0 || across === cut + 1 || (across > cut && along === jog + 1)
+  if (lit) return '#675a48'
+  const tone = groundHash(tx * 3 + slab, ty * 5 + slab)
+  const base = tone < 0.4 ? '#584c3d' : tone < 0.8 ? '#5c4f40' : '#54483a'
+  return groundHash(x, y) < 0.05 ? '#4e4436' : base
+}
+const cryptWall: Tex = (x, y) => {
+  const course = Math.floor(y / 4)
+  const off = course % 2 === 0 ? 0 : 4
+  const bx = (x + off) % PX
+  if (y % 4 === 3 || bx === PX - 1) return '#241e1a'
+  if (y % 4 === 0) return bx === 0 ? '#9a9088' : '#8a8078'
+  const worn = groundHash(Math.floor((x + off) / PX), course) < 0.2
+  return bx === PX - 2 ? '#5e564e' : worn ? '#665d55' : '#736a62'
+}
+
+// FLOODED HALLS. Floor: worn rounded slabs, green-grey, with puddles that catch a glint. Wall: mossy stone, moss on the
+// top of each course and drips down the face.
+const PUDDLE = ['........', '..##....', '.####...', '.#####..', '..####..', '...##...', '........', '........']
+/** A shallow puddle's pixel in one tile in seven, mirrored in half of them: dark water, a single glint; else undefined. */
+const puddle = (tx: number, ty: number, lx: number, ly: number) => {
+  if (groundHash(tx, ty * 7) >= 0.14) return undefined
+  const flip = groundHash(ty, tx) < 0.5
+  if (PUDDLE[ly]?.[flip ? PX - 1 - lx : lx] !== '#') return undefined
+  if (lx === (flip ? 5 : 2) && ly === 2) return '#9fd8d0'
+  return ly <= 2 ? '#2c4a46' : '#22403e'
+}
+const floodFloor: Tex = (x, y) => {
+  // Worn slabs, their corners rounded off; one tile in seven holds a shallow puddle.
+  const tx = Math.floor(x / PX)
+  const ty = Math.floor(y / PX)
+  const lx = x % PX
+  const ly = y % PX
+  const corner = (lx === 0 || lx === PX - 1) && (ly === 0 || ly === PX - 1)
+  if (corner || lx === PX - 1 || ly === PX - 1) return '#1e2a26'
+  const water = puddle(tx, ty, lx, ly)
+  if (water !== undefined) return water
+  if (lx === 0 || ly === 0) return '#56685c'
+  return groundHash(x, y) < 0.1 ? '#3a4a40' : groundHash(tx, ty) < 0.5 ? '#44564a' : '#405248'
+}
+const floodWall: Tex = (x, y) => {
+  const course = Math.floor(y / 4)
+  const off = course % 2 === 0 ? 0 : 3
+  const bx = (x + off) % 6
+  if (y % 4 === 3 || bx === 5) return '#16201c'
+  const drip = groundHash(x, course) < 0.18 && y % 4 <= 2
+  if (y % 4 === 0) return groundHash(x * 3, course) < 0.6 ? '#5a9a42' : '#7a8a76'
+  if (drip) return '#3c6a2e'
+  return y % 4 === 1 ? '#6a7a68' : '#5e7060'
+}
+
+// FUNGAL DEEP. Floor: soft packed earth, no grout, pale mycelium threads and a rare glowing spore. Wall: rounded porous
+// rock lumps, a glowing cap now and then.
+const fungalFloor: Tex = (x, y) => {
+  const n = groundHash(Math.floor(x / 2), Math.floor(y / 2))
+  const thread = (groundHash(Math.floor((x + y) / 3), Math.floor((x - y + 64) / 5)) < 0.08) && groundHash(x, y) < 0.6
+  if (thread) return '#7a6a88'
+  if (groundHash(x * 7, y * 3) < 0.0025) return '#7fe3ff'
+  return n < 0.3 ? '#3a2c40' : n < 0.75 ? '#42324a' : '#4a3a52'
+}
+const fungalWall: Tex = (x, y) => {
+  const cx = Math.floor(x / 4)
+  const cy = Math.floor(y / 4)
+  const lx = x % 4
+  const ly = y % 4
+  const lump = groundHash(cx, cy)
+  if ((lx === 0 && ly === 0) || (lx === 3 && ly === 3)) return '#1c1420'
+  if (ly === 0 || lx === 0) return lump < 0.5 ? '#7a6488' : '#6e5a7c'
+  if (lump > 0.93 && lx === 2 && ly === 1) return '#ff6ad5'
+  if (lump > 0.93 && ly === 2 && lx >= 1 && lx <= 2) return '#e8e2d0'
+  if (groundHash(x, y) < 0.12) return '#3e3048'
+  return lx === 3 || ly === 3 ? '#4a3a58' : '#5a4868'
+}
+
+// FROZEN CAVERNS. Floor: ice sheets, diagonal facet lines in ice glow that run across tiles, a snow dimple here and
+// there. Wall: rough grey-blue rock, snow on the top of each lump, an icicle hanging.
+const frozenFloor: Tex = (x, y) => {
+  // Dark sheet ice: long diagonal facet lines, a glow line over its shadow, running across tiles; frost specks sparse.
+  const facet = (x + 2 * y) % 19
+  const run = groundHash(Math.floor((x + 2 * y) / 19), Math.floor((2 * x - y + 200) / 23)) < 0.55
+  if (run && facet === 0) return '#7aa8c8'
+  if (run && facet === 1) return '#243a52'
+  if (groundHash(x, y) < 0.012) return '#c8e4f4'
+  const n = groundHash(Math.floor(x / 4), Math.floor(y / 4))
+  return n < 0.4 ? '#324a64' : n < 0.8 ? '#36506c' : '#2e445c'
+}
+const frozenWall: Tex = (x, y) => {
+  // Rough blue-grey rock in lumps; snow lies only on a lump's top, unevenly; now and then an icicle hangs from it.
+  const cx = Math.floor(x / 4)
+  const cy = Math.floor(y / 4)
+  const lx = x % 4
+  const ly = y % 4
+  const snow = groundHash(cx, cy) < 0.65
+  if (ly === 0 && snow && (lx < 3 || groundHash(x, cy) < 0.5)) return lx === 0 ? '#a8bccc' : '#d8e6f0'
+  if (ly === 3 || lx === 3) return '#18222e'
+  if (lx === 1 && groundHash(cx, cy * 3) < 0.22 && ly <= 2) return '#9ad0f0'
+  return groundHash(x, y) < 0.15 ? '#3a4858' : ly === 0 ? '#5a6a7c' : '#485a6c'
+}
+
+// FORGE. Floor: dark iron plates, a bevel lit top-left and rivets at the corners; now and then a cracked plate with an
+// ember glow in the crack. Wall: near-black basalt blocks, a red rim of heat at the foot of each course.
+const forgeFloor: Tex = (x, y) => {
+  const tx = Math.floor(x / PX)
+  const ty = Math.floor(y / PX)
+  const lx = x % PX
+  const ly = y % PX
+  if (lx === PX - 1 || ly === PX - 1) return '#120e0e'
+  if ((lx === 1 || lx === PX - 2) && (ly === 1 || ly === PX - 2)) return lx === 1 && ly === 1 ? '#8a7a70' : '#5a4e48'
+  if (lx === 0 || ly === 0) return '#4a403c'
+  const cracked = groundHash(tx * 5, ty * 3) < 0.15
+  if (cracked && (lx === ly || lx === ly + 1) && lx >= 2 && lx <= 5) return lx === 3 ? '#ffd34d' : '#ff6a1a'
+  return groundHash(x, y) < 0.07 ? '#2e2624' : '#362e2c'
+}
+const forgeWall: Tex = (x, y) => {
+  const course = Math.floor(y / 4)
+  const off = course % 2 === 0 ? 0 : 4
+  const bx = (x + off) % PX
+  if (y % 4 === 3) return '#5a1810'
+  if (bx === PX - 1) return '#0c0a0a'
+  if (y % 4 === 0) return '#3a302c'
+  return groundHash(x, y) < 0.1 ? '#161212' : '#1e1818'
+}
+
+/**
+ * Each theme's floor and wall by world pixel, in its own colors and its own shapes: the crypt's flagstones (a slab in
+ * twenty cracked) and ashlar, the flooded halls' worn slabs and mossy stone, the fungal deep's packed earth and porous
+ * lumps, the frozen caverns' sheet ice and snowy rock, the forge's iron plates and basalt.
+ */
+export const GROUND: Readonly<Record<Theme, Readonly<Record<'floor' | 'wall', Tex>>>> = {
+  crypt: { floor: (x, y) => (isCracked(Math.floor(x / PX), Math.floor(y / PX)) && CRACK.some(([cx, cy]) => cx === x % PX && cy === y % PX) ? CRACK_INK : cryptFloor(x, y)), wall: cryptWall },
+  flooded: { floor: floodFloor, wall: floodWall },
+  fungal: { floor: fungalFloor, wall: fungalWall },
+  frozen: { floor: frozenFloor, wall: frozenWall },
+  forge: { floor: forgeFloor, wall: forgeWall },
 }
 
 /** A pillar's stone, by its column of the tile: lit from the left, in shade on the right. */
 const SHAFT = ['', '', '#a89e94', '#8a8078', '#7a7068', '#5a524a', '', ''] as const
 
-/** Ground textures by world pixel, so neighbouring tiles join without seams. */
+/** A pillar's own pixel by world pixel, its capital, shaft and base; undefined where the floor shows round it. */
+export const pillarShaft = (x: number, y: number): string | undefined => {
+  const lx = x % PX
+  const ly = y % PX
+  if (ly === 0 && lx >= 1 && lx <= 6) return lx === 1 ? '#5a524a' : '#9a9088'
+  if (ly === PX - 1 && lx >= 1 && lx <= 6) return MORTAR
+  if (ly === PX - 2 && lx >= 1 && lx <= 6) return lx === 6 ? '#3e3830' : '#6a6058'
+  const shaft = SHAFT[lx]
+  return shaft === undefined || shaft === '' ? undefined : shaft
+}
+
+/** Ground textures by world pixel, so neighbouring tiles join without seams; floor and wall are the crypt's (`GROUND`). */
 export const TERRAIN: Readonly<Record<'floor' | 'passage' | 'wall' | 'door' | 'stairs' | 'pillar', (x: number, y: number) => string>> = {
-  floor: floorSlab,
+  floor: (x, y) => GROUND.crypt.floor(x, y),
   // A column standing on the floor slab, its capital on top and its base below: rock in a room, not a wall.
-  pillar: (x, y) => {
-    const lx = x % PX
-    const ly = y % PX
-    if (ly === 0 && lx >= 1 && lx <= 6) return lx === 1 ? '#5a524a' : '#9a9088'
-    if (ly === PX - 1 && lx >= 1 && lx <= 6) return MORTAR
-    if (ly === PX - 2 && lx >= 1 && lx <= 6) return lx === 6 ? '#3e3830' : '#6a6058'
-    const shaft = SHAFT[lx]
-    return shaft === undefined || shaft === '' ? floorSlab(x, y) : shaft
-  },
+  pillar: (x, y) => pillarShaft(x, y) ?? GROUND.crypt.floor(x, y),
   passage: (x, y) => {
     const n = pixelHash(x, y)
     return n < 0.12 ? '#2a241e' : n > 0.92 ? '#4a4034' : '#3a3228'
   },
-  wall: (x, y) => {
-    const course = Math.floor(y / 4)
-    const offset = course % 2 === 0 ? 0 : 4
-    if (y % 4 === 3 || (x + offset) % PX === PX - 1) return MORTAR
-    if (y % 4 === 0) return '#8a8078'
-    return '#6f665e'
-  },
+  wall: (x, y) => GROUND.crypt.wall(x, y),
   door: (x, y) => {
     const lx = x % PX
     const ly = y % PX

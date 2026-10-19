@@ -11,6 +11,10 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- Each theme has its own floor and walls, where all five drew one slab and one brick in different tints: the crypt
+  irregular flagstones and ashlar, the flooded halls worn slabs with puddles and mossy stone, the fungal deep packed
+  earth with mycelium and porous rock with glowing caps, the frozen caverns sheet ice and snow-capped rock with icicles,
+  the forge riveted iron plates, some cracked and glowing, and basalt with a line of heat.
 - Each tier of a belt slot stacks to 99, where it stacked to 9: a potion, herb, scroll, rune or bomb found with its
   tier at 9 is kept, where it was left on the floor. Simulated deaths are unchanged (1.65 and 1.64 per 1,000 steps).
 - A belt slot shows how many it holds of the tier it uses next, where it showed the total of all its tiers; the

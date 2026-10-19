@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Added
+
+- A session that starts with talents owed or a fork open says so in the log ("9 talents to choose: open the character
+  sheet."), so a hero who earned them before they existed, or while no one watched, hears of them.
+
 ### Fixed
 
 - A prompt that is only a pasted image no longer becomes a quest quoting the host's stand-in for it ("A new quest:

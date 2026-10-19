@@ -557,6 +557,29 @@ test('on a wide pane a click on Card in the codex window saves the card', async 
   await ui.unmount()
 })
 
+test('a session begun with talents owed says so in the log', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 91 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((kept.get('save') as Game).log).toContain('9 talents to choose: open the character sheet.')
+  await ui.unmount()
+})
+
+test('a session begun with nothing waiting says nothing of it', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 5 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const log = ((kept.get('save') as Game | undefined)?.log ?? [])
+  expect(log.some(l => l.includes('to choose') || l.startsWith('The deep forks'))).toBe(false)
+  await ui.unmount()
+})
+
 test('before a big boss falls, Retire on the sheet does nothing', async $ => {
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'sheet' })

@@ -10,7 +10,7 @@ import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, hasTalent, offer, owed } from './talents'
-import { MARKS, forkTier, markHere, markOf, pairOf, roman, tierStart } from './deep'
+import { MARKS, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -76,6 +76,8 @@ export type Action =
   | { kind: 'talent'; talent: Talent }
   /** One of the two marks the next tier is chosen of, chosen. */
   | { kind: 'mark'; mark: Mark }
+  /** A session begun: what waits for the player's choice, said. */
+  | { kind: 'greet' }
   | { kind: 'train'; stat: Attribute }
   | { kind: 'zoom' }
 
@@ -1187,6 +1189,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   retire: (g, a) => say(g, whyNotRetire(g, a.slot) ?? ''),
   talent: (g, a) => learn(g, a.talent),
   mark: (g, a) => chooseMark(g, a.mark),
+  greet: g => greet(g),
   order: (g, a) => order(g, a.order),
   cycle: g => cycle(g),
   place: (g, a) => {
@@ -1599,9 +1602,25 @@ const learn = (g: Game, t: Talent) => {
 /** A boss slain that opens a fork (a big boss from depth 50 on: no other leaves the hero short of a tier): the next tier's choice said. */
 const announceFork = (g: Game) => {
   const tier = forkTier(g)
-  if (tier === undefined) return
+  if (tier !== undefined) say(g, forkSaid(g, tier))
+}
+
+/** What a fork says: the tier and its two marks, and where to choose. */
+const forkSaid = (g: Game, tier: number) => {
   const [easy, hard] = pairOf(g.world, tier).map(m => MARKS[m].name)
-  say(g, `The deep forks: tier ${roman(tier)} will be ${easy} or ${hard}. Choose on the character sheet.`)
+  return `The deep forks: tier ${roman(tier)} will be ${easy} or ${hard}. Choose on the character sheet.`
+}
+
+/**
+ * A session begun: the talents owed and the fork open, said, since a hero who earned them before they existed, or
+ * while no one watched, has heard of neither.
+ */
+const greet = (g: Game) => {
+  const talents = owed(g)
+  if (talents === 1) say(g, 'A talent to choose: open the character sheet.')
+  else if (talents > 1) say(g, `${talents} talents to choose: open the character sheet.`)
+  const tier = forkTier(g)
+  if (tier !== undefined && isForkOpen(g)) say(g, forkSaid(g, tier))
 }
 
 /** Into a tier's first depth from the fork before it: the mark taken (the easier, if none was chosen), and said. */

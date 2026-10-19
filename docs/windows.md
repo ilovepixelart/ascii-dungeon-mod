@@ -65,9 +65,14 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## Settings
 
-- Opened from the gear in the strip, or Settings on the text dashboard. New game opens the start screen; View steps the view; Effects and Music each turn on or off; Volume steps a quarter at a time, from full round to a quarter, for every clip and the tune (`SoundSettings`, `nextSound`). Music turned on or off, or a new volume, restarts the tune at its level. The sound settings are kept across sessions; the `sound` and `music` options give them until the player sets them.
+- Opened from the gear in the strip, or Settings on the text dashboard. New game opens the start screen; Help beside it the how-it-plays window; View steps the view; Effects and Music each turn on or off; Volume steps a quarter at a time, from full round to a quarter, for every clip and the tune (`SoundSettings`, `nextSound`). Music turned on or off, or a new volume, restarts the tune at its level. The sound settings are kept across sessions; the `sound` and `music` options give them until the player sets them.
 - Hero orders, under a rule below the sound (`Game.orders`, kept with the game; `obey` and `ORDER_STEPS` in `hooks/game.ts`), each stepped by its button. Drink: a healing potion after a blow that leaves the hero under a quarter of max HP (the default), under half, or never. Smoke: never (the default), or when low, a smoke bomb under a quarter of max HP with no healing potion left and a foe near. Leave: take every item (the default), leave Commons, or leave anything below Rare; a kill's item below it stays on the floor, said. The orders' hotkeys (d, f, k) work only in the pixel window: on the text dashboard d descends and k moves up.
 - What the drink order is for: the hero plays mostly while no one watches. Over 60 simulated games a class with a player who never drinks by hand, deaths per 1,000 steps are 4.73 with it off and 2.57 at a quarter; a player who drinks at 40% by hand sees no change (2.24 to 2.26).
+
+## How it plays
+
+- What the session's coding does to the hero, a row a rule with the strip's own icon (`HELP_ROWS` in `hooks/helpwindow.ts`): every tool call a step or a blow, a failed call the foe's strike, passing tests a sure critical, a commit a shrine and full HP, a push or a pull request a cache, a finished answer the stairs; the work it rewards in green. Under a rule, what is the player's: gear, talents, orders.
+- Opened by Help (`h`) beside New game in settings, and How it plays on the text dashboard's settings. It is the pane's own state (`isHelpOpen` in `register.tsx`), not a game panel, so it opens over whatever is open and closes back to it; first in the window lists, it draws over every other. As text, a line a rule and where the bag, the sheet and settings are.
 
 ## The death window
 

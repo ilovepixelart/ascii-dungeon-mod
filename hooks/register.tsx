@@ -21,6 +21,7 @@ import { deepGesture, deepHeight, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
+import { HELP_ROWS, helpGesture, helpHeight, helpPixels } from './helpwindow'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
@@ -102,6 +103,8 @@ let forgeUi: ForgeUi = FORGE_UI_IDLE
 let retireUi: RetireUi = FORGE_UI_IDLE
 let chestUi: ChestUi = CHEST_UI_IDLE
 let startUi: StartUi | null = null
+/** The how-it-plays window, open over whatever the pane shows: it closes back to that. */
+let isHelpOpen = false
 /** The pixel map's mounted size, which a repaint must match. */
 let mapSize: { columns: number; rows: number } | null = null
 /** Where the camera looks, in world pixels, and in which place: it holds still while the hero stays mid-view. */
@@ -137,6 +140,9 @@ const tileCenter = (g: Game): Pos => ({ x: g.x * TILE_PX + TILE_PX / 2, y: g.y *
 const SHEET_ROWS = 3 + ATTRIBUTES.length
 /** The rows a panel under the dashboard takes: its title, a row per ware or worn slot, and its close row. */
 const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, shop: 3 + WARES.length, forge: 2 + SLOTS.length, stash: 3 + STASH_SIZE, healer: 3, elder: 5, mystic: 4, guard: 3, villager: 3, dog: 4 }
+
+/** The how-it-plays window's rows as text: its head, a line a rule, where things are, the close key. */
+const HELP_TEXT_ROWS = HELP_ROWS.length + 3
 
 /** The townsfolk without work, by window: who they are, as their window's title says. */
 const TALKER_NAME: Readonly<Record<'guard' | 'villager' | 'dog', string>> = { guard: 'The guard', villager: 'A villager', dog: 'The dog' }
@@ -851,6 +857,7 @@ const saveCard = async ($: EngineInterface, g: Game) => {
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
   const outcome = settingsGesture(g, soundSettings, data as Gesture)
+  if (outcome.isHelp === true) isHelpOpen = true
   setSound($, g, outcome.sound)
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
@@ -906,6 +913,10 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'deep-clicks':
       await onDeepClick($, data)
+      return true
+    case 'help-clicks':
+      if (helpGesture(data as Gesture)) isHelpOpen = false
+      $.ui.invalidate('ui.render')
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -1003,7 +1014,7 @@ const sizesOf = (p: Pane) => {
   const hasHud = Raster !== undefined && columns >= HUD_COLUMNS
   const hudRows = hudLayout(columns).height / 2
   // The dashboard's rows: the pixel strip alone, or five text rows and a 5-line log; the character sheet's when open.
-  const dashRows = (hasHud ? hudRows : 14) + (PANEL_ROWS[g.panel] ?? 0)
+  const dashRows = (hasHud ? hudRows : 14) + (isHelpOpen ? HELP_TEXT_ROWS : (PANEL_ROWS[g.panel] ?? 0))
   // The pixel inventory opens as a window over the map, so the map keeps its rows; the text bag sits inline below.
   const mapRoom = e.props.scroll.bodyRows - dashRows - (g.panel === 'bag' && !isPixelBag && !isCompactBag ? 12 : 0)
   // With the pixel dashboard there is no view key: the map is always pixels.
@@ -1049,7 +1060,8 @@ const bagActions = ({ Box, Button, press }: Pane) => (
 )
 
 /** The settings' keys; the orders' hotkeys only where the window has the pane to itself, the dashboard's d and k being taken. */
-const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane, isWindow = false) => {
+const settingsKeys = (p: Pane, isWindow = false) => {
+  const { g, Button, press, redraw, setSoundTo } = p
   const orderKey = (which: 'drink' | 'smoke' | 'leave', hotkey: string) => {
     const word = orderWord(g, which).toLowerCase().replace(/\bhp\b/, 'HP')
     return <Button key={`settings-${which}`} label={word[0]!.toUpperCase() + word.slice(1)} hotkey={isWindow ? hotkey : undefined} plain onPress={press({ kind: 'order', order: which })} />
@@ -1060,6 +1072,7 @@ const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane, isWindow =
   }
   return [
     <Button key="settings-new" label="New game..." hotkey="n" plain onPress={press({ kind: 'panel', panel: 'start' })} />,
+    helpKey(p, isWindow ? 'h' : undefined),
     <Button key="settings-view" label={VIEW_LABEL[g.zoom]} hotkey="v" plain onPress={press({ kind: 'zoom' })} />,
     <Button key="settings-effects" label={soundSettings.effects ? 'Effects: on' : 'Effects: off'} hotkey="e" plain onPress={soundKey('effects')} />,
     <Button key="settings-music" label={soundSettings.music ? 'Music: on' : 'Music: off'} hotkey="m" plain onPress={soundKey('music')} />,
@@ -1069,6 +1082,28 @@ const settingsKeys = ({ g, Button, press, redraw, setSoundTo }: Pane, isWindow =
     orderKey('leave', 'k'),
     <Button key="settings-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'settings' })} />,
   ]
+}
+
+/** Help: the how-it-plays window, over whatever is open. */
+const helpKey = ({ Button, redraw }: Pane, hotkey?: string) => (
+  <Button key="help-open" label="How it plays" hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
+)
+const helpClose = ({ Button, redraw }: Pane, hotkey?: string) => (
+  <Button key="help-close" label="Close" hotkey={hotkey} plain onPress={() => { isHelpOpen = false; redraw() }} />
+)
+
+/** The how-it-plays window as text: a line a rule, then where things are. */
+const textHelp = (p: Pane) => {
+  const { Box, Text } = p
+  const said = (s: string) => s.charAt(0) + s.slice(1).toLowerCase()
+  return (
+    <Box flexDirection="column">
+      <Text bold>How it plays: your coding plays the hero</Text>
+      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${said(r.when)}: ${r.does.toLowerCase()}.`}</Text>)}
+      <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text>
+      <Box columnGap={2}>{helpClose(p)}</Box>
+    </Box>
+  )
 }
 
 const playOnKey = ({ Button, press }: Pane, hotkey?: string) => <Button key="recap-play" label="Play on" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'recap' })} />
@@ -1365,6 +1400,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
  * windows need the pane wide enough (`isWindowWide`); the start screen draws as text when it is not.
  */
 const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
+  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), [], [helpClose(p, 'c')]) },
   { is: (_, l) => l.isPixelBag, draw: pixelBag },
   { is: p => p.g.panel === 'shop' && p.isWindowWide, draw: pixelShop },
   { is: p => p.g.panel === 'start', draw: startScreen },
@@ -1761,6 +1797,7 @@ const dashKeys = ({ g, Box, Text, Button, press }: Pane) => (
 
 /** The windows the dashboard draws inline under the map, in their order: each when it is open and not drawn whole-pane. */
 const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
+  { is: () => isHelpOpen, draw: textHelp },
   { is: (p, l) => p.g.panel === 'bag' && !l.isPixelBag && !l.isCompactBag, draw: textBag },
   { is: p => p.g.panel === 'sheet', draw: textSheet },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined, draw: textDeath },

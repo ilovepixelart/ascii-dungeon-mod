@@ -21,6 +21,7 @@ import { TALENTS } from './talents'
 import { talentPixels } from './talentwindow'
 import { pairOf } from './deep'
 import { deepPixels } from './deepwindow'
+import { helpPixels } from './helpwindow'
 import { arrive } from './world'
 
 export const CLASSES: readonly HeroClass[] = ['knight', 'mage', 'rogue']
@@ -52,6 +53,7 @@ const kitted = (cls: HeroClass, rarity: Rarity): Game => {
 /** The windows of a hero's long game: the codex, retiring, the talents offered three by three, the deep at every pair of marks. */
 const heroShots = (g: Game): Shot[] => {
   const out: Shot[] = [
+    { name: 'help', px: helpPixels() },
     { name: 'codex', px: codexPixels({ ...g, codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }) },
     { name: 'retire', px: retirePixels({ ...g, bossSlain: 10, deepest: 12, gear: { weapon: g.bag[0]! } }, { slot: 'weapon' }) },
   ]

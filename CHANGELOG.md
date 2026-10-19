@@ -15,6 +15,8 @@ release may change behaviour.
 
 ### Added
 
+- How it plays, from Help in settings: what the session's coding does to the hero (tool calls, failed calls, passing
+  tests, commits, pushes and pull requests, finished answers), a row each, and what is the player's to choose.
 - A session that starts with talents owed or a fork open says so in the log ("9 talents to choose: open the character
   sheet."), so a hero who earned them before they existed, or while no one watched, hears of them.
 

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { GOLD_INK } from './pieces'
-import { SETTINGS_H, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, soundFrom } from './settings'
+import { GOLD_INK, buttonW } from './pieces'
+import { SETTINGS_H, VOLUME_STEPS, helpRect, nextSound, settingsGesture, settingsPixels, soundFrom } from './settings'
 import type { SoundSettings } from './settings'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
@@ -95,4 +95,17 @@ describe('the sound as saved', () => {
       expect(soundFrom(saved, ON)).toEqual(ON)
     }
   })
+})
+
+test('Help sits beside New game, inside the window, and a click on it asks for the how-it-plays window', async () => {
+  const r = helpRect()
+  const g = newGame()
+  const sound = { effects: true, music: true, volume: 4 }
+  expect([r.x > 3 + buttonW('N', 'NEW GAME'), r.x + r.w <= WINDOW_W, r.y + r.h <= SETTINGS_H]).toEqual([true, true, true])
+  // Its key letter is drawn in gold where it stands.
+  expect(settingsPixels(g, sound).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + r.w).includes(GOLD_INK))).toBe(true)
+  const at = { x: r.x + 2.5, y: (r.y + 4) / 2 + 0.25 }
+  expect(settingsGesture(g, sound, { type: 'release', from: at, at, button: 'left' }).isHelp).toBe(true)
+  const beside = { x: 4.5, y: (r.y + 4) / 2 + 0.25 }
+  expect(settingsGesture(g, sound, { type: 'release', from: beside, at: beside, button: 'left' }).isHelp).toBeUndefined()
 })

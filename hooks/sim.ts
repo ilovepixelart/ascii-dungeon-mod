@@ -1,6 +1,6 @@
 // Simulation: plays whole games through the real rules with a scripted coding session and a simple player,
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
-import type { Game, HeroClass } from '../types'
+import type { Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
 import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, threat } from './game'
 import type { Action } from './game'
@@ -35,6 +35,11 @@ export type SimStats = {
   kills: number
   blocked: number
   potionsUsed: number
+  /** Herbs, scrolls, runes and bombs used. */
+  herbsUsed: number
+  scrollsUsed: number
+  wardsUsed: number
+  bombsUsed: number
   loot: Record<string, number>
   finalLevel: number
   finalGold: number
@@ -208,10 +213,26 @@ const leaveWhenClear = (g: Game, d: Dice): Action | undefined => {
   return g.foe === null && g.x === stairs.x && g.y === stairs.y && d(2) === 1 ? { kind: 'stairs' } : undefined
 }
 
-/** Staying alive: a potion when low, or before an announced breath that could kill; better gear on; fury against a deadly foe. */
+/** The belt slot of a kind, while it holds any. */
+const held = (g: Game, kind: Consumable) => (countOf(g.belt[slotOf(kind)]) > 0 ? slotOf(kind) : -1)
+
+/**
+ * The rest of the belt, as a player reaches for it: smoke out of a fight when low with no healing left, a ward up
+ * against a foe that is not easy, herbs after a fight that left the hero hurt.
+ */
+export const beltAid = (g: Game): Action | undefined => {
+  if (g.foe !== null && g.hp < g.maxHp * 0.25 && healingSlot(g) < 0 && held(g, 'smoke') >= 0) return { kind: 'use', slot: held(g, 'smoke') }
+  if (g.foe !== null && g.effects.ward === 0 && held(g, 'ward') >= 0 && threat(g) !== 'easy') return { kind: 'use', slot: held(g, 'ward') }
+  if (g.foe === null && g.effects.regen === 0 && g.hp < g.maxHp * 0.7 && held(g, 'regen') >= 0) return { kind: 'use', slot: held(g, 'regen') }
+  return undefined
+}
+
+/** Staying alive: a potion when low, or before an announced breath that could kill; the rest of the belt; better gear on; fury against a deadly foe. */
 const keepAlive = (g: Game): Action | undefined => {
   const heal = healingSlot(g)
   if (g.hp < g.maxHp * 0.4 && heal >= 0) return { kind: 'use', slot: heal }
+  const aid = beltAid(g)
+  if (aid !== undefined) return aid
   const isBreathNext = g.foe !== null && (g.log.at(-1) ?? '').includes('draws a deep breath')
   if (isBreathNext && g.foe !== null && g.hp <= g.foe.atk * 2.5 && heal >= 0) return { kind: 'use', slot: heal }
   const upgrade = g.bag.find(i => isUpgrade(g, i))
@@ -388,6 +409,10 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     kills: count(records, /^You slay /),
     blocked: count(records, /blocks your way/),
     potionsUsed: count(records, /^You drink a/),
+    herbsUsed: count(records, /^Warmth spreads through you/),
+    scrollsUsed: count(records, /^Fury fills you/),
+    wardsUsed: count(records, /^A ward shimmers around you/),
+    bombsUsed: count(records, /^You vanish in smoke/),
     loot,
     finalLevel: g.level,
     finalGold: g.gold,

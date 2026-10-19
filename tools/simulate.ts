@@ -73,6 +73,10 @@ const summary = {
   balance: {
     deathsPer1000Steps: (sum(r => r.stats.deaths) * 1000) / (results.length * steps),
     potionsPerGame: sum(r => r.stats.potionsUsed) / results.length,
+    herbsPerGame: sum(r => r.stats.herbsUsed) / results.length,
+    scrollsPerGame: sum(r => r.stats.scrollsUsed) / results.length,
+    wardsPerGame: sum(r => r.stats.wardsUsed) / results.length,
+    bombsPerGame: sum(r => r.stats.bombsUsed) / results.length,
     turnsPerGame: sum(r => r.stats.turns) / results.length,
     deepestAverage: sum(r => r.stats.deepest) / results.length,
     levelAverage: sum(r => r.stats.finalLevel) / results.length,

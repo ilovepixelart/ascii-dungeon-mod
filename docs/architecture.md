@@ -49,7 +49,7 @@ flowchart LR
 | a townsfolk | a spot in `TOWN_SPOTS` (`town.ts`), their art in `NPC_ART`, what a visit does in `visit` (`game.ts`) |
 | a field in the saved state | the field in `types/index.d.ts`, its default in `newGame`, and a migration in `save.ts` with `SAVE_VERSION` raised |
 
-- `hooks/invariants.ts` lists the rules every state keeps; `hooks/sim.ts` plays whole games through `apply` with a scripted coding session and checks them after every step. `tools/simulate.ts` runs it at scale and reports balance.
+- `hooks/invariants.ts` lists the rules every state keeps; `hooks/sim.ts` plays whole games through `apply` with a scripted coding session and checks them after every step. Its player drinks a potion under 40% of max HP and reaches for the rest of the belt as a player would (`beltAid`): smoke under a quarter with no healing, a ward against a foe that is not easy, herbs after a fight under 70%, fury against a deadly foe. `tools/simulate.ts` runs it at scale and reports balance, each kind's uses a game among it.
 
 Art changes go through the mock workbench first; rule changes through the simulator (see `CLAUDE.md`).
 

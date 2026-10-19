@@ -66,6 +66,14 @@ describe('the rest of the belt, as the simulated player reaches for it', () => {
     expect(beltAid(at(20, 3, 'ward'))).toBeUndefined()
   })
 
+  test('fury against a deadly foe, none already burning; not against a tough one', async () => {
+    // 20 HP against an attack of 7 is 3 hits, deadly; against 4, 5 hits, tough.
+    const fury = { kind: 'use', slot: 2 }
+    expect(beltAid(at(20, 7, 'fury'))).toEqual(fury)
+    expect(beltAid({ ...at(20, 7, 'fury'), effects: { ...plainHero().effects, fury: 3 } })).toBeUndefined()
+    expect(beltAid(at(20, 4, 'fury'))).toBeUndefined()
+  })
+
   test('herbs with no foe about, under 70% of max HP, none already working', async () => {
     expect(beltAid(at(13, 0, 'regen'))).toEqual(herb)
     expect(beltAid(at(14, 0, 'regen'))).toBeUndefined()
@@ -74,11 +82,11 @@ describe('the rest of the belt, as the simulated player reaches for it', () => {
   })
 })
 
-test('the simulated player uses herbs, scrolls and runes as well as potions', { timeoutMs: 60000 }, async () => {
+test('the simulated player uses herbs and runes as well as potions', { timeoutMs: 60000 }, async () => {
   const runs = (['knight', 'mage', 'rogue'] as const).flatMap(cls => [1, 2, 3].map(seed => simulate(seed, 2000, cls).stats))
   const used = (key: 'potionsUsed' | 'herbsUsed' | 'scrollsUsed' | 'wardsUsed' | 'bombsUsed') => runs.reduce((n, s) => n + s[key], 0)
-  // Bombs only once healing has run out, which few runs reach; their rule is held above.
-  expect([used('potionsUsed') > 0, used('herbsUsed') > 0, used('scrollsUsed') > 0, used('wardsUsed') > 0]).toEqual([true, true, true, true])
+  // Bombs only once healing has run out and fury only against a deadly foe, which short runs may not meet; both rules are held above.
+  expect([used('potionsUsed') > 0, used('herbsUsed') > 0, used('wardsUsed') > 0]).toEqual([true, true, true])
 })
 
 describe('moves the pane can play', () => {

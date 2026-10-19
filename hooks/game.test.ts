@@ -1176,10 +1176,30 @@ describe('the boss of every fifth depth', () => {
     expect(['rare', 'epic', 'legendary']).toContain(found[0]!.rarity)
   })
 
-  test('a task done in town with a guardian waiting: back through the portal to meet it', async () => {
+  test('a task done in town with a guardian waiting: back through the portal and to the stairs, where it rises', async () => {
     const town = apply(atDepth(5), { kind: 'portal' })
     const g = apply(town, { kind: 'descend' })
-    expect([g.where, g.depth, g.x, g.y, g.foe?.boss]).toEqual(['dungeon', 5, town.portal!.x, town.portal!.y, true])
+    const stairs = levelOf(g).stairs
+    expect([g.where, g.depth, g.x, g.y, g.foe?.boss]).toEqual(['dungeon', 5, stairs.x, stairs.y, true])
+    // Through the portal and down at once: no walk for the town's screen to play.
+    expect(g.walked).toEqual([])
+  })
+
+  test('an answer finished walks the hero the way to the stairs, then down, the walk kept to be played', async () => {
+    const g = { ...atDepth(2), seen: '1'.repeat(64 * 18) }
+    const level = levelOf(g)
+    const way = bfs(level.tiles, g, level.stairs)!
+    const down = apply(g, { kind: 'descend' })
+    expect(down.depth).toBe(3)
+    expect(down.walked).toEqual(way.slice(1).map(p => ({ x: p.x, y: p.y })))
+  })
+
+  test('with a foe alive, an answer finished leaves the hero where he stands and the stairs guarded', async () => {
+    const g0 = atDepth(2)
+    const g = { ...g0, foe: foeAhead(g0, 3) }
+    const stays = apply(g, { kind: 'descend' })
+    expect([stays.depth, stays.x, stays.y, stays.walked]).toEqual([2, g.x, g.y, []])
+    expect(stays.log.at(-1)).toMatch(/ guards the stairs\.$/)
   })
 })
 

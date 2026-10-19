@@ -1140,13 +1140,26 @@ const goTo = (g: Game, target: Pos) => {
   }
   if (!walkWay(g, path, isFoe)) return
   if (isFoe && g.foe !== null && isNextTo(g, g.foe)) attack(g)
-  if (same(target, level.stairs) && same(g, level.stairs)) {
-    // The walk to the stairs is kept past the descent, so it can be played on the level it was walked on.
-    const walked = g.walked
-    const depth = g.depth
-    descend(g)
-    if (g.depth !== depth) g.walked = walked
-  }
+  if (same(target, level.stairs) && same(g, level.stairs)) descendAfterWalk(g)
+}
+
+/** Down the stairs the hero walked to, the walk kept past the descent so it can be played on the level it was walked on. */
+const descendAfterWalk = (g: Game) => {
+  const walked = g.walked
+  const depth = g.depth
+  descend(g)
+  if (g.depth !== depth) g.walked = walked
+}
+
+/**
+ * An answer finished: the hero walks the way to the stairs, picking up what lies on it, and goes down. With a foe alive
+ * the stairs stay guarded, as they are; a foe stepping up or a fall on the way stops the walk short of them.
+ */
+const walkDown = (g: Game) => {
+  const level = levelOf(g)
+  const path = g.foe === null && !same(g, level.stairs) ? bfs(level.tiles, g, level.stairs) : null
+  if (path !== null && !walkWay(g, path, false)) return
+  descendAfterWalk(g)
 }
 
 /**
@@ -1197,7 +1210,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
     const quest = questOf(a.text)
     if (quest !== undefined) say(g, `A new quest: "${quest}"`)
   },
-  descend: g => descend(g),
+  descend: g => walkDown(g),
   attack: g => attack(g),
   potion: g => quaff(g),
   walk: g => step(g, 1),
@@ -1577,7 +1590,9 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   // A task done in town: back through the portal, then down, unless the stairs have a guardian to meet first.
   descend: g => {
     leaveTown(g)
-    descend(g)
+    walkDown(g)
+    // Through the portal and down at once: a walk on the dungeon's ground is not one the town's screen can play.
+    g.walked = []
   },
 }
 

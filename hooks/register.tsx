@@ -952,6 +952,7 @@ const beginSession = async ($: EngineInterface) => {
   const saved = (await $.store.get(SAVE)) as Game | undefined
   const opening = openingGame(await read($, game), version, saved)
   if (opening !== undefined) await update($, game, () => opening)
+  await act($, { kind: 'greet' })
   void $.ui.open(OPEN)
 }
 

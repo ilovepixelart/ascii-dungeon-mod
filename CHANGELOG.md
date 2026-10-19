@@ -4,6 +4,14 @@ All notable changes to ascii-dungeon are listed here. Versions follow
 [Semantic Versioning](https://semver.org/); while the version is 0.x, any
 release may change behaviour.
 
+## [Unreleased]
+
+### Fixed
+
+- A prompt that is only a pasted image no longer becomes a quest quoting the host's stand-in for it ("A new quest:
+  "[Image #16]""): attachment placeholders are left out, and a prompt with no words left is no quest. A long prompt is
+  cut at a word and ends in "...", where it was cut mid-word.
+
 ## [0.3.0] - 2026-10-19
 
 Saves from 0.2.0 load with their belt rearranged (save version 7): nothing is lost, and nothing needs doing. A save

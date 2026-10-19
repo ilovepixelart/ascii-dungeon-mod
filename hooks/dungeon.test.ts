@@ -1526,7 +1526,36 @@ test('a blow plays as hit frames: the number over the foe for 18 frames, then th
   // The hero walks up first; the blow's frames follow the walk's.
   expect(frames.length).toBeGreaterThanOrEqual(HIT_FRAMES - 1)
   const after = (await ui.find({ type: 'Raster', key: 'map' }))?.props.cells
-  expect(frames.every(f => f !== after)).toBe(true)
+  // Every frame of the blow is not the ordinary map; the last one sent is, so the terminal is left showing it
+  // whether or not the host repaints a map whose cells it already had.
+  expect(frames.slice(0, -1).every(f => f !== after)).toBe(true)
+  expect(frames.at(-1)).toBe(after)
+  await ui.unmount()
+})
+
+test('a kill\'s number does not stay on the map: once its frames end the last frame sent is the ordinary map', async ($, on) => {
+  const clock = mock.clock(on)
+  const frames: string[] = []
+  on('ui.blit', (_$, e) => {
+    if ('cells' in e) frames.push(e.cells)
+    return { value: {} }
+  })
+  // A foe beside the hero with 1 HP: the next edit's blow slays it.
+  const g0 = newGame()
+  storeIn(on, new Map<string, unknown>([['save', { ...g0, foe: foeAhead(g0, 1, { hp: 1, maxHp: 1, atk: 0 }) }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  on('tool.call', () => ({ result: { filePath: '/src/utils.ts' } as never }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  await clock.advance(1000)
+  frames.length = 0
+  await $.tool.call({ tool: 'Edit', file_path: '/src/utils.ts', old_string: 'a', new_string: 'b' })
+  await clock.advance(5000)
+  const tree = (await ui.find({ type: 'Raster', key: 'map' }))?.props.cells
+  expect(frames.length).toBeGreaterThan(2)
+  expect(frames.at(-1)).toBe(tree)
   await ui.unmount()
 })
 

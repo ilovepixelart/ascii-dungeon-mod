@@ -436,13 +436,28 @@ const playHits = ($: EngineInterface, g: Game, hits: readonly Hit[]) => {
     if (walk !== null || mapSize === null || frame >= hitFramesFor(hits)) {
       isHitPlaying = false
       isFalling = false
-      if (frame >= hitFramesFor(hits)) $.ui.invalidate('ui.render')
+      if (frame >= hitFramesFor(hits)) await endHits($)
       return false
     }
     const view = cameraFor(g, tileCenter(g), mapSize.columns, mapSize.rows)
     const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame), mapSize)
     return painted.deny === undefined
   }, () => $.clock.every(FRAME_MS, () => void $.clock.now().then(ticker.tick)))
+}
+
+/**
+ * A blow's frames over: the ordinary map sent as the pane now draws it, then the pane redrawn. The pane's own map may
+ * already hold those cells from before the blow, and a host need not repaint a map whose cells it already had, so
+ * without the frame the terminal would keep the blow's last one, its number still up.
+ */
+const endHits = async ($: EngineInterface) => {
+  const size = mapSize
+  if (size !== null) {
+    const g = normalize(await read($, game))
+    const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
+    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown), size)
+  }
+  $.ui.invalidate('ui.render')
 }
 
 /** Carries out the click the hero is walking to, now: at the walk's end, or cut short by what cannot wait. */

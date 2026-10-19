@@ -34,6 +34,7 @@ import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeOverlay, for
 import type { ForgeUi } from './forge'
 import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
+import { UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
 import { openingGame } from './save'
@@ -1016,13 +1017,15 @@ const sizesOf = (p: Pane) => {
   const hudRows = hudLayout(columns).height / 2
   // The dashboard's rows: the pixel strip alone, or five text rows and a 5-line log; the character sheet's when open.
   const dashRows = (hasHud ? hudRows : 14) + (isHelpOpen ? HELP_TEXT_ROWS : (PANEL_ROWS[g.panel] ?? 0))
+  // The pane's top row, while it is short of the size the game plays best in: too narrow first, else too short.
+  const topNote = Raster === undefined ? undefined : (widthNote(columns) ?? sizeNote(columns, e.props.scroll.bodyRows))
   // The pixel inventory opens as a window over the map, so the map keeps its rows; the text bag sits inline below.
-  const mapRoom = e.props.scroll.bodyRows - dashRows - (g.panel === 'bag' && !isPixelBag && !isCompactBag ? 12 : 0)
+  const mapRoom = e.props.scroll.bodyRows - dashRows - (topNote === undefined ? 0 : 1) - (g.panel === 'bag' && !isPixelBag && !isCompactBag ? 12 : 0)
   // With the pixel dashboard there is no view key: the map is always pixels.
   const isPixelView = Raster !== undefined && (hasHud || g.zoom === 3)
   const pixelRows = isPixelView ? Math.max(PX / 2, Math.min((MAP_H * PX) / 2, mapRoom)) : undefined
   // No frame around the map: it takes the pane's full width.
-  return { isWide: columns >= 44, mapWidth: Math.max(10, columns), isPixelBag, isCompactBag, hasHud, hudRows, mapRoom, isPixelView, pixelRows }
+  return { isWide: columns >= 44, mapWidth: Math.max(10, columns), isPixelBag, isCompactBag, hasHud, hudRows, mapRoom, isPixelView, pixelRows, topNote }
 }
 
 /**
@@ -1111,10 +1114,17 @@ const playOnKey = ({ Button, press }: Pane, hotkey?: string) => <Button key="rec
 const wakeKey = ({ Button, press }: Pane) => <Button key="death-wake" label="Wake" hotkey="w" plain onPress={press({ kind: 'panel', panel: 'death' })} />
 
 /** A pixel window over the whole pane: its raster and click layer, the keys under it, the last two log lines. */
+/** A window's top row while the pane cannot show it whole: the rows it needs and the pane has. */
+const fitLine = (p: Pane, rows: number, under: number) => {
+  const note = fitNote(rows, under, p.e.props.scroll.bodyRows)
+  return note === undefined ? undefined : <p.Text dimColor wrap="truncate-end">{note}</p.Text>
+}
+
 const pixelWindow = (p: Pane, key: string, height: number, px: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string) => {
   const { Box, Text, Raster, Client } = p
   return (
     <Box flexDirection="column">
+      {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : 1))}
       <Box flexDirection="column" alignItems="center">
         <Box>
           {Raster !== undefined && <Raster key={key} columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px })} />}
@@ -1195,6 +1205,7 @@ const pixelShop = (p: Pane) => {
   const junk = junkValue(g)
   return (
     <Box flexDirection="column">
+      {fitLine(p, rows, UNDER_WINDOW + 1)}
       <Box flexDirection="column" alignItems="center">
         <Box>
           {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: shopPixels(g, shopUi, boxes) })} />}
@@ -1379,6 +1390,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
   const deed = talkAction(g, who)
   return (
     <Box flexDirection="column">
+      {fitLine(p, height / 2, UNDER_WINDOW)}
       <Box flexDirection="column" alignItems="center">
         <Box>
           {Raster !== undefined && <Raster key="talk" columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px: talkPixels(g, who) })} />}
@@ -1819,15 +1831,14 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: p => p.g.panel === 'guard' || p.g.panel === 'villager' || p.g.panel === 'dog', draw: p => textTalker(p, p.g.panel as 'guard' | 'villager' | 'dog') },
 ]
 
-/** The dashboard: the map, a note on the width or the layout where one is due, the strip or the status, then the text views' keys, belt, open window and log. */
+/** The dashboard: the pane's size note on its top row where one is due, the map, a note on the layout, the strip or the status, then the text views' keys, belt, open window and log. */
 const dashboard = (p: Pane, l: Layout) => {
-  const { e, g, Box, Text, Raster } = p
-  const note = Raster !== undefined ? widthNote(e.props.bodyColumns) : undefined
+  const { e, g, Box, Text } = p
   const isWindowed = e.surface === 'terminal' && e.viewport?.isFullscreen === false && l.isPixelView
   return (
     <Box flexDirection="column" position="relative">
+      {l.topNote !== undefined && <Text dimColor wrap="truncate-end">{l.topNote}</Text>}
       <Box flexDirection="column">{mapView(p, l)}</Box>
-      {note !== undefined && <Text dimColor>{note}</Text>}
       {isWindowed && (
         <Text dimColor>
           {l.hasHud ? 'Playing by mouse needs the fullscreen layout: type /tui fullscreen.' : 'Clicking the map needs the fullscreen layout: type /tui fullscreen. Keys work everywhere.'}

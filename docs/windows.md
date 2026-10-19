@@ -1,6 +1,6 @@
 # Pixel windows
 
-Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width shows them all, or none), the same title bar and the same text boxes over it. Every pixel menu is built on it: the inventory (and its compact form), the town's windows, the character sheet and the start screen. A pane narrower than `WINDOW_W` shows each as text instead (`widthNote` in `register.tsx` says why).
+Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width shows them all, or none), the same title bar and the same text boxes over it. Every pixel menu is built on it: the inventory (and its compact form), the town's windows, the character sheet and the start screen. A pane narrower than `WINDOW_W` shows each as text instead. The pane's top row says what its size is short of (`hooks/panesize.ts`): on the map, how wide it needs to be (`widthNote` in `register.tsx`), else that it is under the size the game plays best in (`BEST_COLUMNS` by `BEST_ROWS`, the tallest window whole, pinned by a test over every window drawn); on a window it cannot show whole, the rows that window needs (`fitNote`, counting the `UNDER_WINDOW` rows beneath it). The map gives the note its row.
 
 | Module | Holds |
 |---|---|

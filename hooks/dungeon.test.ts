@@ -618,8 +618,8 @@ test('before a big boss falls, Retire on the sheet does nothing', async $ => {
   await ui.unmount()
 })
 
-test('a wide terminal pane draws the pixel strip alone under the map: no text rows, no buttons, no log', async $ => {
-  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+test('a wide terminal pane of the best size draws the pixel strip alone under the map: no text rows, no buttons, no log', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
   const hud = await ui.find({ type: 'Raster', key: 'hud' })
   expect(hud?.props.columns).toBe(110)
   expect(hud?.props.rows).toBe(hudLayout(110).height / 2)
@@ -945,11 +945,12 @@ test('no frame around the game: neither the map nor the inventory screen draws a
 })
 
 test('the map takes every row the strip leaves, nothing for text rows or a frame', async $ => {
-  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 70 } }, surface: 'terminal' })
+  // At the best size, so no note takes a row.
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
   const strip = hudLayout(WIDE.props.bodyColumns).height / 2
   // The strip: 28 px of content and 2 px of frame and room each side, 32 px, 16 rows.
   expect(strip).toBe(16)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(70 - 16)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(80 - 16)
   await ui.unmount()
 })
 
@@ -1876,6 +1877,49 @@ describe('a walk cut short', () => {
     // The walk back is the two tiles walked: 2 tiles of 4 frames, the last handed to the ordinary drawing.
     expect(blits).toBe(2 * FRAMES_PER_TILE - 1)
     await ui.unmount()
+  })
+})
+
+describe('a pane short of the size the game plays best in', () => {
+  const sized = (columns: number, rows: number) => ({ ...PANE, props: { ...PANE.props, bodyColumns: columns, scroll: { offset: 0, bodyRows: rows } }, surface: 'terminal' as const })
+
+  test('says so on its top row, wide enough but short; narrow, the width note alone', async $ => {
+    const short = await $.ui.mount(sized(110, 50))
+    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 78 rows tall; this one is 110 by 50.' })).toBeDefined()
+    await short.unmount()
+    const narrow = await $.ui.mount(sized(90, 50))
+    expect(await narrow.find({ type: 'Text', text: /^Widen the pane for the full pixel windows/ })).toBeDefined()
+    expect(await narrow.find({ type: 'Text', text: /^ASCII Dungeon plays best/ })).toBeUndefined()
+    await narrow.unmount()
+    const best = await $.ui.mount(sized(110, 78))
+    expect(await best.find({ type: 'Text', text: /^ASCII Dungeon plays best|^Widen the pane/ })).toBeUndefined()
+    await best.unmount()
+  })
+
+  test('the map gives up the note\'s row: one row short of the best size, two map rows fewer', async $ => {
+    const rowsAt = async (rows: number) => {
+      const ui = await $.ui.mount(sized(110, rows))
+      const n = (await ui.find({ type: 'Raster', key: 'map' }))?.props.rows as number
+      await ui.unmount()
+      return n
+    }
+    expect((await rowsAt(78)) - (await rowsAt(77))).toBe(2)
+  })
+
+  test('a window it cannot show whole says on its top row the rows it needs; a pane that holds it says nothing', async ($, on) => {
+    storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'settings' }]]))
+    on('command.register', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('session.start', (_$, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+    const cut = await $.ui.mount(sized(110, 60))
+    expect((await cut.find({ type: 'Raster', key: 'settings' }))?.props.rows).toBe(71)
+    // Settings is 71 rows, with 5 under it and this line: 77.
+    expect(await cut.find({ type: 'Text', text: 'This window needs 77 rows to show whole; the pane has 60. Make it taller, or scroll down.' })).toBeDefined()
+    await cut.unmount()
+    const whole = await $.ui.mount(sized(110, 77))
+    expect(await whole.find({ type: 'Text', text: /^This window needs/ })).toBeUndefined()
+    await whole.unmount()
   })
 })
 

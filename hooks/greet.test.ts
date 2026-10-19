@@ -38,10 +38,10 @@ describe('a session begun with choices waiting', () => {
     expect([said[0], said[1]!.startsWith('The deep forks: tier II')]).toEqual(['2 talents to choose: open the character sheet.', true])
   })
 
-  test('changes nothing else about the game', async () => {
+  test('changes nothing else about the game, but for opening the talent window on the talents owed', async () => {
     const g = hero({ level: 91 })
     const { log: _a, ...after } = apply(g, { kind: 'greet' })
     const { log: _b, ...before } = g
-    expect(after).toEqual({ ...before, codex: after.codex })
+    expect(after).toEqual({ ...before, codex: after.codex, panel: 'talent', talentOffered: 9 })
   })
 })

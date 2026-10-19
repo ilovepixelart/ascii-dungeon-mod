@@ -1,4 +1,4 @@
-import type { Foe, Game, HeroClass } from '../types'
+import type { Foe, Game, HeroClass, Talent } from '../types'
 import type { Theme } from './map'
 
 /** Pixels per tile edge: a tile is PX columns by PX / 2 rows of half-block cells, square on screen. */
@@ -832,6 +832,25 @@ export const TERRAIN: Readonly<Record<'floor' | 'passage' | 'wall' | 'door' | 's
     if (ly % 2 === 0) return ['#b0a08a', '#8a7c68', '#665a4a', '#463e34'][step] ?? '#463e34'
     return ['#7a6e60', '#5a5044', '#3e362c', '#241f1a'][step] ?? '#241f1a'
   },
+}
+
+/**
+ * Each talent's icon, 12 by 12, drawn at twice its size on its card: a tick, a shield, a rocket, a duck; a winged
+ * heart, a blade, a drop of blood, a cracked skull; a bottle, a flask, a coin, a compass.
+ */
+export const TALENT_ICON: Readonly<Record<Talent, readonly string[]>> = {
+  testDriven: ['............', '.........KK.', '........KgK.', '.......KgGK.', '.KK...KgGK..', 'KgGK.KgGK...', 'KGggKgGK....', '.KGgggK.....', '..KGgK......', '...KK.......', '............', '............'],
+  cleanCommit: ['..KKKKKKKK..', '.KwwwwwwwWK.', '.KwZwwwwwWK.', '.KwwwccwwWK.', '.KwwcccwwWK.', '.KwwwccwwWK.', '.KwwwwwwwWK.', '..KwwwwwWK..', '...KwwwWK...', '....KwWK....', '.....KK.....', '............'],
+  shipIt: ['.....KK.....', '....KwwK....', '...KwZwWK...', '...KwccWK...', '...KwccWK...', '...KwwwWK...', '..KKwwwWKK..', '.KrKwwwWKrK.', '.KKKKKKKKKK.', '....KiIK....', '.....iI.....', '.....I......'],
+  rubberDucking: ['............', '....KKKK....', '...KyyyyK...', '...KyykyKKK.', '...KyyyyiiIK', '..KKyyyyKKK.', '.KyyyyyyyK..', 'KyZyyyyyyyK.', 'KyyyyyyyYyK.', '.KYyyyyyYK..', '..KKKKKKK...', '............'],
+  secondWind: ['............', 'Kh.KK.KK.hK.', 'KhKrrKrrKhK.', '.KrZrrrrrK..', '.KrrrrrrRK..', '..KrrrrRK...', '...KrrRK....', '....KRK.....', '.....K......', '............', '............', '............'],
+  opener: ['..........KK', '.........KwK', '........KwWK', '.......KwWK.', '......KwWK..', '.....KwWK...', '..KK.KwK....', '..KyKKK.....', '...KyK......', '..KnKyK.....', '.KnK.KK.....', '.KK.........'],
+  bloodletting: ['.....KK.....', '.....KrK....', '....KrrK....', '....KrrrK...', '...KrZrrK...', '...KrZrrrK..', '..KrrrrrRK..', '..KrrrrrRK..', '..KRrrrRRK..', '...KRRRRK...', '....KKKK....', '............'],
+  grudge: ['...KKKKKK...', '..KooooooK..', '.KoooooooOK.', '.KoKKoKKoOK.', '.KoKrKoKrOK.', '.KooooKoooK.', '..KooKKooK..', '..KoOoOoOK..', '...KoKoKK...', '...KKKKK....', '............', '............'],
+  scavenger: ['....KKKK....', '....KnnK....', '....KKKK....', '...KvvvvK...', '..KvZvvvvK..', '..KvvvvvvK..', '..KvvvvvvK..', '..KvvvvvvK..', '...KvvvvK...', '....KKKK....', '............', '............'],
+  ironStomach: ['...KKKKKK...', '...KeEEeK...', '....KeeK....', '...KeeeeK...', '..KeEeeeEK..', '.KeEgggggEK.', '.KegZggggeK.', '.KeggggggeK.', '.KeEggggEeK.', '..KeEEEEeK..', '...KKKKKK...', '............'],
+  haggler: ['....KKKK....', '..KKyyyyKK..', '.KyyZYYYyyK.', '.KyYyyyyYyK.', 'KyYyKKKKyYyK', 'KyYyKyyyyYyK', 'KyYyyKKyyYyK', 'KyYyyyyKyYyK', '.KyYKKKKYyK.', '.KyyYYYYyyK.', '..KKyyyyKK..', '....KKKK....'],
+  pathfinder: ['....KKKK....', '..KKnnnnKK..', '.KnNwwwwNnK.', '.KnwwwrwwnK.', 'KnwwwrrwwwnK', 'KnwwwwKwwwnK', 'KnwwwKwwwwnK', 'KnwwbbwwwwnK', '.Knwwbwwwwn.', '.KnNwwwwNnK.', '..KKnnnnKK..', '....KKKK....'],
 }
 
 /** The townsfolk, by role: those with work, and those who live there. */

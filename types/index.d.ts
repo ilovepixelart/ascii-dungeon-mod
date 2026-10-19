@@ -183,6 +183,8 @@ export type Game = {
   recap?: Recap
   /** The talents picked, in the order picked; absent, none. */
   talents?: Talent[]
+  /** How many talents earned the talent window has opened on its own for; absent, none. */
+  talentOffered?: number
   /** The depth Second Wind last saved the hero on: once a depth. */
   wind?: number
   /** The hero's last blow slew its foe while Momentum is worn: the next blow deals a quarter more. */

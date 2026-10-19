@@ -412,38 +412,47 @@ test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet'
   await ui.unmount()
 })
 
-test('a talent owed is picked from the sheet, saved, and the sheet says when none is', async ($, on) => {
+test('a talent owed: the session opens on it, it is picked and saved, and the window then says when the next comes', async ($, on) => {
   const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  await ui.press({ key: 'sheet' })
-  expect(await ui.find({ type: 'Button', key: 'sheet-talent', text: /Talent \(1\)/ })).toBeDefined()
-  await ui.press({ key: 'sheet-talent' })
+  expect(await ui.find({ type: 'Text', text: 'Level 10: choose a talent' })).toBeDefined()
   const first = offer({ ...newGame(), level: 10 })[0]!
   await ui.press({ key: `talent-${first}` })
   expect((kept.get('save') as Game).talents).toEqual([first])
+  // The only one owed taken, the window closes; opened from the sheet, it says when the next comes.
+  expect((kept.get('save') as Game).panel).toBe('none')
+  await ui.press({ key: 'sheet' })
+  expect(await ui.find({ type: 'Button', key: 'sheet-talent', text: 'Talent' })).toBeDefined()
+  await ui.press({ key: 'sheet-talent' })
   expect(await ui.find({ type: 'Text', text: /^Talents: .+\. The next at level 20\.$/ })).toBeDefined()
   await ui.unmount()
 })
 
-test('on a wide pane a talent card, clicked, takes that talent', async ($, on) => {
+test('on a wide pane a session with a talent owed opens on the cards; a card clicked is chosen, clicked again taken', async ($, on) => {
   const saved = { ...newGame(), level: 10 }
   const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 20, LINE2_Y + 2)
-  await ui.press({ key: 'sheet-talent' })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  expect((kept.get('save') as Game).panel).toBe('talent')
   const card = talentCards({ ...saved, panel: 'talent' })[2]!
-  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 6) / 2) }
-  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'talent-clicks' } as never)
-  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'talent-clicks' } as never)
+  const at = { x: card.rect.x + 10, y: Math.floor((card.rect.y + 20) / 2) }
+  const click = async () => {
+    await ui.pointer({ type: 'down', ...at, button: 'left', in: 'talent-clicks' } as never)
+    await ui.pointer({ type: 'up', ...at, button: 'left', in: 'talent-clicks' } as never)
+  }
+  await click()
+  expect((kept.get('save') as Game).talents ?? []).toEqual([])
+  await click()
   expect((kept.get('save') as Game).talents).toEqual([card.talent])
+  // The only one owed taken, the window closes.
+  expect((kept.get('save') as Game).panel).toBe('none')
   await ui.unmount()
 })
 

@@ -9,7 +9,7 @@ import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
-import { TALENTS, TALENT_EVERY, hasTalent, offer, owed } from './talents'
+import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed } from './talents'
 import { MARKS, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
@@ -1647,6 +1647,8 @@ const learn = (g: Game, t: Talent) => {
   }
   g.talents = [...(g.talents ?? []), t]
   say(g, `You learn ${TALENTS[t].name}: ${TALENTS[t].does}`)
+  // The last owed taken, the window it was taken in closes; with more owed, it offers the next three.
+  if (g.panel === 'talent' && owed(g) === 0) g.panel = 'none'
 }
 
 /** A boss slain that opens a fork (a big boss from depth 50 on: no other leaves the hero short of a tier): the next tier's choice said. */
@@ -1741,6 +1743,17 @@ const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>
 /** What tool calls do, counted for the recap; the player's own clicks and keys are not. */
 const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend'])
 
+/**
+ * A talent newly earned opens the talent window on its own, once nothing else is open and no foe is alive: once for
+ * each talent earned, so Later leaves it closed until the next.
+ */
+const offerTalent = (g: Game) => {
+  const now = earned(g)
+  if (g.panel !== 'none' || g.foe !== null || owed(g) === 0 || now <= (g.talentOffered ?? 0)) return
+  g.panel = 'talent'
+  g.talentOffered = now
+}
+
 export const apply = (game: Game, action: Action): Game => {
   // A new hero keeps the codex and the heirloom: they are the save's, not one hero's.
   if (action.kind === 'restart') return newHero(game, action.cls ?? game.cls ?? 'knight')
@@ -1750,6 +1763,7 @@ export const apply = (game: Game, action: Action): Game => {
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)
+  offerTalent(g)
   if (TOOL_DRIVEN.has(action.kind)) g.recap = noted(before, g, action)
   g.codex = record(before, g)
   return g

@@ -663,6 +663,17 @@ describe('hit feedback', () => {
     expect(hitsBetween({ ...g, foe }, fled)).toEqual([])
   })
 
+  test('a blow the hero took shows its own damage, even when a potion on the same action leaves the HP higher', async () => {
+    const struck = (hp: number, ...lines: string[]) => hitsBetween({ ...g, foe, hp: 14 }, { ...g, foe, hp, log: [...g.log, ...lines], fresh: lines.length })
+    const atHero = { x: g.x, y: g.y }
+    expect(struck(14, 'The goblin of x strikes you for 9.', 'You drink a Health Potion. +9 HP')).toEqual([{ at: atHero, amount: 9, kind: 'hurt' }])
+    expect(struck(24, 'The goblin of x strikes you for 10.', 'You drink a Greater Health Potion. +21 HP')).toEqual([{ at: atHero, amount: 10, kind: 'hurt' }])
+    expect(struck(13, 'The goblin of x strikes you for 1, half of it turned.')).toEqual([{ at: atHero, amount: 1, kind: 'hurt' }])
+    // Harm with no blow said is the HP lost; a heal alone is no blow.
+    expect(struck(12, 'A trap snaps at your ankle! -2 HP')).toEqual([{ at: atHero, amount: 2, kind: 'hurt' }])
+    expect(struck(20, 'You regenerate 6 HP.')).toEqual([])
+  })
+
   test('a number rises from the tile: white for a hit, gold for a crit or a kill, red over the hurt hero; it holds still for 3 frames on a crit or a kill', async () => {
     expect(hitColor('hit')).toBe('#ffffff')
     expect(hitColor('crit')).toBe('#ffd34d')

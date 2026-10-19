@@ -64,6 +64,8 @@ again from its new start, gains kept. Nothing else needs doing.
 
 - A blow's number no longer stays on the map after its frames end, a kill's included: the pane sends the ordinary
   map at the end, where it left the host to repaint a map it might already have had.
+- A blow on the hero shows its damage even when a potion, a heal or a shrine on the same action leaves the HP no
+  lower; it showed nothing, as if the blow had missed.
 - A click on the stairs walks the hero to them on screen before the descent, where the hero appeared on the next
   depth at once.
 - The fungal deep and the frozen caverns draw their own floors and walls. Their ground shared a place in the drawing

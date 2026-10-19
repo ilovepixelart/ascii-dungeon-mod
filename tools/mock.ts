@@ -1,5 +1,5 @@
 // Art workbench: renders pixel art to review sheets.
-// Usage: bun tools/mock.ts <out-dir> [art-file]   writes cast.ans, cast.png, scene.ans, scene.png
+// Usage: bun tools/mock.ts <out-dir> [art-file]   writes cast.ans, cast.png, scene.ans, scene.png, and ground.png (the scene in each theme's floor and wall, top to bottom)
 // art-file defaults to the live hooks/pixelart.ts; pass a draft copy to review changes before they reach the game.
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -111,7 +111,11 @@ const withPopups = (px: Px): Px => {
   return px
 }
 
-const sceneSheet = (): Px => {
+/** The texture for a scene tile: a theme's own floor and wall when the art file has them (`GROUND`), the rest as drawn. */
+type Ground = Readonly<Record<'floor' | 'wall', (x: number, y: number) => string>>
+const textureOf = (tile: keyof typeof TERRAIN, ground: Ground | undefined) => (ground !== undefined && (tile === 'floor' || tile === 'wall') ? ground[tile] : TERRAIN[tile])
+
+const sceneSheet = (ground?: Ground): Px => {
   const hero = { x: 4 * PX + PX / 2, y: 4 * PX + PX / 2 }
   return withPopups(Array.from({ length: SCENE.length * PX }, (_, y) =>
     Array.from({ length: (SCENE[0]?.length ?? 0) * PX }, (_, x) => {
@@ -122,7 +126,7 @@ const sceneSheet = (): Px => {
       if (key !== '.') return lightPixel(PAL[key] ?? '#ff00ff', light, true)
       const tile = TILE[ch] ?? 'floor'
       const shade = (sprite === undefined ? 1 : dropShadow(x % PX, y % PX)) * (tile === 'wall' ? 1 : wallOcclusion(wallDistance(x, y)))
-      return lightPixel(darken(TERRAIN[tile](x, y), shade), light, false)
+      return lightPixel(darken(textureOf(tile, ground)(x, y), shade), light, false)
     }),
   ))
 }
@@ -143,6 +147,8 @@ await Bun.write(join(out, 'cast.png'), png(cast, 6))
 const scene = sceneSheet()
 await Bun.write(join(out, 'scene.ans'), `${ansi(scene)}\n`)
 await Bun.write(join(out, 'scene.png'), png(scene, 6))
+const grounds: Ground[] = Object.values((art as { GROUND?: Record<string, Ground> }).GROUND ?? {})
+if (grounds.length > 0) await Bun.write(join(out, 'ground.png'), png(grounds.flatMap(g => sceneSheet(g)), 6))
 console.log(`cast: ${CAST.map(([n]) => n).join(' ')}`)
 console.log(`review rows: ${REVIEWS.map(([n]) => n).join(', ')}`)
-console.log(`wrote ${join(out, 'cast.ans')} ${join(out, 'cast.png')} ${join(out, 'scene.ans')} ${join(out, 'scene.png')}`)
+console.log(`wrote ${join(out, 'cast.ans')} ${join(out, 'cast.png')} ${join(out, 'scene.ans')} ${join(out, 'scene.png')}${grounds.length > 0 ? ` ${join(out, 'ground.png')}` : ''}`)

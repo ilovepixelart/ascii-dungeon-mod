@@ -2,10 +2,10 @@
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
 import type { Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
-import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, threat } from './game'
+import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
-import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, same } from './map'
+import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same } from './map'
 import type { Level, Pos } from './map'
 import { violations } from './invariants'
 import { workOf } from './work'
@@ -65,6 +65,8 @@ export type SimStats = {
   cutsAstray: number
   /** Actions that moved the hero with no walk to play (`isJump`): each one is a bug. */
   jumps: number
+  /** Cells shown against the rules of sight (`sightBreaks`): each one is a bug. */
+  sightBreaks: number
   questsDone: number
   fortunes: number
   /** Bosses risen, slain, and deaths to one. */
@@ -352,19 +354,49 @@ export const drawnVsTold = (before: Game, next: Game) => {
   return off
 }
 
+/**
+ * Cells an action showed against the rules of sight: a room's floor with the hero never in it, on its door or in sight
+ * range of it; a closed chest the hero never came in sight range of, where no room's view down a corridor reaches it.
+ * A new level, a Passage Bomb and a death show what they show.
+ */
+export const sightBreaks = (before: Game, next: Game): Pos[] => {
+  if (next.where !== 'dungeon' || before.where !== 'dungeon' || next.depth !== before.depth || next.deaths !== before.deaths) return []
+  if (next.seen === before.seen || next.log.slice(next.log.length - next.fresh).some(l => l.includes('The whole level is laid bare.'))) return []
+  const level = levelOf(next)
+  const shown: Pos[] = []
+  for (let i = 0; i < next.seen.length; i += 1) {
+    const c = { x: i % MAP_W, y: Math.floor(i / MAP_W) }
+    if (before.seen[i] === '0' && next.seen[i] === '1' && isFloor(level.tiles, c)) shown.push(c)
+  }
+  if (shown.length === 0) return []
+  const path = [{ x: before.x, y: before.y }, ...next.walked]
+  const reach = sightOf(next)
+  const near = (c: Pos) => path.some(q => Math.max(Math.abs(q.x - c.x), Math.abs(q.y - c.y)) <= reach)
+  const beside = (q: Pos) => [[1, 0], [-1, 0], [0, 1], [0, -1]].flatMap(([dx, dy]) => roomAt(level, { x: q.x + dx!, y: q.y + dy! }) ?? [])
+  const roomsStoodIn = new Set(path.flatMap(q => roomAt(level, q) ?? beside(q)))
+  return shown.filter(c => {
+    const room = roomAt(level, c)
+    if (room !== undefined) return !roomsStoodIn.has(room) && !near(c)
+    const isChest = chestAt(next.world, next.depth, level, c) !== undefined && !next.taken.includes(cellId(c))
+    return isChest && !near(c) && roomsStoodIn.size === 0
+  })
+}
+
 /** Where a click that changes place is carried out from: beside the town's portal, or on the stairs. */
 const isAtTheWayOut = (g: Game) => (g.where === 'town' ? pathBeside(g, TOWN_SPOTS.portal)?.length === 1 : same(g, levelOf(g).stairs))
 
 /**
  * Whether an action moved the hero without a walk the pane can play: in the same place, to a new tile its walk does not
- * end on; or, by a click, to another place with no walk from where it was not already at the way out, short of a death.
+ * end on; or, by a click, to another place with no walk from where it was not already at the way out. A death is none.
  * The jump a click on the stairs once made.
  */
 export const isJump = (before: Game, next: Game, action: Action) => {
   const isSamePlace = next.where === before.where && next.depth === before.depth
   const end = next.walked.at(-1)
+  // A death wakes the hero where it wakes him, walk or none.
+  if (next.deaths !== before.deaths) return false
   if (isSamePlace) return (next.x !== before.x || next.y !== before.y) && (end === undefined || end.x !== next.x || end.y !== next.y)
-  return action.kind === 'goto' && next.deaths === before.deaths && next.walked.length === 0 && !isAtTheWayOut(before)
+  return action.kind === 'goto' && next.walked.length === 0 && !isAtTheWayOut(before)
 }
 
 /**
@@ -398,6 +430,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
   let untold = 0
   let miscut = 0
   let jumps = 0
+  let sightOff = 0
   for (let step = 0; step < steps; step += 1) {
     const action = actions.next().value as Action
     if (action.kind === 'descend') turns += 1
@@ -407,6 +440,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     untold += drawnVsTold(before, g)
     miscut += cutVsDrawn(before, g)
     if (isJump(before, g, action)) jumps += 1
+    sightOff += sightBreaks(before, g).length
     records.push({
       step,
       action,
@@ -443,6 +477,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     drawnUntold: untold,
     cutsAstray: miscut,
     jumps,
+    sightBreaks: sightOff,
     placed: records.filter(r => r.action.kind === 'place').length,
     placeRefused: count(records, /^It doesn't fit there\./),
     destroyed: count(records, /^You destroy the /),

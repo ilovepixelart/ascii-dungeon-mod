@@ -19,7 +19,7 @@ describe('what the map draws against what the strip and log tell', () => {
   })
 
   test('over simulated games of every class, not one walk tile where they disagree', { timeoutMs: 20000 }, async () => {
-    for (const cls of ['knight', 'mage', 'rogue'] as const) for (const seed of [1, 2]) expect(simulate(seed, 600, cls).stats).toMatchObject({ drawnUntold: 0, cutsAstray: 0, jumps: 0 })
+    for (const cls of ['knight', 'mage', 'rogue'] as const) for (const seed of [1, 2]) expect(simulate(seed, 600, cls).stats).toMatchObject({ drawnUntold: 0, cutsAstray: 0, jumps: 0, sightBreaks: 0 })
   })
 })
 

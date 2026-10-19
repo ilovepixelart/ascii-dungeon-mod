@@ -142,7 +142,7 @@ Each class has a set of three Epic pieces (`SETS` in `hooks/items/catalog.ts`), 
 
 Used from the belt, never worn. Using one always costs a turn, so each is strong. Vital ones are plentiful so they get used, not hoarded.
 
-Five kinds, each with a fixed belt slot (`KINDS` in `hooks/consumables.ts`, keys 1 to 5), so a pile of one kind never takes another's place. Each kind comes in three tiers, each tier stacking to 9 in its slot (`STACK_MAX`). A slot uses the tier chosen for it (`choose`, from its popover on the strip, kept in `BeltSlot.chosen` while the slot holds one of that tier), else its strongest, and is drawn with that tier's icon (`activeTier`), a gold pip under the count for each tier above the first, and the slot's total count. What each tier does is its entry in `CONSUMABLES`:
+Five kinds, each with a fixed belt slot (`KINDS` in `hooks/consumables.ts`, keys 1 to 5), so a pile of one kind never takes another's place. Each kind comes in three tiers, each tier stacking to 99 in its slot (`STACK_MAX`). A slot uses the tier chosen for it (`choose`, from its popover on the strip, kept in `BeltSlot.chosen` while the slot holds one of that tier), else its strongest, and is drawn with that tier's icon (`activeTier`), a gold pip under the count for each tier above the first, and the slot's total count. What each tier does is its entry in `CONSUMABLES`:
 
 | Slot | Form | I | II | III |
 |---|---|---|---|---|

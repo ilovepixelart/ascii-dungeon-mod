@@ -9,7 +9,7 @@ import { markHere } from './deep'
 
 export const BELT_SIZE = 5
 /** The most of one tier a slot holds. */
-export const STACK_MAX = 9
+export const STACK_MAX = 99
 /** The kinds in their belt slots, 1 to 5. */
 export const KINDS: readonly Consumable[] = ['health', 'regen', 'fury', 'ward', 'smoke']
 export type Tier = 1 | 2 | 3

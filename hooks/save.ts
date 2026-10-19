@@ -1,6 +1,6 @@
 // Saves from older versions of the mod, brought up to the current shape. Each version step is one migration.
 import type { BeltSlot, Consumable, Game, Item, Rarity } from '../types'
-import { KINDS, STACK_MAX, TIERS, emptyBelt, slotOf } from './consumables'
+import { KINDS, TIERS, emptyBelt, slotOf } from './consumables'
 import type { Tier } from './consumables'
 import { baseOf, repack, priceOf } from './items'
 import { BIG_EVERY, generate, layoutOf, themeOf } from './map'
@@ -79,12 +79,15 @@ const stacksOf = (slot: LegacySlot | BeltSlot): [Consumable, Tier, number][] => 
 }
 
 /** Version 7: the belt holds five kinds in three tiers, a slot a kind; each old stack joins its kind's slot at its tier. */
+/** The most of one tier a slot held at version 7: a save of that version merges up to it, as it then did. */
+const V7_STACK_MAX = 9
+
 export const toVersion7 = (belt: readonly (LegacySlot | BeltSlot | null)[]): (BeltSlot | null)[] => {
   const out = emptyBelt()
   for (const [kind, tier, count] of belt.flatMap(s => (s === null ? [] : stacksOf(s)))) {
     const at = slotOf(kind)
     const tiers = [...(out[at]?.tiers ?? [0, 0, 0])] as [number, number, number]
-    tiers[tier - 1] = Math.min(STACK_MAX, tiers[tier - 1]! + Math.max(0, Math.floor(count)))
+    tiers[tier - 1] = Math.min(V7_STACK_MAX, tiers[tier - 1]! + Math.max(0, Math.floor(count)))
     out[at] = tiers.some(n => n > 0) ? { kind, tiers } : null
   }
   return out

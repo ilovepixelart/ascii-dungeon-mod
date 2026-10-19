@@ -26,16 +26,16 @@ describe('the belt', () => {
     expect(g.belt.map(s => s?.kind)).toEqual(['health', 'regen', 'fury', 'ward', 'smoke'])
   })
 
-  test('stacks each tier up to 9; a full tier refuses one more and leaves the other tiers room', async () => {
+  test('stacks each tier up to 99; a full tier refuses one more and leaves the other tiers room', async () => {
     const g = withBelt(emptyBelt())
-    for (let i = 0; i < 9; i += 1) expect(addToBelt(g, 'health', 1)).toBe(true)
+    for (let i = 0; i < 99; i += 1) expect(addToBelt(g, 'health', 1)).toBe(true)
     expect(addToBelt(g, 'health', 1)).toBe(false)
     expect(addToBelt(g, 'health', 2)).toBe(true)
-    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [9, 1, 0] })
+    expect(g.belt[0]).toEqual({ kind: 'health', tiers: [99, 1, 0] })
   })
 
   test('a slot full of one kind never blocks another kind', async () => {
-    const g = withBelt(KINDS.map(kind => ({ kind, tiers: [9, 9, 9] as [number, number, number] })).map((s, i) => (i === 0 ? null : s)))
+    const g = withBelt(KINDS.map(kind => ({ kind, tiers: [99, 99, 99] as [number, number, number] })).map((s, i) => (i === 0 ? null : s)))
     expect(addToBelt(g, 'health')).toBe(true)
   })
 

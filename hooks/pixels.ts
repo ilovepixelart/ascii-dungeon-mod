@@ -313,8 +313,12 @@ export const walkState = (start: Game, tiles: readonly Game[], frame: number): G
 
 let lastWalking: { g: Game; start: Pick<Game, 'taken' | 'foe'>; path: readonly Pos[]; along: number; drawn: Game } | null = null
 
-const terrainOf = (level: Level, tile: Tile, p: Pos): keyof typeof TERRAIN => {
+/** Rock with floor on all four sides: a pillar in a room, drawn as a column rather than a wall. */
+export const isPillar = (level: Level, p: Pos) => !isFloor(level.tiles, p) && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => isFloor(level.tiles, { x: p.x + dx!, y: p.y + dy! }))
+
+export const terrainOf = (level: Level, tile: Tile, p: Pos): keyof typeof TERRAIN => {
   if (same(p, level.stairs)) return 'stairs'
+  if (tile.surface === 'wall' && isPillar(level, p)) return 'pillar'
   if (tile.surface === 'wall' || tile.surface === 'door' || tile.surface === 'passage') return tile.surface
   return 'floor'
 }

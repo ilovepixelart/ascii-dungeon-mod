@@ -624,19 +624,35 @@ const pixelHash = (x: number, y: number) => {
 
 const MORTAR = '#1c1a20'
 
+/** A room's floor slab, by world pixel. */
+const floorSlab = (x: number, y: number) => {
+  const lx = x % PX
+  const ly = y % PX
+  const tx = Math.floor(x / PX)
+  const ty = Math.floor(y / PX)
+  if (lx === PX - 1 || ly === PX - 1) return '#40362c'
+  if (lx === 0 || ly === 0) return '#6a5c49'
+  if (isCracked(tx, ty) && CRACK.some(([cx, cy]) => cx === lx && cy === ly)) return CRACK_INK
+  const stone = pixelHash(tx * 7, ty * 13)
+  const base = stone < 0.33 ? '#574b3c' : stone < 0.66 ? '#5c5040' : '#615443'
+  return pixelHash(x, y) < 0.08 ? '#51463a' : base
+}
+
+/** A pillar's stone, by its column of the tile: lit from the left, in shade on the right. */
+const SHAFT = ['', '', '#a89e94', '#8a8078', '#7a7068', '#5a524a', '', ''] as const
+
 /** Ground textures by world pixel, so neighbouring tiles join without seams. */
-export const TERRAIN: Readonly<Record<'floor' | 'passage' | 'wall' | 'door' | 'stairs', (x: number, y: number) => string>> = {
-  floor: (x, y) => {
+export const TERRAIN: Readonly<Record<'floor' | 'passage' | 'wall' | 'door' | 'stairs' | 'pillar', (x: number, y: number) => string>> = {
+  floor: floorSlab,
+  // A column standing on the floor slab, its capital on top and its base below: rock in a room, not a wall.
+  pillar: (x, y) => {
     const lx = x % PX
     const ly = y % PX
-    const tx = Math.floor(x / PX)
-    const ty = Math.floor(y / PX)
-    if (lx === PX - 1 || ly === PX - 1) return '#40362c'
-    if (lx === 0 || ly === 0) return '#6a5c49'
-    if (isCracked(tx, ty) && CRACK.some(([cx, cy]) => cx === lx && cy === ly)) return CRACK_INK
-    const stone = pixelHash(tx * 7, ty * 13)
-    const base = stone < 0.33 ? '#574b3c' : stone < 0.66 ? '#5c5040' : '#615443'
-    return pixelHash(x, y) < 0.08 ? '#51463a' : base
+    if (ly === 0 && lx >= 1 && lx <= 6) return lx === 1 ? '#5a524a' : '#9a9088'
+    if (ly === PX - 1 && lx >= 1 && lx <= 6) return MORTAR
+    if (ly === PX - 2 && lx >= 1 && lx <= 6) return lx === 6 ? '#3e3830' : '#6a6058'
+    const shaft = SHAFT[lx]
+    return shaft === undefined || shaft === '' ? floorSlab(x, y) : shaft
   },
   passage: (x, y) => {
     const n = pixelHash(x, y)

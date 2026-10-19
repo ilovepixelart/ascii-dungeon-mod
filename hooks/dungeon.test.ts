@@ -26,6 +26,7 @@ import { talentCards } from './talentwindow'
 import { pairOf } from './deep'
 import { deepCards } from './deepwindow'
 import { arrive } from './world'
+import { helpRect } from './settings'
 import { cardText } from './herocard'
 import { codexCardRect } from './codexwindow'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
@@ -577,6 +578,34 @@ test('a session begun with nothing waiting says nothing of it', async ($, on) =>
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   const log = ((kept.get('save') as Game | undefined)?.log ?? [])
   expect(log.some(l => l.includes('to choose') || l.startsWith('The deep forks'))).toBe(false)
+  await ui.unmount()
+})
+
+test('How it plays opens from settings over it, and closes back to settings', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
+  expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeDefined()
+  const r = helpRect()
+  const at = { x: r.x + 2, y: Math.floor((r.y + 4) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'settings-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'settings-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'help' })).toBeDefined()
+  expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeUndefined()
+  const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
+  await ui.pointer({ type: 'down', ...close, button: 'left', in: 'help-clicks' } as never)
+  await ui.pointer({ type: 'up', ...close, button: 'left', in: 'help-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'help' })).toBeUndefined()
+  expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('as text, How it plays lists the rules and closes', async $ => {
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'settings' })
+  await ui.press({ key: 'help-open' })
+  expect(await ui.find({ type: 'Text', text: 'Tests that pass: a sure critical.' })).toBeDefined()
+  await ui.press({ key: 'help-close' })
+  expect(await ui.find({ type: 'Text', text: 'Tests that pass: a sure critical.' })).toBeUndefined()
   await ui.unmount()
 })
 

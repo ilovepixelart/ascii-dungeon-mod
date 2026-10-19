@@ -47,6 +47,10 @@ export const orderWord = (g: Pick<Game, 'orders'>, which: keyof Orders) => {
   return LEAVE_WORD[orders.leave] ?? 'TAKE ALL LOOT'
 }
 
+/** Help, beside New game on its row: it opens the how-it-plays window. */
+export const HELP_KEY = { key: 'H', label: 'HELP' }
+export const helpRect = (): Rect => ({ x: PAD + buttonW('N', 'NEW GAME') + 3, y: rowY(0), w: buttonW(HELP_KEY.key, HELP_KEY.label), h: BUTTON_H })
+
 /** The buttons above the orders; the orders start below a rule and their label. */
 const SOUND_ROWS = 5
 const ORDER_ROWS = 3
@@ -80,13 +84,14 @@ export const SETTINGS_H = Math.ceil((rowY(SOUND_ROWS + ORDER_ROWS) + 1) / 2) * 2
 export const settingsPixels = (g: Game, sound: SoundSettings): string[][] => {
   const body = canvas(WINDOW_W, SETTINGS_H - top)
   buttons(g, sound).forEach((b, i) => button(body, b.key, b.label, PAD, buttonRect(b.key, b.label, i).y - top, b.does === 'new' ? 'armed' : 'ready'))
+  button(body, HELP_KEY.key, HELP_KEY.label, helpRect().x, helpRect().y - top, 'ready')
   fill(body, PAD, RULE_Y - top, WINDOW_W - 2 * PAD, 1, RULE)
   word(body, 'HERO ORDERS', PAD, RULE_Y - top + RULE_GAP, LABEL_INK)
   return windowPixels(CHROME, body.px).px
 }
 
 /** What a gesture does: game actions, and the sound as it now is. */
-export type SettingsOutcome = { actions: Action[]; sound: SoundSettings }
+export type SettingsOutcome = { actions: Action[]; sound: SoundSettings; isHelp?: true }
 
 /** A button clicked: New game opens the start screen, the view steps to the next, a sound button sets the sound; the close box closes. */
 export const settingsGesture = (g: Game, sound: SoundSettings, gesture: Gesture): SettingsOutcome => {
@@ -95,6 +100,8 @@ export const settingsGesture = (g: Game, sound: SoundSettings, gesture: Gesture)
   const from = pixel(gesture.from)
   const at = pixel(gesture.at)
   if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return none
+  const help = helpRect()
+  if (isInside(at, help.x, help.y, help.w, help.h)) return { ...none, isHelp: true }
   const hit = buttons(g, sound).find((b, i) => {
     const r = buttonRect(b.key, b.label, i)
     return isInside(at, r.x, r.y, r.w, r.h)

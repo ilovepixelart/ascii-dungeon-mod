@@ -10,7 +10,7 @@ import type { TownSpot } from './town'
 import { CANVAS, INK, MEMORY_BG, MEMORY_FG, WOOD_BG, WOOD_FG, light, mix, shade } from './palette'
 import { hash } from './rng'
 
-const THING_INK: Record<string, string> = { $: INK.gold, '!': INK.potion, '^': INK.trap, '>': INK.stairs }
+const THING_INK: Record<string, string> = { $: INK.gold, '!': INK.potion, '^': INK.trap, '>': INK.stairs, U: '#7fe3ff', V: '#6abe30', P: '#8c6cc8', X: '#b8e8ff', K: '#ffb43a' }
 
 const isRoom = (level: Level, x: number, y: number) => isFloor(level.tiles, { x, y }) && roomAt(level, { x, y }) !== undefined
 

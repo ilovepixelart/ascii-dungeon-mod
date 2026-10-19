@@ -35,6 +35,9 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Added
 
+- Things to gather, one a theme, about one a level by a room's wall: a warding stone in the crypt and a rime crystal
+  in the frozen caverns (ward runes), reeds in the flooded halls and glowing caps in the fungal deep (herbs), a powder
+  keg in the forge (smoke bombs). Stepped onto, each goes onto the belt at a tier for the depth.
 - The start screen is titled ASCII DUNGEON and has Help beside Start, framed white on a first game. Under the chosen
   hero it says what each attribute does and, after a retirement, the heirloom and whether the hero wears it.
 - How it plays, from Help in settings or on the start screen: what the session's coding does to the hero (tool calls, failed calls, passing

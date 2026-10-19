@@ -1,7 +1,7 @@
-import type { Attribute, ChampionMod, Codex, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
+import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
-import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
+import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
 import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
@@ -257,15 +257,43 @@ const ON_FLOOR: Readonly<Record<string, (g: Game) => void>> = {
   G: openChestHere,
 }
 
+/** Each theme's thing to gather (`GATHERABLE`), by glyph: the consumable it gives and where it comes from. */
+const GATHER: Readonly<Record<string, { kind: Consumable; from: string }>> = {
+  U: { kind: 'ward', from: 'the warding stone' },
+  V: { kind: 'regen', from: 'the reeds' },
+  P: { kind: 'regen', from: 'the glowing caps' },
+  X: { kind: 'ward', from: 'the rime crystal' },
+  K: { kind: 'smoke', from: 'the powder keg' },
+}
+
+/** What gathering here gives: its kind, and a tier by depth drawn from the world and the cell, so the dice are left alone. */
+const gatheredHere = (g: Game) => {
+  const gather = GATHER[floorThing(g.world, g.depth, levelOf(g), g)]
+  return gather === undefined ? undefined : { ...gather, tier: tierAt(g.depth, hash(g.world * 3 + g.depth, g.x, g.y) + 1) }
+}
+
+/** The theme's thing gathered onto the belt and said; false, and said, when its tier has no room there. */
+const gather = (g: Game) => {
+  const found = gatheredHere(g)!
+  const name = nameOf(found.kind, found.tier)
+  if (!addToBelt(g, found.kind, found.tier)) {
+    say(g, `Your belt has no room for the ${name} ${found.from} offers.`)
+    return false
+  }
+  say(g, `You gather ${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name} from ${found.from}.`)
+  return true
+}
+
 const pickUp = (g: Game) => {
   const at = cellId(g)
   const found = g.taken.includes(at) ? ' ' : floorThing(g.world, g.depth, levelOf(g), g)
   const tile = isTakenNow(g, found) ? found : ' '
-  // The lectern's scroll needs room on the belt before the lectern counts as read.
+  // The lectern's scroll needs room on the belt before the lectern counts as read; so does what is gathered.
   if (tile === 'R' && !addToBelt(g, 'fury', 3)) {
     say(g, 'Your belt has no room for the scroll the lectern offers.')
     return
   }
+  if (GATHER[tile] !== undefined && !gather(g)) return
   if (tile !== ' ') g.taken = [...g.taken, at]
   ON_FLOOR[tile]?.(g)
 }

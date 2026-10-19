@@ -20,11 +20,11 @@ const KIND_OF_NAME = new Map(KINDS.flatMap(kind => TIERS.map(tier => [nameOf(kin
 const TWIST = new RegExp(`^(${Object.values(MOD_NAME).join('|')}): `)
 const DENIED = /^(Your belt is full|Your bag is full|No room|Not enough gold|Your stash is full|Your belt has no room|Your belt holds no|Belt slot \d+ is empty|You have no |No stat points|Nothing worn there|There is no reforge|A Legendary is as it was made|The smith has nothing|The merchant has no|The portal will not open|You can't get there|No way on)|is locked: |is tempered as far as it will go/
 
-/** A consumable picked up, by the line that tells it: the floor's potion, a drop, the lectern's scroll. */
+/** A consumable picked up, by the line that tells it: the floor's potion, a drop, the lectern's scroll, a thing gathered. */
 const pickupOf = (line: string): Sound | undefined => {
   if (line === 'You find a Health Potion.') return 'potionUp'
   if (line.startsWith('You read at the lectern and copy out')) return 'scrollUp'
-  const kind = KIND_OF_NAME.get(/^Loot: (.+)\.$/.exec(line)?.[1] ?? '')
+  const kind = KIND_OF_NAME.get(/^Loot: (.+)\.$/.exec(line)?.[1] ?? /^You gather an? (.+) from /.exec(line)?.[1] ?? '')
   return kind === undefined ? undefined : PICKUP[kind]
 }
 

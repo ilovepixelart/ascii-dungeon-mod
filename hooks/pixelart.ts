@@ -573,6 +573,13 @@ export const THING_ART: Readonly<Record<string, readonly string[]>> = {
   ],
   // Chests, one silhouette whatever they are made of: wooden (a brass knob), iron-bound (steel corners, edges, band and
   // knob), gilded (gold trim and band, a gem for the knob); then each opened, its lid up, its inside dark, its knob kept.
+  // Each theme's thing to gather, with what lies round it: a warding stone and its rune over bones, reeds in a pool,
+  // glowing caps and their spores, rime crystals on rock, a powder keg with its fuse lit and powder spilt.
+  U: ['...c....', '.KKKKKK.', '.KeccEK.', '.KeEceK.', '.KecceK.', '.KEeceK.', 'oKeeEEKO', 'OoOKKoOo'],
+  V: ['.N....N.', '.n..N.n.', '.l..n.lL', '.lL.l.l.', 'l.lLlLl.', 'bClLlLCb', 'BbCbbCbB', '.BBBBBB.'],
+  P: ['..pppp..', '.pFZFpp.', 'pFpFFpFp', '.KKooKK.', '...oo..c', '.c.oo.vF', '..MooM.o', '.MMMMMMM'],
+  X: ['...Z....', '..cZ..c.', '..cC.cZ.', '.cCZcCc.', '.cCZcCcc', 'cCcZCcCc', 'EKCcCcKE', '.EEEEEE.'],
+  K: ['.....Zi.', '....Ei..', '..KKKK..', '.KDnDnK.', '.KwWwWK.', '.KnDnDK.', '.KwWwWK.', '.EKKKKEE'],
   C: ['........', '........', '.KKKKKK.', 'KDDDDDDK', 'KnnnnnnK', 'KWWyyWWK', 'KnNnnNnK', 'KKKKKKKK'],
   H: ['........', '........', '.KKKKKK.', 'KwDDDDwK', 'KWWWWWWK', 'KWnwwnWK', 'KwNnnNwK', 'KKKKKKKK'],
   G: ['........', '........', '.KKKKKK.', 'KYDDDDYK', 'KyyyyyyK', 'KYnZZnYK', 'KYNnnNYK', 'KKKKKKKK'],

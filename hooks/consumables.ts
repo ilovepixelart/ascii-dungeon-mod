@@ -157,14 +157,16 @@ export const tickEffects = (g: Game): string | undefined => {
   return healed > 0 ? `You regenerate ${healed} HP.` : undefined
 }
 
-/** A drop's tier by depth: III 1 in 100 at depth 1, 2 more a depth up to 30; II 4 a depth up to 45 more; else I. */
-export const tierFor = (g: Game): Tier => {
-  const third = Math.min(30, 1 + 2 * (g.depth - 1))
-  const n = roll(g, 100)
+/** A tier by depth for a draw `n` of 1 to 100: III 1 in 100 at depth 1, 2 more a depth up to 30; II 4 a depth up to 45 more; else I. */
+export const tierAt = (depth: number, n: number): Tier => {
+  const third = Math.min(30, 1 + 2 * (depth - 1))
   if (n <= third) return 3
-  if (n <= third + Math.min(45, 4 * g.depth)) return 2
+  if (n <= third + Math.min(45, 4 * depth)) return 2
   return 1
 }
+
+/** A drop's tier by depth (`tierAt`), rolled. */
+export const tierFor = (g: Game): Tier => tierAt(g.depth, roll(g, 100))
 
 /**
  * What a kill drops besides gear: a kind and its tier. Healing keeps a steady supply: the chance starts at 40%, falls

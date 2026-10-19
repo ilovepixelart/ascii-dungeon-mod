@@ -187,7 +187,9 @@ const OFF_INK = '#5a5664'
 const LABEL_INK = '#e8e4dc'
 
 /** A button's width: its key, its label and, when it costs, a price; three pixels of room between and round them. */
-export const buttonW = (key: string, label: string, cost?: number) => 3 + textW(key) + 3 + textW(label) + (cost === undefined ? 0 : 3 + priceW(cost)) + 3
+/** The gap between a button's key and its label; none when either is empty, so a key alone sits centered. */
+const keyGap = (key: string, label: string) => (key === '' || label === '' ? 0 : 3)
+export const buttonW = (key: string, label: string, cost?: number) => 3 + textW(key) + keyGap(key, label) + textW(label) + (cost === undefined ? 0 : 3 + priceW(cost)) + 3
 
 /** A pixel button at x, y: its key in gold, its label, its price (grey when it cannot be paid); all grey when off. Returns its width. */
 export const button = (c: Canvas, key: string, label: string, x: number, y: number, state: ButtonState, cost?: number, canPay = true) => {
@@ -197,7 +199,7 @@ export const button = (c: Canvas, key: string, label: string, x: number, y: numb
   // A lit top edge, so it reads as raised.
   if (state !== 'off') fill(c, x + 1, y + 1, w - 2, 1, BUTTON_LIT)
   word(c, key, x + 3, y + 3, state === 'off' ? OFF_INK : GOLD_INK)
-  const lx = x + 3 + textW(key) + 3
+  const lx = x + 3 + textW(key) + keyGap(key, label)
   word(c, label, lx, y + 3, state === 'off' ? OFF_INK : LABEL_INK)
   if (cost !== undefined) price(c, cost, lx + textW(label) + 3, y + 3, canPay && state !== 'off')
   return w

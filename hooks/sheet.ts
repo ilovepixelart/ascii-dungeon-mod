@@ -32,7 +32,7 @@ const NAMES = ['MIGHT', 'FOCUS', 'VIGOR', 'INSIGHT'] as const
 
 /** Each attribute row's place, and its + button's, in window pixels. */
 const rowRect = (i: number): Rect => ({ x: PAD, y: top + ROWS_Y + i * ROW_H, w: WINDOW_W - 2 * PAD, h: ROW_H - 1 })
-export const plusRect = (i: number): Rect => ({ x: 44, y: rowRect(i).y, w: buttonW(String(i + 1), '+'), h: BUTTON_H })
+export const plusRect = (i: number): Rect => ({ x: 44, y: rowRect(i).y, w: buttonW('+', ''), h: BUTTON_H })
 
 /** The Codex button, under the attribute rows: it opens the codex. */
 export const CODEX_KEY = { key: 'X', label: 'CODEX' }
@@ -99,7 +99,7 @@ export const sheetPixels = (g: Game): string[][] => {
     word(body, NAMES[i]!, r.x + 3, r.y - top + 3, LABEL_INK)
     digits(body, String(g.stats[a.stat]), 41, r.y - top + 8, NUM_INK)
     const p = plusRect(i)
-    button(body, String(i + 1), '+', p.x, p.y - top, g.points > 0 ? 'ready' : 'off')
+    button(body, '+', '', p.x, p.y - top, g.points > 0 ? 'ready' : 'off')
   })
   button(body, CODEX_KEY.key, CODEX_KEY.label, CODEX_RECT.x, CODEX_RECT.y - top, 'ready')
   button(body, RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, canRetire(g) ? 'ready' : 'off')

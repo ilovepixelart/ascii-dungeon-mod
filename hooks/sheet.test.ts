@@ -2,6 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
+import { textMask } from './pixelart'
 import { CODEX_RECT, DEEP_RECT, RETIRE_RECT, SHEET_H, TALENT_RECT, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
@@ -64,6 +65,20 @@ describe('the character sheet', () => {
     expect(edge(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }))).not.toBe('#ffffff')
     expect(edge(hero({ bossSlain: 40, deepest: 40 }))).not.toBe('#ffffff')
     expect([r.y, r.x > TALENT_RECT.x + TALENT_RECT.w, r.x + r.w <= WINDOW_W]).toEqual([TALENT_RECT.y, true, true])
+  })
+
+  test('each + key is the plus alone, centered, no digit beside it', async () => {
+    const plus = textMask('+')
+    const g = hero({ points: 1 })
+    const px = sheetPixels(g)
+    for (let i = 0; i < 4; i += 1) {
+      const r = plusRect(i)
+      expect(r.w).toBe(3 + plus[0]!.length + 3)
+      const gold = new Set<string>()
+      for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (px[y]![x] === GOLD_INK) gold.add(`${x - r.x},${y - r.y}`)
+      const want = new Set(plus.flatMap((row, dy) => [...row].flatMap((k, dx) => (k === '#' ? [`${3 + dx},${3 + dy}`] : []))))
+      expect([...gold].sort()).toEqual([...want].sort())
+    }
   })
 
   test('the + keys are lit only with points to spend', async () => {

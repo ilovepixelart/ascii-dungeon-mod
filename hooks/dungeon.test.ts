@@ -1543,7 +1543,9 @@ describe('idle motion in the pane', () => {
 })
 
 describe('pickups on a walk', () => {
-  test('a tool call that walks the hero over something picks it up only when the walk gets there', { timeoutMs: 20000 }, async ($, on) => {
+  // Several worlds, so the pickup lands on frames where the camera pages as well as on frames where it holds.
+  const READS = 40
+  for (const world of [1, 2, 3, 4, 6, 7, 8]) test(`a tool call that walks the hero over something picks it up only when the walk gets there (world ${world})`, { timeoutMs: 20000 }, async ($, on) => {
     const clock = mock.clock(on)
     let lastBlit = ''
     on('ui.blit', (_$, e) => {
@@ -1553,24 +1555,31 @@ describe('pickups on a walk', () => {
     // The first call fails, so an imp's blow leaves the hero hurt; after that every read succeeds.
     let calls = 0
     on('tool.call', () => (calls++ === 0 ? { result: {} as never, isError: true as const } : { result: { file: { content: '' } } as never }))
+    storeIn(on, new Map<string, unknown>([['save', newGame(world)]]))
+    on('command.register', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('session.start', (_$, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
     const hud = async () => (await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells as string
     // The same game beside the pane's, read by read, until a read's walk takes something up.
-    let g = newGame()
-    for (let call = 0; call < 40; call += 1) {
+    let g = newGame(world)
+    for (let call = 0; call < READS; call += 1) {
       const was = g
       const walked = apply(g, onToolStart('Read', '/a.ts'))
       const next = apply(walked, { kind: 'outcome', ok: call > 0, what: 'Read' })
+      // The first tile on the way holding something to take: not taken before, and no furnishing.
+      const tile = walked.walked.findIndex(p => !was.taken.includes(cellId(p)) && !' BLQF'.includes(floorThing(was.world, was.depth, levelOf(was), p)))
       const isPickup = walked.walked.length > 1 && walked.log.slice(-walked.fresh).some(l => /^You (pick up|find|pray|read at)/.test(l))
       await $.tool.call({ tool: 'Read', file_path: '/a.ts' })
       g = next
-      if (!isPickup) {
+      // Something taken mid-walk: on the walk's last tile the walk is over and the pane draws the hero at rest instead,
+      // and a walk that only reaches a furnishing (an altar, a lectern) changes nothing on the strip.
+      if (!isPickup || tile < 0 || tile >= walked.walked.length - 1) {
         await clock.advance(5000)
         continue
       }
       // The strip changes on the very frame the hero reaches the tile, not before and not at the walk's end.
-      // The first tile on the way holding something to take: not taken before, and no furnishing.
-      const tile = walked.walked.findIndex(p => !was.taken.includes(cellId(p)) && !' BLQF'.includes(floorThing(was.world, was.depth, levelOf(was), p)))
       const before = await hud()
       let changedOn = 0
       for (let frame = 1; frame <= walked.walked.length * FRAMES_PER_TILE && changedOn === 0; frame += 1) {
@@ -1583,7 +1592,7 @@ describe('pickups on a walk', () => {
       await ui.unmount()
       return
     }
-    throw new Error('no pickup on a walk in 40 reads')
+    throw new Error(`no pickup on a walk in ${READS} reads`)
   })
 })
 

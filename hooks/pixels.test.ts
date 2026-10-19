@@ -3,7 +3,8 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game } from '../types'
 import { alongTheWay, apply, levelOf, newGame } from './game'
 import { foeAhead } from './fixtures'
-import { MAP_H, MAP_W, cellId, floorThing, generate, roomAt, same, themedRoomOf, visibleFrom } from './map'
+import { arrive } from './world'
+import { MAP_H, MAP_W, cellId, floorThing, generate, isFloor, roomAt, same, themedRoomOf, visibleFrom } from './map'
 import { CANVAS, INK } from './palette'
 import { MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, TOWN_BIG_ART, TOWN_TERRAIN, TOWN_THING_ART, TREE_ALT, heroArt, torch } from './pixelart'
 import { TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
@@ -108,6 +109,31 @@ describe('the frame', () => {
     expect(heroArt(g)[PX - 1]?.[1]).toBe('.')
     expect(luma(groundPixel(g))).toBeLessThan(luma(groundPixel(away)))
   })
+})
+
+test('every theme\'s floor is its own tint of the slab, whatever themes were drawn over the same cells before it', async () => {
+  // A depth of each theme, world 5. Before one is checked, every other is drawn with its hero on the same cell, so the
+  // same cells pass through the ground's cache under each theme. Torchlight off, a plain floor cell in the hero's room,
+  // with nothing on it and floor on all four sides (so no wall shades it), is then the slab tinted by its theme.
+  const depths = [2, 7, 12, 17, 22]
+  expect(depths.map(d => themeOf(d))).toEqual(['crypt', 'flooded', 'fungal', 'frozen', 'forge'])
+  const at5 = (depth: number): Game => {
+    const g0 = newGame(5, 'knight')
+    return { ...g0, ...arrive(g0.world, depth), depth, deepest: depth }
+  }
+  for (const depth of depths) {
+    const g = at5(depth)
+    for (const other of depths) if (other !== depth) frameOf({ ...at5(other), x: g.x, y: g.y, seen: '1'.repeat(g.seen.length) }, W, H, { isLit: false })
+    const level = levelOf(g)
+    const frame = frameOf(g, W, H, { isLit: false })
+    const plain = visibleFrom(level, g).filter(p => roomAt(level, p) !== undefined && (p.x !== g.x || p.y !== g.y) && floorThing(g.world, depth, level, p) === ' ' && decalAt(g.world, depth, level, p) === undefined && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => isFloor(level.tiles, { x: p.x + dx!, y: p.y + dy! })))
+    const inView = plain.filter(p => { const o = screen(g, p.x * PX, p.y * PX); return o.x >= 0 && o.y >= 0 && o.x + PX <= W && o.y + PX <= H })
+    expect(inView.length).toBeGreaterThan(0)
+    for (const p of inView) {
+      const o = screen(g, p.x * PX, p.y * PX)
+      for (const [lx, ly] of [[2, 3], [5, 5]] as const) expect(at(frame, o.x + lx, o.y + ly)).toBe(themed(hexToInt(TERRAIN.floor(p.x * PX + lx, p.y * PX + ly)), themeOf(depth)))
+    }
+  }
 })
 
 describe('raster cells', () => {

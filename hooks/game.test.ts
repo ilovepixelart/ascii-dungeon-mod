@@ -1692,3 +1692,27 @@ describe('which walks are only walks', () => {
     expect(isOnlyAWalk(town, apply(town, { kind: 'goto', x: TOWN_SPOTS.portal.x - 2, y: TOWN_SPOTS.portal.y - 1 }))).toBe(true)
   })
 })
+
+describe('a prompt as a quest', () => {
+  const quested = (text: string) => apply(newGame(), { kind: 'quest', text }).log.filter(l => l.startsWith('A new quest'))
+
+  test('is said in quotes, as written', async () => {
+    expect(quested('fix the failing build')).toEqual(['A new quest: "fix the failing build"'])
+  })
+
+  test('leaves out what the host stands in for an attachment, and says nothing when that is all there is', async () => {
+    expect(quested('[Image #16]')).toEqual([])
+    expect(quested('[Image #3] why is this red')).toEqual(['A new quest: "why is this red"'])
+    expect(quested('[Pasted text #2 +40 lines]')).toEqual([])
+  })
+
+  test('says nothing for a prompt of only spaces, and runs its lines together', async () => {
+    expect(quested('   \n ')).toEqual([])
+    expect(quested('fix\n\nthe   build')).toEqual(['A new quest: "fix the build"'])
+  })
+
+  test('a long one is cut at a word, and the cut shown', async () => {
+    const said = quested('refactor the inventory module so that dragging an item onto the belt works')[0]!
+    expect(said).toBe('A new quest: "refactor the inventory module so that dragging..."')
+  })
+})

@@ -1156,7 +1156,10 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   summon: (g, a) => summon(g, a.name),
   ally: g => ally(g),
   outcome: (g, a) => outcome(g, a.ok, a.what, a.work),
-  quest: (g, a) => say(g, `A new quest: "${a.text.slice(0, 48)}"`),
+  quest: (g, a) => {
+    const quest = questOf(a.text)
+    if (quest !== undefined) say(g, `A new quest: "${quest}"`)
+  },
   descend: g => descend(g),
   attack: g => attack(g),
   potion: g => quaff(g),
@@ -1261,6 +1264,20 @@ const advanceQuest = (g: Game) => {
     say(g, 'Quest done: go back to the elder in town.')
     g.toast = 'Quest done: go back to the elder.'
   }
+}
+
+/** The longest a prompt is quoted as a quest. */
+const QUEST_LEN = 48
+/** What the host puts in a prompt in place of an attachment: `[Image #16]`, `[Pasted text #2 +40 lines]`. */
+const PLACEHOLDER = /\[(?:Image|Pasted text) #\d+[^\]]*\]/g
+
+/** A prompt as its quest: the words alone, on one line, cut at a word past QUEST_LEN; none when no words are left. */
+export const questOf = (text: string): string | undefined => {
+  const words = text.replace(PLACEHOLDER, ' ').replace(/\s+/g, ' ').trim()
+  if (words === '') return undefined
+  if (words.length <= QUEST_LEN) return words
+  const cut = words.lastIndexOf(' ', QUEST_LEN)
+  return `${words.slice(0, cut > 0 ? cut : QUEST_LEN)}...`
 }
 
 /** A new quest for the hero's deepest depth: slay 8 there or deeper, slay a champion there or deeper, or go 3 deeper. */

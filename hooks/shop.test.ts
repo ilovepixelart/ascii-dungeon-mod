@@ -64,7 +64,7 @@ describe('wares', () => {
     expect(text(poor, open, 'menu')).toEqual(['b Buy for 25  not enough gold'])
     expect(shopGesture(poor, open, onRow(poor, open, 0)).actions).toEqual([])
     const full = knight(100)
-    full.belt = [{ kind: 'health', tiers: [9, 0, 0] }, { kind: 'regen', tiers: [1, 0, 0] }, null, null, null]
+    full.belt = [{ kind: 'health', tiers: [99, 0, 0] }, { kind: 'regen', tiers: [1, 0, 0] }, null, null, null]
     expect(whyNot(full, 'health1')).toBe('no room on your belt')
     expect(whyNot(full, 'regen1')).toBeUndefined()
     expect(whyNot(knight(25), 'health1')).toBeUndefined()

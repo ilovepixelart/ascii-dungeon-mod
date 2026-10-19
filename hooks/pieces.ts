@@ -2,7 +2,7 @@
 // an item grid, the belt. Each draws at a given place on a canvas; the windows say where.
 import type { Game, Item, Rarity, Slot } from '../types'
 import { CELL, ICONS, consumableIcon } from './icons'
-import { activeTier, countOf } from './consumables'
+import { activeTier } from './consumables'
 import type { BeltSlot } from '../types'
 import { RARITY_COLOR, canWear, isUpgrade } from './items'
 import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, digits, fill, frame, put } from './canvas'
@@ -87,7 +87,7 @@ export const beltSlotRect = (x0: number, y: number, i: number): Rect => ({ x: x0
 
 export const TIER_INK = '#ffd34d'
 
-/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`), how many it holds in all its tiers, and under it a pip a tier above the first. */
+/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`), how many of that tier it holds (at most two digits), and under it a pip a tier above the first. */
 export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number, y: number) => {
   frame(c, x, y, BELT_SLOT_W, SLOT, GRID)
   fill(c, x + 1, y + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
@@ -95,7 +95,7 @@ export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number
   if (slot === null || slot === undefined || tier === undefined) return
   art(c, consumableIcon(slot.kind, tier), x + 1, y + 1)
   for (let p = 1; p < tier; p += 1) put(c, x + BELT_SLOT_W - 2 - 2 * (p - 1), y + PX, TIER_INK)
-  digits(c, String(countOf(slot)), x + BELT_SLOT_W - 2, y + SLOT / 2 + 2)
+  digits(c, String(slot.tiers[tier - 1]), x + BELT_SLOT_W - 2, y + SLOT / 2 + 2)
 }
 
 /** The belt at x, y: a slot a kind, as `beltSlot` draws it. */

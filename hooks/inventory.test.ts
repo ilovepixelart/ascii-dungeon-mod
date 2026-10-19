@@ -115,8 +115,8 @@ describe('the panel', () => {
     const px = inventoryPixels(g)
     const slot = new Set(px.slice(BELT_Y, BELT_Y + SLOT).flatMap(r => r.slice(BELT_X, BELT_X + BELT_SLOT_W)))
     expect(slot.has('#ffffff')).toBe(true)
-    // Four Health Potions and three Greater: it shows the Greater, the tier it uses next, and counts all seven.
-    expect(beltLabel(g, 0)).toBe('Greater Health Potion x7')
+    // Four Health Potions and three Greater: it shows the Greater, the tier it uses next, and counts those three.
+    expect(beltLabel(g, 0)).toBe('Greater Health Potion x3')
     expect(beltLabel(g, 1)).toBe('empty')
   })
 })

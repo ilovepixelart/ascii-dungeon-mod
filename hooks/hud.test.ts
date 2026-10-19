@@ -491,14 +491,18 @@ test('a pixel stands between the portrait and the marks', async () => {
   expect(HEART_X - PORTRAIT).toBe(1)
 })
 
-test('a slot counts all it holds, every tier; its icon and pips are the tier it uses next', async () => {
+test('a slot counts the tier it uses next, as its icon and pips show it; the other tiers are not counted', async () => {
   const width = 111 - 2 * INSET
   const g = hero({ belt: [null, null, { kind: 'fury', tiers: [2, 1, 0] }, null, null] })
   const c = hudContent(g, width)
   const x = beltSlotX(width, 2)
   const digitsAt = (n: number) => hasText(hudContent(hero({ belt: [null, null, { kind: 'fury', tiers: [n, 0, 0] }, null, null] }), width), String(n), x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')
   expect(digitsAt(3)).toBe(true)
-  expect(hasText(c, '3', x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(true)
+  expect(hasText(c, '1', x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(true)
+  expect(hasText(c, '3', x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(false)
+  // A full slot, 99 of each tier: the 99 Scrolls of the Berserker, two digits, where all 297 would cover the icon.
+  const full = hudContent(hero({ belt: [null, null, { kind: 'fury', tiers: [99, 99, 99] }, null, null] }), width)
+  expect(hasText(full, '99', x + BELT_SLOT_W - 2 - 7, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(true)
 })
 
 test('a pixel stands under the star, above and below the side line, and between the content and the metal', async () => {

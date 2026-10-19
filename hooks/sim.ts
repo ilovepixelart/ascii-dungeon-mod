@@ -10,7 +10,8 @@ import type { Level, Pos } from './map'
 import { violations } from './invariants'
 import { workOf } from './work'
 import type { GitOperation } from './work'
-import { FRAMES_PER_TILE, walkingGame } from './pixels'
+import { FRAMES_PER_TILE, frameOf, hitsBetween, originAt, tileCamera, walkingGame, worldSize } from './pixels'
+import { PX } from './pixelart'
 import { levelOf, newGame } from './world'
 import { offer } from './talents'
 import { forkTier, isForkOpen, pairOf } from './deep'
@@ -67,6 +68,12 @@ export type SimStats = {
   jumps: number
   /** Cells shown against the rules of sight (`sightBreaks`): each one is a bug. */
   sightBreaks: number
+  /** Blows on the hero the pane shows nothing of (`isBlowUntold`): each one is a bug. */
+  blowsUntold: number
+  /** Walk tiles where the pane's camera leaves the hero off the view (`heroOutOfView`): each one is a bug. */
+  outOfView: number
+  /** Each step's frame build time in ms, when timed. */
+  frameMs: number[]
   questsDone: number
   fortunes: number
   /** Bosses risen, slain, and deaths to one. */
@@ -381,6 +388,45 @@ export const sightBreaks = (before: Game, next: Game): Pos[] => {
   })
 }
 
+/**
+ * Whether an action told of a blow landing on the hero ("strikes you for 7") that its blows show nothing of: no hurt
+ * or fall where the pane would draw one, as when a potion drunk on the same step leaves the HP higher.
+ */
+export const isBlowUntold = (before: Game, next: Game) => {
+  const fresh = next.log.slice(next.log.length - next.fresh)
+  if (!fresh.some(l => / strikes you for [1-9]/.test(l))) return false
+  return !hitsBetween(before, next).some(h => h.kind === 'hurt' || h.kind === 'death')
+}
+
+/** The pane sizes the camera is followed at, in map pixels: a short pane, the best size's map, a big one. */
+const VIEWS: readonly { w: number; h: number }[] = [{ w: 105, h: 60 }, { w: 105, h: 124 }, { w: 200, h: 144 }]
+/** The cameras of the pane at each size as the pane moves them: recentered on a change of place, else paged by `tileCamera`. */
+type Cameras = { place: string; at: (Pos | null)[] }
+const placeKey = (g: Game) => (g.where === 'town' ? 'town' : `depth ${g.depth}`)
+
+/**
+ * The tiles of an action's walk, and where it ends, that the pane's camera at some size leaves the hero off the view
+ * on; the cameras moved as the pane moves them.
+ */
+export const heroOutOfView = (cams: Cameras, next: Game): number => {
+  if (cams.place !== placeKey(next)) {
+    cams.place = placeKey(next)
+    cams.at = VIEWS.map(() => null)
+  }
+  const tiles = next.walked.length > 0 && placeKey(next) === cams.place ? [...next.walked, { x: next.x, y: next.y }] : [{ x: next.x, y: next.y }]
+  let off = 0
+  VIEWS.forEach((v, i) => {
+    for (const t of tiles) {
+      const hero = { x: t.x * PX + PX / 2, y: t.y * PX + PX / 2 }
+      const at = tileCamera(cams.at[i] ?? null, hero, v.w, v.h)
+      cams.at[i] = at
+      const o = originAt(at, v.w, v.h, worldSize(next))
+      if (hero.x - PX / 2 < o.x || hero.x + PX / 2 > o.x + v.w || hero.y - PX / 2 < o.y || hero.y + PX / 2 > o.y + v.h) off += 1
+    }
+  })
+  return off
+}
+
 /** Where a click that changes place is carried out from: beside the town's portal, or on the stairs. */
 const isAtTheWayOut = (g: Game) => (g.where === 'town' ? pathBeside(g, TOWN_SPOTS.portal)?.length === 1 : same(g, levelOf(g).stairs))
 
@@ -422,26 +468,38 @@ const BIG_NAMES = Object.values(BIG_BOSSES).map(b => b.name).join('|')
 const count = (records: StepRecord[], re: RegExp) => records.reduce((n, r) => n + r.said.filter(l => re.test(l)).length, 0)
 
 /** Plays `steps` actions of one game and records each. */
-export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight'): SimResult => {
+/** What every step is checked for, counted over a game; the pane's cameras followed as it moves them. */
+const newChecks = () => ({ untold: 0, miscut: 0, jumps: 0, sightOff: 0, blowsUntold: 0, outOfView: 0, frameMs: [] as number[], cams: { place: '', at: [] } as Cameras })
+
+/** One step checked: the walk drawn against the told, its cuts, jumps, sight, blows untold, the camera; its frame timed with `timeFrames`. */
+const check = (c: ReturnType<typeof newChecks>, before: Game, g: Game, action: Action, timeFrames: boolean) => {
+  c.untold += drawnVsTold(before, g)
+  c.miscut += cutVsDrawn(before, g)
+  if (isJump(before, g, action)) c.jumps += 1
+  c.sightOff += sightBreaks(before, g).length
+  if (isBlowUntold(before, g)) c.blowsUntold += 1
+  c.outOfView += heroOutOfView(c.cams, g)
+  if (!timeFrames) return
+  const t = performance.now()
+  frameOf(g, 105, 124)
+  c.frameMs.push(performance.now() - t)
+}
+
+/** With `timeFrames`, each step's frame is built and timed, as the pane would draw it at the best size's map. */
+export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight', timeFrames = false): SimResult => {
   let g = newGame(seed, cls)
   const d = dice(seed)
   const actions = session(() => g, d)
   const records: StepRecord[] = []
   let turns = 0
-  let untold = 0
-  let miscut = 0
-  let jumps = 0
-  let sightOff = 0
+  const checks = newChecks()
   for (let step = 0; step < steps; step += 1) {
     const action = actions.next().value as Action
     if (action.kind === 'descend') turns += 1
     const from = { x: g.x, y: g.y }
     const before = g
     g = apply(g, action)
-    untold += drawnVsTold(before, g)
-    miscut += cutVsDrawn(before, g)
-    if (isJump(before, g, action)) jumps += 1
-    sightOff += sightBreaks(before, g).length
+    check(checks, before, g, action, timeFrames)
     records.push({
       step,
       action,
@@ -475,10 +533,13 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     clicks: records.filter(r => r.action.kind === 'goto').length,
     clicksRefused: count(records, /^You can't get there\.$/),
     clicksUnexplained: records.filter(isUnexplainedClick).length,
-    drawnUntold: untold,
-    cutsAstray: miscut,
-    jumps,
-    sightBreaks: sightOff,
+    drawnUntold: checks.untold,
+    cutsAstray: checks.miscut,
+    jumps: checks.jumps,
+    sightBreaks: checks.sightOff,
+    blowsUntold: checks.blowsUntold,
+    outOfView: checks.outOfView,
+    frameMs: checks.frameMs,
     placed: records.filter(r => r.action.kind === 'place').length,
     placeRefused: count(records, /^It doesn't fit there\./),
     destroyed: count(records, /^You destroy the /),

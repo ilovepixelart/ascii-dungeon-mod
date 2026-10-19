@@ -1,5 +1,6 @@
 // Simulator: plays many games through the real rules, checks every invariant after every step, and reports balance.
-// Usage: bun tools/simulate.ts <out-dir> [--games 30] [--steps 1000] [--class knight|mage|rogue|all]
+// Usage: bun tools/simulate.ts <out-dir> [--games 30] [--steps 1000] [--class knight|mage|rogue|all] [--frames]
+//        --frames builds and times each step's frame as the pane draws it, and reports the times and the slowest steps.
 //        bun tools/simulate.ts <out-dir> --replay <class>:<seed>:<step>   (the steps up to <step>, and a picture of it)
 // Writes summary.json and, for any game that broke a rule, trace-<class>-<seed>.jsonl and break-<class>-<seed>.png.
 import { mkdirSync } from 'node:fs'
@@ -53,7 +54,8 @@ if (replay !== '') {
 const games = Number(flag('games', '30'))
 const steps = Number(flag('steps', '1000'))
 const results: SimResult[] = []
-for (const cls of CLASSES) for (let seed = 1; seed <= games; seed += 1) results.push(simulate(seed, steps, cls))
+const timeFrames = args.includes('--frames')
+for (const cls of CLASSES) for (let seed = 1; seed <= games; seed += 1) results.push(simulate(seed, steps, cls, timeFrames))
 
 const sum = (f: (r: SimResult) => number) => results.reduce((n, r) => n + f(r), 0)
 const said = (re: RegExp) => sum(r => r.records.reduce((n, s) => n + s.said.filter(l => re.test(l)).length, 0))
@@ -65,7 +67,17 @@ for (const r of results) for (const [k, v] of Object.entries(r.stats.loot)) loot
 const lootTotal = Object.values(loot).reduce((a, b) => a + b, 0)
 const broken = results.filter(r => r.firstBreak !== undefined)
 
+/** The frame times, when timed: the middle, the 99th hundredth, the worst, and the steps over a 30 fps frame's 33 ms. */
+const frameTimes = () => {
+  const all = results.flatMap(r => r.stats.frameMs.map((ms, i) => ({ ms, action: r.records[i]!.action.kind, cls: r.cls, seed: r.seed, step: i })))
+  if (all.length === 0) return undefined
+  const sorted = [...all].sort((a, b) => a.ms - b.ms)
+  const at = (q: number) => Number(sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]!.ms.toFixed(2))
+  return { p50: at(0.5), p99: at(0.99), max: at(1), over33: all.filter(f => f.ms > 33).length, slowest: sorted.slice(-5).reverse().map(f => `${f.cls}:${f.seed}:${f.step} ${f.action} ${f.ms.toFixed(1)} ms`) }
+}
+
 const summary = {
+  frames: frameTimes(),
   games: results.length,
   stepsEach: steps,
   classes: CLASSES,
@@ -88,6 +100,8 @@ const summary = {
     drawnUntold: sum(r => r.stats.drawnUntold),
     cutsAstray: sum(r => r.stats.cutsAstray),
     jumps: sum(r => r.stats.jumps),
+    blowsUntold: sum(r => r.stats.blowsUntold),
+    outOfView: sum(r => r.stats.outOfView),
     sightBreaks: sum(r => r.stats.sightBreaks),
     placedPerGame: sum(r => r.stats.placed) / results.length,
     placeRefusedShare: sum(r => r.stats.placeRefused) / Math.max(1, sum(r => r.stats.placed)),

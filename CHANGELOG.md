@@ -60,6 +60,8 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   or pull request's item rolled four times, XP from a failed call); Second Wind, Opener, Bloodletting, Grudge,
   Scavenger, Iron Stomach, Haggler and Pathfinder change fights, potions, prices and sight. A hero already past level
   10 has the picks it earned waiting. New `talent` action; saves gain the optional `talents` and `wind`.
+- A hero card, from Card in the codex: the hero saved as a picture to `~/Downloads/ascii-dungeon-hero.svg` (the home
+  folder without a Downloads folder) and copied as five lines of text, for sharing. Nothing is sent anywhere.
 - Class sets: three Epic pieces a class, half a big boss's Epics being one of the hero's class. Two worn add a stat
   (Oathbound +2 def, Archivist's +10% XP, Nightglass +5% crit); three strengthen the class's ability (the knight's
   shield turns the first blow of a fight and halves the second, the mage's siphon restores a quarter of max HP, the

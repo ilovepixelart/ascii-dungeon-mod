@@ -13,6 +13,7 @@ import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { codexGesture, codexHeight, codexPixels } from './codexwindow'
+import { cardPixels, cardText, svgOf } from './herocard'
 import { retireGesture, retireHeight, retirePixels } from './retirewindow'
 import { talentGesture, talentHeight, talentPixels } from './talentwindow'
 import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
@@ -820,7 +821,32 @@ const onDeathClick = async ($: EngineInterface, data: unknown) => actAll($, deat
 
 const onRecapClick = async ($: EngineInterface, data: unknown) => actAll($, recapGesture(await current($), data as Gesture))
 
-const onCodexClick = async ($: EngineInterface, data: unknown) => actAll($, codexGesture(await current($), data as Gesture))
+const onCodexClick = async ($: EngineInterface, data: unknown) => {
+  const g = await current($)
+  const outcome = codexGesture(g, data as Gesture)
+  if (outcome.isCard) await saveCard($, g)
+  await actAll($, outcome.actions)
+}
+
+/** The card's file name, in the player's Downloads (their home folder without one). */
+const CARD_FILE = 'ascii-dungeon-hero.svg'
+
+/** Where the hero card goes: Downloads under the home folder when there is one, else the home folder, else the working directory. */
+const cardPath = async ($: EngineInterface) => {
+  const home = await $.env.get('HOME')
+  if (home === undefined) return { path: CARD_FILE, said: CARD_FILE }
+  const isDownloads = await $.fs.exists(`${home}/Downloads`)
+  return isDownloads ? { path: `${home}/Downloads/${CARD_FILE}`, said: `~/Downloads/${CARD_FILE}` } : { path: `${home}/${CARD_FILE}`, said: `~/${CARD_FILE}` }
+}
+
+/** The hero card saved as an SVG and copied as text, and the toast saying what came of each. */
+const saveCard = async ($: EngineInterface, g: Game) => {
+  const { path, said } = await cardPath($)
+  const saved = await $.fs.write(path, svgOf(cardPixels(g))).then(() => true, () => false)
+  const copied = await $.ui.copy({ text: cardText(g) })
+  const text = copied.isCopied ? 'Text copied.' : 'The text could not be copied.'
+  $.ui.toast(saved ? `Hero card saved to ${said}. ${text}` : `The hero card could not be saved to ${said}. ${text}`)
+}
 
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
@@ -939,6 +965,7 @@ const paneOf = ($: EngineInterface, e: RenderInput<'Pane'>, g: Game) => {
   const redraw = () => $.ui.invalidate('ui.render')
   const run = (action: Action, byHand = false) => act($, action, byHand)
   const setSoundTo = (next: SoundSettings) => setSound($, g, next)
+  const shareCard = () => saveCard($, g)
   const line = (runs: Run[]) => (
     <Text wrap="truncate-end">
       {runs.map(run => (
@@ -961,7 +988,7 @@ const paneOf = ($: EngineInterface, e: RenderInput<'Pane'>, g: Game) => {
   )
   // Wide enough for a pixel window over the whole pane.
   const isWindowWide = Raster !== undefined && e.props.bodyColumns >= INV_W
-  return { e, g, Box, Text, Button, Raster, Client, press, redraw, run, setSoundTo, line, logTail, isWindowWide }
+  return { e, g, Box, Text, Button, Raster, Client, press, redraw, run, setSoundTo, shareCard, line, logTail, isWindowWide }
 }
 type Pane = ReturnType<typeof paneOf>
 
@@ -1348,7 +1375,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
   { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g), talentPixels(p.g), [], talentKeys(p, true)) },
   { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [], deepKeys(p, true)) },
-  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [codexClose(p, 'c')]) },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [cardKey(p, 'k'), codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },
@@ -1579,6 +1606,8 @@ const textRecap = (p: Pane) => {
   )
 }
 
+/** Card: the hero card saved and copied. */
+const cardKey = ({ Button, shareCard }: Pane, hotkey?: string) => <Button key="codex-card" label="Card" hotkey={hotkey} plain onPress={shareCard} />
 const codexClose = ({ Button, press }: Pane, hotkey?: string) => <Button key="codex-close" label="Close" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'codex' })} />
 
 /** The codex as text: each row's count and what is in it, then the records. */
@@ -1596,7 +1625,10 @@ const textCodex = (p: Pane) => {
       <Text>{`Big bosses ${c.bigs.length}/${bigs.length}: ${named(c.bigs, bigs) || 'none yet'}`}</Text>
       <Text>{`Legendaries ${legendaries.length}/${LEGENDARIES.length}: ${legendaries.map(l => l.name).join(', ') || 'none yet'}`}</Text>
       <Text dimColor>{`Deepest ${c.deepest}, level ${c.level}, ${c.kills} kills, ${c.bosses} bosses, ${c.deaths} deaths, ${c.gold} gold.`}</Text>
-      <Box columnGap={2}>{codexClose(p)}</Box>
+      <Box columnGap={2}>
+        {cardKey(p)}
+        {codexClose(p)}
+      </Box>
     </Box>
   )
 }

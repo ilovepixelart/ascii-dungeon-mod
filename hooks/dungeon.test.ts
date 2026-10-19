@@ -26,6 +26,8 @@ import { talentCards } from './talentwindow'
 import { pairOf } from './deep'
 import { deepCards } from './deepwindow'
 import { arrive } from './world'
+import { cardText } from './herocard'
+import { codexCardRect } from './codexwindow'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
@@ -483,6 +485,75 @@ test('on a wide pane a mark card, clicked, chooses that mark', async ($, on) => 
   await ui.pointer({ type: 'down', ...at, button: 'left', in: 'deep-clicks' } as never)
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'deep-clicks' } as never)
   expect((kept.get('save') as Game).marks).toEqual({ 2: card.mark })
+  await ui.unmount()
+})
+
+/** The engine's file system and clipboard as a card press meets them: what was written where, what was copied. */
+const cardWorld = (on: On, has: { downloads: boolean; copies: boolean; writes?: boolean }) => {
+  const seen = { written: [] as { path: string; text: string }[], copied: [] as string[] }
+  mock.env(on, { HOME: '/home/hero' })
+  on('fs.exists', (_$, e) => ({ value: has.downloads && e.path === '/home/hero/Downloads' }) as never)
+  on('fs.write', (_$, e) => {
+    if (has.writes === false) throw new Error('EACCES')
+    seen.written.push({ path: e.path, text: e.text })
+    return { value: undefined } as never
+  })
+  on('ui.copy', (_$, e) => {
+    seen.copied.push(e.text)
+    return { value: has.copies ? { isCopied: true } : { isCopied: false, reason: 'no-clipboard' } } as never
+  })
+  return seen
+}
+
+const openCodex = async ($: Engine, on: On, pane: typeof PANE | typeof WIDE = PANE) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'codex' }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  return $.ui.mount({ ...pane, surface: 'terminal' })
+}
+
+test('Card in the codex saves the hero card to Downloads as an SVG, copies it as text, and says both', async ($, on) => {
+  const seen = cardWorld(on, { downloads: true, copies: true })
+  const said = toasts(on)
+  const ui = await openCodex($, on)
+  await ui.press({ key: 'codex-card' })
+  expect(seen.written.map(w => w.path)).toEqual(['/home/hero/Downloads/ascii-dungeon-hero.svg'])
+  expect(seen.written[0]!.text).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/)
+  expect(seen.copied).toEqual([cardText({ ...newGame(), panel: 'codex' })])
+  expect(said).toContain('Hero card saved to ~/Downloads/ascii-dungeon-hero.svg. Text copied.')
+  await ui.unmount()
+})
+
+test('without a Downloads folder the card goes to the home folder; a clipboard that refuses is said', async ($, on) => {
+  const seen = cardWorld(on, { downloads: false, copies: false })
+  const said = toasts(on)
+  const ui = await openCodex($, on)
+  await ui.press({ key: 'codex-card' })
+  expect(seen.written.map(w => w.path)).toEqual(['/home/hero/ascii-dungeon-hero.svg'])
+  expect(said).toContain('Hero card saved to ~/ascii-dungeon-hero.svg. The text could not be copied.')
+  await ui.unmount()
+})
+
+test('a card that cannot be written is said, and the text is still copied', async ($, on) => {
+  const seen = cardWorld(on, { downloads: true, copies: true, writes: false })
+  const said = toasts(on)
+  const ui = await openCodex($, on)
+  await ui.press({ key: 'codex-card' })
+  expect(seen.copied.length).toBe(1)
+  expect(said).toContain('The hero card could not be saved to ~/Downloads/ascii-dungeon-hero.svg. Text copied.')
+  await ui.unmount()
+})
+
+test('on a wide pane a click on Card in the codex window saves the card', async ($, on) => {
+  const seen = cardWorld(on, { downloads: true, copies: true })
+  const ui = await openCodex($, on, WIDE)
+  const r = codexCardRect({ ...newGame(), panel: 'codex' })
+  const at = { x: r.x + 2, y: Math.floor((r.y + 4) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'codex-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'codex-clicks' } as never)
+  expect(seen.written.length).toBe(1)
   await ui.unmount()
 })
 

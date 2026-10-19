@@ -175,8 +175,8 @@ describe('the codex window', () => {
     expect(codexHeight(g)).toBeLessThanOrEqual(MAP_H * PX)
     expect(codexPixels(g).length).toBe(codexHeight(g))
     const at = (p: { x: number; y: number }) => codexGesture(g, { type: 'release', from: p, at: p, button: 'left' })
-    expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual([{ kind: 'panel', panel: 'codex' }])
-    expect(at({ x: 20, y: 30 })).toEqual([])
+    expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual({ actions: [{ kind: 'panel', panel: 'codex' }], isCard: false })
+    expect(at({ x: 20, y: 30 })).toEqual({ actions: [], isCard: false })
   })
 
   test('before its first action an older save shows the codex begun from it', async () => {

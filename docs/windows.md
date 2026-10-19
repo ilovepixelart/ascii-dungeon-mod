@@ -56,8 +56,8 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 ## The start screen
 
 - The `start` panel: a first game opens on it (`openingGame` in `hooks/save.ts`), and New game in settings (or `r` on the text dashboard) opens it. While it is open the dungeon waits: `apply` lets through only a new game, closing it and the view key, so tool calls change nothing.
-- The title, then a card a hero: its portrait in its starting kit, its name, a pip a point of each attribute it starts with. The chosen card is framed white, its ability, lean and kit in the box under the cards.
-- A card chooses its hero; the chosen card clicked again, or Start (`s`), begins a new game as it. Back (`b`) and the close box leave the game as it was; Back shows only with a game under way (`isUnderWay`), since a first game has nothing to go back to. Keys `1` to `3` choose.
+- The title, ASCII DUNGEON, then a card a hero: its portrait in its starting kit, its name, a pip a point of each attribute it starts with. The chosen card is framed white; the box under the cards holds its ability, lean and kit, what each attribute does (`STATS_LINE`), and after a retirement the heirloom and whether the chosen class wears it or carries it in the bag.
+- A card chooses its hero; the chosen card clicked again, or Start (`s`), begins a new game as it. Help (`h`) opens the how-it-plays window over the screen, framed white on a first game (`isFirstGame`: none under way and no codex yet). Back (`b`) and the close box leave the game as it was; Back shows only with a game under way (`isUnderWay`), since a first game has nothing to go back to. The buttons sit in one centered row. Keys `1` to `3` choose.
 
 ## The character sheet
 

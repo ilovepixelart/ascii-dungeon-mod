@@ -24,7 +24,9 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Added
 
-- How it plays, from Help in settings: what the session's coding does to the hero (tool calls, failed calls, passing
+- The start screen is titled ASCII DUNGEON and has Help beside Start, framed white on a first game. Under the chosen
+  hero it says what each attribute does and, after a retirement, the heirloom and whether the hero wears it.
+- How it plays, from Help in settings or on the start screen: what the session's coding does to the hero (tool calls, failed calls, passing
   tests, commits, pushes and pull requests, finished answers), a row each, and what is the player's to choose.
 - A session that starts with talents owed or a fork open says so in the log ("9 talents to choose: open the character
   sheet."), so a hero who earned them before they existed, or while no one watched, hears of them.

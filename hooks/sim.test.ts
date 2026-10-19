@@ -4,8 +4,11 @@ import { apply, newGame } from './game'
 import type { Consumable, Game } from '../types'
 import { KINDS } from './consumables'
 import { foeAhead, plainHero } from './fixtures'
-import { beltAid, drawnVsTold, simulate } from './sim'
+import { beltAid, drawnVsTold, isJump, simulate } from './sim'
 import { MARKS, tierOf } from './deep'
+import { bfs } from './map'
+import { TOWN_SPOTS, pathBeside } from './town'
+import { levelOf } from './world'
 
 describe('what the map draws against what the strip and log tell', () => {
   test('a walk over gold and a potion: on every tile the map and the strip agree', async () => {
@@ -16,7 +19,7 @@ describe('what the map draws against what the strip and log tell', () => {
   })
 
   test('over simulated games of every class, not one walk tile where they disagree', { timeoutMs: 20000 }, async () => {
-    for (const cls of ['knight', 'mage', 'rogue'] as const) for (const seed of [1, 2]) expect(simulate(seed, 600, cls).stats).toMatchObject({ drawnUntold: 0, cutsAstray: 0 })
+    for (const cls of ['knight', 'mage', 'rogue'] as const) for (const seed of [1, 2]) expect(simulate(seed, 600, cls).stats).toMatchObject({ drawnUntold: 0, cutsAstray: 0, jumps: 0 })
   })
 })
 
@@ -76,4 +79,45 @@ test('the simulated player uses herbs, scrolls and runes as well as potions', { 
   const used = (key: 'potionsUsed' | 'herbsUsed' | 'scrollsUsed' | 'wardsUsed' | 'bombsUsed') => runs.reduce((n, s) => n + s[key], 0)
   // Bombs only once healing has run out, which few runs reach; their rule is held above.
   expect([used('potionsUsed') > 0, used('herbsUsed') > 0, used('scrollsUsed') > 0, used('wardsUsed') > 0]).toEqual([true, true, true, true])
+})
+
+describe('moves the pane can play', () => {
+  const seen = (g: Game): Game => ({ ...g, seen: '1'.repeat(g.seen.length) })
+
+  test('a click on the stairs from four tiles off walks there before the descent: no jump', async () => {
+    const g0 = seen(newGame())
+    const level = levelOf(g0)
+    const way = bfs(level.tiles, g0, level.stairs)!
+    const from = way[way.length - 5]!
+    const g = { ...g0, x: from.x, y: from.y }
+    const action = { kind: 'goto', ...level.stairs } as const
+    const next = apply(g, action)
+    expect(next.depth).toBe(2)
+    expect(isJump(g, next, action)).toBe(false)
+    // The same descent with its walk dropped is the jump.
+    expect(isJump(g, { ...next, walked: [] }, action)).toBe(true)
+  })
+
+  test('a click on the stairs while on them, or on the portal while beside it, needs no walk', async () => {
+    const g0 = seen(newGame())
+    const level = levelOf(g0)
+    const onStairs = { ...g0, ...level.stairs }
+    const down = { kind: 'goto', ...level.stairs } as const
+    expect(isJump(onStairs, apply(onStairs, down), down)).toBe(false)
+    const town = apply(g0, { kind: 'portal' })
+    const spot = pathBeside(town, TOWN_SPOTS.portal)!.at(-1)!
+    const beside = { ...town, x: spot.x, y: spot.y }
+    const out = { kind: 'goto', ...TOWN_SPOTS.portal } as const
+    const back = apply(beside, out)
+    expect([beside.where, back.where]).toEqual(['town', 'dungeon'])
+    expect(isJump(beside, back, out)).toBe(false)
+  })
+
+  test('a step within a level is a jump only when no walk ends where the hero stands', async () => {
+    const g = seen(newGame())
+    const action = { kind: 'explore', steps: 3 } as const
+    const next = apply(g, action)
+    expect(isJump(g, next, action)).toBe(false)
+    expect(isJump(g, { ...next, walked: next.walked.slice(0, -1) }, action)).toBe(true)
+  })
 })

@@ -5,7 +5,7 @@ import { countOf, healingSlot, slotOf } from './consumables'
 import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
-import { MAP_H, MAP_W, chestAt, floorThing, isFloor } from './map'
+import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, same } from './map'
 import type { Level, Pos } from './map'
 import { violations } from './invariants'
 import { workOf } from './work'
@@ -14,7 +14,7 @@ import { FRAMES_PER_TILE, walkingGame } from './pixels'
 import { levelOf, newGame } from './world'
 import { offer } from './talents'
 import { forkTier, isForkOpen, pairOf } from './deep'
-import { TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
+import { TOWN_H, TOWN_SPOTS, TOWN_W, pathBeside } from './town'
 
 export type StepRecord = {
   step: number
@@ -63,6 +63,8 @@ export type SimStats = {
   drawnUntold: number
   /** Walk tiles where cutting the walk would leave a game other than the one drawn there. */
   cutsAstray: number
+  /** Actions that moved the hero with no walk to play (`isJump`): each one is a bug. */
+  jumps: number
   questsDone: number
   fortunes: number
   /** Bosses risen, slain, and deaths to one. */
@@ -129,8 +131,8 @@ const frontier = (g: Game) => {
 }
 
 /**
- * Where the simulated player clicks: the foe, now and then an opening into the unexplored, a visible pickup, a seen
- * floor tile nearby, or now and then the dark.
+ * Where the simulated player clicks: the foe, now and then a chest in sight, the stairs once seen, an opening into the
+ * unexplored, a visible pickup, a seen floor tile nearby, or now and then the dark.
  */
 type Dice = (n: number) => number
 
@@ -159,6 +161,8 @@ const clickTarget = (g: Game, d: Dice): Action => {
   const level = levelOf(g)
   const chest = chestInSight(g, level)
   if (chest !== undefined && d(2) === 1) return { kind: 'goto', ...chest }
+  // The stairs once seen, now and then, from wherever the hero stands: down there and then.
+  if (g.seen[cellId(level.stairs)] === '1' && d(8) === 1) return { kind: 'goto', ...level.stairs }
   const open = d(2) === 1 ? frontier(g) : null
   if (open !== null) return { kind: 'goto', ...open }
   if (d(10) === 1) return { kind: 'goto', ...nearCell(g, d, 12) }
@@ -348,6 +352,21 @@ export const drawnVsTold = (before: Game, next: Game) => {
   return off
 }
 
+/** Where a click that changes place is carried out from: beside the town's portal, or on the stairs. */
+const isAtTheWayOut = (g: Game) => (g.where === 'town' ? pathBeside(g, TOWN_SPOTS.portal)?.length === 1 : same(g, levelOf(g).stairs))
+
+/**
+ * Whether an action moved the hero without a walk the pane can play: in the same place, to a new tile its walk does not
+ * end on; or, by a click, to another place with no walk from where it was not already at the way out, short of a death.
+ * The jump a click on the stairs once made.
+ */
+export const isJump = (before: Game, next: Game, action: Action) => {
+  const isSamePlace = next.where === before.where && next.depth === before.depth
+  const end = next.walked.at(-1)
+  if (isSamePlace) return (next.x !== before.x || next.y !== before.y) && (end === undefined || end.x !== next.x || end.y !== next.y)
+  return action.kind === 'goto' && next.deaths === before.deaths && next.walked.length === 0 && !isAtTheWayOut(before)
+}
+
 /**
  * The tiles of a walk that is only a walk where cutting it there would leave a game other than the one drawn there:
  * the hero elsewhere, or an item, gold or a potion taken or not that the screen showed otherwise.
@@ -378,6 +397,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
   let turns = 0
   let untold = 0
   let miscut = 0
+  let jumps = 0
   for (let step = 0; step < steps; step += 1) {
     const action = actions.next().value as Action
     if (action.kind === 'descend') turns += 1
@@ -386,6 +406,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     g = apply(g, action)
     untold += drawnVsTold(before, g)
     miscut += cutVsDrawn(before, g)
+    if (isJump(before, g, action)) jumps += 1
     records.push({
       step,
       action,
@@ -421,6 +442,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight')
     clicksUnexplained: records.filter(isUnexplainedClick).length,
     drawnUntold: untold,
     cutsAstray: miscut,
+    jumps,
     placed: records.filter(r => r.action.kind === 'place').length,
     placeRefused: count(records, /^It doesn't fit there\./),
     destroyed: count(records, /^You destroy the /),

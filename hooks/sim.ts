@@ -224,16 +224,17 @@ const held = (g: Game, kind: Consumable) => (countOf(g.belt[slotOf(kind)]) > 0 ?
 
 /**
  * The rest of the belt, as a player reaches for it: smoke out of a fight when low with no healing left, a ward up
- * against a foe that is not easy, herbs after a fight that left the hero hurt.
+ * against a foe that is not easy, herbs after a fight that left the hero hurt, fury against a deadly foe.
  */
 export const beltAid = (g: Game): Action | undefined => {
   if (g.foe !== null && g.hp < g.maxHp * 0.25 && healingSlot(g) < 0 && held(g, 'smoke') >= 0) return { kind: 'use', slot: held(g, 'smoke') }
   if (g.foe !== null && g.effects.ward === 0 && held(g, 'ward') >= 0 && threat(g) !== 'easy') return { kind: 'use', slot: held(g, 'ward') }
   if (g.foe === null && g.effects.regen === 0 && g.hp < g.maxHp * 0.7 && held(g, 'regen') >= 0) return { kind: 'use', slot: held(g, 'regen') }
+  if (g.foe !== null && g.effects.fury === 0 && held(g, 'fury') >= 0 && threat(g) === 'deadly') return { kind: 'use', slot: held(g, 'fury') }
   return undefined
 }
 
-/** Staying alive: a potion when low, or before an announced breath that could kill; the rest of the belt; better gear on; fury against a deadly foe. */
+/** Staying alive: a potion when low, or before an announced breath that could kill; the rest of the belt; better gear on. */
 const keepAlive = (g: Game): Action | undefined => {
   const heal = healingSlot(g)
   if (g.hp < g.maxHp * 0.4 && heal >= 0) return { kind: 'use', slot: heal }
@@ -242,9 +243,7 @@ const keepAlive = (g: Game): Action | undefined => {
   const isBreathNext = g.foe !== null && (g.log.at(-1) ?? '').includes('draws a deep breath')
   if (isBreathNext && g.foe !== null && g.hp <= g.foe.atk * 2.5 && heal >= 0) return { kind: 'use', slot: heal }
   const upgrade = g.bag.find(i => isUpgrade(g, i))
-  if (upgrade !== undefined) return g.cursor === upgrade.id ? { kind: 'equip' } : { kind: 'cycle' }
-  const fury = g.belt.findIndex(s => s?.kind === 'fury')
-  return g.foe !== null && fury >= 0 && threat(g) === 'deadly' ? { kind: 'use', slot: fury } : undefined
+  return upgrade === undefined ? undefined : g.cursor === upgrade.id ? { kind: 'equip' } : { kind: 'cycle' }
 }
 
 /** A full bag cleared: junk sold, now and then destroyed rather than sold, the way a player clears it by hand; else marked. */
@@ -387,7 +386,8 @@ const isAtTheWayOut = (g: Game) => (g.where === 'town' ? pathBeside(g, TOWN_SPOT
 
 /**
  * Whether an action moved the hero without a walk the pane can play: in the same place, to a new tile its walk does not
- * end on; or, by a click, to another place with no walk from where it was not already at the way out. A death is none.
+ * end on; or, by a click or an answer's descent in the dungeon, to another place with no walk from where it was not
+ * already at the way out. A death is none.
  * The jump a click on the stairs once made.
  */
 export const isJump = (before: Game, next: Game, action: Action) => {
@@ -396,7 +396,8 @@ export const isJump = (before: Game, next: Game, action: Action) => {
   // A death wakes the hero where it wakes him, walk or none.
   if (next.deaths !== before.deaths) return false
   if (isSamePlace) return (next.x !== before.x || next.y !== before.y) && (end === undefined || end.x !== next.x || end.y !== next.y)
-  return action.kind === 'goto' && next.walked.length === 0 && !isAtTheWayOut(before)
+  const isWalked = action.kind === 'goto' || (action.kind === 'descend' && before.where === 'dungeon')
+  return isWalked && next.walked.length === 0 && !isAtTheWayOut(before)
 }
 
 /**

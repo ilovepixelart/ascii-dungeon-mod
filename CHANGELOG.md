@@ -57,6 +57,8 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Fixed
 
+- A blow's number no longer stays on the map after its frames end, a kill's included: the pane sends the ordinary
+  map at the end, where it left the host to repaint a map it might already have had.
 - A click on the stairs walks the hero to them on screen before the descent, where the hero appeared on the next
   depth at once.
 - The fungal deep and the frozen caverns draw their own floors and walls. Their ground shared a place in the drawing

@@ -43,11 +43,13 @@ describe('pixel art', () => {
     }
   })
 
-  test('no floor item shares a silhouette with another item or with a monster', async () => {
+  test('no floor item shares a silhouette with another item or with a monster; the chests share theirs with each other', async () => {
     const all = [...Object.entries(MONSTER_ART), ...Object.entries(THING_ART)]
+    // Every kind of chest, closed and opened, is drawn on one silhouette so it reads as a chest; its make shows in its colors.
+    const CHESTS = new Set(['C', 'H', 'G', 'c', 'h', 'j'])
     for (const [a, artA] of Object.entries(THING_ART)) {
       for (const [b, artB] of all) {
-        if (a === b) continue
+        if (a === b || (CHESTS.has(a) && CHESTS.has(b))) continue
         const differ = [...mask(artA)].filter((c, i) => c !== mask(artB)[i]).length
         expect(differ >= DISTINCT ? 'ok' : `${a} vs ${b}: ${differ}`).toBe('ok')
       }

@@ -3,7 +3,7 @@ import { countOf, slotOf } from './consumables'
 import { attackBonus, bar, critChance, defense, levelOf, runsOf, sightOf, threat, xpToLevel } from './game'
 import type { Run } from './game'
 import { BAG_H, BAG_W, GLYPH, RARITY_COLOR, itemAt } from './items'
-import { MAP_H, MAP_W, cellId, floorThing, isFloor, roomAt, same, visibleFrom } from './map'
+import { MAP_H, MAP_W, OPENED_GLYPH, cellId, floorThing, isFloor, roomAt, same, visibleFrom } from './map'
 import type { Level, Pos } from './map'
 import { TOWN_GROUND, TOWN_H, TOWN_W, townDecorAt, townSpotAt } from './town'
 import type { TownSpot } from './town'
@@ -71,7 +71,7 @@ const thingAt = (g: Game, level: Level, p: Pos) => {
   // The themed room's furnishings stand there for good, used or not.
   if (thing === 'A' || thing === 'B' || thing === 'L' || thing === 'R' || thing === 'S' || thing === 'Q' || thing === 'N' || thing === 'F') return thing
   // An opened chest stays where it stood, open.
-  if (thing === 'C' || thing === 'H' || thing === 'G') return isTaken ? 'c' : thing
+  if (thing === 'C' || thing === 'H' || thing === 'G') return isTaken ? OPENED_GLYPH[thing] : thing
   return thing === ' ' || isTaken ? undefined : thing
 }
 

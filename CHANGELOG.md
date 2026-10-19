@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- A pillar in a room (rock with floor on all four sides, as in a hall's rows of them) is drawn as a stone column
+  standing on the floor, where it was drawn as a block of wall: seen alone, a row of them read as a tunnel paved with
+  bricks.
 - The three chests share one shape, told apart by what they are made of: wooden with a brass knob, iron-bound with
   steel corners, edges and knob, gilded with gold trim and a gem. The gilded one was a gold lump with no lid, the iron
   one stood on feet. Each opened kind is drawn as its own, its knob kept, where every opened chest looked wooden; on

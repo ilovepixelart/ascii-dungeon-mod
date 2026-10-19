@@ -138,25 +138,44 @@ export const wallTorchesOf = (world: number, depth: number, level: Level): Pos[]
 }
 
 /** Small things left on the floor: a few pixels on the slab, palette keys as sprites use them. */
-export const DECAL_ART: Readonly<Record<'bones' | 'rubble', readonly string[]>> = {
+export const DECAL_ART = {
   bones: ['........', '........', '........', '........', '.o..o...', '..oO....', '.O..o...', '........'],
-  rubble: ['........', '........', '........', '........', '........', '..e.....', '.eEe.E..', '........'],
+  cobweb: ['EeE.....', 'eE......', 'E.e.....', '..E.....', '........', '........', '........', '........'],
+  algae: ['........', '........', '........', '...L....', '.LlL.L..', '..L.LlL.', '...L.L..', '........'],
+  sprigs: ['........', '........', '........', '........', '.l...l..', '.lL.lL..', '..L..L..', '........'],
+  tuft: ['........', '........', '........', '........', '.p...F..', 'pFp.FvF.', '.o...o..', '........'],
+  spores: ['........', '........', '........', '...P....', '.P.xP...', '..xPx.c.', '...P....', '........'],
+  frost: ['........', '........', '........', '..h.....', '.hHh.h..', '..h.hHh.', '.....h..', '........'],
+  shards: ['........', '........', '........', '........', '..c.....', '.cC..c..', '.CC.cC..', '........'],
+  slag: ['........', '........', '........', '........', '..EE....', '.EkEI...', '.kEEk...', '........'],
+  soot: ['........', '........', '........', '........', '.K.K....', 'KkKkK...', '.KkK....', '........'],
+} as const satisfies Readonly<Record<string, readonly string[]>>
+type Decal = keyof typeof DECAL_ART
+
+/** Each theme's two decals: bones and cobwebs in the crypt, algae and reed sprigs in the flooded halls, mushroom tufts
+ * and spores in the fungal deep, frost and ice shards in the frozen caverns, slag and soot in the forge. */
+export const THEME_DECALS: Readonly<Record<Theme, readonly [Decal, Decal]>> = {
+  crypt: ['bones', 'cobweb'],
+  flooded: ['algae', 'sprigs'],
+  fungal: ['tuft', 'spores'],
+  frozen: ['frost', 'shards'],
+  forge: ['slag', 'soot'],
 }
 
 /**
- * The decal on a room's floor tile, if any: bones or rubble, gathered by the walls, a chance of (rock beside it)^2
- * in 16: never in the open, 1 in 16 beside one wall, 1 in 4 in a corner.
+ * The decal on a room's floor tile, if any: one of its theme's two, gathered by the walls, a chance of (rock beside
+ * it)^2 in 16: never in the open, 1 in 16 beside one wall, 1 in 4 in a corner.
  */
-export const decalAt = (world: number, depth: number, level: Level, p: Pos): keyof typeof DECAL_ART | undefined => {
+export const decalAt = (world: number, depth: number, level: Level, p: Pos): Decal | undefined => {
   if (!isFloor(level.tiles, p) || roomAt(level, p) === undefined) return undefined
   const rock = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !isFloor(level.tiles, { x: p.x + dx!, y: p.y + dy! })).length
   const n = hash(world * 31 + depth * 7919 + 13, p.x, p.y)
   if (n >= (100 * rock * rock) / 16) return undefined
-  return n % 2 === 0 ? 'bones' : 'rubble'
+  return THEME_DECALS[themeOf(depth)][n % 2]
 }
 
 /** A tile's texture with its decal painted on, a copy; the texture as it is without one. */
-const withDecal = (tex: Uint32Array, decal: keyof typeof DECAL_ART | undefined) => {
+const withDecal = (tex: Uint32Array, decal: Decal | undefined) => {
   if (decal === undefined) return tex
   const out = Uint32Array.from(tex)
   DECAL_ART[decal].forEach((row, y) => [...row].forEach((k, x) => {

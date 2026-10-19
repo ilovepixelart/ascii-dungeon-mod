@@ -1139,7 +1139,13 @@ const goTo = (g: Game, target: Pos) => {
   }
   if (!walkWay(g, path, isFoe)) return
   if (isFoe && g.foe !== null && isNextTo(g, g.foe)) attack(g)
-  if (same(target, level.stairs) && same(g, level.stairs)) descend(g)
+  if (same(target, level.stairs) && same(g, level.stairs)) {
+    // The walk to the stairs is kept past the descent, so it can be played on the level it was walked on.
+    const walked = g.walked
+    const depth = g.depth
+    descend(g)
+    if (g.depth !== depth) g.walked = walked
+  }
 }
 
 /**

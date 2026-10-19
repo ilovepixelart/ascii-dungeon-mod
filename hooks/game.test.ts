@@ -6,7 +6,7 @@ import { foeAhead, plainHero } from './fixtures'
 import { countOf } from './consumables'
 import { plainItem } from './items'
 import { arrive } from './world'
-import { analyze, bfs, cellId, chestAt, floorThing, generate, layoutOf, same, themedRoomOf } from './map'
+import { analyze, bfs, cellId, chestAt, floorThing, generate, isFloor, layoutOf, same, themedRoomOf } from './map'
 import { foeRuns, mapRows, statusRuns, tileAt } from './panels'
 import { TOWN_ARRIVAL, TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W, isTownWalkable, pathBeside } from './town'
 
@@ -706,18 +706,22 @@ describe('a version 4 save, from before the levels were rebuilt', () => {
   })
 
   test('a version 7 save re-enters its depth at the start where the layout changed, and stays put where it did not', async () => {
+    // World 3: one of its depths kept its 'rooms' layout and gained none of version 11's shapes.
+    const W = 3
     const depthOf = (changed: boolean) => {
-      for (let d = 2; d < 30; d += 1) if (!isBossDepth(d) && (layoutOf(4, d) !== 'rooms') === changed) return d
+      // A depth kept must also be untouched by the shapes of version 11, which rebuild a level of their own.
+      const isNewShaped = (d: number) => generate(W, d).rooms.some(r => r.shape === 'rounded' || r.shape === 'alcoves' || r.shape === 'island')
+      for (let d = 2; d < 60; d += 1) if (!isBossDepth(d) && (layoutOf(W, d) !== 'rooms') === changed && (changed || !isNewShaped(d))) return d
       throw new Error('no such depth')
     }
     // The middle of a room the hero does not start in: floor whatever the room's shape.
     const spotOn = (depth: number) => {
-      const level = generate(4, depth)
+      const level = generate(W, depth)
       return level.rooms.map(r => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })).find(p => !same(p, level.start))!
     }
-    const at = (depth: number) => normalize({ ...newGame(4), world: 4, depth, ...spotOn(depth), seen: '1'.repeat(64 * 18), version: 7 } as Game)
+    const at = (depth: number) => normalize({ ...newGame(W), world: W, depth, ...spotOn(depth), seen: '1'.repeat(64 * 18), version: 7 } as Game)
     const moved = at(depthOf(true))
-    expect({ x: moved.x, y: moved.y }).toEqual(generate(4, moved.depth).start)
+    expect({ x: moved.x, y: moved.y }).toEqual(generate(W, moved.depth).start)
     const kept = at(depthOf(false))
     expect({ x: kept.x, y: kept.y, seen: kept.seen }).toEqual({ ...spotOn(kept.depth), seen: '1'.repeat(64 * 18) })
   })
@@ -731,7 +735,8 @@ describe('a version 4 save, from before the levels were rebuilt', () => {
     const at = (depth: number) => normalize({ ...newGame(4), world: 4, depth, ...spotOn(depth), seen: '1'.repeat(64 * 18), version: 8 } as Game)
     const moved = at(12)
     expect({ x: moved.x, y: moved.y }).toEqual(generate(4, 12).start)
-    const kept = at(layoutOf(4, 7) === 'rooms' ? 7 : 6)
+    // A depth that kept its theme (the first ten did) and gained none of version 11's room shapes.
+    const kept = at([7, 6, 8, 9, 4, 3, 2].find(d => !generate(4, d).rooms.some(r => r.shape === 'rounded' || r.shape === 'alcoves' || r.shape === 'island'))!)
     expect({ x: kept.x, y: kept.y }).toEqual(spotOn(kept.depth))
   })
 
@@ -1669,9 +1674,13 @@ describe('a walk cut where the hero stands', () => {
   })
 
   test('a trap that slays the hero on the way ends it: he wakes at the entrance and walks no further', async () => {
-    // On depth 1 of world 1 a trap lies at x 40 of row y 13.
-    const hurt = { ...newGame(), seen: '1'.repeat(64 * 18), x: 38, y: 13, hp: 2 }
-    const cut = apply(hurt, { kind: 'trail', path: [{ x: 39, y: 13 }, { x: 40, y: 13 }, { x: 41, y: 13 }, { x: 42, y: 13 }] })
+    // A trap on depth 1 with clear floor two cells either side of it along its row.
+    const level = generate(newGame().world, 1)
+    const clear = (x: number, y: number) => isFloor(level.tiles, { x, y }) && floorThing(newGame().world, 1, level, { x, y }) === ' '
+    const trap = Array.from({ length: 64 * 18 }, (_, i) => ({ x: i % 64, y: Math.floor(i / 64) }))
+      .find(p => floorThing(newGame().world, 1, level, p) === '^' && [-2, -1, 1, 2].every(d => clear(p.x + d, p.y)))!
+    const hurt = { ...newGame(), seen: '1'.repeat(64 * 18), x: trap.x - 2, y: trap.y, hp: 2 }
+    const cut = apply(hurt, { kind: 'trail', path: [-1, 0, 1, 2].map(d => ({ x: trap.x + d, y: trap.y })) })
     expect(cut.deaths).toBe(1)
     expect({ x: cut.x, y: cut.y }).toEqual(generate(cut.world, 1).start)
   })

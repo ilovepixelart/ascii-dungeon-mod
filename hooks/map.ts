@@ -539,8 +539,9 @@ export const visibleFrom = (level: Level, p: Pos, reach = 1): Pos[] => {
 }
 
 export type ChestKind = 'wooden' | 'iron' | 'gilded'
-/** A chest's glyph on the map, by kind; opened, every chest is 'c'. */
+/** A chest's glyph on the map, by kind, closed and opened (`g` is the goblin's, so the opened gilded chest is `j`). */
 export const CHEST_GLYPH: Readonly<Record<ChestKind, string>> = { wooden: 'C', iron: 'H', gilded: 'G' }
+export const OPENED_GLYPH: Readonly<Record<string, string>> = { C: 'c', H: 'h', G: 'j' }
 
 const deadEndsOf = new WeakMap<Level, Set<number>>()
 

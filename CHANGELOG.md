@@ -6,6 +6,13 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed behaviour
+
+- The three chests share one shape, told apart by what they are made of: wooden with a brass knob, iron-bound with
+  steel corners, edges and knob, gilded with gold trim and a gem. The gilded one was a gold lump with no lid, the iron
+  one stood on feet. Each opened kind is drawn as its own, its knob kept, where every opened chest looked wooden; on
+  the text map an opened iron chest is `h` and an opened gilded one `j`.
+
 ### Added
 
 - A session that starts with talents owed or a fork open says so in the log ("9 talents to choose: open the character

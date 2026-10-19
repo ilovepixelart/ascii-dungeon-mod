@@ -826,7 +826,17 @@ describe('opening a chest', () => {
     const glyph = (game: typeof g) => tileAt(game, level, new Set([cellId(chest)]), chest).occupant
     expect(glyph(g)).toMatchObject({ kind: 'thing', glyph: 'H' })
     // Opened, and the hero stepped back off it.
-    expect(glyph(apply(apply(g, { kind: 'goto', ...chest }), { kind: 'goto', x: g.x, y: g.y }))?.glyph).toBe('c')
+    expect(glyph(apply(apply(g, { kind: 'goto', ...chest }), { kind: 'goto', x: g.x, y: g.y }))?.glyph).toBe('h')
+  })
+
+  test('each kind opens to its own: wooden c, iron h, gilded j', async () => {
+    for (const [kind, closed, open] of [['wooden', 'C', 'c'], ['iron', 'H', 'h'], ['gilded', 'G', 'j']] as const) {
+      const { g, chest } = besideChest(kind, 6)
+      const level = levelOf(g)
+      const glyph = (game: typeof g) => tileAt(game, level, new Set([cellId(chest)]), chest).occupant?.glyph
+      expect(glyph(g)).toBe(closed)
+      expect(glyph(apply(apply(g, { kind: 'goto', ...chest }), { kind: 'goto', x: g.x, y: g.y }))).toBe(open)
+    }
   })
 
   test('an Epic from a chest is announced as any Epic is', async () => {

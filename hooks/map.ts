@@ -6,8 +6,12 @@ export const MAP_H = 18
 export type Pos = { x: number; y: number }
 /** A room's floor: `w` by `h` cells from its top-left `x`, `y`, less what its shape gives back to rock. */
 export type Room = Pos & { w: number; h: number; shape?: RoomShape }
-/** A room not a plain rectangle: corners cut (cross), one quarter cut (L), or two rows of pillars along an aisle (pillars). */
-export type RoomShape = 'cross' | 'L' | 'pillars' | 'ragged'
+/**
+ * A room not a plain rectangle: corners cut (cross), one quarter cut (L), two rows of pillars along an aisle (pillars),
+ * its corner cells cut (rounded), one cell in three cut along its long walls (alcoves), a bar of rock either side of its
+ * middle row (island), or a ragged edge (ragged, the caverns').
+ */
+export type RoomShape = 'cross' | 'L' | 'pillars' | 'rounded' | 'alcoves' | 'island' | 'ragged'
 /**
  * How a level is laid out. Rooms: rooms joined as a branching tree. Hall: one great pillared hall, the other rooms each
  * joined straight to it. Ring: the rooms joined round in a circle, so every walk has two ways. Warrens: many small
@@ -89,10 +93,14 @@ const raggedCut = (room: Room, mid: Pos): Pos[] => {
 
 /** The cells of a room its shape gives back to rock; never on its middle row or column, so corridors still meet there. */
 /** Each shape's cut, by a cell (`dx`, `dy` its distance in from the nearer wall) of a room off its middle row and column. */
-const SHAPE_CUTS: Readonly<Record<'cross' | 'L' | 'pillars', (c: { x: number; y: number; dx: number; dy: number }, room: Room, mid: Pos) => boolean>> = {
+const SHAPE_CUTS: Readonly<Record<Exclude<RoomShape, 'ragged'>, (c: { x: number; y: number; dx: number; dy: number }, room: Room, mid: Pos) => boolean>> = {
   cross: (c, room) => c.dx < Math.floor(room.w / 3) && c.dy < Math.floor(room.h / 3),
   L: (c, _room, mid) => c.x > mid.x && c.y < mid.y,
   pillars: c => c.dy === 1 && c.dx % 2 === 1,
+  rounded: c => c.dx === 0 && c.dy === 0,
+  // Never the cell next to the far end: it would leave that end cell standing alone, a dead end.
+  alcoves: (c, room) => c.dy === 0 && (c.x - room.x) % 3 === 0 && c.x - room.x !== room.w - 2,
+  island: c => c.dx >= 2 && c.dy >= 1,
 }
 
 export const shapeCut = (room: Room): Pos[] => {
@@ -108,13 +116,20 @@ export const shapeCut = (room: Room): Pos[] => {
   return cells
 }
 
-/** About one room in three big enough for a shape gets one, chosen by its place alone, so corridors stay as they were. */
+/**
+ * Most rooms big enough for a shape get one, chosen by its place alone, so corridors stay as they were: the big
+ * shapes for rooms of 7 by 5 and more, the small ones for the ordinary rooms most levels are made of.
+ */
 const shapeOf = (world: number, depth: number, room: Room): RoomShape | undefined => {
   const n = hash(world * 11 + depth * 5, room.x, room.y)
   const isBig = room.w >= 7 && room.h >= 5
   if (n < 12 && isBig) return 'cross'
   if (n < 24 && room.w >= 6 && room.h >= 4) return 'L'
   if (n < 34 && isBig) return 'pillars'
+  // Four rows at least: in three, the corners cut leave each end of the middle row a dead end.
+  if (n < 54 && room.w >= 4 && room.h >= 4) return 'rounded'
+  if (n < 68 && room.w >= 6 && room.h >= 4) return 'alcoves'
+  if (n < 78 && room.w >= 8 && room.h >= 5) return 'island'
   return undefined
 }
 
@@ -594,7 +609,8 @@ const kindOf = (world: number, depth: number): RoomKind => {
 export const themedRoomOf = (world: number, depth: number, level: Level): { room: Room; kind: RoomKind } | undefined => {
   const known = themedOf.get(level)
   if (known !== undefined) return known ?? undefined
-  const candidates = level.rooms.filter(r => r.w >= 5 && r.shape === undefined && r !== roomAt(level, level.start) && r !== roomAt(level, level.stairs))
+  // A rounded room loses only its corners, which no kind's furnishings stand on.
+  const candidates = level.rooms.filter(r => r.w >= 5 && (r.shape === undefined || r.shape === 'rounded') && r !== roomAt(level, level.start) && r !== roomAt(level, level.stairs))
   const themed = candidates.length === 0 ? null : { room: candidates[hash(world * 13 + depth * 7, 1, 2) % candidates.length]!, kind: kindOf(world, depth) }
   themedOf.set(level, themed)
   return themed ?? undefined
@@ -613,6 +629,9 @@ export const braziersOf = (world: number, depth: number, level: Level): Pos[] =>
 /** Two furnishings either side of a themed room's centrepiece, on its middle row. */
 const isFlanking = (p: Pos, mid: Pos) => p.y === mid.y && Math.abs(p.x - mid.x) === 2
 
+/** A corner a rounded room gave back to rock. */
+const isCutCorner = (p: Pos, room: Room) => room.shape === 'rounded' && (p.x === room.x || p.x === room.x + room.w - 1) && (p.y === room.y || p.y === room.y + room.h - 1)
+
 /** What each themed room holds, by cell: its centrepiece in the middle and its furnishings. */
 const THEMED: Readonly<Record<RoomKind, (p: Pos, mid: Pos, room: Room) => string>> = {
   shrine: (p, mid) => (same(p, mid) ? 'A' : isFlanking(p, mid) ? 'B' : ' '),
@@ -624,7 +643,8 @@ const THEMED: Readonly<Record<RoomKind, (p: Pos, mid: Pos, room: Room) => string
     const off = Math.abs(p.x - mid.x)
     return off <= 2 && off % 2 === 0 ? '$' : off === 1 ? '^' : ' '
   },
-  library: (p, mid, room) => (same(p, mid) ? 'R' : p.y === room.y && (p.x - room.x) % 2 === 0 ? 'L' : ' '),
+  // Shelves along the top row, but never on a corner a rounded room gave back to rock.
+  library: (p, mid, room) => (same(p, mid) ? 'R' : p.y === room.y && (p.x - room.x) % 2 === 0 && !isCutCorner(p, room) ? 'L' : ' '),
 }
 
 const themedThing = (themed: { room: Room; kind: RoomKind }, p: Pos) => {

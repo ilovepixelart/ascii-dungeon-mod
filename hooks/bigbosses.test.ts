@@ -176,7 +176,33 @@ describe('saves from before the arenas', () => {
   test('a version 9 save on a tenth depth re-enters it at the start; on another depth it stays put', async () => {
     const moved = at(10)
     expect({ x: moved.x, y: moved.y, version: moved.version }).toEqual({ ...generate(WORLD, 10).start, version: SAVE_VERSION })
-    const kept = at(9)
-    expect({ x: kept.x, y: kept.y }).toEqual(spotOn(9))
+    // A depth that is no tenth one, nor rebuilt by version 11's room shapes.
+    const plain = [9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23].find(d => !generate(WORLD, d).rooms.some(r => r.shape === 'rounded' || r.shape === 'alcoves' || r.shape === 'island'))!
+    const kept = at(plain)
+    expect({ x: kept.x, y: kept.y }).toEqual(spotOn(plain))
+  })
+})
+
+describe('saves from before the new room shapes', () => {
+  /** A depth of world WORLD whose rooms have a shape made since version 10, or none: `changed` says which. */
+  const depthWhere = (changed: boolean) => {
+    for (let depth = 2; depth < 60; depth += 1) {
+      if (depth % 10 === 0) continue
+      const isNew = generate(WORLD, depth).rooms.some(r => r.shape === 'rounded' || r.shape === 'alcoves' || r.shape === 'island')
+      if (isNew === changed) return depth
+    }
+    throw new Error('no such depth')
+  }
+  const spotOn = (depth: number) => {
+    const level = generate(WORLD, depth)
+    return level.rooms.map(r => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })).find(p => p.x !== level.start.x || p.y !== level.start.y)!
+  }
+  const at = (depth: number) => normalize({ ...newGame(WORLD), world: WORLD, depth, ...spotOn(depth), seen: '1'.repeat(64 * 18), version: 10 } as Game)
+
+  test('a version 10 save on a depth with a rounded, alcoved or island room re-enters it at the start; on another depth it stays put', async () => {
+    const changed = depthWhere(true)
+    expect({ x: at(changed).x, y: at(changed).y, version: at(changed).version }).toEqual({ ...generate(WORLD, changed).start, version: SAVE_VERSION })
+    const same = depthWhere(false)
+    expect({ x: at(same).x, y: at(same).y }).toEqual(spotOn(same))
   })
 })

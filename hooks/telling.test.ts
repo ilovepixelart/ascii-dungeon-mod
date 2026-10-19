@@ -16,7 +16,9 @@ const goldWalk = () => {
       for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]] as const) {
         const plan = apply(g0, { kind: 'goto', x: x + dx, y: y + dy })
         const onIt = plan.walked.findIndex(p => p.x === x && p.y === y)
-        if (onIt < 0 || onIt >= plan.walked.length - 1 || plan.foe !== null) continue
+        // The pile the only thing on the way: another (a trap) would be told, and outrank it.
+        const isOnlyGold = plan.walked.every(p => (p.x === x && p.y === y) || floorThing(g0.world, g0.depth, level, p) === ' ')
+        if (onIt < 0 || onIt >= plan.walked.length - 1 || plan.foe !== null || !isOnlyGold) continue
         const tiles = alongTheWay(g0, plan)
         if (tiles !== null) return { start: g0 as Game, plan, tiles }
       }

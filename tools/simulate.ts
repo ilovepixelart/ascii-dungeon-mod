@@ -87,6 +87,7 @@ const summary = {
     clicksUnexplained: sum(r => r.stats.clicksUnexplained),
     drawnUntold: sum(r => r.stats.drawnUntold),
     cutsAstray: sum(r => r.stats.cutsAstray),
+    jumps: sum(r => r.stats.jumps),
     placedPerGame: sum(r => r.stats.placed) / results.length,
     placeRefusedShare: sum(r => r.stats.placeRefused) / Math.max(1, sum(r => r.stats.placed)),
     destroyedPerGame: sum(r => r.stats.destroyed) / results.length,

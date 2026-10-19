@@ -14,7 +14,7 @@ import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
 import { BELT_BELOW_Y, INSET, LINE2_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
-import { cellId, floorThing, same } from './map'
+import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
 import { wareRect } from './shop'
@@ -1118,6 +1118,41 @@ describe('a click is carried out when the hero gets there, not when it is made',
     await clock.advance(5000)
     expect(blits).toBeGreaterThan(2)
     expect(said).toContain('You step back through the portal.')
+    await ui.unmount()
+  })
+
+  test('a click on the stairs walks the hero to them, frame by frame, and only then descends', async ($, on) => {
+    const clock = mock.clock(on)
+    const said = toasts(on)
+    let blits = 0
+    on('ui.blit', () => {
+      blits += 1
+      return { value: {} }
+    })
+    // A hero four tiles of known floor from the stairs, every tile seen.
+    const g0 = newGame()
+    const level = levelOf(g0)
+    const way = bfs(level.tiles, g0, level.stairs)!
+    const from = way[way.length - 5]!
+    const start: Game = { ...g0, x: from.x, y: from.y, seen: '1'.repeat(g0.seen.length) }
+    const kept = storeIn(on, new Map<string, unknown>([['save', start]]))
+    on('command.register', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('session.start', (_$, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(TALL)
+    const map = await ui.find({ type: 'Raster', key: 'map' })
+    const stairs = cellOf(start, level.stairs, map?.props.columns as number, map?.props.rows as number)
+    said.length = 0
+    blits = 0
+    await ui.pointer({ type: 'down', ...stairs, button: 'left', in: 'map-clicks' })
+    await clock.advance(FRAME_MS)
+    // A frame in: still on depth 1, nothing said of the stairs.
+    expect((kept.get('save') as Game).depth).toBe(1)
+    expect(said.some(l => / descend to depth /.test(l))).toBe(false)
+    await clock.advance(5000)
+    expect(blits).toBeGreaterThan(2)
+    expect((kept.get('save') as Game).depth).toBe(2)
     await ui.unmount()
   })
 

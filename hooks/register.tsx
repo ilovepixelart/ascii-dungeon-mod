@@ -43,7 +43,8 @@ import { COMPACT_H, COMPACT_W, compactGesture, compactOverlay, compactPixels } f
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkOverlay, talkPixels } from './talk'
 import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
-import { MAP_H, MAP_W } from './map'
+import { MAP_H, MAP_W, same } from './map'
+import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
 import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
@@ -345,10 +346,15 @@ export const toastFor = (before: Game, next: Game, byHand: boolean, hasLog: bool
 /** A click the hero is walking to carry out: the rules take it when the walk ends, not when it is made. */
 let pending: { action: Action; byHand: boolean; isOnlyAWalk?: boolean } | null = null
 
-/** Whether a walk from `before` to `next` plays on screen: a pixel map, and the hero still in the same place. */
-/** A walk through town to the portal ends in the dungeon: walked in town, and only its end changes place. */
-const isPortalWalk = (before: Game, next: Game) => before.where === 'town' && next.where === 'dungeon'
-const isPlayed = (before: Game, next: Game) => next.walked.length > 0 && (placeOf(next) === placeOf(before) || isPortalWalk(before, next)) && (next.zoom >= 3 || isPixelDash)
+/**
+ * A walk that ends by changing place, walked where it began and only its end elsewhere: through town to the portal,
+ * or to the stairs and down them.
+ */
+const isWalkThrough = (before: Game, next: Game) =>
+  (before.where === 'town' && next.where === 'dungeon') ||
+  (before.where === 'dungeon' && next.where === 'dungeon' && next.depth === before.depth + 1 && same(next.walked.at(-1) ?? before, levelOf(before).stairs))
+/** Whether a walk from `before` to `next` plays on screen: a pixel map, and the hero still in the same place, or a walk through. */
+const isPlayed = (before: Game, next: Game) => next.walked.length > 0 && (placeOf(next) === placeOf(before) || isWalkThrough(before, next)) && (next.zoom >= 3 || isPixelDash)
 
 /**
  * What is new in `next` since `shown`, a state the same action's walk already showed: only the log lines after it and

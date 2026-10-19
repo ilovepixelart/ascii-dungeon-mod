@@ -53,6 +53,8 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Fixed
 
+- A click on the stairs walks the hero to them on screen before the descent, where the hero appeared on the next
+  depth at once.
 - The fungal deep and the frozen caverns draw their own floors and walls. Their ground shared a place in the drawing
   cache, so one could show the colors of the other, or of the forge, depending on what had been drawn before in the
   session.

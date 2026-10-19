@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { MAP_H, MAP_W, analyze, bfs, braziersOf, chestAt, floorThing, generate, isFloor, layoutOf, roomAt, shapeCut, themedRoomOf, visibleFrom } from './map'
-import type { Layout } from './map'
+import type { Layout, Pos } from './map'
 
 const GRID = [
   '#######',
@@ -202,9 +202,9 @@ describe('chests', () => {
 
 describe('sight down corridors', () => {
   test('from a room the hero sees straight down each corridor leaving it, up to 6 cells, and its walls', async () => {
-    // A 3 by 3 room with a corridor of 7 leaving to the right; the room's cells and walls, then 6 corridor cells.
-    const tiles = ['#############', '#...#########', '#..........##', '#...#########', '#############']
-    const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 10, y: 2 } }
+    // A 3 by 3 room with a corridor of 8 leaving to the right, turning down at its end so no cell in sight is a dead end.
+    const tiles = ['#############', '#...#########', '#...........#', '#...#######.#', '###########.#', '#############']
+    const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 11, y: 4 } }
     const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
     // The wall ring holds the corridor's first cell (4,2); then 6 more: 5 to 10.
     for (let x = 4; x <= 10; x += 1) expect(seen.has(`${x},2`)).toBe(true)
@@ -212,20 +212,58 @@ describe('sight down corridors', () => {
     expect(seen.has('7,1') && seen.has('7,3')).toBe(true)
   })
 
+  test('sight down a corridor stops short of a dead end, where a chest stands', async () => {
+    // The corridor's last cell, (8, 2), is a dead end.
+    const tiles = ['#############', '#...#########', '#........####', '#...#########', '#############']
+    const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 2, y: 2 } }
+    const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
+    expect([seen.has('7,2'), seen.has('8,2')]).toEqual([true, false])
+  })
+
+  test('sight down a corridor stops short of a door into another room, and shows none of that room', async () => {
+    // Two rooms with a corridor of 3 between: (8, 2) is the door into the right room.
+    const tiles = ['#############', '#...#####...#', '#...........#', '#...#####...#', '#############']
+    const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }, { x: 9, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 10, y: 2 } }
+    const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
+    expect([seen.has('7,2'), seen.has('8,2'), seen.has('9,2'), seen.has('10,1')]).toEqual([true, false, false, false])
+  })
+
   test('sight down a corridor stops at the first rock, even with floor past it', async () => {
-    const tiles = ['#############', '#...#########', '#.....#....##', '#...#########', '#############']
+    // The corridor turns down at (5, 2), so that cell is no dead end; floor lies past the rock at (6, 2).
+    const tiles = ['#############', '#...#########', '#.....#....##', '#...#.#######', '#####.#######', '#############']
     const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 2, y: 2 } }
     const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
     expect(seen.has('5,2')).toBe(true)
     expect(seen.has('7,2')).toBe(false)
   })
 
-  test('every chest can be seen from the room its branch leaves', async () => {
+  test('a room touching another, no wall between, shows none of the other\'s floor', async () => {
+    // Rooms at x 1 to 3 and x 4 to 6, side by side.
+    const tiles = ['########', '#......#', '#......#', '#......#', '########']
+    const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }, { x: 4, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 5, y: 2 } }
+    const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
+    expect(['4,1', '4,2', '4,3'].filter(c => seen.has(c))).toEqual([])
+    expect(seen.has('3,2')).toBe(true)
+  })
+
+  test('sight down a corridor takes the rock either side of it, never floor beside it', async () => {
+    // A corridor east along row 2; another runs along row 1 above part of it, from (6, 1) to (8, 1) and up at (8, 0).
+    const tiles = ['########.####', '#...##...####', '#..........##', '#...#######.#', '###########.#', '#############']
+    const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 11, y: 4 } }
+    const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
+    expect(seen.has('5,2')).toBe(true)
+    expect(seen.has('5,1')).toBe(true)
+    expect(seen.has('6,1')).toBe(false)
+  })
+
+  test('no chest is seen from any room; each shows once the hero stands beside it', async () => {
     for (let world = 1; world <= 30; world += 1) {
       const level = generate(world, 2)
       for (const end of analyze(level).deadEnds) {
-        const fromSomeRoom = level.rooms.some(r => visibleFrom(level, { x: r.x, y: r.y }).some(p => p.x === end.x && p.y === end.y))
-        expect(fromSomeRoom ? 'seen' : `${world}: ${end.x},${end.y} hidden`).toBe('seen')
+        const isAt = (p: Pos) => p.x === end.x && p.y === end.y
+        expect(level.rooms.some(r => visibleFrom(level, { x: r.x, y: r.y }).some(isAt)) ? `${world}: ${end.x},${end.y} seen from a room` : 'hidden').toBe('hidden')
+        const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: end.x + dx!, y: end.y + dy! })).find(p => isFloor(level.tiles, p))!
+        expect(visibleFrom(level, beside).some(isAt)).toBe(true)
       }
     }
   })

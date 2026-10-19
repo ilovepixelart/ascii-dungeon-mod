@@ -170,12 +170,14 @@ describe('what each talent does', () => {
     expect(apply(town, { kind: 'buy', ware: 'health1' }).gold).toBe(80)
   })
 
-  test('Pathfinder: in a corridor the hero sees two tiles around, not one; a room is seen whole either way', async () => {
+  test('Pathfinder: in a corridor away from rooms the hero sees two tiles around, not one; a room is seen whole either way', async () => {
     const g = plainHero(3)
     const level = levelOf(g)
     expect([sightOf(g), sightOf(knowing(g, 'pathfinder'))]).toEqual([1, 2])
     const corridor = Array.from({ length: MAP_W * MAP_H }, (_, i) => ({ x: i % MAP_W, y: Math.floor(i / MAP_W) }))
-      .find(c => c.x >= 2 && c.y >= 2 && c.x < MAP_W - 2 && c.y < MAP_H - 2 && isFloor(level.tiles, c) && roomAt(level, c) === undefined)!
+      .find(c => c.x >= 2 && c.y >= 2 && c.x < MAP_W - 2 && c.y < MAP_H - 2 && isFloor(level.tiles, c) && roomAt(level, c) === undefined
+        // Away from any room: a door, beside one, sees the room it opens on.
+        && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => roomAt(level, { x: c.x + dx!, y: c.y + dy! }) === undefined))!
     expect(visibleFrom(level, corridor, 2).length).toBe(25)
     expect(visibleFrom(level, corridor).length).toBe(9)
     const there = { ...g, ...corridor }

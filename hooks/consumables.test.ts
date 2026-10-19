@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Consumable, Game } from '../types'
+import { HEALING_DROP_SHARE } from './balance'
 import { CONSUMABLES, KINDS, addToBelt, emptyBelt, killConsumable, tierFor, useBelt } from './consumables'
 import { toVersion7 } from './save'
 import { consumableIcon } from './icons'
@@ -211,12 +212,20 @@ describe('drops', () => {
   })
 
   test('the potion chance falls 10 after a potion and rises 10 after a kill without one', async () => {
-    const sure = { ...plainHero(), potionChance: 100 }
+    // A chance high enough that its share of it is sure.
+    const sure = { ...plainHero(), potionChance: 100 / HEALING_DROP_SHARE }
     expect(killConsumable(sure)?.kind).toBe('health')
-    expect(sure.potionChance).toBe(90)
+    expect(sure.potionChance).toBe(100 / HEALING_DROP_SHARE - 10)
     const never = { ...plainHero(), potionChance: 0, seed: 7 }
     killConsumable(never)
     expect(never.potionChance).toBe(10)
+  })
+
+  test('a kill takes healing at half its potion chance: at a chance of 100, about half of kills', async () => {
+    expect(HEALING_DROP_SHARE).toBe(0.5)
+    const kills = Array.from({ length: 600 }, (_, seed) => killConsumable({ ...plainHero(), potionChance: 100, seed: seed + 1 }))
+    const share = kills.filter(d => d?.kind === 'health').length / kills.length
+    expect([share > 0.42, share < 0.58]).toEqual([true, true])
   })
 
   test('every kill without an Epic or better improves the next roll, and one dropping resets it', async () => {

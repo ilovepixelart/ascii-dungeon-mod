@@ -11,6 +11,9 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- Kills drop healing potions half as often, where three healing finds in four went to waste. Simulated deaths rise
+  from 1.46 to 1.55 per 1,000 steps, the deepest depth reached unchanged; the hero buys potions and uses herbs and
+  runes about a third more.
 - Each theme has its own floor and walls, where all five drew one slab and one brick in different tints: the crypt
   irregular flagstones and ashlar, the flooded halls worn slabs with puddles and mossy stone, the fungal deep packed
   earth with mycelium and porous rock with glowing caps, the frozen caverns sheet ice and snow-capped rock with icicles,

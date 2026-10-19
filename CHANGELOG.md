@@ -42,6 +42,8 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Added
 
+- A blow that comes to nothing shows it: MISS over a foe that darts aside or that the blow passes through, BLOCK over
+  whoever's shield turns it, WARD over the hero when a ward absorbs it.
 - The pane's top row says when it is short of the size the game plays best in, 105 columns by 78 rows, and how big it
   is; a window it cannot show whole says how many rows it needs. The note on a pane too narrow for the pixel windows
   moves there from under the map.

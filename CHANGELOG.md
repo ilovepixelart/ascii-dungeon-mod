@@ -13,6 +13,8 @@ again from its new start, gains kept. Nothing else needs doing.
 
 - Each tier of a belt slot stacks to 99, where it stacked to 9: a potion, herb, scroll, rune or bomb found with its
   tier at 9 is kept, where it was left on the floor. Simulated deaths are unchanged (1.65 and 1.64 per 1,000 steps).
+- A belt slot shows how many it holds of the tier it uses next, where it showed the total of all its tiers; the
+  slot's menu still lists each tier.
 - A pillar in a room (rock with floor on all four sides, as in a hall's rows of them) is drawn as a stone column
   standing on the floor, where it was drawn as a block of wall: seen alone, a row of them read as a tunnel paved with
   bricks.

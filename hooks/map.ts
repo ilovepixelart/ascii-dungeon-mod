@@ -585,6 +585,15 @@ const THEMES: readonly Theme[] = ['crypt', 'flooded', 'fungal', 'frozen', 'forge
 export const THEME_DEPTHS = 5
 export const themeOf = (depth: number): Theme => THEMES[Math.floor((depth - 1) / THEME_DEPTHS) % THEMES.length]!
 
+/**
+ * Each theme's thing to gather, by its glyph: the crypt's warding stone (U), the flooded halls' reeds (V), the fungal
+ * deep's glowing caps (P), the frozen caverns' rime crystal (X), the forge's powder keg (K).
+ */
+export const GATHERABLE: Readonly<Record<Theme, string>> = { crypt: 'U', flooded: 'V', fungal: 'P', frozen: 'X', forge: 'K' }
+
+/** How many of a cell's four sides are rock. */
+const rockSides = (level: Level, p: Pos) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !isFloor(level.tiles, { x: p.x + dx!, y: p.y + dy! })).length
+
 export type RoomKind = 'shrine' | 'library' | 'spring' | 'anvil' | 'vault'
 /** The themed rooms each theme can have: the crypt's two, and a third of the flooded halls' and the forge's own. */
 const KINDS: Readonly<Record<Theme, readonly RoomKind[]>> = {
@@ -654,7 +663,7 @@ const themedThing = (themed: { room: Room; kind: RoomKind }, p: Pos) => {
 
 /**
  * What lies on a floor cell before anyone takes it: a chest at a dead end; the themed room's furnishings; in a room
- * gold, a potion, a trap or nothing.
+ * gold, a potion, a trap, by a wall the theme's thing to gather, or nothing.
  */
 export const floorThing = (world: number, depth: number, level: Level, p: Pos) => {
   const isInside = p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H
@@ -679,6 +688,7 @@ const workedThing = (world: number, depth: number, level: Level, p: Pos) => {
   if (n < 3) return '$'
   if (n < 4) return '!'
   if (n < 6) return '^'
+  if (n < 7 && rockSides(level, p) > 0) return GATHERABLE[themeOf(depth)]
   return ' '
 }
 

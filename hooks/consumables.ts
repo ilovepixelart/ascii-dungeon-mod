@@ -6,6 +6,7 @@ import { pick, roll } from './rng'
 import { TheFoe } from './names'
 import { hasTalent } from './talents'
 import { markHere } from './deep'
+import { HEALING_DROP_SHARE } from './balance'
 
 export const BELT_SIZE = 5
 /** The most of one tier a slot holds. */
@@ -157,21 +158,23 @@ export const tickEffects = (g: Game): string | undefined => {
   return healed > 0 ? `You regenerate ${healed} HP.` : undefined
 }
 
-/** A drop's tier by depth: III 1 in 100 at depth 1, 2 more a depth up to 30; II 4 a depth up to 45 more; else I. */
-export const tierFor = (g: Game): Tier => {
-  const third = Math.min(30, 1 + 2 * (g.depth - 1))
-  const n = roll(g, 100)
+/** A tier by depth for a draw `n` of 1 to 100: III 1 in 100 at depth 1, 2 more a depth up to 30; II 4 a depth up to 45 more; else I. */
+export const tierAt = (depth: number, n: number): Tier => {
+  const third = Math.min(30, 1 + 2 * (depth - 1))
   if (n <= third) return 3
-  if (n <= third + Math.min(45, 4 * g.depth)) return 2
+  if (n <= third + Math.min(45, 4 * depth)) return 2
   return 1
 }
 
+/** A drop's tier by depth (`tierAt`), rolled. */
+export const tierFor = (g: Game): Tier => tierAt(g.depth, roll(g, 100))
+
 /**
  * What a kill drops besides gear: a kind and its tier. Healing keeps a steady supply: the chance starts at 40%, falls
- * 10 points after a potion drops and rises 10 points after a kill without one.
+ * 10 points after a potion drops and rises 10 points after a kill without one, and is taken at `HEALING_DROP_SHARE`.
  */
 export const killConsumable = (g: Game): { kind: Consumable; tier: Tier } | undefined => {
-  if (roll(g, 100) <= g.potionChance * (hasTalent(g, 'scavenger') ? 1.5 : 1) * (markHere(g) === 'lean' ? 0.25 : 1)) {
+  if (roll(g, 100) <= g.potionChance * HEALING_DROP_SHARE * (hasTalent(g, 'scavenger') ? 1.5 : 1) * (markHere(g) === 'lean' ? 0.25 : 1)) {
     g.potionChance = Math.max(10, g.potionChance - 10)
     return { kind: 'health', tier: tierFor(g) }
   }

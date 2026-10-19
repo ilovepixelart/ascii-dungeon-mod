@@ -31,6 +31,9 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Fixed
 
+- The fungal deep and the frozen caverns draw their own floors and walls. Their ground shared a place in the drawing
+  cache, so one could show the colors of the other, or of the forge, depending on what had been drawn before in the
+  session.
 - A prompt that is only a pasted image no longer becomes a quest quoting the host's stand-in for it ("A new quest:
   "[Image #16]""): attachment placeholders are left out, and a prompt with no words left is no quest. A long prompt is
   cut at a word and ends in "...", where it was cut mid-word.

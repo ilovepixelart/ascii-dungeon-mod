@@ -178,7 +178,7 @@ export const themed = (n: number, theme: Theme) => {
 
 const groundCache = new Map<number, Uint32Array>()
 const TERRAIN_KINDS = Object.keys(TERRAIN) as (keyof typeof TERRAIN)[]
-const THEME_ORDER: readonly Theme[] = ['crypt', 'flooded', 'forge']
+const THEME_ORDER: readonly Theme[] = ['crypt', 'flooded', 'fungal', 'frozen', 'forge']
 const groundTexture = (kind: keyof typeof TERRAIN, p: Pos, theme: Theme = 'crypt') => {
   // A number for the kind, the cell (one tile of room each way past the map) and the theme.
   const key = ((((p.y + 1) * (MAP_W + 2) + p.x + 1) * TERRAIN_KINDS.length + TERRAIN_KINDS.indexOf(kind)) * THEME_ORDER.length) + THEME_ORDER.indexOf(theme)

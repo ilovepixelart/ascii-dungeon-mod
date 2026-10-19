@@ -30,6 +30,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 - Every bar is flat, one color, 2 px tall on a whole cell's top (`flatBar` in `hooks/pieces.ts`), its numbers text centred on it (`barLabel`): each character on the bar's color under it, in the ink that reads there (`inkOn`). The strip's HP and XP, the sheet's XP, the healer's HP and the elder's quest. The foe's bar on the map is 1 px and too short for a number.
 - Text goes in text boxes, not pixels: the pixel font is 5 px tall, fine for titles, labels and numbers, not for sentences. The window draws a box's frame and fill in pixels; the click layer writes its text on the same fill.
+- The pixel font has no full stop or comma (`drawable` in `hooks/window.ts` drops them from a card's text), nor a colon or an apostrophe: text drawn in a window is written without them, which the assets test holds every window in `hooks/screens.ts` to.
 - A text box is placed in cells (one pixel across, two down), so its frame lands on even pixel rows.
 - `place` scores a spot by what it hides (`coverage`, weights the window chooses) a thousand times over its distance from what the box is about: hiding less always wins over being nearer.
 
@@ -60,7 +61,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The character sheet
 
-- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex. New game is in settings.
+- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex, Retire (`r`) beside it the retire window, lit once the hero has slain a big boss (`canRetire`), and Talent (`t`) under them the talent window, framed white while a talent is owed, Deep (`d`) beside it the deep window, framed white while a fork waits. New game is in settings.
 
 ## Settings
 
@@ -81,9 +82,31 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 ## The codex
 
 - What every hero of the save has done (`Game.codex`, kept through a new game by `apply`'s `restart`): the uniques and big bosses slain and the Legendaries come to hand, and the records: deepest depth, top level, kills, bosses slain, deaths and gold found in the dungeon. `recorded` in `hooks/codex.ts` adds what each action did, compared before and after, so no rule has to report to it. A Legendary counts once it is in the bag, the stash or worn; one left on the floor of a full bag is not found.
-- A save from before the codex begins one at its first action (`firstCodex` in `hooks/game.ts`): uniques from `uniquesSlain`, every big boss up to `bossSlain` (each guards the way down), the Legendaries owned, the deepest depth, level and deaths. Kills and gold were never counted, so they start at 0.
+- A save from before the codex begins one at its first action (`firstCodex` in `hooks/game.ts`): uniques from `uniquesSlain`, every big boss up to `bossSlain` (each guards the way down), the Legendaries owned, the deepest depth, level and deaths. Kills and gold were never counted, so they start at 0. `Codex.retired` counts the heroes retired; a codex from before retiring has none.
 - A set made whole pays once a save, the moment it is (`paySets`): all five uniques an Epic or better, all five big bosses a Legendary. A save whose set was whole when the codex began is not paid for it. Over 30 simulated games a class at 8,000 steps the prizes take deaths per 1,000 steps from 2.72 to 2.27 and the deepest depth from 74 to 79; a run that rolls the prizes and withholds them stays at 2.74. Below depth 25 nothing changes.
-- Drawn by `hooks/codexwindow.ts`: a row each with its count, an entry lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag; the records under a rule. The close box and Close (`c`) close it. As text, each row names what is in it.
+- Drawn by `hooks/codexwindow.ts`: a row each with its count, an entry lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag; the records under a rule, four lines of them ending the window on the map's height, with Card (`k`) beside the last. The close box and Close (`c`) close it. As text, each row names what is in it.
+
+## The hero card
+
+- Card (`k`) in the codex, as a button on the text dashboard too, saves the hero as a picture and copies them as text, for the player to share where they like; nothing leaves the machine on its own. `hooks/herocard.ts` draws it (`cardPixels`): the portrait in what they wear, level and class, the deepest depth and its tier, kills and deaths, heroes retired (none, left out), the worn pieces in their tier boxes, the codex's counts, gold found and the talents; `cardText` writes the same in five lines.
+- A plugin writes text, not bytes (`$.fs.write`), so the picture is an SVG (`svgOf`): a rectangle a run of one color along a row, drawn at four times. `saveCard` in `register.tsx` writes `ascii-dungeon-hero.svg` to `~/Downloads` (`$.env.get('HOME')`, `$.fs.exists`), or the home folder without one, copies the text (`$.ui.copy`) and toasts what came of each, a refusal of either said.
+
+## Retiring and the heirloom
+
+- A hero who has slain a big boss may retire (`retire` action, `whyNotRetire` in `hooks/game.ts`), passing down one piece they wear as the save's heirloom (`Game.heirloom`, `heirloomOf` in `hooks/items/loot.ts`). The game becomes a new one on the start screen with the codex (one more retired) and the heirloom; no Back, as nothing is under way.
+- Every new hero after that, by the start screen or New game, sets out with the heirloom (`newHero`): worn when the class can wear it, its kit piece going to the bag, at full HP; in the bag when it cannot. The next retirement replaces it.
+- An heirloom keeps its name, tier, look, Legendary power and trigger; its stats are its base's plain ones, untempered, unlocked, not junk. The Rubber Duck's power is its +50% XP, so that stat stays. With the stats as found on depth 1, simulated deaths in the first 1,000 steps (60 games a class) fell from 2.26 to 0.50 with the Duck; as built they are 1.92 with the Duck, 2.17 with the Band of the Endless Loop and 2.06 with a Rare chain.
+- Drawn by `hooks/retirewindow.ts`: the portrait, level, class, deepest depth and big bosses slain; the worn pieces in a row, the chosen one framed white (the first worn until one is clicked; `w` steps through them); its name and what passing it down means; Retire (`r`, dark until a big boss is slain) and Back (`b`, to the sheet). As text, a button a worn piece retires passing it down.
+
+## Talents
+
+- A talent is earned at every tenth level (`owed` in `hooks/talents.ts`), and picked from three offered (`offer`): none already taken, the three fixed by the world and the picks so far, so reopening shows the same cards. The `talent` action takes one on offer; reaching a tenth level says one is waiting. Each talent is read where its rule lives (`hasTalent`): Test Driven and Clean Commit in `greenBuild` and `shrine`, Ship It in `cache`, Rubber Ducking in `fail`, Second Wind in `hurt` (`Game.wind`, once a depth), Opener and Grudge in `talentTimes`, Bloodletting in `strike`, Scavenger and Iron Stomach in `consumables.ts`, Haggler in `priceOfWare`, Pathfinder in `sightOf` (corridor sight, `visibleFrom`'s `reach`).
+- Balance: simulated with each talent from the first step (30 games a class, 1,000 steps), deaths per 1,000 steps are 2.28 with none and 1.8 to 2.4 with any one. Grudge and Opener at half again the damage gave 1.1 and 1.3, so they give a quarter. With the simulated player picking at random, 8,000-step games are 2.27 without talents and 2.37 with (noise), the deepest depth 79 and 82.
+- Drawn by `hooks/talentwindow.ts`: while one is owed, the level that earned it and a card each offered talent (its number key, its name, green for those that reward work, what it does); a card clicked, or its number, takes it. With none owed, the talents taken and the level of the next. As text, a button each offered talent.
+
+## The deep
+
+- Drawn by `hooks/deepwindow.ts`: the depth and its tier, the tiers reached with their depths and marks (the last three, two while a fork waits; the one the hero is in framed white, its mark green if easier, orange if harder), and while a fork waits the next tier's two marks as cards (`A` the easier, `B` the harder; the chosen one framed white), a click or its letter choosing one (`mark` action). Without a fork it names the depth of the next. As text, a button each mark of the fork. The rules are in [pacing.md](pacing.md#tiers-past-depth-50).
 
 ## The compact inventory
 

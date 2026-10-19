@@ -5,6 +5,7 @@ import { foeAhead } from './fixtures'
 import { apply, levelOf, newGame } from './game'
 import { plainItem } from './items'
 import { violations } from './invariants'
+import { pairOf } from './deep'
 import { simulate } from './sim'
 
 const broke = (g: Game) => violations(g).map(v => v.split(':')[0])
@@ -79,6 +80,9 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, cls: 'mage', foe })).toContain('opening only by a class that has one')
     expect(broke({ ...g, cls: 'knight', foe })).not.toContain('opening only by a class that has one')
     expect(broke({ ...g, cls: 'rogue', foe })).not.toContain('opening only by a class that has one')
+    const braced = { ...foe, opened: undefined, braced: true as const }
+    expect(broke({ ...g, cls: 'mage', foe: braced })).toContain('opening only by a class that has one')
+    expect(broke({ ...g, cls: 'knight', foe: braced })).not.toContain('opening only by a class that has one')
   })
 
   test('a quest done more times than it asks, or asking for nothing', async () => {
@@ -207,6 +211,60 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...at, codex: { ...c, deepest: 6 } })).toContain(rule)
     expect(broke({ ...at, codex: { ...c, level: 2 } })).toContain(rule)
     expect(broke({ ...at, codex: { ...c, deaths: 1 } })).toContain(rule)
+  })
+
+  test('an heirloom kept tempered, locked or as junk', async () => {
+    const rule = 'heirloom untempered, unlocked, not junk'
+    const h = g.gear.weapon!
+    expect(broke({ ...g, heirloom: { ...h, temper: undefined, locked: undefined, junk: undefined } })).not.toContain(rule)
+    expect(broke({ ...g, heirloom: { ...h, temper: 1 } })).toContain(rule)
+    expect(broke({ ...g, heirloom: { ...h, locked: true } })).toContain(rule)
+    expect(broke({ ...g, heirloom: { ...h, junk: true } })).toContain(rule)
+  })
+
+  test('a talent twice, or more talents than levels earned', async () => {
+    const rule = 'talents each once, no more than earned'
+    expect(broke({ ...g, level: 20, talents: ['grudge', 'opener'] })).not.toContain(rule)
+    expect(broke({ ...g, level: 20, talents: ['grudge', 'grudge'] })).toContain(rule)
+    expect(broke({ ...g, level: 19, talents: ['grudge', 'opener'] })).toContain(rule)
+  })
+
+  test('a set piece not Epic, with a trigger, or not one of its set', async () => {
+    const rule = 'set pieces Epic, untriggered, each of its set by base and name'
+    const piece = (over: Partial<ReturnType<typeof plainItem>> = {}) => ({ ...plainItem(g, 'plate', 'epic'), name: 'Oathbound Plate', set: 'oathbound' as const, ...over })
+    expect(broke({ ...g, stashed: [piece()] })).not.toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ rarity: 'rare' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ trigger: 'thorns' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ name: 'Oathbound Helm' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [piece({ set: 'archivist' })] })).toContain(rule)
+    expect(broke({ ...g, heirloom: piece({ rarity: 'rare' }) })).toContain(rule)
+  })
+
+  test('a trigger on a tier that rolls none, or one unknown', async () => {
+    const rule = 'triggers only on Rares and Epics, each a known one'
+    const item = (rarity: 'rare' | 'epic' | 'uncommon' | 'legendary', trigger: string) => ({ ...plainItem(g, 'sword', rarity), trigger: trigger as never })
+    expect(broke({ ...g, bag: [item('rare', 'thorns')], stashed: [item('epic', 'bulwark')] })).not.toContain(rule)
+    expect(broke({ ...g, bag: [item('uncommon', 'thorns')] })).toContain(rule)
+    expect(broke({ ...g, stashed: [item('legendary', 'thorns')] })).toContain(rule)
+    expect(broke({ ...g, gear: { ...g.gear, weapon: item('epic', 'wings') } })).toContain(rule)
+    expect(broke({ ...g, heirloom: item('uncommon', 'leeching') })).toContain(rule)
+  })
+
+  test('a mark not of its fork, or on a fork not reached', async () => {
+    const rule = 'marks each of its fork, on a fork reached'
+    const [easy, hard] = pairOf(g.world, 2)
+    const other = (['steady', 'mild', 'brittle', 'ironclad', 'frenzied', 'lean'] as const).find(m => m !== easy && m !== hard)!
+    expect(broke({ ...g, bossSlain: 60, marks: { 2: easy } })).not.toContain(rule)
+    expect(broke({ ...g, bossSlain: 60, marks: { 2: hard } })).not.toContain(rule)
+    expect(broke({ ...g, bossSlain: 60, marks: { 2: other } })).toContain(rule)
+    expect(broke({ ...g, bossSlain: 59, marks: { 2: easy } })).toContain(rule)
+    expect(broke({ ...g, bossSlain: 60, marks: { 0: pairOf(g.world, 0)[0] } })).toContain(rule)
+  })
+
+  test('a second wind on a depth not reached', async () => {
+    const rule = 'second wind on a depth reached'
+    expect(broke({ ...g, deepest: 7, wind: 7 })).not.toContain(rule)
+    expect(broke({ ...g, deepest: 7, wind: 8 })).toContain(rule)
   })
 
   test('a fortune outliving its depth', async () => {

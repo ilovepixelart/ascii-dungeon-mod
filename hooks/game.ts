@@ -1,14 +1,16 @@
-import type { Attribute, ChampionMod, Codex, Foe, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
+import type { Attribute, ChampionMod, Codex, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
 import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, cycle, destroy, equip, gearBonus, makeItem, wornPower, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
+import { TALENTS, TALENT_EVERY, hasTalent, offer, owed } from './talents'
+import { MARKS, forkTier, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -68,6 +70,12 @@ export type Action =
   | { kind: 'look' }
   /** The smith's last reforge taken back: the piece kept as it was. */
   | { kind: 'keepOld' }
+  /** The hero retires, passing down the piece they wear in `slot`; the start screen opens for the next. */
+  | { kind: 'retire'; slot: Slot }
+  /** One of the talents offered, picked. */
+  | { kind: 'talent'; talent: Talent }
+  /** One of the two marks the next tier is chosen of, chosen. */
+  | { kind: 'mark'; mark: Mark }
   | { kind: 'train'; stat: Attribute }
   | { kind: 'zoom' }
 
@@ -140,6 +148,7 @@ const levelUp = (g: Game) => {
     g.points += POINTS_PER_LEVEL
     g.toast = `Level up! You are now level ${g.level}.`
     say(g, `*** Level ${g.level}! HP restored, +${POINTS_PER_LEVEL} stat points (open the character sheet). ***`)
+    if (g.level % TALENT_EVERY === 0 && owed(g) > 0) say(g, 'A talent to choose: open the character sheet.')
   }
 }
 
@@ -168,6 +177,11 @@ const die = (g: Game, killer: string) => {
 
 const hurt = (g: Game, amount: number, by: string) => {
   g.hp -= amount
+  if (g.hp <= 0 && hasTalent(g, 'secondWind') && g.wind !== g.depth) {
+    g.hp = 1
+    g.wind = g.depth
+    say(g, 'Second wind: you stand, at 1 HP.')
+  }
   if (g.hp <= 0) die(g, by)
   else obey(g)
 }
@@ -272,11 +286,14 @@ const openChest = (g: Game, kind: ChestKind) => {
   say(g, `You open the ${kind} chest: ${coins} gold${found}.`)
 }
 
+/** How far the hero sees in a corridor: a tile around, two with Pathfinder. */
+export const sightOf = (g: Pick<Game, 'talents'>) => (hasTalent(g, 'pathfinder') ? 2 : 1)
+
 const moveTo = (g: Game, p: Pos) => {
   g.x = p.x
   g.y = p.y
   g.walked = [...g.walked, { x: p.x, y: p.y }]
-  g.seen = reveal(g.seen, visibleFrom(levelOf(g), p))
+  g.seen = reveal(g.seen, visibleFrom(levelOf(g), p, sightOf(g)))
   pickUp(g)
 }
 
@@ -356,6 +373,17 @@ const BARREN_ITEMS = 15
 const BLOODLUST = 1.25
 const HOARD_ATK = 1.15
 const HOARD_GOLD = 2
+/** What a tier's mark makes of a foe's HP and attack (`MARKS` in hooks/deep.ts): Ironclad's and Frenzied's hit a sixth harder. */
+const MARK_TIMES: Readonly<Record<Mark, { hp: number; atk: number }>> = {
+  steady: { hp: 1, atk: 1 },
+  mild: { hp: 1, atk: 0.8 },
+  brittle: { hp: 0.8, atk: 1.2 },
+  ironclad: { hp: 1.5, atk: 7 / 6 },
+  frenzied: { hp: 1, atk: 7 / 6 },
+  lean: { hp: 1, atk: 1 },
+}
+const MILD_GOLD = 2 / 3
+const LEAN_GOLD = 2
 
 /** A depth's twist, the same every time it is drawn: picked from the world and the depth, none on depth 1 or a boss depth. */
 export const depthMod = (world: number, depth: number): DepthMod | undefined => {
@@ -403,17 +431,18 @@ const spawn = (g: Game, origin: string): Foe => {
   const tier = pickTier(g)
   const kind = BESTIARY[tier] ?? { glyph: '?', name: 'horror' }
   const mod = modHere(g)
-  const maxHp = Math.round(foeHp(g.depth, tier, roll(g, 4)) * (mod === 'horde' ? HORDE_HP : 1))
+  const mark = markHere(g)
+  const maxHp = Math.round(foeHp(g.depth, tier, roll(g, 4)) * (mod === 'horde' ? HORDE_HP : 1) * MARK_TIMES[mark].hp)
   const foe: Foe = {
     glyph: kind.glyph,
     name: `${kindName(kind.glyph, g.depth)} of ${origin}`,
     hp: maxHp,
     maxHp,
-    atk: Math.round(foeAtk(g.depth, tier, roll(g, 2)) * (mod === 'gloom' ? GLOOM_ATK : mod === 'hoard' ? HOARD_ATK : 1)),
+    atk: Math.round(foeAtk(g.depth, tier, roll(g, 2)) * (mod === 'gloom' ? GLOOM_ATK : mod === 'hoard' ? HOARD_ATK : 1) * MARK_TIMES[mark].atk),
     xp: foeXp(g.depth, tier),
     ...foeSpot(g),
   }
-  if (g.depth >= 2 && roll(g, mod === 'den' ? DEN_ODDS : CHAMPION_ODDS) === 1) return championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
+  if (g.depth >= 2 && roll(g, mod === 'den' || mark === 'frenzied' ? DEN_ODDS : CHAMPION_ODDS) === 1) return championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
   return foe
 }
 
@@ -588,7 +617,7 @@ const loot = (g: Game, isChampion = false) => {
     g.sinceRare += 1
     return
   }
-  const item = makeItem(g, isRareDue ? 'rare' : isChampion ? 'uncommon' : 'common', isChampion ? 2 : 1)
+  const item = makeItem(g, isRareDue ? 'rare' : isChampion ? 'uncommon' : 'common', (isChampion ? 2 : 1) * (markHere(g) === 'ironclad' ? 2 : 1))
   if (item.rarity === 'common' || item.rarity === 'uncommon') g.sinceRare += 1
   if (RARITY_RANK.indexOf(item.rarity) < RARITY_RANK.indexOf(ordersOf(g).leave)) {
     say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
@@ -601,7 +630,8 @@ const loot = (g: Game, isChampion = false) => {
 /** A boss's hoard: the best of three rolls, Rare at least (a big boss's Epic at least), and an Elixir; the way down opens. */
 const bossLoot = (g: Game, name: string, isBig = false) => {
   say(g, addToBelt(g, 'health', 3) ? 'Loot: Elixir.' : 'Your belt is full. The Elixir stays on the floor.')
-  const item = makeItem(g, isBig ? 'epic' : 'rare', 3)
+  // Half a big boss's Epics, by the depth and the world, are a piece of the hero's class's set.
+  const item = isBig && hash(g.depth, g.world, 41) < SET_SHARE ? setPiece(g, setOf(g.cls)) : makeItem(g, isBig ? 'epic' : 'rare', 3)
   stashOrLeave(g, item)
   if (item.rarity !== 'legendary' && item.rarity !== 'epic') g.toast = `The ${name} falls: ${item.name}. The way down is open.`
   else announce(g, item)
@@ -617,12 +647,17 @@ const charge = (g: Game, foe: Foe) => {
   return true
 }
 
+/** Prospector's share more of a kill's gold. */
+const PROSPECTOR = 1.2
+
 /** What a kill pays: gold by the depth and the foe (a boss or unique five times, a champion three), its stolen gold back; XP by its own. The depth's twist and the fortune add theirs. */
 const killPay = (g: Game, foe: Foe) => {
   const found = roll(g, 3) * g.depth * (foe.boss === true || foe.unique !== undefined ? 5 : foe.champion === undefined ? 1 : 3)
   const mod = modHere(g)
-  const paid = mod === 'gloom' ? Math.floor(found * MOD_MORE) : found
-  const coins = (g.fortune?.kind === 'riches' ? Math.floor(paid * FORTUNE_MORE) : paid) + (foe.stolen ?? 0)
+  const mark = markHere(g)
+  const paid = Math.floor(found * (mod === 'gloom' ? MOD_MORE : 1) * (mark === 'mild' ? MILD_GOLD : mark === 'lean' ? LEAN_GOLD : 1))
+  const prospected = wornTrigger(g, 'prospector') ? Math.floor(paid * PROSPECTOR) : paid
+  const coins = (g.fortune?.kind === 'riches' ? Math.floor(prospected * FORTUNE_MORE) : prospected) + (foe.stolen ?? 0)
   const xp = Math.floor(xpGain(g, foe.xp) * (mod === 'horde' ? MOD_MORE : 1))
   return { coins, xp }
 }
@@ -632,6 +667,7 @@ const spoils = (g: Game, foe: Foe) => {
   if (foe.boss === true) {
     g.bossSlain = g.depth
     bossLoot(g, foe.name, foe.big !== undefined)
+    announceFork(g)
   } else if (foe.nemesis === true && g.nemesis !== null) trophy(g, g.nemesis)
   else if (foe.unique !== undefined) {
     g.uniquesSlain = [...g.uniquesSlain, bandOf(g.depth)]
@@ -650,6 +686,8 @@ const slay = (g: Game, foe: Foe) => {
   say(g, `You slay ${theFoe(foe)}! +${xp} XP, +${coins} gold.`)
   g.tension += KILL_TENSION
   if (g.cls === 'mage') siphon(g, foe.name)
+  if (wornTrigger(g, 'leeching')) g.hp = Math.min(g.maxHp, g.hp + 1)
+  if (wornTrigger(g, 'momentum')) g.momentum = true
   if (g.quest?.kind === 'slay' || (g.quest?.kind === 'champion' && foe.champion !== undefined)) advanceQuest(g)
   spoils(g, foe)
   loop(g)
@@ -681,7 +719,34 @@ const swing = (g: Game, foe: Foe, isSure: boolean) => {
   if (isFury) g.effects = { ...g.effects, fury: g.effects.fury - 1 }
   const critTimes = wornPower(g, 'tripleCrit') === undefined ? 2 : 3
   const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? critTimes : 1) * (isFury ? 2 : 1))
-  return { blow, isCrit, opened: isAmbush ? { opened: true as const } : {} }
+  return { blow, isCrit, opened: isAmbush ? openingPlayed(g, foe) : {} }
+}
+
+/** The class's opening played against the foe: done, or with a whole set and the first of two played, braced for the second. */
+const openingPlayed = (g: Game, foe: Foe): Pick<Foe, 'opened' | 'braced'> => (isSetWhole(g) && foe.braced === undefined ? { braced: true } : { opened: true })
+
+/**
+ * Grudge's share more damage to a champion (a nemesis among them) or a unique, and Opener's to a foe at full HP; Bloodletting's
+ * HP from a critical. Simulated from the first step, half again for either took deaths per 1,000 steps from 2.28 to
+ * 1.1 and 1.3; a quarter, to 1.8 and 1.9, with the other talents.
+ */
+const GRUDGE = 1.25
+const OPENER = 1.25
+const BLOODLETTING = 2
+/** Executioner's blow on a foe under a quarter HP; Momentum's after a kill. */
+const EXECUTIONER = 1.5
+const MOMENTUM = 1.25
+
+/** What the hero's worn triggers multiply a blow on `foe` by. */
+const triggerTimes = (g: Game, foe: Foe) =>
+  (wornTrigger(g, 'executioner') && foe.hp * 4 < foe.maxHp ? EXECUTIONER : 1) * (g.momentum === true && wornTrigger(g, 'momentum') ? MOMENTUM : 1)
+
+/** What the hero's talents multiply a blow on `foe` by. */
+const talentTimes = (g: Game, foe: Foe) => {
+  // A nemesis is a champion too.
+  const isGrudge = hasTalent(g, 'grudge') && (foe.champion !== undefined || foe.unique !== undefined)
+  const isOpener = hasTalent(g, 'opener') && foe.hp === foe.maxHp
+  return (isGrudge ? GRUDGE : 1) * (isOpener ? OPENER : 1)
 }
 
 const strike = (g: Game, isSure = false) => {
@@ -698,7 +763,9 @@ const strike = (g: Game, isSure = false) => {
     say(g, blow.said)
     return
   }
-  const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1))
+  const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1) * talentTimes(g, foe) * triggerTimes(g, foe))
+  delete g.momentum
+  if (isCrit && hasTalent(g, 'bloodletting')) g.hp = Math.min(g.maxHp, g.hp + BLOODLETTING)
   const left = foe.hp - dmg
   const how = isCrit ? 'CRITICALLY hit' : 'hit'
   if (left > 0) {
@@ -730,9 +797,9 @@ export const classAbout = (cls: HeroClass) => {
   return `${CLASS_NAME[cls]}: ${CLASS_ABILITY[cls]}. ${lean}. ${kit}.`
 }
 
-/** The mage's siphon: a fifth of max HP back from every kill. */
+/** The mage's siphon: a fifth of max HP back from every kill, a quarter with the whole Archivist's set. */
 const siphon = (g: Game, name: string) => {
-  const healed = Math.min(g.maxHp - g.hp, Math.ceil(g.maxHp / 5))
+  const healed = Math.min(g.maxHp - g.hp, Math.ceil(g.maxHp / (isSetWhole(g) ? 4 : 5)))
   if (healed <= 0) return
   g.hp += healed
   say(g, `You draw on the fallen ${name}. +${healed} HP`)
@@ -740,8 +807,8 @@ const siphon = (g: Game, name: string) => {
 
 /** The foe's blow turned aside: the knight's shield takes the first of each fight, else a ward the next. */
 const isTurned = (g: Game, by: string) => {
-  if (g.cls === 'knight' && g.foe !== null && g.foe.opened === undefined) {
-    g.foe = { ...g.foe, opened: true }
+  if (g.cls === 'knight' && g.foe !== null && g.foe.opened === undefined && g.foe.braced === undefined) {
+    g.foe = { ...g.foe, ...openingPlayed(g, g.foe) }
     say(g, `Your shield turns ${by}'s blow.`)
     return true
   }
@@ -770,13 +837,46 @@ const counter = (g: Game, what: string) => {
     if (!turn.strikes) return
   }
   if (isTurned(g, by)) return
-  const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
-  const dmg = Math.max(1, Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust) - (turn?.pierces === true ? 0 : defense(g)))
-  say(g, `${capitalized(by)} strikes you for ${dmg}.`)
+  const { dmg, halved } = foeBlow(g, turn)
+  say(g, `${capitalized(by)} strikes you for ${dmg}${HALVED_SAID[halved]}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
   if (g.foe?.champion === 'vampiric') g.foe = { ...g.foe, hp: Math.min(g.foe.maxHp, g.foe.hp + dmg) }
   hurt(g, dmg, by)
+  landed(g, dmg)
+}
+
+/** What the log adds to a blow halved once or twice. */
+const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned'] as const
+
+/**
+ * The foe's blow (an imp's with no foe) after the hero's defense, its turn and the depth's twist, halved (rounded up)
+ * for the first of a fight to land with Bulwark worn, and for the knight's braced shield: with the whole Oathbound set
+ * the shield turns the first blow and halves the second, which spends the opening.
+ */
+const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
+  const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
+  const blow = Math.max(1, Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust) - (turn?.pierces === true ? 0 : defense(g)))
+  const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
+  const isBraced = g.cls === 'knight' && g.foe?.braced === true && g.foe.opened === undefined
+  if (isBraced && g.foe !== null) g.foe = { ...g.foe, opened: true }
+  const once = isBulwark ? Math.ceil(blow / 2) : blow
+  return { dmg: isBraced ? Math.ceil(once / 2) : once, halved: (isBulwark ? 1 : 0) + (isBraced ? 1 : 0) }
+}
+
+/** A blow landed and the hero standing (a death takes the foe away with it): the foe has landed one, and Thorns answers it. */
+const landed = (g: Game, dmg: number) => {
+  if (g.foe === null) return
+  g.foe = { ...g.foe, landed: true }
+  thorns(g, dmg)
+}
+
+/** Thorns: a foe whose blow landed takes a tenth of it back, rounded up, never the last of its HP. */
+const thorns = (g: Game, dmg: number) => {
+  if (g.foe === null || !wornTrigger(g, 'thorns') || g.foe.hp <= 1) return
+  const back = Math.min(g.foe.hp - 1, Math.ceil(dmg / 10))
+  g.foe = { ...g.foe, hp: g.foe.hp - back }
+  say(g, `Thorns: ${theFoe(g.foe)} takes ${back}.`)
 }
 
 const descend = (g: Game) => {
@@ -789,6 +889,7 @@ const descend = (g: Game) => {
     say(g, `${TheFoe(g.foe)} (${g.foe.glyph}) rises to bar the way down!`)
     return
   }
+  const fork = forkTier(g)
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
   g.hp = Math.min(g.maxHp, g.hp + Math.ceil(g.maxHp / 4))
   if (g.depth > g.deepest) {
@@ -797,6 +898,7 @@ const descend = (g: Game) => {
   }
   if (g.quest?.kind === 'depth') advanceQuest(g)
   say(g, `Task done. You find stairs > and descend to depth ${g.depth}.`)
+  enterTier(g, fork)
   announceTwist(g)
 }
 
@@ -874,6 +976,15 @@ const greenBuild = (g: Game) => {
     say(g, `Your ${aegis.name} hums: the next blow will be turned.`)
   }
   if (g.foe !== null) say(g, 'The tests pass: your blow is sure.')
+  if (hasTalent(g, 'testDriven')) {
+    g.effects = { ...g.effects, fury: g.effects.fury + 2 }
+    say(g, 'Test driven: 2 blows of fury.')
+  }
+  if (wornTrigger(g, 'quickStudy')) {
+    g.xp += g.depth
+    say(g, `Quick study: +${g.depth} XP.`)
+    levelUp(g)
+  }
 }
 
 /**
@@ -888,6 +999,11 @@ const fail = (g: Game, what: string) => {
     strike(g)
     if (g.foe !== null) counter(g, what)
   } else counter(g, what)
+  if (hasTalent(g, 'rubberDucking') && g.deaths === deaths) {
+    g.xp += g.depth
+    say(g, `Rubber ducking: +${g.depth} XP.`)
+    levelUp(g)
+  }
   const mantle = wornPower(g, 'failHeal')
   if (mantle === undefined || g.deaths !== deaths || g.hp >= g.maxHp) return
   g.hp += 1
@@ -897,6 +1013,14 @@ const fail = (g: Game, what: string) => {
 /** A commit's shrine: full HP, and the depth marked to wake on, unless a guardian waits on it. */
 const shrine = (g: Game) => {
   g.hp = g.maxHp
+  if (hasTalent(g, 'cleanCommit')) {
+    g.effects = { ...g.effects, ward: Math.max(g.effects.ward, 1) }
+    say(g, 'A clean commit: the next blow will be turned.')
+  }
+  if (wornTrigger(g, 'freshStart')) {
+    g.effects = { ...g.effects, fury: g.effects.fury + 1 }
+    say(g, 'A fresh start: 1 blow of fury.')
+  }
   if (isBossDepth(g.depth)) {
     say(g, 'You kneel at a shrine: your work is kept. Full HP.')
     return
@@ -909,7 +1033,7 @@ const shrine = (g: Game) => {
 /** Found by work: an item of `atLeast` or better, best of two rolls, into the bag. */
 const cache = (g: Game, said: string, atLeast: Rarity) => {
   say(g, said)
-  const item = makeItem(g, atLeast, 2)
+  const item = makeItem(g, atLeast, hasTalent(g, 'shipIt') ? 4 : 2)
   stashOrLeave(g, item)
   g.toast = `${RARITY_NAME[item.rarity]}! ${item.name}`
 }
@@ -1057,6 +1181,9 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
     g.panel = g.panel === a.panel ? 'none' : a.panel
   },
   look: g => look(g),
+  retire: (g, a) => say(g, whyNotRetire(g, a.slot) ?? ''),
+  talent: (g, a) => learn(g, a.talent),
+  mark: (g, a) => chooseMark(g, a.mark),
   order: (g, a) => order(g, a.order),
   cycle: g => cycle(g),
   place: (g, a) => {
@@ -1240,13 +1367,16 @@ const retrieve = (g: Game, id: number) => {
 /** What the merchant sells and asks for it, in shelf order: gold's one way out besides the smith. */
 export const SHOP_PRICES = { health1: 25, health2: 50, health3: 80, regen1: 45, fury1: 50, ward1: 50, ward2: 75, smoke1: 35, smoke3: 60 } as const satisfies Partial<Record<Ware, number>>
 const PRICES: Readonly<Partial<Record<Ware, number>>> = SHOP_PRICES
-/** A ware's price; one the merchant does not sell has none. */
-export const priceOfWare = (ware: Ware) => PRICES[ware] ?? Infinity
+/** A ware's price, a fifth less for a Haggler; one the merchant does not sell has none. */
+export const priceOfWare = (ware: Ware, g?: Pick<Game, 'talents'>) => {
+  const price = PRICES[ware] ?? Infinity
+  return g !== undefined && hasTalent(g, 'haggler') ? Math.ceil(price * 0.8) : price
+}
 
 const buy = (g: Game, ware: Ware) => {
   const { kind, tier } = wareOf(ware)
   const name = nameOf(kind, tier)
-  const price = priceOfWare(ware)
+  const price = priceOfWare(ware, g)
   if (price === Infinity) say(g, `The merchant has no ${name} to sell.`)
   else if (g.gold < price) say(g, `Not enough gold: a ${name} costs ${price}.`)
   else if (!addToBelt(g, kind, tier)) say(g, `Your belt has no room for a ${name}.`)
@@ -1439,6 +1569,85 @@ const record = (before: Game, g: Game) => {
   return paySets(g, was, now) ? recorded(was, before, g) : now
 }
 
+/** A talent picked: only one offered, while one is owed. */
+const learn = (g: Game, t: Talent) => {
+  if (!offer(g).includes(t)) {
+    say(g, owed(g) === 0 ? `No talent to choose until level ${TALENT_EVERY * ((g.talents?.length ?? 0) + 1)}.` : `${TALENTS[t].name} is not on offer.`)
+    return
+  }
+  g.talents = [...(g.talents ?? []), t]
+  say(g, `You learn ${TALENTS[t].name}: ${TALENTS[t].does}`)
+}
+
+/** A boss slain that opens a fork (a big boss from depth 50 on: no other leaves the hero short of a tier): the next tier's choice said. */
+const announceFork = (g: Game) => {
+  const tier = forkTier(g)
+  if (tier === undefined) return
+  const [easy, hard] = pairOf(g.world, tier).map(m => MARKS[m].name)
+  say(g, `The deep forks: tier ${roman(tier)} will be ${easy} or ${hard}. Choose on the character sheet.`)
+}
+
+/** Into a tier's first depth from the fork before it: the mark taken (the easier, if none was chosen), and said. */
+const enterTier = (g: Game, fork: number | undefined) => {
+  if (fork === undefined || g.depth !== tierStart(fork)) return
+  if (g.marks?.[fork] === undefined) {
+    g.marks = { ...g.marks, [fork]: pairOf(g.world, fork)[0] }
+    say(g, `Unchosen, tier ${roman(fork)} takes the easier mark.`)
+  }
+  const mark = MARKS[markOf(g, fork)]
+  say(g, `Tier ${roman(fork)}, ${mark.name}: ${mark.does}`)
+}
+
+/** One of the next tier's two marks chosen, while its fork is open; a choice made may be changed until the stairs. */
+const chooseMark = (g: Game, mark: Mark) => {
+  const tier = forkTier(g)
+  if (tier === undefined) {
+    say(g, 'The deep has no fork to choose now.')
+    return
+  }
+  if (!pairOf(g.world, tier).includes(mark)) {
+    say(g, `${MARKS[mark].name} is not on offer for tier ${roman(tier)}.`)
+    return
+  }
+  g.marks = { ...g.marks, [tier]: mark }
+  say(g, `Tier ${roman(tier)} will be ${MARKS[mark].name}: ${MARKS[mark].does}`)
+}
+
+/** Whether the hero may retire: once a big boss is slain. */
+export const canRetire = (g: Pick<Game, 'bossSlain'>) => g.bossSlain >= BIG_EVERY
+
+/** Why the hero cannot retire passing down what they wear in `slot`, or undefined when they can. */
+export const whyNotRetire = (g: Game, slot: Slot) => {
+  if (!canRetire(g)) return 'A hero retires once they have slain a big boss.'
+  return g.gear[slot] === undefined ? 'Choose a piece you wear to pass down.' : undefined
+}
+
+/** The hero retired: counted in the codex, the piece in `slot` the heirloom, and a new hero to choose on the start screen. */
+const retiredFrom = (g: Game, slot: Slot): Game => {
+  const codex = g.codex ?? firstCodex(g)
+  return { ...newGame(g.seed, g.cls), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
+}
+
+/** A new hero for the save of `game`: its codex and heirloom kept, the heirloom worn when the class can, else in the bag. */
+const newHero = (game: Game, cls: HeroClass): Game => {
+  const g: Game = { ...newGame(game.seed, cls), codex: game.codex ?? firstCodex(normalize(game)) }
+  if (game.heirloom === undefined) return g
+  const item = { ...game.heirloom, id: g.nextId }
+  g.heirloom = game.heirloom
+  g.nextId += 1
+  stash(g, item)
+  if (!canWear(g, item)) {
+    say(g, `Your heirloom, the ${item.name}, waits in your bag.`)
+    return g
+  }
+  g.cursor = item.id
+  equip(g)
+  g.cursor = null
+  g.hp = g.maxHp
+  say(g, `You set out in your heirloom, the ${item.name}.`)
+  return g
+}
+
 /** Pure: the game after `action`, never mutating `game`. */
 /** What the start screen lets through: the dungeon waits behind it, whatever the tool calls do. */
 const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['restart', 'panel', 'zoom'])
@@ -1447,10 +1656,11 @@ const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>
 const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend'])
 
 export const apply = (game: Game, action: Action): Game => {
-  // A new hero keeps the codex: it is the save's, not one hero's.
-  if (action.kind === 'restart') return { ...newGame(game.seed, action.cls ?? game.cls ?? 'knight'), codex: game.codex ?? firstCodex(normalize(game)) }
+  // A new hero keeps the codex and the heirloom: they are the save's, not one hero's.
+  if (action.kind === 'restart') return newHero(game, action.cls ?? game.cls ?? 'knight')
   if (game.panel === 'start' && !ON_THE_START_SCREEN.has(action.kind)) return game
   const before = normalize(game)
+  if (action.kind === 'retire' && whyNotRetire(before, action.slot) === undefined) return retiredFrom(before, action.slot)
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)

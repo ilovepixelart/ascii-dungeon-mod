@@ -2,11 +2,13 @@
 // Each returns a sentence naming what broke, or nothing.
 import type { Game } from '../types'
 import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
-import { BAG_H, BAG_W, RARE_KILLS, SLOTS, TEMPER_MAX, itemAt } from './items'
+import { BAG_H, BAG_W, RARE_KILLS, SETS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
 import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
 import { CALM_CALLS } from './balance'
+import { TALENT_EVERY } from './talents'
+import { pairOf, tierStart } from './deep'
 import { levelOf } from './world'
 
 type Rule = (g: Game) => string | undefined
@@ -33,7 +35,7 @@ const RULES: Readonly<Record<string, Rule>> = {
   },
   'boss only on a boss depth': g => (g.foe?.boss === true && !isBossDepth(g.depth) ? `the ${g.foe.name} guards depth ${g.depth}` : undefined),
   'boss slain on a boss depth reached': g => (g.bossSlain === 0 || (isBossDepth(g.bossSlain) && g.bossSlain <= g.deepest) ? undefined : `boss of depth ${g.bossSlain} slain, deepest ${g.deepest}`),
-  'opening only by a class that has one': g => (g.foe?.opened === true && g.cls !== 'knight' && g.cls !== 'rogue' ? `the ${g.foe.name} met a ${g.cls}'s opening` : undefined),
+  'opening only by a class that has one': g => ((g.foe?.opened === true || g.foe?.braced === true) && g.cls !== 'knight' && g.cls !== 'rogue' ? `the ${g.foe.name} met a ${g.cls}'s opening` : undefined),
   'quest within its count': g => {
     const q = g.quest
     return q === null || (q.need >= 1 && q.have >= 0 && q.have <= q.need && q.depth >= 1) ? undefined : `quest ${q.kind}: ${q.have} of ${q.need} on depth ${q.depth}`
@@ -84,6 +86,32 @@ const RULES: Readonly<Record<string, Rule>> = {
     if (twice !== undefined) return `the codex lists ${twice.join(', ')}`
     return c.deepest >= g.deepest && c.level >= g.level && c.deaths >= g.deaths ? undefined : `codex deepest ${c.deepest}, level ${c.level}, deaths ${c.deaths}; the hero's ${g.deepest}, ${g.level}, ${g.deaths}`
   },
+  'triggers only on Rares and Epics, each a known one': g => {
+    const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
+    const wrong = all.find(i => i.trigger !== undefined && (!(i.rarity === 'rare' || i.rarity === 'epic') || TRIGGERS[i.trigger] === undefined))
+    return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} carries ${wrong.trigger}`
+  },
+  'set pieces Epic, untriggered, each of its set by base and name': g => {
+    const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
+    const wrong = all.find(i => i.set !== undefined && (i.rarity !== 'epic' || i.trigger !== undefined || !SETS[i.set]?.pieces.some(p => p.base === i.base && p.name === i.name)))
+    return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} (${wrong.base}) of set ${wrong.set}${wrong.trigger === undefined ? '' : ` with ${wrong.trigger}`}`
+  },
+  'heirloom untempered, unlocked, not junk': g => {
+    const h = g.heirloom
+    return h === undefined || (h.temper === undefined && h.locked === undefined && h.junk === undefined) ? undefined : `the heirloom ${h.name} kept tempered ${h.temper}, locked ${h.locked}, junk ${h.junk}`
+  },
+  'talents each once, no more than earned': g => {
+    const t = g.talents ?? []
+    return new Set(t).size === t.length && t.length <= Math.floor(g.level / TALENT_EVERY) ? undefined : `talents ${t.join(', ')} at level ${g.level}`
+  },
+  'marks each of its fork, on a fork reached': g => {
+    const wrong = Object.entries(g.marks ?? {}).find(([t, mark]) => {
+      const tier = Number(t)
+      return !Number.isInteger(tier) || tier < 1 || tierStart(tier) - 1 > g.bossSlain || !pairOf(g.world, tier).includes(mark)
+    })
+    return wrong === undefined ? undefined : `tier ${wrong[0]} marked ${wrong[1]}, deepest boss slain ${g.bossSlain}`
+  },
+  'second wind on a depth reached': g => (g.wind === undefined || (g.wind >= 1 && g.wind <= g.deepest) ? undefined : `second wind on depth ${g.wind}, deepest ${g.deepest}`),
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),
   'petted a count': g => (Number.isInteger(g.petted) && g.petted >= 0 ? undefined : `the dog petted ${g.petted} times`),

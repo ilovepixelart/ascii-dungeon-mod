@@ -15,6 +15,10 @@ export type Foe = {
   boss?: true
   /** The hero's class has played its opening against it: the knight's block or the rogue's ambush. */
   opened?: true
+  /** A full class set's first opening is played: the knight's first block, the rogue's first ambush; the second marks `opened`. */
+  braced?: true
+  /** One of its blows has landed this fight: Bulwark halves only the first. */
+  landed?: true
   /** Its turns so far this fight, for the traits that come round every few. */
   turn?: number
   /** A once-a-fight trait spent: the kobold's brew. */
@@ -51,8 +55,20 @@ export type Recap = { calls: number; depth: number; level: number; kills: number
 /** What the hero does on their own: drink a healing potion under `drink` percent of max HP (0, never); throw a smoke bomb when low with no healing left; leave a kill's items below `leave` on the floor. */
 export type Orders = { drink: 0 | 25 | 50; smoke: boolean; leave: Rarity }
 
-/** What every hero of this save has done, kept through a new game: the uniques and big bosses slain and the Legendaries found, by key and name, and the records. */
-export type Codex = { uniques: NonNullable<Foe['unique']>[]; bigs: NonNullable<Foe['big']>[]; legendaries: string[]; deepest: number; level: number; kills: number; bosses: number; deaths: number; gold: number }
+/** What every hero of this save has done, kept through a new game: the uniques and big bosses slain and the Legendaries found, by key and name, the records, and the heroes retired (absent, none). */
+export type Codex = { uniques: NonNullable<Foe['unique']>[]; bigs: NonNullable<Foe['big']>[]; legendaries: string[]; deepest: number; level: number; kills: number; bosses: number; deaths: number; gold: number; retired?: number }
+
+/** A talent by key: one picked of three every tenth level, each changing a rule (`TALENTS` in hooks/talents.ts). */
+/** A tier's mark past depth 50: easier (steady, mild, brittle) or harder for more (ironclad, frenzied, lean) (`MARKS` in hooks/deep.ts). */
+export type Mark = 'steady' | 'mild' | 'brittle' | 'ironclad' | 'frenzied' | 'lean'
+
+/** A trigger by key: a rule a Rare or Epic changes while worn, once however many pieces carry it. */
+export type Trigger = 'thorns' | 'leeching' | 'momentum' | 'bulwark' | 'executioner' | 'prospector' | 'quickStudy' | 'freshStart'
+
+/** A class's set: three Epic pieces, a bonus at two worn and its class's ability strengthened at three. */
+export type ClassSet = 'oathbound' | 'archivist' | 'nightglass'
+
+export type Talent = 'testDriven' | 'cleanCommit' | 'shipIt' | 'rubberDucking' | 'secondWind' | 'opener' | 'bloodletting' | 'grudge' | 'scavenger' | 'ironStomach' | 'haggler' | 'pathfinder'
 
 /** Work a tool call came to that the game rewards: tests that passed, a commit, a push, a pull request opened or merged. */
 export type Work = 'tests' | 'commit' | 'push' | 'pr'
@@ -85,6 +101,10 @@ export type Item = {
   cls?: HeroClass
   /** A Legendary's fixed power, by key. */
   power?: string
+  /** A Rare's or an Epic's trigger, a rule it changes while worn (`TRIGGERS` in hooks/items/catalog.ts). */
+  trigger?: Trigger
+  /** The class set it is a piece of (`SETS` in hooks/items/catalog.ts); absent, none. */
+  set?: ClassSet
   junk?: boolean
   /** Kept whatever happens: not sold, marked as junk or destroyed until unlocked. */
   locked?: true
@@ -98,7 +118,7 @@ export type Item = {
 export type Attribute = 'might' | 'focus' | 'vigor' | 'insight'
 
 /** What is open over the map; 'start' is the start screen, where the dungeon waits. */
-export type Panel = 'none' | 'start' | 'death' | 'recap' | 'settings' | 'bag' | 'sheet' | 'codex' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
+export type Panel = 'none' | 'start' | 'death' | 'recap' | 'settings' | 'bag' | 'sheet' | 'codex' | 'retire' | 'talent' | 'deep' | 'shop' | 'forge' | 'stash' | 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
 
 /** The five kinds of consumable, a belt slot each, each in three tiers. */
 export type Consumable = 'health' | 'regen' | 'fury' | 'ward' | 'smoke'
@@ -161,6 +181,16 @@ export type Game = {
   orders?: Orders
   /** What the tool calls since the player's last click or key came to; absent when none have. */
   recap?: Recap
+  /** The talents picked, in the order picked; absent, none. */
+  talents?: Talent[]
+  /** The depth Second Wind last saved the hero on: once a depth. */
+  wind?: number
+  /** The hero's last blow slew its foe while Momentum is worn: the next blow deals a quarter more. */
+  momentum?: true
+  /** Each tier's chosen mark, by tier number (tier 1 is depths 51 to 60); a tier absent here is Steady. Absent, none chosen. */
+  marks?: Record<number, Mark>
+  /** The worn piece the last hero to retire passed down, at depth 1 strength: every new hero starts with it. Absent before the first retirement. */
+  heirloom?: Item
   /** What every hero of this save has done; absent until the first action after a load, then begun from the game (`firstCodex`). */
   codex?: Codex
   /** The depth each once-a-depth reward for work was last given on. */

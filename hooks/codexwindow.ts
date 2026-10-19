@@ -1,17 +1,17 @@
 // The codex window: the uniques, the big bosses and the Legendaries, each lit once slain or found and a dark shape
-// until then, a row each with its count; under them the records. Pure: the click layer reports whole gestures, this
-// decides the game actions they make.
+// until then, a row each with its count; under them the records, and Card, which shares the hero. Pure: the click
+// layer reports whole gestures, this decides the game actions they make and whether the card is asked for.
 import type { Codex, Game } from '../types'
 import type { Action } from './game'
 import { BIG_BOSSES, UNIQUES, firstCodex } from './game'
 import { LEGENDARIES } from './items'
 import { ICONS } from './icons'
 import { BOSS_ART, PAL, foeArtOf } from './pixelart'
-import { tierBox } from './pieces'
+import { BUTTON_H, button, buttonW, tierBox } from './pieces'
 import { art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, isInside, pixel, windowPixels, word } from './window'
-import type { Chrome, Gesture } from './window'
+import type { Chrome, Gesture, Rect } from './window'
 
 const CHROME: Chrome = { title: 'CODEX', labels: [] }
 const PAD = 3
@@ -59,10 +59,19 @@ const layout = (c: Codex) => {
     { label: 'BIG BOSSES', found: c.bigs.length, of: bigs.length, y: 33 },
     { label: 'LEGENDARIES', found: c.legendaries.filter(n => LEGENDARIES.some(l => l.name === n)).length, of: LEGENDARIES.length, y: 64 },
   ]
-  const rule = 99
-  // Even, so the window ends on a whole cell.
-  return { rows, rule, records: rule + 4, height: Math.ceil((rule + 4 + 3 * LINE + 1) / 2) * 2 }
+  const rule = 97
+  // Even, so the window ends on a whole cell; four lines of records end it on the map's height.
+  return { rows, rule, records: rule + 3, height: Math.ceil((rule + 3 + 4 * LINE + 1) / 2) * 2 }
 }
+
+/** The Card button, beside the last line of records: it saves the hero card and copies it as text. */
+export const CARD_KEY = { key: 'K', label: 'CARD' }
+const cardRect = (c: Codex): Rect => {
+  const y = layout(c).records + 3 * LINE - 2
+  return { x: COL2, y: bodyTop(CHROME) + y, w: buttonW(CARD_KEY.key, CARD_KEY.label), h: BUTTON_H }
+}
+/** The Card button's place, in window pixels. */
+export const codexCardRect = (g: Game) => cardRect(codexOf(g))
 
 /** The records, two to a line: where each goes and its ink. */
 const recordLines = (c: Codex, y: number) => [
@@ -72,6 +81,7 @@ const recordLines = (c: Codex, y: number) => [
   { text: `BOSSES ${c.bosses}`, x: COL2, y: y + LINE, ink: SAY },
   { text: `DEATHS ${c.deaths}`, x: PAD, y: y + 2 * LINE, ink: DIM },
   { text: `GOLD ${c.gold}`, x: COL2, y: y + 2 * LINE, ink: GOLD },
+  { text: `RETIRED ${c.retired ?? 0}`, x: PAD, y: y + 3 * LINE, ink: DIM },
 ]
 
 /** Every line the window says: each row's name and count, then the records. */
@@ -122,14 +132,22 @@ export const codexPixels = (g: Game): string[][] => {
   })
   fill(body, PAD, l.rule, WINDOW_W - 2 * PAD, 1, RULE)
   for (const line of codexLines(g)) word(body, line.text, line.x, line.y, line.ink)
+  const card = cardRect(c)
+  button(body, CARD_KEY.key, CARD_KEY.label, card.x, card.y - bodyTop(CHROME), 'ready')
   return windowPixels(CHROME, body.px).px
 }
 
-/** The close box closes it; anything else, nothing. */
-export const codexGesture = (_g: Game, gesture: Gesture): Action[] => {
-  if (gesture.type === 'drag') return []
+/** What a gesture on the codex comes to: the game actions, and whether the hero card is asked for. */
+export type CodexOutcome = { actions: Action[]; isCard: boolean }
+
+/** Card asks for the hero card; the close box closes; anything else, nothing. */
+export const codexGesture = (g: Game, gesture: Gesture): CodexOutcome => {
+  const none = { actions: [], isCard: false }
+  if (gesture.type === 'drag') return none
   const from = pixel(gesture.from)
   const at = pixel(gesture.at)
-  if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return []
-  return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'codex' }] : []
+  if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return none
+  const card = codexCardRect(g)
+  if (isInside(at, card.x, card.y, card.w, card.h)) return { actions: [], isCard: true }
+  return isInside(at, ...CLOSE_BOX) ? { actions: [{ kind: 'panel', panel: 'codex' }], isCard: false } : none
 }

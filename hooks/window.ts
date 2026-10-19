@@ -45,6 +45,9 @@ export const isInside = (p: Pos, x: number, y: number, w: number, h: number) => 
 export const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>
   textMask(text).forEach((row, dy) => [...row].forEach((k, dx) => k === '#' && put(c, x + dx, y + dy, ink)))
 
+/** Text as the font can draw it: without the full stops and commas it lacks. */
+export const drawable = (text: string) => text.replace(/[.,]/g, '')
+
 /** Where a window's body starts: below its labels, or just under the title bar when it has none. */
 export const bodyTop = (chrome: Chrome) => (chrome.labels.length > 0 ? BODY_TOP : BARE_TOP)
 

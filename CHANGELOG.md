@@ -51,6 +51,30 @@ boss's arena (save version 10, every tenth depth) starts that depth again from i
   is kept through a new game. Slaying all five uniques pays an Epic or better, all five big bosses a Legendary, once a
   save. Saves gain the optional `codex`; an older save begins it from its uniques, bosses and Legendaries, with kills
   and gold from 0.
+- Retiring, from Retire on the character sheet once a big boss is slain: the hero passes down one piece they wear as
+  the heirloom, and every new hero sets out wearing it (in the bag when the class cannot wear it), its name, look and
+  Legendary power kept, its stats its base's plain ones. The next retirement replaces it; the codex counts heroes
+  retired. New `retire` action; saves gain the optional `heirloom` and `codex.retired`.
+- Talents, from Talent on the character sheet: one picked of three at every tenth level, twelve in all. Test Driven,
+  Clean Commit, Ship It and Rubber Ducking reward work (fury on passing tests, a ward with a commit's shrine, a push's
+  or pull request's item rolled four times, XP from a failed call); Second Wind, Opener, Bloodletting, Grudge,
+  Scavenger, Iron Stomach, Haggler and Pathfinder change fights, potions, prices and sight. A hero already past level
+  10 has the picks it earned waiting. New `talent` action; saves gain the optional `talents` and `wind`.
+- A hero card, from Card in the codex: the hero saved as a picture to `~/Downloads/ascii-dungeon-hero.svg` (the home
+  folder without a Downloads folder) and copied as five lines of text, for sharing. Nothing is sent anywhere.
+- Class sets: three Epic pieces a class, half a big boss's Epics being one of the hero's class. Two worn add a stat
+  (Oathbound +2 def, Archivist's +10% XP, Nightglass +5% crit); three strengthen the class's ability (the knight's
+  shield turns the first blow of a fight and halves the second, the mage's siphon restores a quarter of max HP, the
+  rogue's first two strikes of a fight are sure criticals). The card shows the set and its bonuses. Saves gain the
+  optional `set` on items and `braced` on the foe.
+- Triggers on Rares and Epics: every Epic and about a third of Rares carry one of eight rules while worn (Thorns,
+  Leeching, Momentum, Bulwark, Executioner, Prospector, and Quick Study and Fresh Start for passing tests and
+  commits), shown on the item card. The same trigger on two pieces counts once. Items already in a save carry none
+  until the smith reforges them. Saves gain the optional `trigger` on items and `momentum`.
+- Tiers past depth 50: ten depths each, ending at a big boss, each with a mark. When a tier's big boss falls, the next
+  tier's mark is chosen from Deep on the character sheet, of two offered: an easier (Steady, Mild, Brittle) and a
+  harder that pays more (Ironclad, Frenzied, Lean). Unchosen when the hero takes the stairs into the tier, it takes the
+  easier. A tier a hero went into before this release is Steady. New `mark` action; saves gain the optional `marks`.
 - Hero orders in settings: drink a healing potion under a quarter of max HP (on by default), under half, or never;
   throw a smoke bomb when low with no healing left (off by default); leave a kill's Commons, or anything below Rare, on
   the floor (off by default). New `order` action; saves gain the optional `orders`, older saves taking the defaults.

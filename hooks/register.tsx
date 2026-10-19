@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass } from '../types'
 import { TOWN_TALK } from './town'
-import { BIG_BOSSES, STASH_SIZE, UNIQUES, firstCodex, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
+import { BIG_BOSSES, STASH_SIZE, UNIQUES, canRetire, firstCodex, whyNotRetire, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -13,6 +13,13 @@ import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { codexGesture, codexHeight, codexPixels } from './codexwindow'
+import { cardPixels, cardText, svgOf } from './herocard'
+import { retireGesture, retireHeight, retirePixels } from './retirewindow'
+import { talentGesture, talentHeight, talentPixels } from './talentwindow'
+import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
+import { deepGesture, deepHeight, deepPixels } from './deepwindow'
+import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
+import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
@@ -91,6 +98,8 @@ let beltMenu: BeltMenu = null
 let hudWidth = 0
 let shopUi: ShopUi = SHOP_UI_IDLE
 let forgeUi: ForgeUi = FORGE_UI_IDLE
+/** The piece the retire window has chosen to pass down. */
+let retireUi: RetireUi = FORGE_UI_IDLE
 let chestUi: ChestUi = CHEST_UI_IDLE
 let startUi: StartUi | null = null
 /** The pixel map's mounted size, which a repaint must match. */
@@ -779,6 +788,16 @@ const onForgeClick = async ($: EngineInterface, data: unknown) => {
   $.ui.invalidate('ui.render')
 }
 
+const onTalentClick = async ($: EngineInterface, data: unknown) => actAll($, talentGesture(await current($), data as Gesture))
+const onDeepClick = async ($: EngineInterface, data: unknown) => actAll($, deepGesture(await current($), data as Gesture))
+
+const onRetireClick = async ($: EngineInterface, data: unknown) => {
+  const outcome = retireGesture(await current($), retireUi, data as Gesture)
+  retireUi = outcome.ui
+  await actAll($, outcome.actions)
+  $.ui.invalidate('ui.render')
+}
+
 const onChestClick = async ($: EngineInterface, data: unknown) => {
   const outcome = chestGesture(await current($), chestUi, data as Gesture)
   chestUi = outcome.ui
@@ -802,7 +821,32 @@ const onDeathClick = async ($: EngineInterface, data: unknown) => actAll($, deat
 
 const onRecapClick = async ($: EngineInterface, data: unknown) => actAll($, recapGesture(await current($), data as Gesture))
 
-const onCodexClick = async ($: EngineInterface, data: unknown) => actAll($, codexGesture(await current($), data as Gesture))
+const onCodexClick = async ($: EngineInterface, data: unknown) => {
+  const g = await current($)
+  const outcome = codexGesture(g, data as Gesture)
+  if (outcome.isCard) await saveCard($, g)
+  await actAll($, outcome.actions)
+}
+
+/** The card's file name, in the player's Downloads (their home folder without one). */
+const CARD_FILE = 'ascii-dungeon-hero.svg'
+
+/** Where the hero card goes: Downloads under the home folder when there is one, else the home folder, else the working directory. */
+const cardPath = async ($: EngineInterface) => {
+  const home = await $.env.get('HOME')
+  if (home === undefined) return { path: CARD_FILE, said: CARD_FILE }
+  const isDownloads = await $.fs.exists(`${home}/Downloads`)
+  return isDownloads ? { path: `${home}/Downloads/${CARD_FILE}`, said: `~/Downloads/${CARD_FILE}` } : { path: `${home}/${CARD_FILE}`, said: `~/${CARD_FILE}` }
+}
+
+/** The hero card saved as an SVG and copied as text, and the toast saying what came of each. */
+const saveCard = async ($: EngineInterface, g: Game) => {
+  const { path, said } = await cardPath($)
+  const saved = await $.fs.write(path, svgOf(cardPixels(g))).then(() => true, () => false)
+  const copied = await $.ui.copy({ text: cardText(g) })
+  const text = copied.isCopied ? 'Text copied.' : 'The text could not be copied.'
+  $.ui.toast(saved ? `Hero card saved to ${said}. ${text}` : `The hero card could not be saved to ${said}. ${text}`)
+}
 
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
@@ -853,6 +897,15 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'codex-clicks':
       await onCodexClick($, data)
+      return true
+    case 'retire-clicks':
+      await onRetireClick($, data)
+      return true
+    case 'talent-clicks':
+      await onTalentClick($, data)
+      return true
+    case 'deep-clicks':
+      await onDeepClick($, data)
       return true
     case 'settings-clicks':
       await onSettingsClick($, data)
@@ -912,6 +965,7 @@ const paneOf = ($: EngineInterface, e: RenderInput<'Pane'>, g: Game) => {
   const redraw = () => $.ui.invalidate('ui.render')
   const run = (action: Action, byHand = false) => act($, action, byHand)
   const setSoundTo = (next: SoundSettings) => setSound($, g, next)
+  const shareCard = () => saveCard($, g)
   const line = (runs: Run[]) => (
     <Text wrap="truncate-end">
       {runs.map(run => (
@@ -934,7 +988,7 @@ const paneOf = ($: EngineInterface, e: RenderInput<'Pane'>, g: Game) => {
   )
   // Wide enough for a pixel window over the whole pane.
   const isWindowWide = Raster !== undefined && e.props.bodyColumns >= INV_W
-  return { e, g, Box, Text, Button, Raster, Client, press, redraw, run, setSoundTo, line, logTail, isWindowWide }
+  return { e, g, Box, Text, Button, Raster, Client, press, redraw, run, setSoundTo, shareCard, line, logTail, isWindowWide }
 }
 type Pane = ReturnType<typeof paneOf>
 
@@ -1184,8 +1238,57 @@ const sheetWindow = (p: Pane) => {
   return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), sheetOverlay(g), [
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
     <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
+    retireKey(p, 'r'),
+    talentKey(p, 't'),
+    deepKey(p, 'd'),
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
   ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined)
+}
+
+/** Retire on the sheet: dimmed, and doing nothing, until the hero has slain a big boss. */
+const retireKey = ({ g, Button, press }: Pane, hotkey?: string) => (
+  <Button key="sheet-retire" label="Retire" hotkey={hotkey} plain dimColor={!canRetire(g)} onPress={canRetire(g) ? press({ kind: 'panel', panel: 'retire' }) : () => undefined} />
+)
+
+/** Talent on the sheet: marked while a talent is owed. */
+const talentKey = ({ g, Button, press }: Pane, hotkey?: string) => (
+  <Button key="sheet-talent" label={owed(g) > 0 ? `Talent (${owed(g)})` : 'Talent'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'talent' })} />
+)
+
+/** Deep on the sheet: marked while a fork waits. */
+const deepKey = ({ g, Button, press }: Pane, hotkey?: string) => (
+  <Button key="sheet-deep" label={isForkOpen(g) ? 'Deep (choose)' : 'Deep'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'deep' })} />
+)
+
+/** The fork's two marks, a key each, the easier first; the window's own close. */
+const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
+  const fork = forkTier(g)
+  const chosen = fork === undefined ? undefined : g.marks?.[fork]
+  return [
+    ...(fork === undefined ? [] : pairOf(g.world, fork)).map((m, i) => (
+      <Button key={`deep-${m}`} label={`${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
+    )),
+    <Button key="deep-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'deep' })} />,
+  ]
+}
+
+/** The talents offered, a key each; the window's own close. */
+const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => [
+  ...offer(g).map((t, i) => <Button key={`talent-${t}`} label={`${TALENTS[t].name}: ${TALENTS[t].does}`} hotkey={isWindow ? String(i + 1) : undefined} plain onPress={press({ kind: 'talent', talent: t })} />),
+  <Button key="talent-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
+]
+
+const retireWindow = (p: Pane) => {
+  const { redraw, g, Button, press } = p
+  const slot = chosenSlot(g, retireUi)
+  return pixelWindow(p, 'retire', retireHeight(g, retireUi), retirePixels(g, retireUi), [], [
+    <Button key="retire-go" label="Retire" hotkey="r" plain dimColor={slot === undefined || whyNotRetire(g, slot) !== undefined} onPress={slot === undefined ? () => undefined : press({ kind: 'retire', slot })} />,
+    <Button key="retire-next" label="Next piece" hotkey="w" plain onPress={() => {
+      retireUi = nextWorn(g, retireUi)
+      redraw()
+    }} />,
+    <Button key="retire-back" label="Back" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
+  ], 'Click a piece you wear to pass it down.')
 }
 
 const forgeWindow = (p: Pane) => {
@@ -1269,7 +1372,10 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
-  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [codexClose(p, 'c')]) },
+  { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
+  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g), talentPixels(p.g), [], talentKeys(p, true)) },
+  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [], deepKeys(p, true)) },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [cardKey(p, 'k'), codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },
@@ -1310,27 +1416,33 @@ const textBelt = ({ g, Box, Button, press }: Pane) => (
   </Box>
 )
 
-const textSheet = ({ g, Box, Text, Button, press }: Pane) => (
-  <Box flexDirection="column">
-    <Text bold>
-      Level {g.level} adventurer, {g.points} unspent point{g.points === 1 ? '' : 's'}
-    </Text>
-    {ATTRIBUTES.map((a, i) => (
-      <Box>
-        <Button key={`train-${a.stat}`} label="+" hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />
-        <Text>
-          {' '}
-          {a.label} {String(g.stats[a.stat]).padStart(2)}{'  '}
-        </Text>
-        <Text dimColor>{a.effect(g)}</Text>
+const textSheet = (p: Pane) => {
+  const { g, Box, Text, Button, press } = p
+  return (
+    <Box flexDirection="column">
+      <Text bold>
+        Level {g.level} adventurer, {g.points} unspent point{g.points === 1 ? '' : 's'}
+      </Text>
+      {ATTRIBUTES.map((a, i) => (
+        <Box>
+          <Button key={`train-${a.stat}`} label="+" hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />
+          <Text>
+            {' '}
+            {a.label} {String(g.stats[a.stat]).padStart(2)}{'  '}
+          </Text>
+          <Text dimColor>{a.effect(g)}</Text>
+        </Box>
+      ))}
+      <Box marginTop={1} columnGap={2}>
+        <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
+        {retireKey(p)}
+        {talentKey(p)}
+        {deepKey(p)}
+        <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
       </Box>
-    ))}
-    <Box marginTop={1} columnGap={2}>
-      <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
-      <Button key="sheet-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
     </Box>
-  </Box>
-)
+  )
+}
 
 const textShop = ({ g, Box, Text, Button, press }: Pane) => (
   <Box flexDirection="column">
@@ -1339,7 +1451,7 @@ const textShop = ({ g, Box, Text, Button, press }: Pane) => (
       <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
     </Text>
     {WARES.map(ware => (
-      <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware)} gold`} plain dimColor={g.gold < priceOfWare(ware)} onPress={press({ kind: 'buy', ware })} />
+      <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware, g)} gold`} plain dimColor={g.gold < priceOfWare(ware, g)} onPress={press({ kind: 'buy', ware })} />
     ))}
     <Button key="shop-undo" label={undoLabel(g)} plain dimColor={whyNotBuyBack(g) !== undefined} onPress={press({ kind: 'buyBack' })} />
     <Button key="shop-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
@@ -1494,6 +1606,8 @@ const textRecap = (p: Pane) => {
   )
 }
 
+/** Card: the hero card saved and copied. */
+const cardKey = ({ Button, shareCard }: Pane, hotkey?: string) => <Button key="codex-card" label="Card" hotkey={hotkey} plain onPress={shareCard} />
 const codexClose = ({ Button, press }: Pane, hotkey?: string) => <Button key="codex-close" label="Close" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'codex' })} />
 
 /** The codex as text: each row's count and what is in it, then the records. */
@@ -1511,7 +1625,53 @@ const textCodex = (p: Pane) => {
       <Text>{`Big bosses ${c.bigs.length}/${bigs.length}: ${named(c.bigs, bigs) || 'none yet'}`}</Text>
       <Text>{`Legendaries ${legendaries.length}/${LEGENDARIES.length}: ${legendaries.map(l => l.name).join(', ') || 'none yet'}`}</Text>
       <Text dimColor>{`Deepest ${c.deepest}, level ${c.level}, ${c.kills} kills, ${c.bosses} bosses, ${c.deaths} deaths, ${c.gold} gold.`}</Text>
-      <Box columnGap={2}>{codexClose(p)}</Box>
+      <Box columnGap={2}>
+        {cardKey(p)}
+        {codexClose(p)}
+      </Box>
+    </Box>
+  )
+}
+
+/** The retire window as text: a button a worn piece, each retiring the hero and passing that piece down; Back. */
+const textRetire = ({ g, Box, Text, Button, press }: Pane) => (
+  <Box flexDirection="column">
+    <Text bold>Retire: choose the heirloom every new hero starts with, its power kept, its stats plain</Text>
+    {SLOTS.flatMap(slot => {
+      const item = g.gear[slot]
+      return item === undefined ? [] : [<Button key={`retire-${slot}`} plain dimColor={whyNotRetire(g, slot) !== undefined} onPress={press({ kind: 'retire', slot })}>{'Pass down '}<Text color={RARITY_COLOR[item.rarity]}>{item.name}</Text></Button>]
+    })}
+    <Button key="retire-back" label="Back" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />
+  </Box>
+)
+
+/** The deep window as text: the tier the hero is in and its mark, the tiers reached, and the fork's two marks while one waits. */
+const textDeep = (p: Pane) => {
+  const { g, Box, Text } = p
+  const fork = forkTier(g)
+  const here = g.where === 'dungeon' ? tierOf(g.depth) : 0
+  const reached = Array.from({ length: tierOf(g.deepest) }, (_, i) => `${roman(i + 1)} ${MARKS[markOf(g, i + 1)].name}`).join(', ')
+  const head = fork !== undefined
+    ? `Choose the mark of tier ${roman(fork)}. None chosen, the stairs take ${MARKS[pairOf(g.world, fork)[0]].name}.`
+    : here > 0 ? `Depth ${g.depth}, tier ${roman(here)}: ${MARKS[markOf(g, here)].name}. ${MARKS[markOf(g, here)].does}` : `The tiers begin past depth ${DEEP_FROM}.`
+  return (
+    <Box flexDirection="column">
+      <Text bold>{head}</Text>
+      {reached === '' ? null : <Text dimColor>Tiers: {reached}</Text>}
+      <Box flexDirection="column">{deepKeys(p, false)}</Box>
+    </Box>
+  )
+}
+
+/** The talent window as text: the talents offered, a button each, or those taken and the level of the next. */
+const textTalent = (p: Pane) => {
+  const { g, Box, Text } = p
+  const taken = (g.talents ?? []).map(t => TALENTS[t].name).join(', ')
+  const next = TALENT_EVERY * ((g.talents?.length ?? 0) + 1)
+  return (
+    <Box flexDirection="column">
+      <Text bold>{owed(g) > 0 ? `Level ${next}: choose a talent` : offer({ ...g, level: next }).length === 0 ? `Talents: ${taken}. Every talent is taken.` : `Talents: ${taken || 'none yet'}. The next at level ${next}.`}</Text>
+      <Box flexDirection="column">{talentKeys(p, false)}</Box>
     </Box>
   )
 }
@@ -1605,6 +1765,9 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined, draw: textDeath },
   { is: p => p.g.panel === 'recap', draw: textRecap },
   { is: p => p.g.panel === 'codex', draw: textCodex },
+  { is: p => p.g.panel === 'retire', draw: textRetire },
+  { is: p => p.g.panel === 'talent', draw: textTalent },
+  { is: p => p.g.panel === 'deep', draw: textDeep },
   { is: p => p.g.panel === 'settings', draw: textSettings },
   { is: p => p.g.panel === 'shop', draw: textShop },
   { is: p => p.g.panel === 'forge', draw: textForge },
@@ -1652,6 +1815,7 @@ const drawPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
   if (g.panel !== 'bag') bagUi = BAG_UI_IDLE
   if (g.panel !== 'shop') shopUi = SHOP_UI_IDLE
   if (g.panel !== 'forge') forgeUi = FORGE_UI_IDLE
+  if (g.panel !== 'retire') retireUi = FORGE_UI_IDLE
   if (g.panel !== 'stash') chestUi = CHEST_UI_IDLE
   if (g.panel !== 'start') startUi = null
   const p = paneOf($, e, g)

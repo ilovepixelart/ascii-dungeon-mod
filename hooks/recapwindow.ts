@@ -43,7 +43,7 @@ const greedy = (text: string, width: number) =>
   }, [])
 
 /** Words wrapped to as few lines as fit `width` pixels, as even as those lines can be: the narrowest width that needs no more of them. */
-const wrap = (text: string, width: number) => {
+export const wrap = (text: string, width: number) => {
   const count = greedy(text, width).length
   let w = width
   while (w > 1 && greedy(text, w - 1).length === count) w -= 1

@@ -137,10 +137,10 @@ describe('sets made whole', () => {
 
 describe('the codex window', () => {
   const shown = (c: Codex): Game => ({ ...plainHero(3), panel: 'codex', codex: c })
-  const told: Codex = { uniques: ['rot', 'bones', 'rime'], bigs: ['king'], legendaries: [LEGENDARIES[1]!.name, LEGENDARIES[4]!.name], deepest: 34, level: 22, kills: 1240, bosses: 12, deaths: 9, gold: 18450 }
+  const told: Codex = { uniques: ['rot', 'bones', 'rime'], bigs: ['king'], legendaries: [LEGENDARIES[1]!.name, LEGENDARIES[4]!.name], deepest: 34, level: 22, kills: 1240, bosses: 12, deaths: 9, gold: 18450, retired: 2 }
 
   test('says each row\'s count and the records, as the approved mock does', async () => {
-    expect(codexLines(shown(told)).map(l => l.text)).toEqual(['UNIQUES 3/5', 'BIG BOSSES 1/5', 'LEGENDARIES 2/7', 'DEEPEST 34', 'KILLS 1240', 'LEVEL 22', 'BOSSES 12', 'DEATHS 9', 'GOLD 18450'])
+    expect(codexLines(shown(told)).map(l => l.text)).toEqual(['UNIQUES 3/5', 'BIG BOSSES 1/5', 'LEGENDARIES 2/7', 'DEEPEST 34', 'KILLS 1240', 'LEVEL 22', 'BOSSES 12', 'DEATHS 9', 'GOLD 18450', 'RETIRED 2'])
   })
 
   test('lights what is slain or found, in the themes\' order and the Legendaries\' own', async () => {
@@ -175,8 +175,8 @@ describe('the codex window', () => {
     expect(codexHeight(g)).toBeLessThanOrEqual(MAP_H * PX)
     expect(codexPixels(g).length).toBe(codexHeight(g))
     const at = (p: { x: number; y: number }) => codexGesture(g, { type: 'release', from: p, at: p, button: 'left' })
-    expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual([{ kind: 'panel', panel: 'codex' }])
-    expect(at({ x: 20, y: 30 })).toEqual([])
+    expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual({ actions: [{ kind: 'panel', panel: 'codex' }], isCard: false })
+    expect(at({ x: 20, y: 30 })).toEqual({ actions: [], isCard: false })
   })
 
   test('before its first action an older save shows the codex begun from it', async () => {

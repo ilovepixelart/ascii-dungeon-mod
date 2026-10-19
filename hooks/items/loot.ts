@@ -1,7 +1,7 @@
 // Making items: a plain base, a class's starting kit, and a rolled drop.
-import type { Game, HeroClass, Item, Rarity } from '../../types'
-import { pick, roll } from '../rng'
-import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, STARTING_KIT, SUFFIXES, baseOf } from './catalog'
+import type { ClassSet, Game, HeroClass, Item, Rarity, Trigger } from '../../types'
+import { hash, pick, roll } from '../rng'
+import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, RARE_TRIGGER_SHARE, SETS, STARTING_KIT, SUFFIXES, TRIGGERS, baseOf } from './catalog'
 import type { Base } from './catalog'
 import { NO_STATS, STAT_KEYS, plus } from './stats'
 import type { Stats } from './stats'
@@ -71,6 +71,18 @@ const affixed = (g: Game, base: Base, count: number): { name: string; stats: Sta
   return { name, stats }
 }
 
+/**
+ * An item as it is passed down: its name, tier, look and Legendary power kept, its stats its base's plain ones,
+ * untempered, unlocked and not junk. With its stats as found on depth 1, a Legendary heirloom took simulated deaths in
+ * the first 1,000 steps from 2.26 to as few as 0.50.
+ */
+export const heirloomOf = (item: Item): Item => {
+  const { temper: _temper, locked: _locked, junk: _junk, ...kept } = item
+  // The Rubber Duck's power is its XP: kept with it.
+  const power = LEGENDARIES.find(l => l.name === item.name && l.power === 'duck')
+  return { ...kept, ...plus(NO_STATS, baseOf(item.base) ?? {}), ...(power === undefined ? {} : { xp: power.xp ?? 0 }) }
+}
+
 /** How many times the smith will temper one item. */
 export const TEMPER_MAX = 3
 
@@ -95,8 +107,19 @@ export const reforgeItem = (g: Game, item: Item): Item => {
   const base = baseOf(item.base) ?? BASES[0]!
   const { name, stats } = affixed(g, base, AFFIX_COUNT[item.rarity])
   const stat = temperStat(item)
-  return { ...item, name, ...stats, [stat]: stats[stat] + (item.temper ?? 0) }
+  const tempered = { ...stats, [stat]: stats[stat] + (item.temper ?? 0) }
+  // A set piece keeps its name, and its set is its power: no trigger.
+  if (item.set !== undefined) return { ...item, ...tempered }
+  const { trigger: _trigger, ...kept } = item
+  const trigger = triggerFor(item.rarity, roll(g, 100) - 1, roll(g, ALL_TRIGGERS.length) - 1)
+  return { ...kept, name, ...tempered, ...(trigger === undefined ? {} : { trigger }) }
 }
+
+const ALL_TRIGGERS = Object.keys(TRIGGERS) as Trigger[]
+
+/** A tier's trigger by two draws, 0 to 99 and an index: every Epic's, a Rare's RARE_TRIGGER_SHARE times in a hundred, no other's. */
+const triggerFor = (rarity: Rarity, share: number, which: number): Trigger | undefined =>
+  rarity === 'epic' || (rarity === 'rare' && share < RARE_TRIGGER_SHARE) ? ALL_TRIGGERS[which % ALL_TRIGGERS.length] : undefined
 
 /** About three drops in four are for the hero's class (or any class); the rest are any base at all. */
 const pickBase = (g: Game) => {
@@ -131,10 +154,26 @@ const legendaryOf = (g: Game): Item => {
   return { ...plainItem(g, base, 'legendary'), name, power, ...plus(NO_STATS, grown) }
 }
 
+/**
+ * A piece of the set: an Epic of its base with its affixes' stats as rolled, its own name and no trigger. Of the
+ * pieces, one the hero has nowhere (bag, stash or worn) comes first; which, by the depth and the world.
+ */
+export const setPiece = (g: Game, set: ClassSet): Item => {
+  const owned = [...g.bag, ...g.stashed, ...Object.values(g.gear)].filter(i => i?.set === set).map(i => i!.base)
+  const missing = SETS[set].pieces.filter(p => !owned.includes(p.base))
+  const from = missing.length > 0 ? missing : SETS[set].pieces
+  const piece = from[hash(g.depth, g.world, 37) % from.length]!
+  const { stats } = affixed(g, baseOf(piece.base) ?? BASES[0]!, AFFIX_COUNT.epic)
+  return { ...plainItem(g, piece.base, 'epic'), name: piece.name, ...stats, set }
+}
+
 export const makeItem = (g: Game, atLeast: Rarity = 'common', rolls = 1): Item => {
   const rarity = rarityFor(g, atLeast, rolls)
   if (rarity === 'legendary') return legendaryOf(g)
   const base = pickBase(g)
   const { name, stats } = affixed(g, base, AFFIX_COUNT[rarity])
-  return { ...plainItem(g, base.key, rarity), name, ...stats }
+  const item = { ...plainItem(g, base.key, rarity), name, ...stats }
+  // Drawn from the item's own id, not the game's dice, so every roll after it falls as it did before triggers.
+  const trigger = triggerFor(rarity, hash(item.id, g.world, 29), hash(item.id, g.world, 31))
+  return trigger === undefined ? item : { ...item, trigger }
 }

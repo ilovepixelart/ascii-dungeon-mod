@@ -20,6 +20,14 @@ import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
 import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
+import { retireButtons } from './retirewindow'
+import { offer } from './talents'
+import { talentCards } from './talentwindow'
+import { pairOf } from './deep'
+import { deepCards } from './deepwindow'
+import { arrive } from './world'
+import { cardText } from './herocard'
+import { codexCardRect } from './codexwindow'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 
 const PANE = {
@@ -360,6 +368,201 @@ test('as text the codex says what is in each row and the records, and closes', a
   expect(await ui.find({ type: 'Text', text: /^Deepest 1, level 1, 0 kills, 0 bosses, 0 deaths, 0 gold\.$/ })).toBeDefined()
   await ui.press({ key: 'codex-close' })
   expect(await ui.find({ type: 'Text', text: /^Uniques / })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a hero who slew a big boss retires from the sheet, and the next hero sets out in the heirloom', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), bossSlain: 10, deepest: 12 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  await ui.press({ key: 'sheet-retire' })
+  await ui.press({ key: 'retire-weapon' })
+  expect((kept.get('save') as Game).panel).toBe('start')
+  await ui.press({ key: 'start-mage' })
+  await ui.press({ key: 'start-go' })
+  const hero = kept.get('save') as Game
+  expect([hero.cls, hero.level, hero.codex?.retired, hero.heirloom?.base]).toEqual(['mage', 1, 1, 'sword'])
+  expect(hero.bag.some(i => i.base === 'sword')).toBe(true)
+  expect(await ui.find({ type: 'Text', text: /^> Your heirloom, the Short Sword, waits in your bag\.$/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet', async ($, on) => {
+  const saved = { ...newGame(), bossSlain: 10, deepest: 12 }
+  storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-retire' })
+  expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeDefined()
+  const back = retireButtons({ ...saved, panel: 'retire' }, { slot: null }).back
+  const at = { x: back.x + 2, y: Math.floor((back.y + 4) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'retire-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'retire-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeUndefined()
+  expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('a talent owed is picked from the sheet, saved, and the sheet says when none is', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  expect(await ui.find({ type: 'Button', key: 'sheet-talent', text: /Talent \(1\)/ })).toBeDefined()
+  await ui.press({ key: 'sheet-talent' })
+  const first = offer({ ...newGame(), level: 10 })[0]!
+  await ui.press({ key: `talent-${first}` })
+  expect((kept.get('save') as Game).talents).toEqual([first])
+  expect(await ui.find({ type: 'Text', text: /^Talents: .+\. The next at level 20\.$/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('on a wide pane a talent card, clicked, takes that talent', async ($, on) => {
+  const saved = { ...newGame(), level: 10 }
+  const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-talent' })
+  const card = talentCards({ ...saved, panel: 'talent' })[2]!
+  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 6) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'talent-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'talent-clicks' } as never)
+  expect((kept.get('save') as Game).talents).toEqual([card.talent])
+  await ui.unmount()
+})
+
+/** A hero at depth 60 with its big boss slain: the fork for tier II waits. */
+const atFork = () => {
+  const g = newGame()
+  return { ...g, ...arrive(g.world, 60), deepest: 60, bossSlain: 60 }
+}
+
+test('a fork waiting is chosen from the sheet, saved, and said', async ($, on) => {
+  const saved = atFork()
+  const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Deep \(choose\)/ })).toBeDefined()
+  await ui.press({ key: 'sheet-deep' })
+  const hard = pairOf(saved.world, 2)[1]
+  await ui.press({ key: `deep-${hard}` })
+  expect((kept.get('save') as Game).marks).toEqual({ 2: hard })
+  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Deep \(choose\)/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('on a wide pane a mark card, clicked, chooses that mark', async ($, on) => {
+  const saved = atFork()
+  const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await clickStrip(ui, 20, LINE2_Y + 2)
+  await ui.press({ key: 'sheet-deep' })
+  const card = deepCards({ ...saved, panel: 'deep' })[1]!
+  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 6) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'deep-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'deep-clicks' } as never)
+  expect((kept.get('save') as Game).marks).toEqual({ 2: card.mark })
+  await ui.unmount()
+})
+
+/** The engine's file system and clipboard as a card press meets them: what was written where, what was copied. */
+const cardWorld = (on: On, has: { downloads: boolean; copies: boolean; writes?: boolean }) => {
+  const seen = { written: [] as { path: string; text: string }[], copied: [] as string[] }
+  mock.env(on, { HOME: '/home/hero' })
+  on('fs.exists', (_$, e) => ({ value: has.downloads && e.path === '/home/hero/Downloads' }) as never)
+  on('fs.write', (_$, e) => {
+    if (has.writes === false) throw new Error('EACCES')
+    seen.written.push({ path: e.path, text: e.text })
+    return { value: undefined } as never
+  })
+  on('ui.copy', (_$, e) => {
+    seen.copied.push(e.text)
+    return { value: has.copies ? { isCopied: true } : { isCopied: false, reason: 'no-clipboard' } } as never
+  })
+  return seen
+}
+
+const openCodex = async ($: Engine, on: On, pane: typeof PANE | typeof WIDE = PANE) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'codex' }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  return $.ui.mount({ ...pane, surface: 'terminal' })
+}
+
+test('Card in the codex saves the hero card to Downloads as an SVG, copies it as text, and says both', async ($, on) => {
+  const seen = cardWorld(on, { downloads: true, copies: true })
+  const said = toasts(on)
+  const ui = await openCodex($, on)
+  await ui.press({ key: 'codex-card' })
+  expect(seen.written.map(w => w.path)).toEqual(['/home/hero/Downloads/ascii-dungeon-hero.svg'])
+  expect(seen.written[0]!.text).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/)
+  expect(seen.copied).toEqual([cardText({ ...newGame(), panel: 'codex' })])
+  expect(said).toContain('Hero card saved to ~/Downloads/ascii-dungeon-hero.svg. Text copied.')
+  await ui.unmount()
+})
+
+test('without a Downloads folder the card goes to the home folder; a clipboard that refuses is said', async ($, on) => {
+  const seen = cardWorld(on, { downloads: false, copies: false })
+  const said = toasts(on)
+  const ui = await openCodex($, on)
+  await ui.press({ key: 'codex-card' })
+  expect(seen.written.map(w => w.path)).toEqual(['/home/hero/ascii-dungeon-hero.svg'])
+  expect(said).toContain('Hero card saved to ~/ascii-dungeon-hero.svg. The text could not be copied.')
+  await ui.unmount()
+})
+
+test('a card that cannot be written is said, and the text is still copied', async ($, on) => {
+  const seen = cardWorld(on, { downloads: true, copies: true, writes: false })
+  const said = toasts(on)
+  const ui = await openCodex($, on)
+  await ui.press({ key: 'codex-card' })
+  expect(seen.copied.length).toBe(1)
+  expect(said).toContain('The hero card could not be saved to ~/Downloads/ascii-dungeon-hero.svg. Text copied.')
+  await ui.unmount()
+})
+
+test('on a wide pane a click on Card in the codex window saves the card', async ($, on) => {
+  const seen = cardWorld(on, { downloads: true, copies: true })
+  const ui = await openCodex($, on, WIDE)
+  const r = codexCardRect({ ...newGame(), panel: 'codex' })
+  const at = { x: r.x + 2, y: Math.floor((r.y + 4) / 2) }
+  await ui.pointer({ type: 'down', ...at, button: 'left', in: 'codex-clicks' } as never)
+  await ui.pointer({ type: 'up', ...at, button: 'left', in: 'codex-clicks' } as never)
+  expect(seen.written.length).toBe(1)
+  await ui.unmount()
+})
+
+test('before a big boss falls, Retire on the sheet does nothing', async $ => {
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'sheet' })
+  await ui.press({ key: 'sheet-retire' })
+  expect(await ui.find({ type: 'Button', key: 'retire-back' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'sheet-close' })).toBeDefined()
   await ui.unmount()
 })
 

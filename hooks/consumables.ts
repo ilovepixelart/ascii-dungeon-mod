@@ -4,6 +4,8 @@
 import type { BeltSlot, Consumable, Game } from '../types'
 import { pick, roll } from './rng'
 import { TheFoe } from './names'
+import { hasTalent } from './talents'
+import { markHere } from './deep'
 
 export const BELT_SIZE = 5
 /** The most of one tier a slot holds. */
@@ -15,7 +17,7 @@ export const TIERS: readonly Tier[] = [1, 2, 3]
 
 const heal = (g: Game, amount: number) => {
   const before = g.hp
-  g.hp = Math.min(g.maxHp, g.hp + amount)
+  g.hp = Math.min(g.maxHp, g.hp + (hasTalent(g, 'ironStomach') ? Math.ceil(amount * 1.25) : amount))
   return g.hp - before
 }
 
@@ -169,7 +171,7 @@ export const tierFor = (g: Game): Tier => {
  * 10 points after a potion drops and rises 10 points after a kill without one.
  */
 export const killConsumable = (g: Game): { kind: Consumable; tier: Tier } | undefined => {
-  if (roll(g, 100) <= g.potionChance) {
+  if (roll(g, 100) <= g.potionChance * (hasTalent(g, 'scavenger') ? 1.5 : 1) * (markHere(g) === 'lean' ? 0.25 : 1)) {
     g.potionChance = Math.max(10, g.potionChance - 10)
     return { kind: 'health', tier: tierFor(g) }
   }

@@ -11,6 +11,10 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- A corridor shows at once when the hero steps into it, along its floor through its next junction, so one click walks
+  its length; a chest at a dead end, the next door and the room past it show only once the hero is beside them. A
+  room shows whole from its door, and no longer through a gap from a room beside it; from a room the hero no longer
+  sees a chest down a corridor.
 - Kills drop healing potions half as often, where three healing finds in four went to waste. Simulated deaths rise
   from 1.46 to 1.55 per 1,000 steps, the deepest depth reached unchanged; the hero buys potions and uses herbs and
   runes about a third more.

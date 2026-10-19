@@ -506,11 +506,7 @@ export const roomAt = (level: Level, p: Pos) =>
 /** How far the hero sees down a corridor leaving the room he stands in: as far as a branch runs. */
 export const CORRIDOR_SIGHT = 6
 
-/**
- * What the hero sees from `p`: a whole room with its walls when inside one, and straight down each corridor leaving
- * it, CORRIDOR_SIGHT cells and their walls, so what lies at the end of a branch shows from the room; else the cells
- * around.
- */
+/** A room's box with its wall ring: what is seen of it from inside or from its door. */
 type Box = { x: number; y: number; w: number; h: number }
 
 /** The way a cell of a room's wall ring looks out of the room, its side's; none for a corner or a cell inside. */
@@ -526,31 +522,97 @@ const outwardOf = (c: Pos, box: Box): Pos | null => {
   return isBottom ? { x: 0, y: 1 } : null
 }
 
-/** Down a corridor from an opening: CORRIDOR_SIGHT cells out while it is floor, each with the cells either side of it. */
-const corridorSight = (level: Level, c: Pos, out: Pos): Pos[] => {
+/**
+ * Down a corridor from an opening of `room`: up to CORRIDOR_SIGHT cells out while it is corridor floor, each with the
+ * rock either side of it; short of a dead end (a chest), of a door into another room and of any room's floor, each of
+ * which shows only once the hero is beside it or on it.
+ */
+const corridorSight = (level: Level, room: Room, c: Pos, out: Pos): Pos[] => {
   const cells: Pos[] = []
   for (let k = 1; k <= CORRIDOR_SIGHT; k += 1) {
     const q = { x: c.x + out.x * k, y: c.y + out.y * k }
-    if (!isFloor(level.tiles, q)) break
-    cells.push(q, { x: q.x + out.y, y: q.y + out.x }, { x: q.x - out.y, y: q.y - out.x })
+    if (!isCorridor(level, q) || isDeadEnd(level, q) || roomsBeside(level, q).some(r => r !== room)) break
+    cells.push(q, ...[{ x: q.x + out.y, y: q.y + out.x }, { x: q.x - out.y, y: q.y - out.x }].filter(s => !isFloor(level.tiles, s)))
   }
   return cells
 }
 
-export const visibleFrom = (level: Level, p: Pos, reach = 1): Pos[] => {
-  const room = roomAt(level, p)
-  const box = room === undefined ? { x: p.x - reach, y: p.y - reach, w: 2 * reach + 1, h: 2 * reach + 1 } : { x: room.x - 1, y: room.y - 1, w: room.w + 2, h: room.h + 2 }
+const STEPS4: readonly Pos[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]
+const isCorridor = (level: Level, p: Pos) => isFloor(level.tiles, p) && roomAt(level, p) === undefined
+/** The rooms a cell is beside, by its four sides: the rooms a corridor cell is the door of. */
+const roomsBeside = (level: Level, p: Pos) => [...new Set(STEPS4.flatMap(d => roomAt(level, { x: p.x + d.x, y: p.y + d.y }) ?? []))]
+const touchesRoom = (level: Level, p: Pos) => roomsBeside(level, p).length > 0
+/** A dead end, where a chest stands. */
+const isDeadEnd = (level: Level, p: Pos) => chestAt(1, 1, level, p) !== undefined
+
+/** A room seen whole with its walls, and straight down each corridor leaving it, from each opening in its wall ring. */
+const roomSight = (level: Level, room: Room): Pos[] => {
+  const box = { x: room.x - 1, y: room.y - 1, w: room.w + 2, h: room.h + 2 }
   const cells: Pos[] = []
   for (let y = box.y; y < box.y + box.h; y += 1) for (let x = box.x; x < box.x + box.w; x += 1) cells.push({ x, y })
-  // In a room, the openings in its wall ring, each looking outward from its side.
-  if (room !== undefined) {
-    const openings = cells.flatMap(c => {
-      const out = outwardOf(c, box)
-      return out !== null && isFloor(level.tiles, c) ? [{ c, out }] : []
-    })
-    for (const { c, out } of openings) cells.push(...corridorSight(level, c, out))
-  }
+  const openings = cells.flatMap(c => {
+    const out = outwardOf(c, box)
+    return out !== null && isFloor(level.tiles, c) ? [{ c, out }] : []
+  })
+  for (const { c, out } of openings) cells.push(...corridorSight(level, room, c, out))
+  // A dead end right off the room's wall holds its chest back too, until the hero is beside it; a room touching this
+  // one is seen only from its own door or floor.
+  return cells.filter(c => !isDeadEnd(level, c) && (roomAt(level, c) ?? room) === room)
+}
+
+/**
+ * What the hero sees from `p`: in a room, or on a door into one (a corridor cell beside it), the whole room as
+ * `roomSight` has it; in a corridor elsewhere the cells `reach` around.
+ */
+export const visibleFrom = (level: Level, p: Pos, reach = 1): Pos[] => {
+  const room = roomAt(level, p)
+  const doorOf = room === undefined && isCorridor(level, p) ? roomsBeside(level, p) : []
+  const around: Pos[] = []
+  for (let y = p.y - reach; y <= p.y + reach; y += 1) for (let x = p.x - reach; x <= p.x + reach; x += 1) around.push({ x, y })
+  const cells = room !== undefined ? roomSight(level, room) : [...around, ...doorOf.flatMap(r => roomSight(level, r))]
   return cells.filter(c => c.x >= 0 && c.y >= 0 && c.x < MAP_W && c.y < MAP_H)
+}
+
+
+/**
+ * The corridor a hero standing in it learns at once, with its walls: from `p` along corridor floor, through a junction
+ * (a cell with three ways or more) but no further, short of the next door (a cell beside a room) and of a dead end
+ * (a chest), each of which shows only once the hero is beside it. Nothing in a room.
+ */
+export const corridorAhead = (level: Level, p: Pos): Pos[] => {
+  let known = aheadOf.get(level)
+  if (known === undefined) {
+    known = new Map()
+    aheadOf.set(level, known)
+  }
+  let cells = known.get(cellId(p))
+  if (cells === undefined) {
+    cells = workedAhead(level, p)
+    known.set(cellId(p), cells)
+  }
+  return cells
+}
+/** Each level's corridors as learnt, by cell: fixed by the level alone. */
+const aheadOf = new WeakMap<Level, Map<number, Pos[]>>()
+
+const workedAhead = (level: Level, p: Pos): Pos[] => {
+  if (!isCorridor(level, p)) return []
+  const known = new Set([cellId(p)])
+  const queue: Pos[] = [p]
+  const out: Pos[] = []
+  while (queue.length > 0) {
+    const q = queue.shift()!
+    out.push(...[-1, 0, 1].flatMap(dy => [-1, 0, 1].map(dx => ({ x: q.x + dx, y: q.y + dy }))))
+    const ways = STEPS4.filter(d => isFloor(level.tiles, { x: q.x + d.x, y: q.y + d.y })).length
+    if (q !== p && ways >= 3) continue
+    for (const d of STEPS4) {
+      const n = { x: q.x + d.x, y: q.y + d.y }
+      if (known.has(cellId(n)) || !isCorridor(level, n) || touchesRoom(level, n) || isDeadEnd(level, n)) continue
+      known.add(cellId(n))
+      queue.push(n)
+    }
+  }
+  return out.filter(c => c.x >= 0 && c.y >= 0 && c.x < MAP_W && c.y < MAP_H && (known.has(cellId(c)) || !isFloor(level.tiles, c)))
 }
 
 export type ChestKind = 'wooden' | 'iron' | 'gilded'

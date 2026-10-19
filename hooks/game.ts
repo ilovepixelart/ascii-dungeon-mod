@@ -4,7 +4,7 @@ import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
 import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
-import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
+import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, corridorAhead, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
 import { look, noted } from './recap'
@@ -323,7 +323,8 @@ const moveTo = (g: Game, p: Pos) => {
   g.x = p.x
   g.y = p.y
   g.walked = [...g.walked, { x: p.x, y: p.y }]
-  g.seen = reveal(g.seen, visibleFrom(levelOf(g), p, sightOf(g)))
+  const level = levelOf(g)
+  g.seen = reveal(g.seen, [...visibleFrom(level, p, sightOf(g)), ...corridorAhead(level, p)])
   pickUp(g)
 }
 

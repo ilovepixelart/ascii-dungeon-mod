@@ -15,6 +15,9 @@ again from its new start, gains kept. Nothing else needs doing.
   irregular flagstones and ashlar, the flooded halls worn slabs with puddles and mossy stone, the fungal deep packed
   earth with mycelium and porous rock with glowing caps, the frozen caverns sheet ice and snow-capped rock with icicles,
   the forge riveted iron plates, some cracked and glowing, and basalt with a line of heat.
+- What lies by the walls is the theme's own, where every theme had bones and rubble: bones and cobwebs in the crypt,
+  algae and reed sprigs in the flooded halls, mushroom tufts and spores in the fungal deep, frost and ice shards in the
+  frozen caverns, slag and soot in the forge.
 - Each tier of a belt slot stacks to 99, where it stacked to 9: a potion, herb, scroll, rune or bomb found with its
   tier at 9 is kept, where it was left on the floor. Simulated deaths are unchanged (1.65 and 1.64 per 1,000 steps).
 - A belt slot shows how many it holds of the tier it uses next, where it showed the total of all its tiers; the

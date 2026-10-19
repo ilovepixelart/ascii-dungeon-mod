@@ -730,7 +730,7 @@ describe('decals', () => {
   const sides = (level: ReturnType<typeof generate>, x: number, y: number) =>
     [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => level.tiles[y + dy!]?.[x + dx!] !== '.').length
 
-  test('bones and rubble gather by walls: never on open floor, likelier the more rock beside a tile', async () => {
+  test('decals gather by walls: never on open floor, likelier the more rock beside a tile', async () => {
     const byRock: Record<number, { tiles: number; decals: number }> = {}
     for (let world = 1; world <= 60; world += 1) {
       const level = generate(world, 1)
@@ -754,6 +754,21 @@ describe('decals', () => {
     expect(share(1)).toBeLessThan(0.1)
     expect(share(2)).toBeGreaterThan(0.17)
     expect(share(2)).toBeLessThan(0.33)
+  })
+
+  test('each theme lays its own two and no other: bones and cobwebs, algae and sprigs, tufts and spores, frost and shards, slag and soot', async () => {
+    const expected: Record<string, readonly string[]> = { 2: ['bones', 'cobweb'], 7: ['algae', 'sprigs'], 12: ['tuft', 'spores'], 17: ['frost', 'shards'], 22: ['slag', 'soot'] }
+    for (const [depth, pair] of Object.entries(expected)) {
+      const found = new Set<string>()
+      for (let world = 1; world <= 30; world += 1) {
+        const level = generate(world, Number(depth))
+        level.tiles.forEach((row, y) => [...row].forEach((_, x) => {
+          const d = decalAt(world, Number(depth), level, { x, y })
+          if (d !== undefined) found.add(d)
+        }))
+      }
+      expect([...found].sort()).toEqual([...pair].sort())
+    }
   })
 
   test("drawn on its tile: the decal's pixels in its own colors, over the floor", async () => {

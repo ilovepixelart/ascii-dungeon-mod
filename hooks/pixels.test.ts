@@ -6,7 +6,7 @@ import { foeAhead } from './fixtures'
 import { arrive } from './world'
 import { MAP_H, MAP_W, cellId, floorThing, generate, isFloor, roomAt, same, themedRoomOf, visibleFrom } from './map'
 import { CANVAS, INK } from './palette'
-import { GROUND, MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, TOWN_BIG_ART, TOWN_TERRAIN, TOWN_THING_ART, TREE_ALT, heroArt, torch } from './pixelart'
+import { GROUND, MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, TOWN_BIG_ART, TOWN_TERRAIN, TOWN_THING_ART, TREE_ALT, heroArt, textMask, torch } from './pixelart'
 import { TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W } from './town'
 import { TOWN_PX_W, townImage } from './townpixels'
 import { DECAL_ART, FRAMES_PER_TILE, lightStep, pixelMap, stampCells, stampOf, walkState, hitFramesFor, hitFreeze, isStrideFrame, strideOf, wallTorchesOf, HIT_FRAMES, decalAt, themeOf, themed, benchRoute, hitColor, hitRise, hitsBetween, clickToTile, deadZone, followCamera, tileCamera, frameOf, torchColor, wallFaceLight, hexToInt, originAt, rasterCells, viewOrigin, walkPosition, walkingGame, windowOrigin, worldSize } from './pixels'
@@ -695,6 +695,41 @@ describe('hit feedback', () => {
     const above = (f: Uint32Array) => Array.from({ length: PX * 2 * PX }, (_, i) => f[(top - PX + Math.floor(i / PX)) * width + left + (i % PX)])
     expect(above(third).filter(p => p === 0xffffff).length).toBeGreaterThan(3)
     expect(above(plain).filter(p => p === 0xffffff).length).toBe(0)
+  })
+  test('a blow that came to nothing: MISS over the foe it missed, BLOCK over whoever\'s shield turned it, WARD over the warded hero', async () => {
+    const said = (line: string, fresh = 1) => hitsBetween({ ...g, foe }, { ...g, foe, log: [...g.log, line], fresh })
+    const atFoe = { x: foe.x, y: foe.y }
+    const atHero = { x: g.x, y: g.y }
+    expect(said('The rat darts aside.')).toEqual([{ at: atFoe, amount: 0, kind: 'miss' }])
+    expect(said('The Wraith overlord fades into the dark; your blow passes through.')).toEqual([{ at: atFoe, amount: 0, kind: 'miss' }])
+    expect(said("The goblin of x's shield turns your blow.")).toEqual([{ at: atFoe, amount: 0, kind: 'block' }])
+    expect(said("Your shield turns the goblin of x's blow.")).toEqual([{ at: atHero, amount: 0, kind: 'block' }])
+    expect(said("Your ward absorbs the goblin of x's blow.")).toEqual([{ at: atHero, amount: 0, kind: 'ward' }])
+    // A line the action did not say, an older one, is nothing; nor is a blow that landed.
+    expect(said('The rat darts aside.', 0)).toEqual([])
+    expect(said('You hit the goblin of x for 4.')).toEqual([])
+  })
+
+  test('drawn as its word, in its color: every pixel of MISS over the foe, pale grey', async () => {
+    expect([hitColor('miss'), hitColor('block'), hitColor('ward')]).toEqual(['#c8c8d4', '#9ab8e8', '#7fe3ff'])
+    const width = MAP_W * PX
+    const height = 18 * PX
+    const shown = { ...g, foe }
+    const frame = frameOf(shown, width, height, { hits: [{ at: { x: foe.x, y: foe.y }, amount: 0, kind: 'miss' }], hitFrame: 1, isLit: false })
+    const ink = hexToInt('#c8c8d4')
+    const word = textMask('MISS').join('').split('').filter(k => k === '#').length
+    expect(Array.from(frame).filter(p => p === ink).length).toBe(word)
+  })
+
+  test('a real dodge: a rat that darts aside from the hero\'s blow shows MISS over it', async () => {
+    const found = Array.from({ length: 60 }, (_, seed) => seed + 1).find(seed => {
+      const g0 = { ...newGame(seed), seed }
+      const rat = { ...foeAhead(g0, 1, { hp: 99, maxHp: 99, atk: 0 }), glyph: 'r', name: 'rat' }
+      const before = { ...g0, foe: rat }
+      const after = apply(before, { kind: 'attack' })
+      return hitsBetween(before, after).some(h => h.kind === 'miss' && h.at.x === rat.x && h.at.y === rat.y)
+    })
+    expect(found).toBeDefined()
   })
 })
 

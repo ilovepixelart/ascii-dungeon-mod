@@ -630,7 +630,7 @@ export const strideOf = (art: readonly string[]): readonly string[] => {
 export const isStrideFrame = (frame: number) => frame > 0 && Math.floor((frame - 1) / 2) % 2 === 0
 
 /** Frames a blow's first frame is held, by kind: a crit and a kill land with weight; a plain hit or a blow taken plays straight on. */
-const FREEZE: Readonly<Record<Hit['kind'], number>> = { crit: 3, kill: 4, hit: 0, hurt: 0, loot: 0, death: 0 }
+const FREEZE: Readonly<Record<Hit['kind'], number>> = { crit: 3, kill: 4, hit: 0, hurt: 0, loot: 0, death: 0, miss: 0, block: 0, ward: 0 }
 export const hitFreeze = (hits: readonly Hit[]) => Math.max(0, ...hits.map(h => FREEZE[h.kind]))
 /** The frames a death plays: a foe's crumble, a big boss's burst, the hero's fall and its rest; none for a blow. */
 const deathFrames = (h: Hit) =>
@@ -777,12 +777,33 @@ const drawFall = (frame: Uint32Array, width: number, height: number, pixels: rea
 
 /** What one action did, to show: a blow on the foe (a hit, a crit, a kill) or the hero hurt, where and how much. */
 /** A blow, or (`loot`) a drop of Rare or better from the foe slain there, `tier` its rarity; a kill keeps the foe as it stood, to show it fall; `death`, the hero's. */
-export type Hit = { at: Pos; amount: number; kind: 'hit' | 'crit' | 'kill' | 'hurt' | 'loot' | 'death'; tier?: Rarity; foe?: Foe }
+export type Hit = { at: Pos; amount: number; kind: 'hit' | 'crit' | 'kill' | 'hurt' | 'loot' | 'death' | 'miss' | 'block' | 'ward'; tier?: Rarity; foe?: Foe }
+
+/** A blow that came to nothing, as its word rises where it would have struck. */
+const WORD: Partial<Record<Hit['kind'], string>> = { miss: 'MISS', block: 'BLOCK', ward: 'WARD' }
+
+/** The lines that tell a blow came to nothing: the hero's dodged, passing through or shield-turned; the foe's turned by the hero's shield or absorbed by a ward. */
+const NOTHING: readonly [RegExp, 'miss' | 'block' | 'ward', 'foe' | 'hero'][] = [
+  [/ darts aside\.$|your blow passes through\.$/, 'miss', 'foe'],
+  [/'s shield turns your blow\.$/, 'block', 'foe'],
+  [/^Your shield turns /, 'block', 'hero'],
+  [/^Your ward absorbs /, 'ward', 'hero'],
+]
 
 /**
  * The blows between two games in the same place: the foe's HP lost (a crit when the hero's last lines say so), the
- * foe slain, the hero's HP lost. Nothing across a change of place, where there is nothing left to point at.
+ * foe slain, a blow that came to nothing (missed, blocked, warded), the hero's HP lost. Nothing across a change of
+ * place, where there is nothing left to point at.
  */
+/** The blows of an action that came to nothing, by its own lines: the foe's side first, so the hero's lunge goes the way of his own blow. */
+const nothingHits = (before: Game, after: Game): Hit[] => {
+  const fresh = after.log.slice(after.log.length - after.fresh)
+  const told = NOTHING.filter(([said]) => fresh.some(l => said.test(l)))
+  const onFoe = before.foe === null ? [] : told.filter(t => t[2] === 'foe').map(([, kind]) => ({ at: { x: before.foe!.x, y: before.foe!.y }, amount: 0, kind }))
+  const onHero = told.filter(t => t[2] === 'hero').map(([, kind]) => ({ at: { x: after.x, y: after.y }, amount: 0, kind }))
+  return [...onFoe, ...onHero]
+}
+
 export const hitsBetween = (before: Game, after: Game): Hit[] => {
   // A death is told across the change of place: the hero falls where they were struck, on the level they left.
   if (after.deaths > before.deaths && after.fallen !== undefined) return [{ at: after.fallen.at, amount: 0, kind: 'death' }]
@@ -801,6 +822,7 @@ export const hitsBetween = (before: Game, after: Game): Hit[] => {
     const tier = BEAM_TIERS.find(t => fresh.some(l => l.startsWith('Loot: ') && l.endsWith(` (${t[0]!.toUpperCase()}${t.slice(1)}).`)))
     if (tier !== undefined) hits.push({ at: { x: foe.x, y: foe.y }, amount: 0, kind: 'loot', tier })
   }
+  hits.push(...nothingHits(before, after))
   if (after.hp < before.hp) hits.push({ at: { x: after.x, y: after.y }, amount: before.hp - after.hp, kind: 'hurt' })
   return hits
 }
@@ -811,7 +833,7 @@ export const deathScene = (before: Game, after: Game): Game | undefined =>
 
 /** How long a blow shows, in frames: about 0.6 s at 30 frames a second. */
 export const HIT_FRAMES = 18
-const HIT_COLOR: Readonly<Record<Hit['kind'], string>> = { hit: '#ffffff', crit: '#ffd34d', kill: '#ffd34d', hurt: '#ff4a4a', loot: '#ffffff', death: '#ff4a4a' }
+const HIT_COLOR: Readonly<Record<Hit['kind'], string>> = { hit: '#ffffff', crit: '#ffd34d', kill: '#ffd34d', hurt: '#ff4a4a', loot: '#ffffff', death: '#ff4a4a', miss: '#c8c8d4', block: '#9ab8e8', ward: '#7fe3ff' }
 export const hitColor = (kind: Hit['kind']) => HIT_COLOR[kind]
 
 /** How far the number has risen at `frame`: a pixel every 2 frames, after a 3-frame hold on a crit or a kill. */
@@ -876,9 +898,9 @@ const drawSlain = (frame: Uint32Array, width: number, height: number, g: Game, s
   else drawFall(frame, width, height, foeFall(foeArtOf(slain, themeOf(g.depth)), Math.floor(hitFrame / FOE_HOLD), litKey), left, top)
 }
 
-/** A blow's number rising over the tile in the blow's color, outlined; clear of the foe's bar (3 px over the tile) from the first frame. */
+/** A blow's number, or its word when it came to nothing, rising over the tile in the blow's color, outlined; clear of the foe's bar (3 px over the tile) from the first frame. */
 const drawNumber = (frame: Uint32Array, width: number, height: number, hit: Hit, hitFrame: number, left: number, top: number) => {
-  const mask = textMask(String(hit.amount))
+  const mask = textMask(WORD[hit.kind] ?? String(hit.amount))
   const x0 = left + Math.floor((PX - (mask[0]?.length ?? 0)) / 2)
   const y0 = top - 9 - hitRise(hit.kind, hitFrame)
   const on = (x: number, y: number) => mask[y]?.[x] === '#'

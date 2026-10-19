@@ -38,6 +38,9 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Added
 
+- The pane's top row says when it is short of the size the game plays best in, 105 columns by 78 rows, and how big it
+  is; a window it cannot show whole says how many rows it needs. The note on a pane too narrow for the pixel windows
+  moves there from under the map.
 - Things to gather, one a theme, about one a level by a room's wall: a warding stone in the crypt and a rime crystal
   in the frozen caverns (ward runes), reeds in the flooded halls and glowing caps in the fungal deep (herbs), a powder
   keg in the forge (smoke bombs). Stepped onto, each goes onto the belt at a tier for the depth.

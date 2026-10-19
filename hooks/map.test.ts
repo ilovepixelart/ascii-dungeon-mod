@@ -266,7 +266,9 @@ describe('the themed room', () => {
         want.vault = true
       } else {
         expect(thing(mid.x, mid.y)).toBe('R')
-        for (let x = r.x; x < r.x + r.w; x += 2) expect(thing(x, r.y)).toBe('L')
+        // A rounded library keeps its corners bare: they are rock.
+        const isCorner = (x: number) => r.shape === 'rounded' && (x === r.x || x === r.x + r.w - 1)
+        for (let x = r.x; x < r.x + r.w; x += 2) expect(thing(x, r.y)).toBe(isCorner(x) ? ' ' : 'L')
         want.library = true
       }
     }
@@ -275,7 +277,7 @@ describe('the themed room', () => {
 })
 
 describe('room shapes', () => {
-  const cut = (shape: 'cross' | 'L' | 'pillars', w: number, h: number) => shapeCut({ x: 0, y: 0, w, h, shape }).map(c => `${c.x},${c.y}`).sort()
+  const cut = (shape: 'cross' | 'L' | 'pillars' | 'rounded' | 'alcoves' | 'island', w: number, h: number) => shapeCut({ x: 0, y: 0, w, h, shape }).map(c => `${c.x},${c.y}`).sort()
   const cells = (xs: number[], ys: number[]) => ys.flatMap(y => xs.map(x => `${x},${y}`)).sort()
 
   test('a 10 by 5 cross loses a 3 by 1 block at each corner', async () => {
@@ -287,12 +289,21 @@ describe('room shapes', () => {
   test('an 8 by 6 pillared hall has a pillar row one in from each long wall, the same spacing from either end', async () => {
     expect(cut('pillars', 8, 6)).toEqual(cells([1, 3, 6], [1, 4]))
   })
+  test('a 6 by 4 rounded room loses its four corners', async () => {
+    expect(cut('rounded', 6, 4)).toEqual(cells([0, 5], [0, 3]))
+  })
+  test('a 9 by 4 room with alcoves loses one cell in three along its top and bottom walls, never its middle column', async () => {
+    expect(cut('alcoves', 9, 4)).toEqual(cells([0, 3, 6], [0, 3]))
+  })
+  test('a 10 by 5 island room has a bar of rock either side of its middle row, two in from each end, split at its middle column', async () => {
+    expect(cut('island', 10, 5)).toEqual(cells([2, 3, 4, 6, 7], [1, 3]))
+  })
   test('a plain room loses nothing', async () => {
     expect(shapeCut({ x: 0, y: 0, w: 8, h: 6 })).toEqual([])
   })
 
   const all = Array.from({ length: 400 }, (_, i) => ({ world: 1 + (i % 40), depth: 1 + Math.floor(i / 40) }))
-  test('all four show up over many levels; a shaped room keeps its middle row and column open, and a themed room is never shaped', async () => {
+  test('every shape shows up over many levels; a shaped room keeps its middle row and column open, and a themed room is plain or rounded', async () => {
     const seen = new Set<string>()
     for (const { world, depth } of all) {
       const level = generate(world, depth)
@@ -305,9 +316,26 @@ describe('room shapes', () => {
         // Its shape stands in the map: rock where it was cut, bar a corridor dug through afterwards.
         expect(shapeCut(room).some(c => !isFloor(level.tiles, c))).toBe(true)
       }
-      expect(themedRoomOf(world, depth, level)?.room.shape).toBeUndefined()
+      expect([undefined, 'rounded']).toContain(themedRoomOf(world, depth, level)?.room.shape)
     }
-    expect([...seen].sort()).toEqual(['L', 'cross', 'pillars', 'ragged'])
+    expect([...seen].sort()).toEqual(['L', 'alcoves', 'cross', 'island', 'pillars', 'ragged', 'rounded'])
+  })
+
+  test('at least a third of the rooms of a rooms level are shaped', async () => {
+    const rooms = all.filter(({ world, depth }) => layoutOf(world, depth) === 'rooms').flatMap(({ world, depth }) => generate(world, depth).rooms)
+    expect(rooms.filter(r => r.shape !== undefined).length / rooms.length).toBeGreaterThan(1 / 3)
+  })
+
+  test('no shape leaves a dead end inside a room, where a chest would stand', async () => {
+    for (const { world, depth } of all) {
+      const level = generate(world, depth)
+      // A side branch dug for a chest may end in a cut corner: that cell is rock to the room, not its floor.
+      const onFloor = (p: { x: number; y: number }) => {
+        const room = roomAt(level, p)
+        return room !== undefined && !shapeCut(room).some(c => c.x === p.x && c.y === p.y)
+      }
+      expect(analyze(level).deadEnds.filter(onFloor)).toEqual([])
+    }
   })
 
   test('nothing lies on a cell a shape gave back to rock', async () => {

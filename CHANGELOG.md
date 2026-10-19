@@ -6,8 +6,14 @@ release may change behaviour.
 
 ## [Unreleased]
 
+Saves from 0.3.0 standing on a depth that now has a rounded, alcoved or island room (save version 11) start that depth
+again from its new start, gains kept. Nothing else needs doing.
+
 ### Changed behaviour
 
+- More rooms take a shape: rounded (corners cut), alcoves (notches along the long walls) and an island (bars of rock
+  either side of the middle) join the L, the cross and the pillared hall, so about a third of rooms are shaped where
+  one in eight was. A rounded room may be the themed one.
 - The three chests share one shape, told apart by what they are made of: wooden with a brass knob, iron-bound with
   steel corners, edges and knob, gilded with gold trim and a gem. The gilded one was a gold lump with no lid, the iron
   one stood on feet. Each opened kind is drawn as its own, its knob kept, where every opened chest looked wooden; on

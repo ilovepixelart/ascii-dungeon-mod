@@ -3,7 +3,7 @@ import type { BeltSlot, Consumable, Game, Item, Rarity } from '../types'
 import { KINDS, STACK_MAX, TIERS, emptyBelt, slotOf } from './consumables'
 import type { Tier } from './consumables'
 import { baseOf, repack, priceOf } from './items'
-import { BIG_EVERY, layoutOf, themeOf } from './map'
+import { BIG_EVERY, generate, layoutOf, themeOf } from './map'
 import type { Theme } from './map'
 
 /** The theme of a depth before version 9 added the fungal deep and the frozen caverns: three themes, five depths each. */
@@ -106,13 +106,17 @@ const reshaped = (game: Game, version: number): Game => {
 /**
  * Whether the save's level is no longer the one it was saved on. Versions 5 and 6 rebuilt every level (6 gave rooms
  * shapes); version 8 gave some depths another layout, version 9 another theme, version 10 every tenth depth a boss's
- * arena.
+ * arena, version 11 rounded, alcoved and island rooms to the levels that have one.
  */
 const isRebuiltSince = (g: Game, version: number) =>
   version < 6 ||
   (version < 8 && layoutOf(g.world, g.depth) !== 'rooms') ||
   (version < 9 && themeBefore9(g.depth) !== themeOf(g.depth)) ||
-  (version < 10 && g.depth % BIG_EVERY === 0)
+  (version < 10 && g.depth % BIG_EVERY === 0) ||
+  (version < 11 && hasShapeSince10(g))
+
+/** A shape no level had before version 11: a level with one is not the level a version 10 save stood on. */
+const hasShapeSince10 = (g: Game) => generate(g.world, g.depth).rooms.some(r => r.shape === 'rounded' || r.shape === 'alcoves' || r.shape === 'island')
 
 const normalizeOnce = (game: Game): Game => {
   const version = game.version ?? 1

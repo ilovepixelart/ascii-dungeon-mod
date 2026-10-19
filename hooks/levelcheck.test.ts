@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { LEVEL_RULES, levelProblems, problemsOf } from './levelcheck'
-import { MAP_H, MAP_W } from './map'
+import { MAP_H, MAP_W, floorThing, generate, themedRoomOf } from './map'
 import type { Level, Room } from './map'
 
 /** A level drawn by hand on the map's grid: `rows` at its top-left, rock everywhere else. */
@@ -61,5 +61,18 @@ describe('generated levels', () => {
   test('every one keeps every rule', async () => {
     const broken = sample.flatMap(({ world, depth }) => levelProblems(world, depth).map(p => `${world}:${depth} ${p}`))
     expect(broken).toEqual([])
+  })
+
+  test('a rounded room may be the themed one; a library there puts no shelf on a cut corner', async () => {
+    let found = 0
+    for (let world = 1; world < 4000 && found < 3; world += 1) for (const depth of [3, 8, 13]) {
+      const level = generate(world, depth)
+      const t = themedRoomOf(world, depth, level)
+      if (t?.kind !== 'library' || t.room.shape !== 'rounded') continue
+      found += 1
+      const r = t.room
+      for (const c of [{ x: r.x, y: r.y }, { x: r.x + r.w - 1, y: r.y }]) expect(floorThing(world, depth, level, c)).toBe(' ')
+    }
+    expect(found).toBe(3)
   })
 })

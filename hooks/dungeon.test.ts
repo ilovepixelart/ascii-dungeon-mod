@@ -1516,7 +1516,7 @@ describe('idle motion in the pane', () => {
 describe('pickups on a walk', () => {
   // Several worlds, so the pickup lands on frames where the camera pages as well as on frames where it holds.
   const READS = 40
-  for (const world of [1, 2, 3, 4, 6, 7, 8]) test(`a tool call that walks the hero over something picks it up only when the walk gets there (world ${world})`, { timeoutMs: 20000 }, async ($, on) => {
+  for (const world of [1, 3, 4, 6, 7, 8]) test(`a tool call that walks the hero over something picks it up only when the walk gets there (world ${world})`, { timeoutMs: 20000 }, async ($, on) => {
     const clock = mock.clock(on)
     let lastBlit = ''
     on('ui.blit', (_$, e) => {

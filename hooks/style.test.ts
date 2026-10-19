@@ -22,12 +22,17 @@ const LEVELS = [0, 0.25, 0.5, 0.75, 1]
 describe('what each cell is built of', () => {
   const level = generate(21, 1)
   test('rock touching a room is wall, rock away from rooms is void', async () => {
-    const room = roomAt(level, level.start)
+    // A plain start room: a shape may give its corner back to rock, and the wall then follows the shape.
+    const plain = Array.from({ length: 60 }, (_, i) => generate(21 + i, 1)).find(l => roomAt(l, l.start)?.shape === undefined)!
+    const room = roomAt(plain, plain.start)
     expect(room).toBeDefined()
     if (room === undefined) return
-    expect(surfaceOf(level, { x: room.x, y: room.y - 1 })).toBe('wall')
-    expect(surfaceOf(level, { x: room.x - 1, y: room.y - 1 })).toBe('wall')
-    expect(surfaceOf(level, { x: 0, y: 0 })).toBe('void')
+    expect(surfaceOf(plain, { x: room.x, y: room.y - 1 })).toBe('wall')
+    expect(surfaceOf(plain, { x: room.x - 1, y: room.y - 1 })).toBe('wall')
+    // Rock with no room cell anywhere round it.
+    const far = Array.from({ length: 64 * 18 }, (_, i) => ({ x: i % 64, y: Math.floor(i / 64) }))
+      .find(p => [-1, 0, 1].every(dx => [-1, 0, 1].every(dy => roomAt(plain, { x: p.x + dx, y: p.y + dy }) === undefined)))!
+    expect(surfaceOf(plain, far)).toBe('void')
   })
 
   test('a corridor running straight into a room is a door; one skirting a wall is passage', async () => {

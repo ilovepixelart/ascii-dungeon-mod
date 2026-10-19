@@ -4,7 +4,9 @@ import type { Game } from '../types'
 import { apply } from './game'
 import { CURSOR, GOLD_INK, buttonW } from './pieces'
 import { openingGame } from './save'
-import { CLASSES, cardRect, isUnderWay, startGesture, startHeight, startPixels } from './start'
+import { CLASSES, STATS_LINE, cardRect, isFirstGame, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
+import { textMask } from './pixelart'
+import { plainItem } from './items'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
@@ -69,25 +71,35 @@ describe('choosing', () => {
     expect(startGesture(g, { cls: 'rogue' }, tap(keys.xs[0]! + 1, keys.y + 2)).actions).toEqual([{ kind: 'restart', cls: 'rogue' }])
   })
 
-  test('Back is there only with a game under way, and leaves it as it was; the close box too', async () => {
+  test('the buttons sit in a centered row: Start and Help, then Back only with a game under way', async () => {
     const first = onStart()
     expect(isUnderWay(first)).toBe(false)
     expect(isUnderWay({ ...first, xp: 3 })).toBe(true)
     expect(isUnderWay({ ...first, deepest: 2 })).toBe(true)
-    // A first game: Start alone, centered; under way, Start and Back.
-    const alone = keyColumns(first)!
-    const both = keyColumns({ ...first, xp: 3 })!
-    const span = (k: { xs: number[] }) => Math.max(...k.xs) - Math.min(...k.xs)
-    expect(span(both)).toBeGreaterThan(span(alone) + 20)
-    // Back's left edge: Start is 31 wide from x 2, Back 3 past it; on a first game Start, centered, begins one further on.
-    const back = 2 + buttonW('S', 'START') + 3
-    expect(startGesture({ ...first, xp: 3 }, { cls: 'knight' }, tap(back, both.y + 2)).actions).toEqual([{ kind: 'panel', panel: 'start' }])
-    expect(startGesture(first, { cls: 'knight' }, tap(back, both.y + 2)).actions).toEqual([])
-    // Where Back would sit beside a centered Start: nothing there on a first game.
-    const centered = Math.floor((WINDOW_W - buttonW('S', 'START')) / 2)
-    expect(startGesture(first, { cls: 'knight' }, tap(centered + buttonW('S', 'START') + 5, both.y + 2)).actions).toEqual([])
+    const [s, h, b] = [buttonW('S', 'START'), buttonW('H', 'HELP'), buttonW('B', 'BACK')]
+    // A first game: Start, 3 pixels, Help, the pair centered; each key's gold begins 3 pixels into its button.
+    const x0 = Math.floor((WINDOW_W - s - 3 - h) / 2)
+    const keys = keyColumns(first)!
+    const px = startPixels(first, { cls: 'knight' })
+    const gold = [...new Set(px.slice(keys.y, keys.y + 6).flatMap(row => row.flatMap((p, x) => (p === GOLD_INK ? [x] : []))))].sort((m, n) => m - n)
+    expect(gold.filter((x, i) => i === 0 || x - gold[i - 1]! > 8)).toEqual([x0 + 3, x0 + s + 3 + 3])
+    expect(startGesture(first, { cls: 'mage' }, tap(x0 + 1, keys.y + 2)).actions).toEqual([{ kind: 'restart', cls: 'mage' }])
+    // Under way: Start, Help and Back, the three centered.
+    const going = { ...first, xp: 3 }
+    const y0 = Math.floor((WINDOW_W - s - h - b - 6) / 2)
+    const back = y0 + s + 3 + h + 3
+    expect(startGesture(going, { cls: 'knight' }, tap(back + 1, keys.y + 2)).actions).toEqual([{ kind: 'panel', panel: 'start' }])
+    expect(startGesture(first, { cls: 'knight' }, tap(back + 1, keys.y + 2)).actions).toEqual([])
     const [x, y] = CLOSE_BOX
     expect(startGesture(first, { cls: 'knight' }, tap(x + 2, y + 2)).actions).toEqual([{ kind: 'panel', panel: 'start' }])
+  })
+
+  test('Help asks for the how-it-plays window and leaves the game and the chosen hero as they were', async () => {
+    for (const g of [onStart(), onStart({ xp: 3 })]) {
+      const s = buttonW('S', 'START')
+      const left = Math.floor((WINDOW_W - s - 3 - buttonW('H', 'HELP') - (isUnderWay(g) ? 3 + buttonW('B', 'BACK') : 0)) / 2)
+      expect(startGesture(g, { cls: 'rogue' }, tap(left + s + 3 + 2, keyColumns(g)!.y + 2))).toEqual({ ui: { cls: 'rogue' }, actions: [], isHelp: true })
+    }
   })
 
   test('a drag, or a click on nothing, does nothing', async () => {
@@ -111,9 +123,50 @@ describe('the screen', () => {
   test('is WINDOW_W wide and a whole number of cells tall', async () => {
     for (const cls of CLASSES) {
       const px = startPixels(onStart(), { cls })
-      expect(px.length).toBe(startHeight({ cls }))
+      expect(px.length).toBe(startHeight(onStart(), { cls }))
       expect(px.length % 2).toBe(0)
       for (const row of px) expect(row.length).toBe(WINDOW_W)
     }
+  })
+
+  test('is titled ASCII DUNGEON: its gold spans the words at twice the font\'s size, centered', async () => {
+    const px = startPixels(onStart(), { cls: 'knight' })
+    const w = 2 * (textMask('ASCII DUNGEON')[0]?.length ?? 0)
+    const rows = px.slice(cardRect(0).y - 26, cardRect(0).y - 12)
+    const xs = rows.flatMap(row => row.flatMap((p, x) => (p === GOLD_INK ? [x] : [])))
+    expect([Math.min(...xs), Math.max(...xs) + 1]).toEqual([Math.floor((WINDOW_W - w) / 2), Math.floor((WINDOW_W - w) / 2) + w])
+  })
+
+  test('frames Help white on a first game only', async () => {
+    const helpEdge = (g: Game) => {
+      const s = buttonW('S', 'START')
+      const left = Math.floor((WINDOW_W - s - 3 - buttonW('H', 'HELP') - (isUnderWay(g) ? 3 + buttonW('B', 'BACK') : 0)) / 2)
+      return startPixels(g, { cls: 'knight' })[cardRect(0).y + cardRect(0).h + 3]![left + s + 3 + 4]
+    }
+    const first = onStart()
+    expect(isFirstGame(first)).toBe(true)
+    expect(helpEdge(first)).toBe(CURSOR)
+    const later = onStart({ codex: apply(onStart({ panel: 'none' }), { kind: 'restart', cls: 'mage' }).codex })
+    expect(later.codex).toBeDefined()
+    expect(isFirstGame(later)).toBe(false)
+    expect(helpEdge(later)).not.toBe(CURSOR)
+    expect(helpEdge(onStart({ xp: 3 }))).not.toBe(CURSOR)
+  })
+
+  test('says what each attribute does, under the hero\'s lines', async () => {
+    const lines = startOverlay(onStart(), { cls: 'mage' })[0]!.lines.map(l => l.map(r => r.text).join(''))
+    expect(lines.at(-1)).toBe('Might: harder hits. Focus: crits. Vigor: HP. Insight: XP.')
+    expect(STATS_LINE).toBe(lines.at(-1))
+  })
+
+  test('names a retired hero\'s heirloom: worn from the start, or in the bag when the class cannot wear it', async () => {
+    const g0 = onStart()
+    const ring = { ...plainItem(g0, 'ring', 'rare'), name: 'Band of Old Days' }
+    const plate = { ...plainItem(g0, 'plate', 'rare'), name: 'Plate of Old Days', cls: 'knight' as const }
+    const last = (g: Game, cls: 'knight' | 'mage') => startOverlay(g, { cls })[0]!.lines.at(-1)!.map(r => r.text).join('')
+    expect(last({ ...g0, heirloom: ring }, 'mage')).toBe('Heirloom: Band of Old Days, worn from the start.')
+    expect(last({ ...g0, heirloom: plate }, 'knight')).toBe('Heirloom: Plate of Old Days, worn from the start.')
+    expect(last({ ...g0, heirloom: plate }, 'mage')).toBe('Heirloom: Plate of Old Days, in the bag from the start.')
+    expect(last(g0, 'mage')).toBe(STATS_LINE)
   })
 })

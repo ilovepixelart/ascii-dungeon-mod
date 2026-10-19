@@ -34,7 +34,7 @@ import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeOverlay, for
 import type { ForgeUi } from './forge'
 import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
-import { CLASSES as HEROES, begin, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
+import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
 import { openingGame } from './save'
 import { SHEET_H, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
@@ -783,6 +783,7 @@ const onStartClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
   const outcome = startGesture(g, startUi ?? { cls: g.cls }, data as Gesture)
   startUi = outcome.ui
+  if (outcome.isHelp === true) isHelpOpen = true
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
 }
@@ -1232,14 +1233,16 @@ const startScreen = (p: Pane) => {
     ...HEROES.map((cls, i) => <Button key={`start-${cls}`} label={cls === ui.cls ? `[${CLASS_NAME[cls]}]` : CLASS_NAME[cls]} hotkey={String(i + 1)} plain dimColor={cls !== ui.cls} onPress={choose(cls)} />),
     <Text dimColor>|</Text>,
     <Button key="start-go" label={`Start as ${CLASS_NAME[ui.cls]}`} hotkey="s" plain onPress={press(begin(ui.cls))} />,
+    helpKey(p, 'h'),
     ...(isUnderWay(g) ? [<Button key="start-back" label="Back to your game" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'start' })} />] : []),
   ]
-  if (p.isWindowWide) return pixelWindow(p, 'start', startHeight(ui), startPixels(g, ui), startOverlay(ui), keys, 'Click a hero to choose, again (or Start) to begin.')
+  if (p.isWindowWide) return pixelWindow(p, 'start', startHeight(g, ui), startPixels(g, ui), startOverlay(g, ui), keys, 'Click a hero to choose, again (or Start) to begin.')
   return (
     <Box flexDirection="column">
       <Text bold>New game: choose your hero</Text>
       <Box columnGap={2} flexWrap="wrap">{keys}</Box>
       <Text wrap="wrap">{classAbout(ui.cls)}</Text>
+      <Text dimColor wrap="wrap">{STATS_LINE}</Text>
     </Box>
   )
 }

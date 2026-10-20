@@ -338,8 +338,9 @@ function* session(g: () => Game, d: (n: number) => number): Generator<Action> {
 }
 
 /** A click on the hero explores; any other ends on its tile, or says why not: refused, already there, stopped by a foe, a fight, a death, the stairs, or in town a visit. */
-const CLICK_EXPLAINED = /^You can't get there\.|^You are already there\.|blocks your way|^You (CRITICALLY )?hit |^You slay |^You draw on the fallen |strikes you|^You were slain|descend to depth|^The healer |^You step back through the portal|^Your stash holds |^The merchant |^The smith |^The elder[: ]|^The mystic[: ]|^The guard|^A villager |^The dog /
-const isUnexplainedClick = (r: StepRecord) =>
+const CLICK_EXPLAINED = /^You can't get there\.|^You are already there\.|blocks your way|^You (CRITICALLY )?hit |^You slay | darts aside\.$| fades into the dark|shield turns your blow\.$|^You swing at the darkness\.|^You draw on the fallen |strikes you|^You were slain|descend to depth|^The healer |^You step back through the portal|^Your stash holds |^The merchant |^The smith |^The elder[: ]|^The mystic[: ]|^The guard|^A villager |^The dog /
+/** A click that ended neither on its tile nor with a line saying why: what the simulator counts as a bug. */
+export const isUnexplainedClick = (r: StepRecord) =>
   r.action.kind === 'goto' && (r.action.x !== r.from.x || r.action.y !== r.from.y) && (r.hero.x !== r.action.x || r.hero.y !== r.action.y) && !r.said.some(l => CLICK_EXPLAINED.test(l))
 
 /**

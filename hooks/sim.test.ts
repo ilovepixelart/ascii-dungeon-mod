@@ -4,7 +4,7 @@ import { apply, newGame } from './game'
 import type { Consumable, Game } from '../types'
 import { KINDS } from './consumables'
 import { foeAhead, plainHero } from './fixtures'
-import { beltAid, drawnVsTold, isJump, simulate } from './sim'
+import { beltAid, drawnVsTold, isJump, isUnexplainedClick, simulate } from './sim'
 import { MARKS, tierOf } from './deep'
 import { bfs } from './map'
 import { TOWN_SPOTS, pathBeside } from './town'
@@ -128,4 +128,16 @@ describe('moves the pane can play', () => {
     expect(isJump(g, next, action)).toBe(false)
     expect(isJump(g, { ...next, walked: next.walked.slice(0, -1) }, action)).toBe(true)
   })
+})
+
+test('a click on a foe that comes to nothing is explained by what the blow did; one that ends short and says nothing is not', async () => {
+  const click = (said: string[]) => ({
+    step: 1, action: { kind: 'goto' as const, x: 5, y: 3 }, from: { x: 4, y: 3 }, hero: { x: 4, y: 3, hp: 9, maxHp: 20, depth: 3, level: 2 },
+    foe: { name: 'rat', hp: 4, x: 5, y: 3 }, said, broke: [],
+  })
+  for (const line of ['The rat darts aside.', 'The goblin\'s shield turns your blow.', 'You swing at the darkness.', 'The wraith fades into the dark; your blow passes through.']) {
+    expect(isUnexplainedClick(click([line]))).toBe(false)
+  }
+  expect(isUnexplainedClick(click([]))).toBe(true)
+  expect(isUnexplainedClick(click(['Loot: Health Potion.']))).toBe(true)
 })

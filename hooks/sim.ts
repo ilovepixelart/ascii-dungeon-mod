@@ -5,7 +5,7 @@ import { countOf, healingSlot, slotOf } from './consumables'
 import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
-import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same } from './map'
+import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same, shapeCut } from './map'
 import type { Level, Pos, Room } from './map'
 import { violations } from './invariants'
 import { workOf } from './work'
@@ -373,13 +373,18 @@ export const drawnVsTold = (before: Game, next: Game) => {
   return off
 }
 
-/** Whether floor in room `b`'s box lies in room `a`'s box or beside floor in it: no wall between the two. */
+/** A room's own floor: in its box, not cut back by its shape, floor on the map. */
+const ownFloor = (level: Level, r: Room) => {
+  const cut = new Set(shapeCut(r).map(cellId))
+  const cells = new Set<number>()
+  for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (isFloor(level.tiles, { x, y }) && !cut.has(cellId({ x, y }))) cells.add(cellId({ x, y }))
+  return cells
+}
+
+/** Whether a cell of room `b`'s own floor is, or lies beside, one of room `a`'s own: no wall between the two. */
 const isOpenBetween = (level: Level, a: Room, b: Room) => {
-  const inA = (p: Pos) => p.x >= a.x && p.x < a.x + a.w && p.y >= a.y && p.y < a.y + a.h && isFloor(level.tiles, p)
-  for (let y = b.y; y < b.y + b.h; y += 1) for (let x = b.x; x < b.x + b.w; x += 1) {
-    if (isFloor(level.tiles, { x, y }) && [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inA({ x: x + dx!, y: y + dy! }))) return true
-  }
-  return false
+  const inA = ownFloor(level, a)
+  return [...ownFloor(level, b)].some(c => [0, 1, -1, MAP_W, -MAP_W].some(d => inA.has(c + d) && Math.abs(((c + d) % MAP_W) - (c % MAP_W)) <= 1))
 }
 
 /**

@@ -119,6 +119,15 @@ describe('an arena grown up against another room, no wall between', () => {
     expect(['11,1', '12,2'].filter(c => seenFrom({ x: 7, y: 2 }).has(c))).toEqual([])
   })
 
+  test('on world 20 depth 240, an arena grown over an L room\'s cut-away corner, rock between, shows none of it', async () => {
+    // The L room (41..51, 7..12) cuts back its top right, x 47 to 51 on rows 7 to 9; the arena (49..62, 1..8) covers
+    // part of that corner. Rock stands at x 47 and 48 between the two floors.
+    const level = generate(20, 240)
+    const seen = (p: Pos) => new Set(visibleFrom(level, p).map(c => `${c.x},${c.y}`))
+    expect([seen({ x: 41, y: 7 }).has('56,3'), seen({ x: 41, y: 7 }).has('45,11')]).toEqual([false, true])
+    expect(seen({ x: 56, y: 3 }).has('41,7')).toBe(false)
+  })
+
   test('on world 1 depth 100, the arena and the room against its east side show each other', async () => {
     // The arena (1..14, 8..15) and the room (15..24, 13..15) meet on rows 13 to 15, open floor across x 14 and 15.
     const level = generate(1, 100)

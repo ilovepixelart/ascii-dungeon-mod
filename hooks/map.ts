@@ -545,14 +545,29 @@ const touchesRoom = (level: Level, p: Pos) => roomsBeside(level, p).length > 0
 /** A dead end, where a chest stands. */
 const isDeadEnd = (level: Level, p: Pos) => chestAt(1, 1, level, p) !== undefined
 
-const inBox = (r: Room, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
+/** Whether `p` is floor of `r`'s own: in its box, not cut back by its shape, and floor on the map. */
+const isOwnFloor = (level: Level, r: Room, p: Pos) =>
+  p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h && isFloor(level.tiles, p) && !cutOf(r).has(cellId(p))
+/** Each room's shape's cut, by cell: fixed by the room alone. */
+const cutOf = (r: Room): ReadonlySet<number> => {
+  let cut = cuts.get(r)
+  if (cut === undefined) {
+    cut = new Set(shapeCut(r).map(cellId))
+    cuts.set(r, cut)
+  }
+  return cut
+}
+const cuts = new WeakMap<Room, ReadonlySet<number>>()
 
-/** Whether two rooms are open to each other: floor of one in the other's box, or beside floor of it, no wall between. */
+/**
+ * Whether two rooms are open to each other: floor of one's own (its box less what its shape cuts back) is floor of the
+ * other's own, or beside it, no wall between. Floor another room grew over a shape's cut corner opens nothing.
+ */
 const opensInto = (level: Level, a: Room, b: Room) => {
   if (a.x > b.x + b.w || b.x > a.x + a.w || a.y > b.y + b.h || b.y > a.y + a.h) return false
   for (let y = b.y; y < b.y + b.h; y += 1) for (let x = b.x; x < b.x + b.w; x += 1) {
     const c = { x, y }
-    if (isFloor(level.tiles, c) && [c, ...STEPS4.map(d => ({ x: x + d.x, y: y + d.y }))].some(n => inBox(a, n) && isFloor(level.tiles, n))) return true
+    if (isOwnFloor(level, b, c) && [c, ...STEPS4.map(d => ({ x: x + d.x, y: y + d.y }))].some(n => isOwnFloor(level, a, n))) return true
   }
   return false
 }

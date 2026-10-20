@@ -1263,8 +1263,8 @@ describe('a click is carried out when the hero gets there, not when it is made',
     await $.tool.call({ tool: 'Bash', command: 'npm test' })
     await clock.advance(5000)
     // The walk's 3 frames in full; then the knight's shield turns the new foe's first blow and BLOCK rises over the
-    // hero, a pixel every 2 of its 18 frames: 9 frames, the repeats not sent.
-    expect(blits).toBe(4 - 1 + HIT_FRAMES / 2)
+    // hero, a pixel every 2 of its 18 frames: 9 frames, the repeats not sent; then the ordinary map once its frames end.
+    expect(blits).toBe(4 - 1 + HIT_FRAMES / 2 + 1)
     await ui.unmount()
   })
 })

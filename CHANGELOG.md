@@ -39,6 +39,8 @@ release may change behaviour.
   where it was cut.
 - The name of an item lying on the map ran past the map's right edge on a map narrower than the name, and below the
   map on a map four rows tall. It is held inside the map, cut to fit with an ellipsis.
+- Gold of 1,000,000 or more ran under the close box in a window's title bar. Past six digits it is written in
+  thousands (1234K), past 99,999,999 in millions (2000M).
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

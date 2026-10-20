@@ -22,6 +22,11 @@ const HEAD_BG = SURFACE.titleBar
 const GOLD_INK = INK.gold
 /** The gold this far left of the window's right edge. */
 const GOLD_FROM_RIGHT = 41
+
+/** The title bar's gold as written: in full to six digits, the room it has before the close box; past that in
+ * thousands (K), then millions (M), so it is never more than six characters. */
+export const goldText = (gold: number) =>
+  gold < 1_000_000 ? String(gold) : gold < 100_000_000 ? `${Math.floor(gold / 1000)}K` : `${Math.floor(gold / 1_000_000)}M`
 /** The close box (x, y, w, h) at the title bar's right end of a window `width` wide: 7 px square, two pixels from the
  * edge, centred in the bar; its X 3 px across with a pixel of room round it. */
 export const closeBoxOf = (width: number) => [width - 9, 2, 7, 7] as const
@@ -92,7 +97,8 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   else tabRow(c, chrome.tabs.items, chrome.tabs.chosen)
   if (chrome.gold !== undefined) {
     coin(c, GOLD_X, TITLE_Y)
-    digits(c, String(chrome.gold), GOLD_X + 5 + String(chrome.gold).length * 4, TITLE_Y + 4, GOLD_INK)
+    const text = goldText(chrome.gold)
+    digits(c, text, GOLD_X + 5 + text.length * 4, TITLE_Y + 4, GOLD_INK)
   }
   const [cx, cy, cw, ch] = closeBoxOf(width)
   fill(c, cx, cy, cw, ch, CLOSE_BG)

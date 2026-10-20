@@ -14,15 +14,15 @@ import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from
 import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { codexGesture, codexHeight, codexPixels } from './codexwindow'
 import { cardPixels, cardText, svgOf } from './herocard'
-import { retireGesture, retireHeight, retirePixels } from './retirewindow'
+import { retireGesture, retireHeight, retireOverlay, retirePixels } from './retirewindow'
 import { TALENT_UI, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
 import type { TalentUi } from './talentwindow'
 import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
-import { deepGesture, deepHeight, deepPixels } from './deepwindow'
+import { deepGesture, deepHeight, deepOverlay, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
-import { HELP_ROWS, helpGesture, helpHeight, helpPixels } from './helpwindow'
+import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
@@ -1128,11 +1128,10 @@ const helpClose = ({ Button, redraw }: Pane, hotkey?: string) => (
 /** The how-it-plays window as text: a line a rule, then where things are. */
 const textHelp = (p: Pane) => {
   const { Box, Text } = p
-  const said = (s: string) => s.charAt(0) + s.slice(1).toLowerCase()
   return (
     <Box flexDirection="column">
       <Text bold>How it plays: your coding plays the hero</Text>
-      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${said(r.when)}: ${r.does.toLowerCase()}.`}</Text>)}
+      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
       <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text>
       <Box columnGap={2}>{helpClose(p)}</Box>
     </Box>
@@ -1345,7 +1344,7 @@ const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
   const chosen = fork === undefined ? undefined : g.marks?.[fork]
   return [
     ...(fork === undefined ? [] : pairOf(g.world, fork)).map((m, i) => (
-      <Button key={`deep-${m}`} label={`${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
+      <Button key={`deep-${m}`} label={isWindow ? MARKS[m].name : `${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
     )),
     <Button key="deep-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'deep' })} />,
   ]
@@ -1365,7 +1364,7 @@ const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
 const retireWindow = (p: Pane) => {
   const { redraw, g, Button, press } = p
   const slot = chosenSlot(g, retireUi)
-  return pixelWindow(p, 'retire', retireHeight(g, retireUi), retirePixels(g, retireUi), [], [
+  return pixelWindow(p, 'retire', retireHeight(g, retireUi), retirePixels(g, retireUi), retireOverlay(g, retireUi), [
     <Button key="retire-go" label="Retire" hotkey="r" plain dimColor={slot === undefined || whyNotRetire(g, slot) !== undefined} onPress={slot === undefined ? () => undefined : press({ kind: 'retire', slot })} />,
     <Button key="retire-next" label="Next piece" hotkey="w" plain onPress={() => {
       retireUi = nextWorn(g, retireUi)
@@ -1449,7 +1448,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
  * windows need the pane wide enough (`isWindowWide`); the start screen draws as text when it is not.
  */
 const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
-  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), [], [helpClose(p, 'c')]) },
+  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), helpOverlay(), [helpClose(p, 'c')]) },
   { is: (_, l) => l.isPixelBag, draw: pixelBag },
   { is: p => p.g.panel === 'shop' && p.isWindowWide, draw: pixelShop },
   { is: p => p.g.panel === 'start', draw: startScreen },
@@ -1460,7 +1459,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
   { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true)) },
-  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [], deepKeys(p, true)) },
+  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), deepOverlay(p.g), deepKeys(p, true)) },
   { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [cardKey(p, 'k'), codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },

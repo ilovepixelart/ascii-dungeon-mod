@@ -6,11 +6,9 @@ import { MARKS, forkTier, isForkOpen, markHere, pairOf, roman, tierOf, tierStart
 import { killConsumable } from './consumables'
 import { foeAhead, plainHero } from './fixtures'
 import { arrive } from './world'
-import { CARD_KEYS, deepCards, deepGesture, deepHeight, deepLines, deepPixels } from './deepwindow'
+import { CARD_KEYS, deepCards, deepGesture, deepHeight, deepLines, deepOverlay, deepPixels } from './deepwindow'
 import { CLOSE_BOX } from './window'
 import type { Gesture } from './window'
-import { MAP_H } from './map'
-import { PX } from './pixelart'
 
 const EASY: Mark[] = ['steady', 'mild', 'brittle']
 const HARD: Mark[] = ['ironclad', 'frenzied', 'lean']
@@ -217,6 +215,7 @@ describe('the deep window', () => {
   const W = deepAt(1).world
   const atFork = deepAt(100, { bossSlain: 100, marks: { 4: pairOf(W, 4)[0], 5: pairOf(W, 5)[1] } })
   const texts = (g: Game) => deepLines(g).map(l => l.text)
+  const said = (g: Game) => deepOverlay(g)[0]!.lines.map(l => l.map(r => r.text).join(''))
 
   test('heads with the depth and its tier, and lists the last three tiers reached with their marks', async () => {
     const t = texts({ ...atFork, depth: 97, bossSlain: 90, deepest: 97 })
@@ -228,12 +227,13 @@ describe('the deep window', () => {
     expect(texts(atFork).slice(0, 7)).toEqual(['DEPTH 100  TIER V', 'IV', '81 90', MARKS[pairOf(W, 4)[0]].name.toUpperCase(), 'V', '91 100', MARKS[pairOf(W, 5)[1]].name.toUpperCase()])
   })
 
-  test('while a fork waits, a card each mark, the easier first, and a click on one chooses it', async () => {
+  test('while a fork waits, a card each mark side by side, the easier first, and a click on one chooses it', async () => {
     const cards = deepCards(atFork)
     expect(cards.map(c => c.mark)).toEqual(pairOf(atFork.world, 6))
-    expect(texts(atFork)).toContain('CHOOSE TIER VI')
-    expect(texts(atFork).at(-1)).toBe('NONE CHOSEN MEANS A')
+    expect([cards[0]!.rect.y === cards[1]!.rect.y, cards[0]!.rect.x + cards[0]!.rect.w < cards[1]!.rect.x]).toEqual([true, true])
     expect(CARD_KEYS).toEqual(['A', 'B'])
+    const [a, b] = pairOf(atFork.world, 6).map(m => MARKS[m])
+    expect(said(atFork)).toEqual([`A ${a!.name}: ${a!.does}`, `B ${b!.name}: ${b!.does}`, 'Choose tier VI: none chosen means A.'])
     expect(deepGesture(atFork, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 6 }))).toEqual([{ kind: 'mark', mark: cards[1]!.mark }])
   })
 
@@ -244,12 +244,13 @@ describe('the deep window', () => {
     const edge = (g: Game, r: { x: number; y: number }) => deepPixels(g)[r.y]![r.x + 30]
     expect([edge(chosen, a!.rect) === '#ffffff', edge(chosen, b!.rect) === '#ffffff']).toEqual([false, true])
     expect(edge(atFork, b!.rect)).not.toBe('#ffffff')
-    expect(texts(chosen).at(-1)).toBe('A CLICK CHANGES IT')
+    expect(said(chosen).at(-1)).toBe('Choose tier VI: a click changes it.')
   })
 
   test('above the tiers, says where they begin and which big boss opens the first fork', async () => {
-    const t = texts(deepAt(30, { bossSlain: 30 }))
-    expect(t).toEqual(['DEPTH 30', 'THE TIERS BEGIN PAST DEPTH 50', 'NEXT FORK AT DEPTH 50'])
+    const g = deepAt(30, { bossSlain: 30 })
+    expect(texts(g)).toEqual(['DEPTH 30', 'THE TIERS BEGIN PAST DEPTH 50'])
+    expect(said(g)).toEqual(['Next fork at depth 50.'])
     expect(deepCards(deepAt(30))).toEqual([])
   })
 
@@ -262,8 +263,8 @@ describe('the deep window', () => {
   })
 
   test('in a tier with no fork waiting, names the big boss that opens the next', async () => {
-    expect(texts(deepAt(97, { bossSlain: 90 })).at(-1)).toBe('NEXT FORK AT DEPTH 100')
-    expect(texts(deepAt(60, { bossSlain: 55 })).at(-1)).toBe('NEXT FORK AT DEPTH 60')
+    expect(said(deepAt(97, { bossSlain: 90 }))).toEqual(['Next fork at depth 100.'])
+    expect(said(deepAt(60, { bossSlain: 55 }))).toEqual(['Next fork at depth 60.'])
   })
 
   test('the close box closes it; a click elsewhere does nothing', async () => {
@@ -271,13 +272,13 @@ describe('the deep window', () => {
     expect(deepGesture(atFork, tap({ x: 50, y: 15 }))).toEqual([])
   })
 
-  test('fits over the map at a fork of each of the nine pairs, two tiers listed above it', async () => {
+  test('fits in 40 rows at a fork of each of the nine pairs, two tiers listed above it', async () => {
     const g = deepAt(80, { bossSlain: 80 })
     const pairs = new Map<string, Game>()
     for (const world of SEEDS) pairs.set(pairOf(world, 4).join(), { ...g, world })
     expect(pairs.size).toBe(9)
     for (const x of pairs.values()) {
-      expect(deepHeight(x)).toBeLessThanOrEqual(MAP_H * PX)
+      expect(deepHeight(x)).toBeLessThanOrEqual(80)
       expect(deepPixels(x).length).toBe(deepHeight(x))
     }
   })

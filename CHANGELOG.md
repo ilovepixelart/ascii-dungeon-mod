@@ -11,6 +11,11 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- How it plays, the start screen, the deep and the retire window each fit in 40 rows, so a short pane shows them
+  whole: their sentences are in a text box under them instead of the pixel font. How it plays keeps an icon a rule;
+  the start screen is titled in its title bar, its cards a portrait and a name (the box says the lean); the deep's
+  two marks are side by side; the retire window drops the portrait. Under the deep window, each mark's key shows
+  its name alone.
 - Talents are picked from three cards side by side, each with its family's ribbon (work, fight, road) and its own
   icon; the chosen card is lifted, its name and what it does in the box below. The window fits in 40 rows, so a
   short pane shows it whole. It opens on its own when a talent is earned, once no window is open and no foe is
@@ -60,7 +65,7 @@ again from its new start, gains kept. Nothing else needs doing.
   in the frozen caverns (ward runes), reeds in the flooded halls and glowing caps in the fungal deep (herbs), a powder
   keg in the forge (smoke bombs). Stepped onto, each goes onto the belt at a tier for the depth.
 - The start screen is titled ASCII DUNGEON and has Help beside Start, framed white on a first game. Under the chosen
-  hero it says what each attribute does and, after a retirement, the heirloom and whether the hero wears it.
+  hero it says what each attribute does or, after a retirement, the heirloom and whether the hero wears it.
 - How it plays, from Help in settings or on the start screen: what the session's coding does to the hero (tool calls, failed calls, passing
   tests, commits, pushes and pull requests, finished answers), a row each, and what is the player's to choose.
 - A session that starts with talents owed or a fork open says so in the log ("9 talents to choose: open the character

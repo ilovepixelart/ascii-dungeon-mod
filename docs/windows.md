@@ -6,7 +6,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 |---|---|
 | `hooks/window.ts` | the frame (title, gold when the window passes it, close box, section labels, the body below `BODY_TOP`); text boxes (`boxShape`, `drawBox`); where they go (`coverage`, `place`); gestures (`Gesture`, `pixel`, `CLICK_SLOP`) |
 | `hooks/pieces.ts` | what windows are built from: an item in its tier box with its marks (`drawItem`), an item grid (`itemGrid`, `cellBox`), the belt |
-| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; flat and beveled cards with their ribbon, gem and sparkles. `tools/ui.ts` draws them all on one sheet |
+| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; flat and beveled cards with their ribbon, gem and sparkles. `tools/ui.ts` draws them all on one sheet, `tools/windows.ts` each window with its text boxes written in, for review |
 | `hooks/windowclient.ts` | the click layer: writes the text boxes it is handed and reports whole gestures |
 | `hooks/inventory.ts`, `hooks/bagui.ts` | the inventory (see `inventory.md`) |
 | `hooks/shop.ts` | the merchant |
@@ -57,7 +57,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 ## The start screen
 
 - The `start` panel: a first game opens on it (`openingGame` in `hooks/save.ts`), and New game in settings (or `r` on the text dashboard) opens it. While it is open the dungeon waits: `apply` lets through only a new game, closing it and the view key, so tool calls change nothing.
-- The title, ASCII DUNGEON, then a card a hero: its portrait in its starting kit, its name, a pip a point of each attribute it starts with. The chosen card is framed white; the box under the cards holds its ability, lean and kit, what each attribute does (`STATS_LINE`), and after a retirement the heirloom and whether the chosen class wears it or carries it in the bag.
+- Titled ASCII DUNGEON, a card a hero: its portrait in its starting kit at twice the sprite's size, its name. The chosen card is framed white; the box under the buttons holds its ability, then its lean and kit, then what each attribute does (`STATS_LINE`) or, after a retirement, the heirloom and whether the chosen class wears it or carries it in the bag in its place.
 - A card chooses its hero; the chosen card clicked again, or Start (`s`), begins a new game as it. Help (`h`) opens the how-it-plays window over the screen, framed white on a first game (`isFirstGame`: none under way and no codex yet). Back (`b`) and the close box leave the game as it was; Back shows only with a game under way (`isUnderWay`), since a first game has nothing to go back to. The buttons sit in one centered row. Keys `1` to `3` choose.
 
 ## The character sheet
@@ -72,7 +72,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## How it plays
 
-- What the session's coding does to the hero, a row a rule with the strip's own icon (`HELP_ROWS` in `hooks/helpwindow.ts`): every tool call a step or a blow, a failed call the foe's strike, passing tests a sure critical, a commit a shrine and full HP, a push or a pull request a cache, a finished answer the stairs; the work it rewards in green. Under a rule, what is the player's: gear, talents, orders.
+- What the session's coding does to the hero, in one text box: a rule each with the strip's own icon beside it (`HELP_ROWS` in `hooks/helpwindow.ts`), what happens over what it comes to: every tool call a step or a blow, a failed call the foe's strike, passing tests a sure critical, a commit a shrine and full HP, a push or a pull request a cache, a finished answer the stairs; the work it rewards in green. Last, what is the player's: gear, talents, orders.
 - Opened by Help (`h`) beside New game in settings, and How it plays on the text dashboard's settings. It is the pane's own state (`isHelpOpen` in `register.tsx`), not a game panel, so it opens over whatever is open and closes back to it; first in the window lists, it draws over every other. As text, a line a rule and where the bag, the sheet and settings are.
 
 ## The death window
@@ -102,7 +102,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 - A hero who has slain a big boss may retire (`retire` action, `whyNotRetire` in `hooks/game.ts`), passing down one piece they wear as the save's heirloom (`Game.heirloom`, `heirloomOf` in `hooks/items/loot.ts`). The game becomes a new one on the start screen with the codex (one more retired) and the heirloom; no Back, as nothing is under way.
 - Every new hero after that, by the start screen or New game, sets out with the heirloom (`newHero`): worn when the class can wear it, its kit piece going to the bag, at full HP; in the bag when it cannot. The next retirement replaces it.
 - An heirloom keeps its name, tier, look, Legendary power and trigger; its stats are its base's plain ones, untempered, unlocked, not junk. The Rubber Duck's power is its +50% XP, so that stat stays. With the stats as found on depth 1, simulated deaths in the first 1,000 steps (60 games a class) fell from 2.26 to 0.50 with the Duck; as built they are 1.92 with the Duck, 2.17 with the Band of the Endless Loop and 2.06 with a Rare chain.
-- Drawn by `hooks/retirewindow.ts`: the portrait, level, class, deepest depth and big bosses slain; the worn pieces in a row, the chosen one framed white (the first worn until one is clicked; `w` steps through them); its name and what passing it down means; Retire (`r`, dark until a big boss is slain) and Back (`b`, to the sheet). As text, a button a worn piece retires passing it down.
+- Drawn by `hooks/retirewindow.ts`: the worn pieces in a row, the chosen one framed white (the first worn until one is clicked; `w` steps through them); Retire (`r`, dark until a big boss is slain) and Back (`b`, to the sheet); in the box under them the chosen piece's name, what passing it down means, and the hero's level, class, deepest depth and big bosses slain. As text, a button a worn piece retires passing it down.
 
 ## Talents
 
@@ -113,7 +113,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The deep
 
-- Drawn by `hooks/deepwindow.ts`: the depth and its tier, the tiers reached with their depths and marks (the last three, two while a fork waits; the one the hero is in framed white, its mark green if easier, orange if harder), and while a fork waits the next tier's two marks as cards (`A` the easier, `B` the harder; the chosen one framed white), a click or its letter choosing one (`mark` action). Without a fork it names the depth of the next. As text, a button each mark of the fork. The rules are in [pacing.md](pacing.md#tiers-past-depth-50).
+- Drawn by `hooks/deepwindow.ts`: the depth and its tier, the tiers reached with their depths and marks (the last three, two while a fork waits; the one the hero is in framed white, its mark green if easier, orange if harder), and while a fork waits the next tier's two marks as cards side by side (`A` the easier, `B` the harder; the chosen one framed white), a click or its letter choosing one (`mark` action). The box under them says what each does and how the fork is chosen; without a fork, the depth of the next. As text, a button each mark of the fork. The rules are in [pacing.md](pacing.md#tiers-past-depth-50).
 
 ## The compact inventory
 

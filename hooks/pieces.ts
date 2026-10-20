@@ -211,14 +211,15 @@ const PORTRAIT_BG = '#1c2230'
 const PORTRAIT_FLOOR = '#232a3a'
 const PORTRAIT_EDGE = '#6b6258'
 
-/** A portrait at x, y: the sprite as many times its size as fits (an 8 by 8 three times), centred on a lit backdrop with a floor, in a double frame. */
-export const portrait = (c: Canvas, rows: readonly string[], x: number, y: number) => {
-  fill(c, x, y, PORTRAIT, PORTRAIT, PORTRAIT_BG)
-  fill(c, x + 2, y + PORTRAIT - 8, PORTRAIT - 4, 6, PORTRAIT_FLOOR)
-  frame(c, x, y, PORTRAIT, PORTRAIT, PORTRAIT_EDGE)
-  frame(c, x + 1, y + 1, PORTRAIT - 2, PORTRAIT - 2, GRID)
-  const scale = Math.floor((PORTRAIT - 4) / rows.length)
-  const inset = 2 + Math.floor((PORTRAIT - 4 - rows.length * scale) / 2)
+/** A portrait `size` pixels square at x, y: the sprite as many times its size as fits (an 8 by 8 three times in
+ * PORTRAIT), centred on a lit backdrop with a floor, in a double frame. */
+export const portrait = (c: Canvas, rows: readonly string[], x: number, y: number, size = PORTRAIT) => {
+  fill(c, x, y, size, size, PORTRAIT_BG)
+  fill(c, x + 2, y + size - 8, size - 4, 6, PORTRAIT_FLOOR)
+  frame(c, x, y, size, size, PORTRAIT_EDGE)
+  frame(c, x + 1, y + 1, size - 2, size - 2, GRID)
+  const scale = Math.floor((size - 4) / rows.length)
+  const inset = 2 + Math.floor((size - 4 - rows.length * scale) / 2)
   rows.forEach((row, dy) => [...row].forEach((k, dx) => {
     if (k !== '.') fill(c, x + inset + dx * scale, y + inset + dy * scale, scale, scale, PAL[k] ?? '#ff00ff')
   }))

@@ -5,9 +5,8 @@ import { apply } from './game'
 import { CURSOR, GOLD_INK, buttonW } from './pieces'
 import { openingGame } from './save'
 import { CLASSES, STATS_LINE, cardRect, isFirstGame, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
-import { textMask } from './pixelart'
 import { plainItem } from './items'
-import { CLOSE_BOX, WINDOW_W } from './window'
+import { CLOSE_BOX, HEAD_H, WINDOW_W, windowPixels } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
 
@@ -129,12 +128,16 @@ describe('the screen', () => {
     }
   })
 
-  test('is titled ASCII DUNGEON: its gold spans the words at twice the font\'s size, centered', async () => {
+  test('is titled ASCII DUNGEON in its title bar', async () => {
     const px = startPixels(onStart(), { cls: 'knight' })
-    const w = 2 * (textMask('ASCII DUNGEON')[0]?.length ?? 0)
-    const rows = px.slice(cardRect(0).y - 26, cardRect(0).y - 12)
-    const xs = rows.flatMap(row => row.flatMap((p, x) => (p === GOLD_INK ? [x] : [])))
-    expect([Math.min(...xs), Math.max(...xs) + 1]).toEqual([Math.floor((WINDOW_W - w) / 2), Math.floor((WINDOW_W - w) / 2) + w])
+    const bar = windowPixels({ title: 'ASCII DUNGEON', labels: [] }, []).px
+    expect(px.slice(0, HEAD_H)).toEqual(bar.slice(0, HEAD_H))
+  })
+
+  test('fits in 40 rows: every hero, a first game or one under way, with an heirloom or none', async () => {
+    const g0 = onStart()
+    const heirloom = { ...plainItem(g0, 'ring', 'rare'), name: 'Band of Old Days' }
+    for (const g of [g0, onStart({ xp: 3 }), onStart({ heirloom })]) for (const cls of CLASSES) expect(startHeight(g, { cls })).toBeLessThanOrEqual(80)
   })
 
   test('frames Help white on a first game only', async () => {
@@ -168,5 +171,11 @@ describe('the screen', () => {
     expect(last({ ...g0, heirloom: plate }, 'knight')).toBe('Heirloom: Plate of Old Days, worn from the start.')
     expect(last({ ...g0, heirloom: plate }, 'mage')).toBe('Heirloom: Plate of Old Days, in the bag from the start.')
     expect(last(g0, 'mage')).toBe(STATS_LINE)
+    // The heirloom takes the attributes' line: a veteran knows them.
+    expect(startOverlay({ ...g0, heirloom: ring }, { cls: 'mage' })[0]!.lines.map(l => l.map(r => r.text).join(''))).toEqual([
+      'Mage: Siphon, each kill restores a fifth of max HP.',
+      '+3 Insight, +1 Focus. Ash Staff, Tome of Sparks, Robe, Pointed Hat.',
+      'Heirloom: Band of Old Days, worn from the start.',
+    ])
   })
 })

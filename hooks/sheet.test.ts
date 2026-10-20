@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
 import { textMask } from './pixelart'
 import { RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
-import { CLOSE_BOX, TITLE_Y, WINDOW_W, tabRects } from './window'
+import { CLOSE_BOX, WINDOW_W, tabRects } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
 
@@ -40,8 +40,8 @@ describe('the character sheet', () => {
   })
 
   test('the talents\' tab is marked in gold while one is owed; the deep\'s while a fork waits', async () => {
-    // The mark: two gold pixels just right of the tab, on the label's top row.
-    const marked = (g: Game, i: number) => sheetPixels(g)[TITLE_Y]![TABS[i]!.x + TABS[i]!.w] === GOLD_INK
+    // The mark: two gold pixels at the tab's top right, above its label, clear of the next tab.
+    const marked = (g: Game, i: number) => sheetPixels(g)[TABS[i]!.y + 1]![TABS[i]!.x + TABS[i]!.w - 2] === GOLD_INK
     expect([marked(hero({ level: 10 }), 1), marked(hero({ level: 9 }), 1)]).toEqual([true, false])
     expect([marked(hero({ bossSlain: 60, deepest: 60 }), 2), marked(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }), 2)]).toEqual([true, false])
   })

@@ -59,7 +59,7 @@ export const tabRects = (tabs: readonly Tab[], y = 0): Rect[] => {
 }
 
 /** A row of tabs at y: the chosen one lit on a lighter ground with a gold rule under it, the others dim; a marked
- * tab's gold dot in the gap after its label. In the title bar, or a window's pages in its body. */
+ * tab's gold dot at its top right, above the end of its label. In the title bar, or a window's pages in its body. */
 export const tabRow = (c: Canvas, items: readonly Tab[], chosen: number, y = 0) => {
   tabRects(items, y).forEach((r, i) => {
     const t = items[i]!
@@ -69,7 +69,7 @@ export const tabRow = (c: Canvas, items: readonly Tab[], chosen: number, y = 0) 
       fill(c, r.x, r.y + r.h - 1, r.w, 1, GOLD_INK)
     }
     word(c, t.label, r.x + 2, r.y + TITLE_Y, isOn ? TITLE_INK : LABEL_INK)
-    if (t.isMarked === true) fill(c, r.x + r.w, r.y + TITLE_Y, 2, 2, GOLD_INK)
+    if (t.isMarked === true) fill(c, r.x + r.w - 2, r.y + 1, 2, 2, GOLD_INK)
   })
 }
 

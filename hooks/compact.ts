@@ -3,7 +3,8 @@
 // item is chosen, compared, opened and moved as in the full screen. Pure, like `bagui.ts`.
 import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
-import { BAG_H, BAG_W, RARITY_COLOR, SLOTS, canWear, classLabel, fitsAt } from './items'
+import { BAG_H, BAG_W, RARITY_COLOR, SLOTS, baseOf, canWear, classLabel, fitsAt } from './items'
+import { wrap } from './talk'
 import { canvas } from './canvas'
 import { CELL } from './icons'
 import { card } from './bagui'
@@ -33,10 +34,22 @@ const CLOSE = closeBoxOf(COMPACT_W)
 const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
 const beltRect = (i: number): Rect => beltSlotRect(BELT_X, WINDOW_TOP + BELT_Y, i)
 
-const listLines = (g: Game): Run[][] => SLOTS.flatMap(slot => {
-  const worn = g.gear[slot]
-  return [[{ text: SLOT_WORD[slot], dim: true }], worn === undefined ? [{ text: '-', dim: true }] : [{ text: worn.name, color: RARITY_COLOR[worn.rarity] }]]
-})
+/** A row of the worn list holds this many characters: the box's width less its frame and a cell of room each side. */
+const LIST_ROW = LIST.w - 4
+
+/**
+ * A slot's two rows: its name, then what is worn there; a worn name too long for a row takes both rows, broken at its
+ * spaces, and one too long for both shows as its base's name. The bag's card says the whole.
+ */
+const slotLines = (slot: Slot, worn: Item | undefined): Run[][] => {
+  if (worn === undefined) return [[{ text: SLOT_WORD[slot], dim: true }], [{ text: '-', dim: true }]]
+  const name = (text: string): Run[] => [{ text, color: RARITY_COLOR[worn.rarity] }]
+  if (worn.name.length <= LIST_ROW) return [[{ text: SLOT_WORD[slot], dim: true }], name(worn.name)]
+  const rows = wrap([name(worn.name)], LIST_ROW)
+  return rows.length <= 2 ? rows : [[{ text: SLOT_WORD[slot], dim: true }], name(baseOf(worn.base)?.name ?? worn.name.slice(0, LIST_ROW))]
+}
+
+const listLines = (g: Game): Run[][] => SLOTS.flatMap(slot => slotLines(slot, g.gear[slot]))
 
 const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
   canWear(g, item) ? [{ text: 'e', color: INK.gold, bold: true }, { text: ' Equip' }] : [{ text: 'e Equip', dim: true }, { text: `  ${classLabel(item)}`, color: OFF_CLASS }],

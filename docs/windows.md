@@ -133,7 +133,7 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 
 ## The compact inventory
 
-- A pane 80 to 104 columns wide cannot hold the worn slots beside the bag. There the bag and the belt are pixels as in the full screen and what is worn is a text list beside them, two rows a slot; a click on a worn row takes it off. Bag items are chosen, compared, opened and dragged as in the full screen; there is no drag onto the list (Equip is in the menu).
+- A pane 80 to 104 columns wide cannot hold the worn slots beside the bag. There the bag and the belt are pixels as in the full screen and what is worn is a text list beside them, two rows a slot: the slot's name, then the piece; a name too long for a row takes both rows, and one too long for both shows as its base's name (`slotLines`). A click on a worn row takes it off. Bag items are chosen, compared, opened and dragged as in the full screen; there is no drag onto the list (Equip is in the menu).
 - The window takes its width (`windowPixels`, `coverage`, `place` and `cardWithMenu` all take one); the gold moves clear of the title when the usual spot is too near it.
 
 ## The merchant, the smith, the bag: undoing and keeping

@@ -28,6 +28,18 @@ describe('the compact inventory', () => {
     expect(list[list.indexOf('Ring') + 1]).toBe('-')
   })
 
+  test('a worn name too long for a row takes both of its slot\'s rows; too long for both, its base\'s name shows', async () => {
+    const g = knight()
+    const boots = { ...plainItem(g, 'boots', 'rare'), name: 'Refactored Leather Boots of Fast Feedback' }
+    const ring = { ...plainItem(g, 'ring', 'legendary'), name: 'Band of the Endless Loop' }
+    const worn = { ...g, gear: { ...g.gear, boots, ring } }
+    const list = compactOverlay(worn, BAG_UI_IDLE)[0]!
+    const rows = list.lines.map(l => l.map(r => r.text).join(''))
+    const of = (slot: (typeof SLOTS)[number]) => rows.slice(SLOTS.indexOf(slot) * 2, SLOTS.indexOf(slot) * 2 + 2)
+    expect([of('weapon'), of('boots'), of('ring')]).toEqual([['Weapon', 'Short Sword'], ['Boots', 'Leather Boots'], ['Band of the', 'Endless Loop']])
+    expect(rows.filter(r => r.length > list.w - 4)).toEqual([])
+  })
+
   test('a click on a worn row takes that piece off; on an empty slot\'s, nothing', async () => {
     const g = knight()
     const list = compactOverlay(g, BAG_UI_IDLE)[0]!

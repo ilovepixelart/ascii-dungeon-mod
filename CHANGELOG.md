@@ -26,6 +26,9 @@ release may change behaviour.
   earlier ones out and the top row could start part way through a line; a word longer than a row was cut. It now shows
   the newest lines whole, as many as its 30 rows hold, under a row saying how many earlier ones do not fit, and wraps a
   long word.
+- The compact inventory (a pane 80 to 104 columns wide) cut a worn piece's name at 16 characters, which most rolled
+  names pass ("Refactored Leath"). A name too long for a row now takes both of its slot's rows, and one too long for
+  both shows as its base's name ("Leather Boots"), in its tier's color.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

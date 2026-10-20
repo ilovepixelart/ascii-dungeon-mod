@@ -91,6 +91,27 @@ describe('the floor, at its edges', () => {
     expect(after.log.some(l => l.endsWith('it waits by the portal in the dungeon.'))).toBe(true)
   })
 
+  test('that cache, room made, is picked up stepping back through the portal, and by an answer finished in town', async () => {
+    const down = { ...plainHero(5), ...arrive(5, 4), depth: 4, deepest: 4 }
+    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring')) }
+    const earned = { ...apply(inTown, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' }), bag: [] }
+    const cache = earned.floor![0]!.item
+    const back = apply(earned, { kind: 'portal' })
+    expect([back.floor, back.bag.map(i => i.id)]).toEqual([[], [cache.id]])
+    const finished = apply(earned, { kind: 'descend' })
+    expect([finished.depth, finished.bag.map(i => i.id)]).toEqual([5, [cache.id]])
+    expect(finished.log).not.toContain('You leave an item on the floor behind you.')
+  })
+
+  test('an item lying under the hero, room made, goes down with an answer finished; with no room it is left, said', async () => {
+    const g = { ...plainHero(3), ...arrive(3, 3), depth: 3, deepest: 3 }
+    const lying = { x: g.x, y: g.y, item: plainItem({ nextId: 7201 }, 'ring') }
+    const finished = apply({ ...g, floor: [lying] }, { kind: 'descend' })
+    expect([finished.depth, finished.bag.map(i => i.id)]).toEqual([4, [lying.item.id]])
+    const full = apply({ ...g, floor: [lying], bag: fullBag() }, { kind: 'descend' })
+    expect([full.depth, full.log.includes('You leave an item on the floor behind you.')]).toEqual([4, true])
+  })
+
   test('a step onto a tile with two items lying on it picks up both, room allowing', async () => {
     const g = facing()
     const next = g.foe!

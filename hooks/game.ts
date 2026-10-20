@@ -668,10 +668,11 @@ const keepPrize = (g: Game, item: Item, at: Pos, said: (named: string) => string
 }
 
 /** Steps onto items lying on the floor: each picked up while there is room, said; what is left, said that it lies there. */
-const pickUpFloor = (g: Game) => {
+/** What lies on the hero's tile, into the bag as far as it fits; `isQuiet`, nothing said of what stays. */
+const pickUpFloor = (g: Game, isQuiet = false) => {
   for (const lying of (g.floor ?? []).filter(f => f.x === g.x && f.y === g.y)) {
     if (!stash(g, lying.item)) {
-      say(g, `The ${lying.item.name} lies here; your bag is still full.`)
+      if (!isQuiet) say(g, `The ${lying.item.name} lies here; your bag is still full.`)
       continue
     }
     g.floor = (g.floor ?? []).filter(f => f !== lying)
@@ -970,6 +971,8 @@ const descend = (g: Game) => {
     return
   }
   const fork = forkTier(g)
+  // What lies underfoot goes down too, room allowing: the tile a walk down starts from is never stepped onto.
+  pickUpFloor(g, true)
   const behind = g.floor?.length ?? 0
   if (behind > 0) say(g, `You leave ${behind === 1 ? 'an item' : `${behind} items`} on the floor behind you.`)
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
@@ -1211,6 +1214,8 @@ const descendAfterWalk = (g: Game) => {
 const walkDown = (g: Game) => {
   const level = levelOf(g)
   const path = g.foe === null && !same(g, level.stairs) ? bfs(level.tiles, g, level.stairs) : null
+  // The tile the walk starts from is on the way too.
+  if (path !== null) pickUpFloor(g, true)
   if (path !== null && !walkWay(g, path, false)) return
   descendAfterWalk(g)
 }
@@ -1346,6 +1351,8 @@ const leaveTown = (g: Game) => {
   if (TOWN_PANELS.has(g.panel)) g.panel = 'none'
   Object.assign(g, { where: 'dungeon', ...(g.portal ?? levelOf(g).start), portal: null, mended: 0, lastSold: null, reforgedFrom: null })
   say(g, 'You step back through the portal.')
+  // Back on the tile, as a step onto it: a cache earned in town lies here.
+  pickUpFloor(g)
 }
 
 const walkTown = (g: Game, path: readonly Pos[]) => {

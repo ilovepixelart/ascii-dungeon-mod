@@ -14,6 +14,10 @@ release may change behaviour.
   where the two met, the hero saw only the smaller room, the rest of the arena dark and drawn without its walls, a foe
   beside the hero included; standing in the arena, the smaller room stayed dark. Each now shows the other whole. The
   levels are as they were.
+- A cache earned in town with the bag and the stash full waits by the portal on the depth below, but stepping back
+  through the portal onto it did not pick it up, and an answer finished in town walked down from that tile without it:
+  the cache was lost. The same befell an item lying under the hero when a walk down began. Arriving on a tile and
+  starting a walk down now pick up what lies there, room allowing.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

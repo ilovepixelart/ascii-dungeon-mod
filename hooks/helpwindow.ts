@@ -5,12 +5,14 @@ import type { Run } from './game'
 import { MARK, mark } from './hud'
 import { canvas } from './canvas'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox } from './window'
 
 const CHROME: Chrome = { title: 'HOW IT PLAYS' }
 const top = WINDOW_TOP
-const HEAD = 'YOUR CODING PLAYS THE HERO'
+const HEAD = 'Your coding plays the hero.'
+/** The head and the row of room under it, above the rules. */
+const HEAD_ROWS = 2
 const YOURS = 'You pick the gear and the talents, and set the orders.'
 /** Each rule takes three rows of the box: what happens, what it comes to, a row of room. */
 const RULE_ROWS = 3
@@ -27,14 +29,16 @@ export const HELP_ROWS: readonly { icon: keyof typeof MARK; when: string; does: 
   { icon: 'stairs', when: 'An answer finished', does: 'The stairs down' },
 ]
 
-/** The box under the head, in cells: each rule, what happens bold (green for the work it rewards) over what it comes
- * to, then what is the player's own. */
+/** The box, in cells: the head, each rule, what happens bold (green for the work it rewards) over what it comes to,
+ * then what is the player's own. */
 export const helpOverlay = (): OverlayBox[] => {
   const lines: Run[][] = [
+    [{ text: HEAD, bold: true, color: INK.gold }],
+    [],
     ...HELP_ROWS.flatMap(r => [[{ text: r.when, bold: true, ...(r.work === true ? { color: INK.good } : {}) }], [{ text: r.does, dim: true }], []]),
     [{ text: YOURS, dim: true }],
   ]
-  return [{ role: 'about', x: 2, y: top / 2 + 6, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines, pad: ICON_PAD }]
+  return [{ role: 'about', x: 2, y: top / 2 + 1, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines, pad: ICON_PAD }]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -43,14 +47,13 @@ export const helpHeight = () => {
   return 2 * (box.y + box.h) + 2
 }
 
-/** The window's pixels: title bar, the head, the box, each rule's icon beside its first line. */
+/** The window's pixels: title bar, the box, each rule's icon beside its first line. */
 export const helpPixels = (): string[][] => {
   const body = canvas(WINDOW_W, helpHeight() - top)
-  word(body, HEAD, 3, 3, INK.gold)
   const c = windowPixels(CHROME, body.px)
   const box = helpOverlay()[0]!
   drawBox(c, box)
-  HELP_ROWS.forEach((r, i) => mark(c, MARK[r.icon], box.x + 3, 2 * (box.y + 1 + i * RULE_ROWS)))
+  HELP_ROWS.forEach((r, i) => mark(c, MARK[r.icon], box.x + 3, 2 * (box.y + 1 + HEAD_ROWS + i * RULE_ROWS)))
   return c.px
 }
 

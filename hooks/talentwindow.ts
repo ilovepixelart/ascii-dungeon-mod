@@ -4,17 +4,16 @@
 // the click layer reports whole gestures, this decides the window's next state and the game actions they make.
 import type { Game, Talent } from '../types'
 import type { Action, Run } from './game'
-import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
+import { TALENTS, TALENT_EVERY, offer } from './talents'
 import { button, buttonW } from './pieces'
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
-import { asIs, bevelCard, flatCard, gem, recede, ribbon, sparkles } from './ui/kit'
+import { asIs, bevelCard, gem, recede, ribbon, sparkles } from './ui/kit'
 import type { Tone } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 import type { FamilyName } from './ui/tokens'
 import { heroChrome, heroTabAt } from './herotabs'
-import { wrap } from './recapwindow'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, drawable, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'TALENT' }
@@ -58,7 +57,7 @@ export const laterRect = (): Rect => {
 /** The box under the buttons, in cells: the chosen talent's line. */
 export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
   const offered = offer(g)
-  if (offered.length === 0) return []
+  if (offered.length === 0) return [takenBox(g)]
   const t = offered[chosenOf(g, ui)]!
   const lines: Run[][] = [[{ text: `${TALENTS[t].name}: `, bold: true }, { text: TALENTS[t].does }]]
   return [{ role: 'about', x: 2, y: Math.floor((takeRect().y + 11 + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
@@ -105,73 +104,34 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
   for (const b of talentOverlay(g, ui)) drawBox(c, b)
   return c.px
 }
-const PAD = 3
-const LINE = 7
-/** A card's text: its name beside the number key, what it does under both. */
-const NAME_X = PAD + 16
-const TEXT_X = PAD + 3
-const TEXT_W = WINDOW_W - 2 * PAD - 6
-
-export type TalentLine = { text: string; x: number; y: number; ink: string }
-type Card = { talent: Talent; rect: Rect; lines: string[] }
-
-const inkOf = (t: Talent) => (TALENTS[t].work === true ? INK.good : INK.text)
-
-/** Where everything goes, in window pixels: the head, a card each offered talent, or the list of those taken. */
-const layout = (g: Game) => {
-  const offered = offer(g)
-  let y = top + 11
-  const cards: Card[] = offered.map(talent => {
-    const lines = wrap(drawable(TALENTS[talent].does.toUpperCase()), TEXT_W)
-    const rect = { x: PAD, y, w: WINDOW_W - 2 * PAD, h: 15 + lines.length * LINE + 1 }
-    y += rect.h + 3
-    return { talent, rect, lines }
-  })
-  const taken = offered.length > 0 ? [] : (g.talents ?? [])
-  const takenY = y
-  y += taken.length * LINE
-  // Even, so the window ends on a whole cell.
-  return { offered, cards, taken, takenY, height: Math.ceil((y + LINE + 1) / 2) * 2 }
-}
-
-/** What the head says: the level that earned the talent, or the next level that will, or that all are taken. */
-const headOf = (g: Game) => {
-  const taken = g.talents?.length ?? 0
-  if (owed(g) > 0) return `LEVEL ${TALENT_EVERY * (taken + 1)}  CHOOSE ONE`
-  return taken === Object.keys(TALENTS).length ? 'EVERY TALENT TAKEN' : `NEXT AT LEVEL ${TALENT_EVERY * (taken + 1)}`
-}
-
-/** The lines the window says, where (window pixels) and in what ink. */
-export const talentLines = (g: Game): TalentLine[] => {
-  const l = layout(g)
-  return [
-    { text: headOf(g), x: PAD, y: top + 3, ink: owed(g) > 0 ? INK.gold : INK.dim },
-    ...l.cards.flatMap(c => [
-      { text: TALENTS[c.talent].name.toUpperCase(), x: NAME_X, y: c.rect.y + 5, ink: inkOf(c.talent) },
-      ...c.lines.map((text, i) => ({ text, x: TEXT_X, y: c.rect.y + 15 + i * LINE, ink: INK.dim })),
-    ]),
-    ...l.taken.map((t, i) => ({ text: TALENTS[t].name.toUpperCase(), x: PAD, y: l.takenY + i * LINE, ink: inkOf(t) })),
-    ...(l.cards.length > 0 ? [{ text: 'CLICK ONE TO TAKE IT', x: PAD, y: l.height - LINE - 1, ink: INK.dim }] : []),
+/** With none owed, the box under the tabs, in cells: when the next talent comes, then each talent taken and what it
+ * does, coding's own in green. */
+const takenBox = (g: Game): OverlayBox => {
+  const taken = g.talents ?? []
+  const head = taken.length === Object.keys(TALENTS).length ? 'Every talent is taken.' : `The next talent comes at level ${TALENT_EVERY * (taken.length + 1)}.`
+  const lines: Run[][] = [
+    [{ text: head, bold: true }],
+    ...taken.map(t => [{ text: `${TALENTS[t].name}: `, bold: true, ...(TALENTS[t].work === true ? { color: INK.good } : {}) }, { text: TALENTS[t].does, dim: true }]),
   ]
+  return { role: 'about', x: 2, y: top / 2 + 1, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }
 }
 
 /** The window's height in pixels, title bar and all. */
-export const talentHeight = (g: Game, ui: TalentUi = TALENT_UI) => (offer(g).length > 0 ? offerHeight(g, ui) : layout(g).height)
+export const talentHeight = (g: Game, ui: TalentUi = TALENT_UI) => {
+  if (offer(g).length > 0) return offerHeight(g, ui)
+  const box = takenBox(g)
+  return 2 * (box.y + box.h) + 2
+}
 
 /** Each offered talent's card, in window pixels: what a click on it covers. */
 export const talentCards = (g: Game): { talent: Talent; rect: Rect }[] => offer(g).map((talent, i) => ({ talent, rect: cardRect(i) }))
 
-/** The window's pixels: the offer as cards, or with none owed the talents taken. */
+/** The window's pixels: the offer as cards, or with none owed the box of the talents taken. */
 export const talentPixels = (g: Game, ui: TalentUi = TALENT_UI): string[][] => {
   if (offer(g).length > 0) return offerPixels(g, ui)
-  const l = layout(g)
-  const body = canvas(WINDOW_W, l.height - top)
-  l.cards.forEach((c, i) => {
-    flatCard(body, { ...c.rect, y: c.rect.y - top }, false)
-    button(body, String(i + 1), '', c.rect.x + 2, c.rect.y - top + 2, 'ready')
-  })
-  for (const line of talentLines(g)) word(body, line.text, line.x, line.y - top, line.ink)
-  return windowPixels(heroChrome(g, 'talent'), body.px).px
+  const c = windowPixels(heroChrome(g, 'talent'), canvas(WINDOW_W, talentHeight(g) - top).px)
+  drawBox(c, takenBox(g))
+  return c.px
 }
 
 type Outcome = { ui: TalentUi; actions: Action[] }

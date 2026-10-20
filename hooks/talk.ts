@@ -8,11 +8,11 @@ import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
 import type { Theme } from './map'
-import { BUTTON_H, CURSOR, GOLD_INK, PORTRAIT, barLabel, button, buttonW, flatBar, portrait } from './pieces'
+import { BUTTON_H, PORTRAIT, barLabel, button, buttonW, flatBar, portrait } from './pieces'
 import type { ButtonState } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
-import { canvas, digits, fill, frame } from './canvas'
+import { canvas, digits } from './canvas'
 import { RARITY_NAME, SLOTS } from './items'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -34,8 +34,6 @@ const CHROME: Readonly<Record<Speaker, (g: Game) => Chrome>> = {
 /** What each fortune does, exactly, for the mystic's window and the text one. */
 export const FORTUNE_NAME: Readonly<Record<NonNullable<Game['fortune']>['kind'], string>> = { luck: 'Luck: +15 crit chance', riches: 'Riches: half again the gold of a kill', insight: 'Insight: half again the XP of a kill' }
 const FORTUNES = ['luck', 'riches', 'insight'] as const
-/** Each fortune's row in pixels: its name, and what it does in the pixel font's few signs. */
-const FORTUNE_ROW: Readonly<Record<(typeof FORTUNES)[number], readonly [string, string]>> = { luck: ['LUCK', '+15 CRIT'], riches: ['RICHES', '+1/2 GOLD'], insight: ['INSIGHT', '+1/2 XP'] }
 
 /** The tier a trade-in gives for three of a tier. */
 const NEXT_TIER: Readonly<Partial<Record<Rarity, Rarity>>> = { common: 'uncommon', uncommon: 'rare', rare: 'epic' }
@@ -64,10 +62,14 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
     if (q.have >= q.need) return [said('"Make room in your bag for your reward, then claim it."'), pays]
     return [said(`"${(q.have === 0 ? ASK : STANDING)[q.kind](q)}"`), pays]
   },
-  mystic: g =>
-    g.fortune !== null ? [said(`"${FORTUNE_SAID[g.fortune.kind]}, until you change depth."`), aside('One fortune at a time.')]
-    : g.gold >= fortuneCost(g) ? [said('"The cards favor those who pay for them."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)]
-    : [said('"Come back when your purse is heavier."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)],
+  mystic: g => {
+    // The three fortunes under her words, the one in force marked.
+    const fortunes = FORTUNES.map(kind => (g.fortune?.kind === kind ? [{ text: '> ', color: INK.gold, bold: true }, { text: FORTUNE_NAME[kind], color: INK.gold }] : [{ text: '  ' }, { text: FORTUNE_NAME[kind], dim: true }]))
+    const words = g.fortune !== null ? [said(`"${FORTUNE_SAID[g.fortune.kind]}, until you change depth."`), aside('One fortune at a time.')]
+      : g.gold >= fortuneCost(g) ? [said('"The cards favor those who pay for them."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)]
+      : [said('"Come back when your purse is heavier."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)]
+    return [...words, ...fortunes]
+  },
   guard: g => {
     const three = tradeInOf(g)
     const trade = aside(three.length === 3
@@ -112,11 +114,10 @@ export const talkAction = (g: Game, who: Speaker) => ACT[who](g)
 const PAD = 3
 const SIDE_X = PAD + PORTRAIT + 4
 const WORDS_W = WINDOW_W - SIDE_X - 2
-const FORTUNE_ROW_H = 9
 
 /** Words wrapped to the box's width (two cells of frame and padding each side), each run keeping its look. */
 export const wrap = (lines: Run[][], width: number): Run[][] =>
-  lines.flatMap(line => line.flatMap(run => {
+  lines.flatMap(line => line.reduce((n, run) => n + run.text.length, 0) <= width ? [line] : line.flatMap(run => {
     const out: Run[][] = []
     let rest = run.text
     while (rest.length > width) {
@@ -140,11 +141,10 @@ const layout = (g: Game, who: Speaker) => {
   const buttonY = statusY + (hasStatus ? 8 : 0)
   const buttonRect: Rect | undefined = act === undefined ? undefined : { x: SIDE_X, y: buttonY, w: buttonW(act.key, act.label, act.cost), h: BUTTON_H }
   const sideEnd = buttonRect !== undefined ? buttonRect.y + BUTTON_H : hasStatus ? statusY + 6 : (box.y + box.h) * 2
-  const fortunesY = Math.max(top + 2 + PORTRAIT, sideEnd) + 4
-  const end = who === 'mystic' ? fortunesY + FORTUNES.length * (FORTUNE_ROW_H + 1) : Math.max(top + 2 + PORTRAIT, sideEnd)
+  const end = Math.max(top + 2 + PORTRAIT, sideEnd)
   // Even, so the window ends on a whole cell.
   const height = Math.ceil((end + 3) / 2) * 2
-  return { top, box, statusY, act, buttonRect, fortunesY, height }
+  return { top, box, statusY, act, buttonRect, height }
 }
 
 /** The window's height in pixels, for the pane to size its drawing. */
@@ -186,24 +186,7 @@ const STATUS: Readonly<Record<Speaker, (c: ReturnType<typeof canvas>, g: Game, y
   },
 }
 
-const FORTUNE_EDGE = SURFACE.cardEdge
-const FORTUNE_BG = SURFACE.card
-const FORTUNE_DIM = INK.dim
-
-/** The mystic's three fortunes, a row each: name and what it does; the one in force framed white, its name in gold. */
-const fortuneRows = (c: ReturnType<typeof canvas>, g: Game, y0: number) =>
-  FORTUNES.forEach((kind, i) => {
-    const y = y0 + i * (FORTUNE_ROW_H + 1)
-    const isOn = g.fortune?.kind === kind
-    fill(c, PAD, y, WINDOW_W - 2 * PAD, FORTUNE_ROW_H, FORTUNE_BG)
-    frame(c, PAD, y, WINDOW_W - 2 * PAD, FORTUNE_ROW_H, isOn ? CURSOR : FORTUNE_EDGE)
-    const [name, does] = FORTUNE_ROW[kind]
-    word(c, name, PAD + 3, y + 2, isOn ? GOLD_INK : INK.text)
-    const doesW = does.length * 4 - 1
-    word(c, does, WINDOW_W - PAD - 3 - doesW, y + 2, isOn ? INK.text : FORTUNE_DIM)
-  })
-
-/** The window's pixels: title bar, portrait, status, button, the mystic's fortunes, and the words' frame. */
+/** The window's pixels: title bar, portrait, status, button, and the words' frame. */
 export const talkPixels = (g: Game, who: Speaker): string[][] => {
   const l = layout(g, who)
   const body = canvas(WINDOW_W, l.height - l.top)
@@ -216,7 +199,6 @@ export const talkPixels = (g: Game, who: Speaker): string[][] => {
     flatBar(body, at.x, at.y - l.top, at.w, b.share, b.color, b.empty)
   }
   if (l.act !== undefined && l.buttonRect !== undefined) button(body, l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y - l.top, l.act.state, l.act.cost, l.act.canPay)
-  if (who === 'mystic') fortuneRows(body, g, l.fortunesY - l.top)
   const c = windowPixels(CHROME[who](g), body.px)
   drawBox(c, l.box)
   return c.px

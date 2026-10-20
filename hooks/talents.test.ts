@@ -8,7 +8,7 @@ import { killConsumable, slotOf } from './consumables'
 import { MAP_W, isFloor, roomAt, visibleFrom } from './map'
 import { visibleSet } from './panels'
 import { levelOf } from './world'
-import { familyOf, laterRect, takeRect, talentCards, talentGesture, talentHeight, talentLines, talentOverlay, talentPixels } from './talentwindow'
+import { familyOf, laterRect, takeRect, talentCards, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
 import { CLOSE_BOX } from './window'
 import type { Gesture } from './window'
 import { MAP_H } from './map'
@@ -250,12 +250,17 @@ describe('the talent window', () => {
     }
   })
 
-  test('with none owed, the talents taken and the level of the next; with all taken, says so', async () => {
+  test('with none owed, a box says when the next comes and each talent taken with what it does; with all taken, says so', async () => {
     const done = { ...g, level: 25, talents: ['grudge', 'haggler'] as Talent[] }
     expect(talentCards(done)).toEqual([])
-    expect(talentLines(done).map(l => l.text)).toEqual(['NEXT AT LEVEL 30', 'GRUDGE', 'HAGGLER'])
-    expect(talentLines({ ...g, level: 200, talents: ALL })[0]!.text).toBe('EVERY TALENT TAKEN')
-    expect(talentHeight({ ...g, level: 200, talents: ALL })).toBeLessThanOrEqual(MAP_H * PX)
+    const said = (x: Game) => talentOverlay(x, ui(0))[0]!.lines.map(l => l.map(r => r.text).join(''))
+    expect(said(done)).toEqual(['The next talent comes at level 30.', `Grudge: ${TALENTS.grudge.does}`, `Haggler: ${TALENTS.haggler.does}`])
+    const all = { ...g, level: 200, talents: ALL }
+    expect(said(all)[0]).toBe('Every talent is taken.')
+    // Coding's own talents are named in green.
+    expect(talentOverlay({ ...g, level: 15, talents: ['testDriven'] as Talent[] }, ui(0))[0]!.lines[1]![0]!.color).toBe('#3ccf4e')
+    expect(talentHeight(all)).toBeLessThanOrEqual(82)
+    expect(talentPixels(all).length).toBe(talentHeight(all))
   })
 })
 

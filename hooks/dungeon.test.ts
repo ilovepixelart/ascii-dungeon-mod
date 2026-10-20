@@ -1489,7 +1489,7 @@ test('on a wide pane the smith opens a pixel window on the first piece worn, its
   const [card] = await boxTexts(ui, 'forge-clicks')
   // A new knight's Short Sword: no gold to temper, a Common has nothing to reforge.
   expect(card?.[0]).toBe('Short Sword')
-  expect(card?.slice(-2)).toEqual(['Temper 60  not enough gold', 'Reforge a Common has no affixes'])
+  expect(card?.slice(-2)).toEqual(['Temper 60  ATK 2 > 3  not enough gold', 'Reforge a Common has no affixes'])
   said.length = 0
   await ui.press({ key: 'forge-temper' })
   expect(said).toEqual(['Not enough gold: tempering costs 60.'])

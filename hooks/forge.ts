@@ -7,10 +7,10 @@ import { keptChoice, reforgeCost } from './game'
 import { RARITY_COLOR, SLOTS, TEMPER_MAX, describe, temperCost, temperStat } from './items'
 import { WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, UNPAID_INK, button, buttonW } from './pieces'
+import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonW } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, fill, frame } from './canvas'
-import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect } from './window'
 import type { Pos } from './map'
 import { INK, SURFACE } from './ui/tokens'
@@ -40,15 +40,24 @@ const cost = (label: string, price: number | undefined, why: string | undefined)
     ? [{ text: `${label} `, dim: true }, { text: String(price), color: why === undefined ? INK.gold : OFF_CLASS }, ...(why === undefined ? [] : [{ text: `  ${why}`, color: OFF_CLASS }])]
     : [{ text: `${label} `, dim: true }, { text: why, color: OFF_CLASS }]
 
+/** Tempering's line: its price or why not, and the stat it raises, now and after one more. */
+const temperRuns = (g: Game, item: Item): Run[] => {
+  const stat = temperStat(item)
+  const now = item[stat]
+  const why = whyNotTemper(g, item)
+  if ((item.temper ?? 0) >= TEMPER_MAX) return [...cost('Temper', undefined, why), { text: `  ${stat.toUpperCase()} ${now}`, dim: true }]
+  const [label, price, ...rest] = cost('Temper', temperCost(item), why)
+  return [label!, price!, { text: `  ${stat.toUpperCase()} ${now} > ${now + 1}` }, ...rest]
+}
+
 /** The chosen piece's card: name, tier and stats, then what each job costs or why it cannot be done. */
 const workCard = (g: Game, item: Item): Run[][] => {
   const lines = card(g, item, undefined, false)
-  const isMaxed = (item.temper ?? 0) >= TEMPER_MAX
   const from = keptChoice(g)
   return [
     ...lines.slice(0, -1),
     ...(from !== undefined && from.item.id === item.id ? [[{ text: 'Before: ', dim: true }, { text: `${from.item.name}, ${describe(from.item)}`, color: RARITY_COLOR[from.item.rarity] }]] : []),
-    cost('Temper', isMaxed ? undefined : temperCost(item), whyNotTemper(g, item)),
+    temperRuns(g, item),
     cost('Reforge', reforgeCost(g), whyNotReforge(g, item)),
   ]
 }
@@ -56,7 +65,7 @@ const workCard = (g: Game, item: Item): Run[][] => {
 /** Whether the chosen piece's last reforge can be taken back: the old one is there to keep. */
 const canKeepOld = (g: Game, slot: Slot | undefined) => slot !== undefined && keptChoice(g)?.slot === slot
 
-/** Where things go, in window pixels: the card, the temper line, the two buttons. */
+/** Where things go, in window pixels: the card, the temper pips, the two buttons. */
 const layout = (g: Game, ui: ForgeUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
@@ -73,16 +82,13 @@ const layout = (g: Game, ui: ForgeUi) => {
 export const forgeHeight = (g: Game, ui: ForgeUi) => layout(g, ui).height
 export const forgeOverlay = (g: Game, ui: ForgeUi): OverlayBox[] => [layout(g, ui).box]
 
-/** The temper line: a pip a tempering, filled as far as done; then the stat now and after one more, or MAX. */
-const temperLine = (c: ReturnType<typeof canvas>, item: Item, y: number) => {
+/** The temper pips: one a tempering, filled as far as done. */
+const temperPips = (c: ReturnType<typeof canvas>, item: Item, y: number) => {
   const done = item.temper ?? 0
   for (let i = 0; i < TEMPER_MAX; i += 1) {
     frame(c, WORK_X + i * 5, y, 4, 4, i < done ? PIP_ON : PIP_OFF)
     if (i < done) fill(c, WORK_X + i * 5 + 1, y + 1, 2, 2, PIP_ON)
   }
-  const stat = temperStat(item)
-  const now = item[stat]
-  word(c, done >= TEMPER_MAX ? `${stat.toUpperCase()} ${now} MAX` : `${stat.toUpperCase()} ${now} > ${now + 1}`, WORK_X + TEMPER_MAX * 5 + 3, y, done >= TEMPER_MAX ? UNPAID_INK : INK.text)
 }
 
 const stateOf = (why: string | undefined): ButtonState => (why === undefined ? 'ready' : 'off')
@@ -98,7 +104,7 @@ export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
     frame(body, x - 2, y - 2, w + 4, h + 4, CURSOR)
   }
   if (l.item !== undefined) {
-    temperLine(body, l.item, l.temperY - WINDOW_TOP)
+    temperPips(body, l.item, l.temperY - WINDOW_TOP)
     button(body, 'T', 'TEMPER', l.temperAt.x, l.temperAt.y - WINDOW_TOP, stateOf(whyNotTemper(g, l.item)))
     button(body, 'R', 'REFORGE', l.reforgeAt.x, l.reforgeAt.y - WINDOW_TOP, stateOf(whyNotReforge(g, l.item)))
     if (l.keepAt !== undefined) button(body, 'K', 'KEEP OLD', l.keepAt.x, l.keepAt.y - WINDOW_TOP, 'ready')

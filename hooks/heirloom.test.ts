@@ -4,7 +4,7 @@ import type { Game, Item, Slot } from '../types'
 import { apply, whyNotRetire } from './game'
 import { plainHero } from './fixtures'
 import { BASES, LEGENDARIES, PREFIXES, RARITY_COLOR, SLOTS, SUFFIXES, heirloomOf, plainItem } from './items'
-import { retireBoxes, retireButtons, retireGesture, retireHeight, retireLines, retireOverlay, retirePixels } from './retirewindow'
+import { retireBoxes, retireButtons, retireGesture, retireHeight, retireOverlay, retirePixels } from './retirewindow'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { GOLD_INK } from './pieces'
@@ -135,16 +135,15 @@ describe('the retire window', () => {
   const said = (x: Game, ui: { slot: Slot | null }) => retireOverlay(x, ui)[0]!.lines.map(l => l.map(r => r.text).join(''))
 
   test('asks for the heirloom; the box names the chosen piece, what passing it down means and who the hero was', async () => {
-    expect(retireLines().map(l => l.text)).toEqual(['CHOOSE AN HEIRLOOM'])
-    expect(said(g, { slot: 'helm' })).toEqual(['Steel Helm of Fast Feedback', 'Every new hero starts wearing it, its power kept and its stats plain.', 'Level 14 Knight, deepest 12, 1 big boss.'])
-    expect(retireOverlay(g, { slot: 'helm' })[0]!.lines[0]![0]!.color).toBe(RARITY_COLOR[helm.rarity])
+    expect(said(g, { slot: 'helm' })).toEqual(['Choose an heirloom: Steel Helm of Fast Feedback', 'Every new hero starts wearing it, its power kept and its stats plain.', 'Level 14 Knight, deepest 12, 1 big boss.'])
+    expect(retireOverlay(g, { slot: 'helm' })[0]!.lines[0]![1]!).toMatchObject({ bold: true, color: RARITY_COLOR[helm.rarity] })
     expect(said({ ...g, bossSlain: 30 }, IDLE).at(-1)).toBe('Level 14 Knight, deepest 12, 3 big bosses.')
   })
 
   test('a box a worn piece; a click on one chooses it, and the first worn is chosen before any', async () => {
     const boxes = retireBoxes(g, IDLE)
     expect(boxes.map(b => b.slot)).toEqual(['weapon', 'helm'])
-    expect(said(g, IDLE)[0]).toBe(g.gear.weapon!.name)
+    expect(said(g, IDLE)[0]).toBe(`Choose an heirloom: ${g.gear.weapon!.name}`)
     expect(retireGesture(g, IDLE, tap({ x: boxes[1]!.x + 3, y: boxes[1]!.y + 4 }))).toEqual({ ui: { slot: 'helm' }, actions: [] })
   })
 

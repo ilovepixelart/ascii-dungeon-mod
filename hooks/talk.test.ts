@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { CURSOR, GOLD_INK } from './pieces'
+import { GOLD_INK } from './pieces'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { SPEAKERS, talkAction, talkGesture, talkHeight, talkOverlay, talkPixels, wrap } from './talk'
@@ -90,6 +90,15 @@ describe('what each says, from how the hero stands', () => {
 })
 
 describe('the button', () => {
+  test('the mystic names the three fortunes in her box, the one in force marked in gold', async () => {
+    const said = (g: Game) => talkOverlay(g, 'mystic')[0]!.lines.slice(-3)
+    const text = (l: { text: string }[]) => l.map(r => r.text).join('')
+    expect(said(hero()).map(text)).toEqual(['  Luck: +15 crit chance', '  Riches: half again the gold of a kill', '  Insight: half again the XP of a kill'])
+    const riches = said(hero({ fortune: { kind: 'riches', depth: 4 } }))
+    expect(text(riches[1]!)).toBe('> Riches: half again the gold of a kill')
+    expect(riches[1]![1]!.color).toBe('#ffd34d')
+  })
+
   test('the mystic\'s reads a fortune, only while none is in force and it can be paid for', async () => {
     expect(talkAction(hero({ gold: 60 }), 'mystic')).toMatchObject({ action: { kind: 'fortune' }, state: 'ready', cost: 60 })
     expect(talkAction(hero({ gold: 59 }), 'mystic')?.state).toBe('off')
@@ -136,17 +145,6 @@ describe('the window', () => {
       const box = talkOverlay(g, who)[0]!
       expect((box.y + box.h) * 2).toBeLessThanOrEqual(px.length)
     }
-  })
-
-  test('the mystic\'s fortune in force is framed white with its name in gold; the others are not', async () => {
-    const px = talkPixels(hero({ fortune: { kind: 'riches', depth: 4 } }), 'mystic')
-    const framed = px.map((row, y) => ({ y, white: row.slice(3, WINDOW_W - 3).every(p => p === CURSOR) })).filter(r => r.white)
-    // One row's frame, top and bottom edges.
-    expect(framed.length).toBe(2)
-    const none = talkPixels(hero(), 'mystic')
-    expect(none.some(row => row.slice(3, WINDOW_W - 3).every(p => p === CURSOR))).toBe(false)
-    const inGold = px.slice(framed[0]!.y, framed[1]!.y).some(row => row.slice(4, 40).includes(GOLD_INK))
-    expect(inGold).toBe(true)
   })
 })
 

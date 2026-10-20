@@ -73,12 +73,18 @@ const heroShots = (g: Game): Shot[] => {
     const offered = { ...g, level: 200, talents: all.filter((_, j) => j < i || j >= i + 3) }
     out.push(shot(`talent-${i / 3}`, talentPixels(offered), talentOverlay(offered, { chosen: 0 })))
   }
+  // Every talent taken: the list at its longest.
+  const allTaken = { ...g, level: 200, talents: all }
+  out.push(shot('talent-taken', talentPixels(allTaken), talentOverlay(allTaken, { chosen: 0 })))
   const pairs = new Map<string, Game>()
   for (let world = 1; pairs.size < 9 && world < 500; world += 1) {
     const at = { ...g, world, ...arrive(world, 60), deepest: 60, bossSlain: 60 }
     pairs.set(pairOf(world, 2).join('-'), at)
   }
   for (const [pair, at] of pairs) out.push(shot(`deep-${pair}`, deepPixels(at), deepOverlay(at)))
+  // Inside a tier, no fork waiting: the head and the tiers alone.
+  const inTier = { ...g, ...arrive(g.world, 97), deepest: 97, bossSlain: 90 }
+  out.push(shot('deep-tiers', deepPixels(inTier), deepOverlay(inTier)))
   const recapped = { ...g, depth: 9, level: 12, panel: 'recap' as const, recap: { calls: 42, depth: 3, level: 5, kills: 17, champions: 2, gold: 340, deaths: 1, tests: 6, commits: 2, pushes: 1, prs: 1, best: g.bag[0]! } }
   out.push(shot('recap', recapPixels(recapped), recapOverlay(recapped)))
   return out

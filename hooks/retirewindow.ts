@@ -117,3 +117,9 @@ export const retireGesture = (g: Game, ui: RetireUi, gesture: Gesture): { ui: Re
   if (r(l.back)) return { ui, actions: [{ kind: 'panel', panel: 'sheet' }] }
   return isInside(at, ...CLOSE_BOX) ? { ui, actions: [{ kind: 'panel', panel: 'retire' }] } : none
 }
+
+/** What a click acts on, in window pixels: the worn pieces not chosen, Retire once it can, and Back. */
+export const retireHot = (g: Game, ui: RetireUi): Rect[] => {
+  const l = layout(g, ui)
+  return [...l.boxes.filter(b => b.slot !== l.slot).map(b => ({ x: b.x, y: b.y, w: BOX_W, h: BOX_H })), ...(l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? [l.retire] : []), l.back]
+}

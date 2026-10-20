@@ -199,3 +199,12 @@ export const talentGesture = (g: Game, ui: TalentUi, gesture: Gesture): Outcome 
   if (inside(takeRect())) return { ui, actions: [{ kind: 'talent', talent: offered[chosen]! }] }
   return inside(laterRect()) || isInside(at, ...CLOSE_BOX) ? close : none
 }
+
+/** What a click acts on, in window pixels, as drawn: each card's face (the chosen one lifted), Take and Later; with
+ * none owed, nothing but the tabs. */
+export const talentHot = (g: Game, ui: TalentUi): Rect[] => {
+  if (offer(g).length === 0) return []
+  const chosen = chosenOf(g, ui)
+  const faces = offer(g).map((_, i) => ({ ...cardRect(i), y: top + CARD_Y - (i === chosen ? LIFT : 0), h: CARD_H }))
+  return [...faces, takeRect(), laterRect()]
+}

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { BG, canvas } from './canvas'
 import type { Canvas } from './canvas'
-import { bevelCard, flatCard, gem, recede, ribbon, sparkles } from './ui/kit'
+import { bevelCard, flatCard, gem, hoveredRect, lightUp, recede, ribbon, sparkles } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 
 const at = (c: Canvas, x: number, y: number) => c.px[y]![x]
@@ -60,5 +60,26 @@ describe('cards', () => {
   test('what is not chosen recedes a quarter and more into the dark', async () => {
     // White at 72%, the veil #0b0a0f at 28%: 255 * 0.72 + 11 * 0.28 = 186.7, + 10 * 0.28 = 186.4, + 15 * 0.28 = 187.8.
     expect(recede('#ffffff')).toBe('#bbbabc')
+  })
+})
+
+describe('the hover', () => {
+  test('is over the smallest clickable place holding the pointer; off them all, none', async () => {
+    const card = { x: 0, y: 0, w: 20, h: 20 }
+    const gem = { x: 5, y: 5, w: 3, h: 3 }
+    expect(hoveredRect([card, gem], { x: 6, y: 6 })).toEqual(gem)
+    expect(hoveredRect([card, gem], { x: 1, y: 1 })).toEqual(card)
+    expect(hoveredRect([card, gem], { x: 20, y: 1 })).toBeUndefined()
+  })
+
+  test('lights the outline half way to white, the inside a tenth of the way, and leaves the rest as it was', async () => {
+    const px = Array.from({ length: 6 }, () => Array<string>(6).fill('#000000'))
+    const lit = lightUp(px, { x: 1, y: 1, w: 4, h: 3 })
+    // #000000 half way to #ffffff: 127.5, rounded to 128.
+    expect([lit[1]![1], lit[3]![4], lit[2]![1], lit[1]![3]]).toEqual(Array(4).fill('#808080'))
+    // A tenth of 255 is 25.5, rounded to 26: #1a.
+    expect([lit[2]![2], lit[2]![3]]).toEqual(['#1a1a1a', '#1a1a1a'])
+    expect([lit[0]![0], lit[4]![1], lit[2]![5]]).toEqual(Array(3).fill('#000000'))
+    expect(px[1]![1]).toBe('#000000')
   })
 })

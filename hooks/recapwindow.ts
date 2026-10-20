@@ -117,3 +117,6 @@ export const recapGesture = (g: Game, gesture: Gesture): Action[] => {
   const r = playRect(recapOf(g))
   return isInside(at, r.x, r.y, r.w, r.h) || isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'recap' }] : []
 }
+
+/** What a click acts on, in window pixels: Play on. */
+export const recapHot = (g: Game): Rect[] => [playRect(recapOf(g))]

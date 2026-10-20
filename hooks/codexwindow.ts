@@ -155,3 +155,6 @@ export const codexGesture = (g: Game, ui: CodexUi, gesture: Gesture): CodexOutco
   if (card !== undefined && isInside(at, card.x, card.y, card.w, card.h)) return { ...none, isCard: true }
   return isInside(at, ...CLOSE_BOX) ? { ...none, actions: [{ kind: 'panel', panel: 'codex' }] } : none
 }
+
+/** What a click acts on, in window pixels: the page not shown, and on Finds Card. */
+export const codexHot = (ui: CodexUi): Rect[] => [...tabRects(PAGES, top).filter((_, i) => i !== pageIndex(ui)), ...(ui.page === 'finds' ? [CARD_RECT] : [])]

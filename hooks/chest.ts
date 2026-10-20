@@ -9,7 +9,7 @@ import { BAG_H, BAG_W, RARITY_COLOR, fit } from './items'
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, cellBox, itemGrid } from './pieces'
+import { CURSOR, OFF_CLASS, cellBox, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 
@@ -128,3 +128,6 @@ export const nextStored = (g: Game, ui: ChestUi): ChestUi => {
   const at = g.stashed.findIndex(i => i.id === ui.stored)
   return { stored: g.stashed[(at + 1) % g.stashed.length]!.id, menu: false }
 }
+
+/** What a click acts on, in window pixels: the bag's items. */
+export const chestHot = (g: Game): Rect[] => g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))

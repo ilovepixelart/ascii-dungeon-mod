@@ -5,7 +5,7 @@ import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { keptChoice, reforgeCost } from './game'
 import { RARITY_COLOR, SLOTS, TEMPER_MAX, describe, temperCost, temperStat } from './items'
-import { WORN_SLOTS, wornSlots } from './inventory'
+import { WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
 import { BUTTON_H, CURSOR, OFF_CLASS, UNPAID_INK, button, buttonW } from './pieces'
 import type { ButtonState } from './pieces'
@@ -137,3 +137,13 @@ export const nextWorn = (g: Game, ui: ForgeUi): ForgeUi => {
   return { slot: all[(at + 1) % all.length] ?? null }
 }
 
+/** What a click acts on, in window pixels: the worn pieces not chosen, and the jobs that can be done. */
+export const forgeHot = (g: Game, ui: ForgeUi): Rect[] => {
+  const l = layout(g, ui)
+  const jobs = l.item === undefined ? [] : [
+    ...(whyNotTemper(g, l.item) === undefined ? [l.temperAt] : []),
+    ...(whyNotReforge(g, l.item) === undefined ? [l.reforgeAt] : []),
+    ...(l.keepAt === undefined ? [] : [l.keepAt]),
+  ]
+  return [...wornOutlines({ ...g, gear: Object.fromEntries(Object.entries(g.gear).filter(([s]) => s !== l.slot)) }, WINDOW_TOP), ...jobs]
+}

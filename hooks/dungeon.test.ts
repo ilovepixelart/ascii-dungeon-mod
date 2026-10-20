@@ -22,7 +22,7 @@ import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
 import { retireButtons } from './retirewindow'
 import { offer } from './talents'
-import { talentCards } from './talentwindow'
+import { takeRect, talentCards } from './talentwindow'
 import { pairOf } from './deep'
 import { deepCards } from './deepwindow'
 import { arrive } from './world'
@@ -453,6 +453,30 @@ test('on a wide pane a session with a talent owed opens on the cards; a card cli
   expect((kept.get('save') as Game).talents).toEqual([card.talent])
   // The only one owed taken, the window closes.
   expect((kept.get('save') as Game).panel).toBe('none')
+  await ui.unmount()
+})
+
+test('the pointer over Take lights its outline; moved off it, or out of the window, the window is as it was', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const cells = async () => (await ui.find({ type: 'Raster', key: 'talent' }))?.props.cells
+  const move = (x: number, y: number) => ui.pointer({ type: 'move', x, y, in: 'talent-clicks' } as never)
+  const idle = await cells()
+  const take = takeRect()
+  await move(take.x + 4, Math.floor((take.y + 5) / 2))
+  const lit = await cells()
+  expect(lit).not.toEqual(idle)
+  // Nothing clickable under it: as it was.
+  await move(50, 8)
+  expect(await cells()).toEqual(idle)
+  await move(take.x + 4, Math.floor((take.y + 5) / 2))
+  expect(await cells()).toEqual(lit)
+  await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'talent-clicks' } as never)
+  expect(await cells()).toEqual(idle)
   await ui.unmount()
 })
 

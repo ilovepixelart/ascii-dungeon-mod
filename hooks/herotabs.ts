@@ -6,7 +6,7 @@ import type { Action } from './game'
 import { owed } from './talents'
 import { isForkOpen } from './deep'
 import { isInside, tabRects } from './window'
-import type { Chrome, Tab } from './window'
+import type { Chrome, Rect, Tab } from './window'
 import type { Pos } from './map'
 
 type HeroPanel = Extract<Panel, 'sheet' | 'talent' | 'deep' | 'codex'>
@@ -32,3 +32,6 @@ export const heroTabAt = (g: Game, panel: HeroPanel, at: Pos): Action[] | undefi
   if (i < 0) return undefined
   return TABS[i]!.panel === panel ? [] : [{ kind: 'panel', panel: TABS[i]!.panel }]
 }
+
+/** The hero's tabs other than the one shown, in window pixels: what a click there opens. */
+export const heroTabsHot = (g: Game, panel: HeroPanel): Rect[] => tabRects(tabsOf(g)).filter((_, i) => TABS[i]!.panel !== panel)

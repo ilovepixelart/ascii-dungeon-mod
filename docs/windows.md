@@ -6,7 +6,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 |---|---|
 | `hooks/window.ts` | the frame (title or a row of tabs, gold when the window passes it, close box, the body below `WINDOW_TOP`); tabs (`tabRow`, `tabRects`), in the title bar or for a window's pages; text boxes (`boxShape`, `drawBox`); where they go (`coverage`, `place`); gestures (`Gesture`, `pixel`, `CLICK_SLOP`) |
 | `hooks/pieces.ts` | what windows are built from: an item in its tier box with its marks (`drawItem`), an item grid (`itemGrid`, `cellBox`), the belt |
-| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; flat and beveled cards with their ribbon, gem and sparkles. `tools/ui.ts` draws them all on one sheet, `tools/windows.ts` each window with its text boxes written in, for review |
+| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; flat and beveled cards with their ribbon, gem and sparkles; the hover (`hoveredRect`, `lightUp`). `tools/ui.ts` draws them all on one sheet, `tools/windows.ts` each window with its text boxes written in, for review |
 | `hooks/windowclient.ts` | the click layer: writes the text boxes it is handed and reports whole gestures |
 | `hooks/inventory.ts`, `hooks/bagui.ts` | the inventory (see `inventory.md`) |
 | `hooks/shop.ts` | the merchant |
@@ -35,6 +35,7 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 - A title bar with the close box, no section labels under it. The hero's windows share one bar of tabs (`hooks/herotabs.ts`); a window with pages shows them as tabs at the top of its body.
 - Sentences go in a text box, full width under the window's content, or beside a portrait; the pixel font is for titles, tabs, button keys and numbers.
 - Choosing among cards or pieces: a click chooses (framed white), a second click or the window's main button acts. The main button is framed white (`armed`): Take, Start, Retire, Wake, Play on. A row of buttons under the content is centered.
+- The hover: the click layer reports where the pointer is while no button is held (`windowclient.ts`), and the window lights what it is over, its outline half way to white and its inside a tenth (`lightUp` in `hooks/ui/kit.ts`). Each window lists what a click acts on as drawn (`startHot`, `talentHot` and the like, the hero's tabs from `heroTabsHot`), what cannot act now left out; the pane adds the close box and redraws only when what is lit changes (`litWindow` in `register.tsx`).
 - Close is `c` in every window, and the close box. Later where something stays owed (talents), Back only where a window returns to another (the start screen, retire).
 - The keys under a window fit one row: a key's label is short, the detail in the window.
 

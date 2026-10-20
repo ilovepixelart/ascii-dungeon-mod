@@ -221,3 +221,9 @@ export const talkGesture = (g: Game, who: Speaker, gesture: Gesture): Action[] =
   if (r !== undefined && l.act !== undefined && l.act.state !== 'off' && isInside(at, r.x, r.y, r.w, r.h)) return [l.act.action]
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: who }] : []
 }
+
+/** What a click acts on, in window pixels: the button while it can act. */
+export const talkHot = (g: Game, who: Speaker): Rect[] => {
+  const l = layout(g, who)
+  return l.buttonRect !== undefined && l.act !== undefined && l.act.state !== 'off' ? [l.buttonRect] : []
+}

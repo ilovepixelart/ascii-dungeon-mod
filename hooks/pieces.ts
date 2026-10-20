@@ -73,6 +73,12 @@ export const gridLines = (c: Canvas, x: number, y: number, cols: number, rows: n
 export const cellBox = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect =>
   ({ x: x + item.x * CELL + 1, y: y + item.y * CELL + 1, w: item.w * CELL - 1, h: item.h * CELL - 1 })
 
+/** An item lying in a grid at x, y as the hover lights it: its box and the frame round it. */
+export const itemOutline = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect => {
+  const b = cellBox(item, x, y)
+  return { x: b.x - 1, y: b.y - 1, w: b.w + 2, h: b.h + 2 }
+}
+
 /** An item grid at x, y with its items laid in it. */
 export const itemGrid = (c: Canvas, g: Game, items: readonly Item[], x: number, y: number, cols: number, rows: number) => {
   gridLines(c, x, y, cols, rows)

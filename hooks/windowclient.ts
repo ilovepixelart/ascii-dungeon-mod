@@ -1,4 +1,5 @@
-// A window's click layer: draws the text boxes the hooks lay out over its pixels, and reports whole gestures.
+// A window's click layer: draws the text boxes the hooks lay out over its pixels, reports whole gestures, and where
+// the pointer is while no button is held (a hover; none once it leaves), for the window to light what it is over.
 // A press is held here, so a release always carries where it started: posts are one a frame, and a later one in the
 // same frame replaces an undelivered one, which a lone 'down' could not survive.
 import type { ClientModule } from 'claude-code'
@@ -21,7 +22,8 @@ const windowLayer: ClientModule<Props, Held> = (props, surface) => {
     else if (e.type === 'up' && held !== null) {
       surface.post({ type: 'release', from: held.from, at, button: held.button })
       surface.setState(null)
-    }
+    } else if (e.type === 'move' && e.button === undefined) surface.post({ type: 'hover', at })
+    else if (e.type === 'leave') surface.post({ type: 'hover', at: null })
   })
   return Box({
     width: props.columns,

@@ -76,3 +76,6 @@ export const deathGesture = (g: Game, gesture: Gesture): Action[] => {
   const r = layout(g, g.fallen).wake
   return isInside(at, r.x, r.y, r.w, r.h) || isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'death' }] : []
 }
+
+/** What a click acts on, in window pixels: Wake. */
+export const deathHot = (g: Game): Rect[] => (g.fallen === undefined ? [] : [layout(g, g.fallen).wake])

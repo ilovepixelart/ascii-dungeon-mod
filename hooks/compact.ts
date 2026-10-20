@@ -9,7 +9,7 @@ import { CELL } from './icons'
 import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
-import { CURSOR, OFF_CLASS, belt, beltSlotRect, cellBox, itemGrid } from './pieces'
+import { CURSOR, OFF_CLASS, belt, beltSlotRect, cellBox, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -134,3 +134,6 @@ const clickOn = (g: Game, ui: BagUi, h: ReturnType<typeof hit>, isRight: boolean
   if (h?.kind === 'close') return { ui, actions: [{ kind: 'panel', panel: 'bag' }] }
   return { ui, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
 }
+
+/** What a click acts on, in window pixels: the bag's items. */
+export const compactHot = (g: Game): Rect[] => g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))

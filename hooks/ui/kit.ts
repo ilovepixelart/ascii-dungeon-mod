@@ -1,5 +1,6 @@
 // The interface kit: the pieces windows share beyond the frame and the button (window.ts, pieces.ts), each drawn on a
-// canvas at a place the window gives: a card flat or beveled with its ribbon and gem. Pure.
+// canvas at a place the window gives: a card flat or beveled with its ribbon and gem; and the hover, lighting the
+// outline of the clickable place under the pointer. Pure.
 import type { Canvas } from '../canvas'
 import { fill, frame, put } from '../canvas'
 import { textMask } from '../pixelart'
@@ -61,3 +62,16 @@ export const sparkles = (c: Canvas, r: Rect) => {
     put(c, sx + (sx < r.x ? 1 : -1), r.y - 2, INK.gold)
   }
 }
+
+/** What the pointer is over among a window's clickable places (window pixels): the smallest holding `at`, if any. */
+export const hoveredRect = (rects: readonly Rect[], at: { x: number; y: number }): Rect | undefined =>
+  rects.filter(r => at.x >= r.x && at.x < r.x + r.w && at.y >= r.y && at.y < r.y + r.h).sort((a, b) => a.w * a.h - b.w * b.h)[0]
+
+/** A window's pixels with `r` lit for the hover: its outline half way to white, its inside a tenth of the way (so a
+ * place framed white already lights too), the rest as it was. */
+export const lightUp = (px: readonly (readonly string[])[], r: Rect): string[][] =>
+  px.map((row, y) => row.map((p, x) => {
+    if (x < r.x || x >= r.x + r.w || y < r.y || y >= r.y + r.h) return p
+    const isEdge = x === r.x || x === r.x + r.w - 1 || y === r.y || y === r.y + r.h - 1
+    return mix(p, INK.focus, isEdge ? 0.5 : 0.1)
+  }))

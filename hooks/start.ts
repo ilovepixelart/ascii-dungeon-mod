@@ -125,3 +125,6 @@ export const startGesture = (g: Game, ui: StartUi, gesture: Gesture): Outcome =>
   if ((back !== undefined && inside(back)) || isInside(at, ...CLOSE_BOX)) return { ui, actions: [{ kind: 'panel', panel: 'start' }] }
   return { ui, actions: [] }
 }
+
+/** What a click acts on, in window pixels: the cards and the buttons. */
+export const startHot = (g: Game): Rect[] => [...CLASSES.map((_, i) => cardRect(i)), ...buttonRects(g)]

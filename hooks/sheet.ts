@@ -110,3 +110,6 @@ export const sheetGesture = (g: Game, gesture: Gesture): Action[] => {
   if (inside(RETIRE_RECT)) return canRetire(g) ? [{ kind: 'panel', panel: 'retire' }] : []
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'sheet' }] : []
 }
+
+/** What a click acts on, in window pixels: the + buttons while there are points, Retire once it can. */
+export const sheetHot = (g: Game): Rect[] => [...(g.points > 0 ? ATTRIBUTES.map((_, i) => plusRect(i)) : []), ...(canRetire(g) ? [RETIRE_RECT] : [])]

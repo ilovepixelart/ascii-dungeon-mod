@@ -151,3 +151,6 @@ export const deepGesture = (g: Game, gesture: Gesture): Action[] => {
   if (card !== undefined) return [{ kind: 'mark', mark: card.mark }]
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'deep' }] : []
 }
+
+/** What a click acts on, in window pixels: the fork's cards. */
+export const deepHot = (g: Game): Rect[] => deepCards(g).map(c => c.rect)

@@ -113,3 +113,9 @@ export const settingsGesture = (g: Game, sound: SoundSettings, ui: SettingsUi, g
   if (does === 'view') return { ...none, actions: [{ kind: 'zoom' }] }
   return isOrder(does) ? { ...none, actions: [{ kind: 'order', order: does }] } : { ...none, sound: nextSound(sound, does) }
 }
+
+/** What a click acts on, in window pixels: the page not shown, and the page's buttons. */
+export const settingsHot = (g: Game, sound: SoundSettings, ui: SettingsUi): Rect[] => [
+  ...tabRects(PAGES, top).filter((_, i) => i !== (ui.page === 'game' ? 0 : 1)),
+  ...placed(g, sound, ui).map(k => k.rect),
+]

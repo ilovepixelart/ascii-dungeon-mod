@@ -4,9 +4,10 @@ import { activeTier, nameOf } from './consumables'
 import type { Run } from './game'
 import { CELL, ICONS } from './icons'
 import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
-import { GRID, SLOT, SLOT_BG, art, canvas, canvasCells, fill, frame, put } from './canvas'
-import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid } from './pieces'
+import { GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
+import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
+import type { Rect } from './window'
 import type { Pos } from './map'
 import type { Canvas } from './canvas'
 
@@ -123,10 +124,6 @@ export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly P
   return c.px
 }
 
-/** The screen as Raster cells: INV_W columns by (INV_TOP + INV_H) / 2 rows. */
-export const inventoryScreenCells = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []) =>
-  canvasCells({ w: INV_W, h: INV_TOP + INV_H, px: inventoryScreenPixels(g, drag, popovers) })
-
 const SLOT_NAME: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 
 /** The selected item in words: name and tier, slot and class, bonuses, change against what is worn, power, price. */
@@ -168,3 +165,10 @@ export const beltLabel = (g: Game, i: number) => {
   const tier = activeTier(slot)
   return slot === null || slot === undefined || tier === undefined ? 'empty' : `${nameOf(slot.kind, tier)} x${slot.tiers[tier - 1]}`
 }
+
+/** The worn slots holding a piece, with their frames, in window pixels for a panel whose top is at `top`: what the hover lights. */
+export const wornOutlines = (g: Game, top: number): Rect[] =>
+  (Object.entries(WORN_SLOTS) as [Slot, readonly [number, number, number, number]][]).filter(([slot]) => g.gear[slot] !== undefined).map(([, [x, y, w, h]]) => ({ x: x - 1, y: top + y - 1, w: w + 2, h: h + 2 }))
+
+/** What a click acts on in the inventory, in window pixels: the bag's items and the worn pieces. */
+export const inventoryHot = (g: Game): Rect[] => [...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(g, INV_TOP)]

@@ -545,17 +545,38 @@ const touchesRoom = (level: Level, p: Pos) => roomsBeside(level, p).length > 0
 /** A dead end, where a chest stands. */
 const isDeadEnd = (level: Level, p: Pos) => chestAt(1, 1, level, p) !== undefined
 
-const sharesFloor = (a: Room, b: Room) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+const inBox = (r: Room, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
+
+/** Whether two rooms are open to each other: floor of one in the other's box, or beside floor of it, no wall between. */
+const opensInto = (level: Level, a: Room, b: Room) => {
+  if (a.x > b.x + b.w || b.x > a.x + a.w || a.y > b.y + b.h || b.y > a.y + a.h) return false
+  for (let y = b.y; y < b.y + b.h; y += 1) for (let x = b.x; x < b.x + b.w; x += 1) {
+    const c = { x, y }
+    if (isFloor(level.tiles, c) && [c, ...STEPS4.map(d => ({ x: x + d.x, y: y + d.y }))].some(n => inBox(a, n) && isFloor(level.tiles, n))) return true
+  }
+  return false
+}
 
 /**
- * The rooms one space on the map with `room`, itself first: the rooms that share floor with it, and theirs. Rooms are
- * placed apart; only a big boss's arena, grown over the rooms beside the stairs, shares floor with another.
+ * The rooms one space on the map with `room`, itself first: the rooms open to it, and theirs. Rooms are placed two
+ * cells of rock apart; only a big boss's arena, grown over or up against the rooms beside the stairs, opens into another.
  */
 const spaceOf = (level: Level, room: Room): Room[] => {
-  const space = [room]
-  for (let i = 0; i < space.length; i += 1) for (const r of level.rooms) if (!space.includes(r) && sharesFloor(space[i]!, r)) space.push(r)
+  let known = spacesOf.get(level)
+  if (known === undefined) {
+    known = new Map()
+    spacesOf.set(level, known)
+  }
+  let space = known.get(room)
+  if (space === undefined) {
+    space = [room]
+    for (let i = 0; i < space.length; i += 1) for (const r of level.rooms) if (!space.includes(r) && opensInto(level, space[i]!, r)) space.push(r)
+    known.set(room, space)
+  }
   return space
 }
+/** Each level's spaces, by room: fixed by the level alone. */
+const spacesOf = new WeakMap<Level, Map<Room, Room[]>>()
 
 /** One room's box with its wall ring, and straight down each corridor leaving it, from each opening in that ring. */
 const boxSight = (level: Level, room: Room, space: readonly Room[]): Pos[] => {

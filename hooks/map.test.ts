@@ -237,13 +237,12 @@ describe('sight down corridors', () => {
     expect(seen.has('7,2')).toBe(false)
   })
 
-  test('a room touching another, no wall between, shows none of the other\'s floor', async () => {
-    // Rooms at x 1 to 3 and x 4 to 6, side by side.
+  test('a room touching another, no wall between, is one open space with it: each shows the other whole', async () => {
+    // Rooms at x 1 to 3 and x 4 to 6, side by side: on the map only a big boss's arena grown against a room is so.
     const tiles = ['########', '#......#', '#......#', '#......#', '########']
     const level = { tiles, rooms: [{ x: 1, y: 1, w: 3, h: 3 }, { x: 4, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 }, stairs: { x: 5, y: 2 } }
     const seen = new Set(visibleFrom(level, { x: 2, y: 2 }).map(p => `${p.x},${p.y}`))
-    expect(['4,1', '4,2', '4,3'].filter(c => seen.has(c))).toEqual([])
-    expect(seen.has('3,2')).toBe(true)
+    expect(['4,1', '4,2', '4,3', '6,3', '7,2'].filter(c => !seen.has(c))).toEqual([])
   })
 
   test('sight down a corridor takes the rock either side of it, never floor beside it', async () => {

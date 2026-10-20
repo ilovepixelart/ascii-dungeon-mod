@@ -10,10 +10,10 @@ release may change behaviour.
 
 - A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the
   task, so the hero had to step off the stairs and back.
-- On a big boss depth the arena often grows over a room beside the stairs (in about 4 such levels in 10). Standing
-  where the two met, the hero saw only the smaller room, the rest of the arena dark and drawn without its walls, a foe
-  beside the hero included; standing in the arena, the smaller room stayed dark. Each now shows the other whole. The
-  levels are as they were.
+- On a big boss depth the arena often grows over a room beside the stairs, or right up against one with no wall
+  between. Standing in the smaller room, the hero saw only it, the rest of the arena dark and drawn without its walls, a
+  foe beside the hero included; standing in the arena, the smaller room stayed dark, and a click on its floor said
+  "You can't get there." Each now shows the other whole. The levels are as they were.
 - A cache earned in town with the bag and the stash full waits by the portal on the depth below, but stepping back
   through the portal onto it did not pick it up, and an answer finished in town walked down from that tile without it:
   the cache was lost. The same befell an item lying under the hero when a walk down began. Arriving on a tile and

@@ -373,6 +373,15 @@ export const drawnVsTold = (before: Game, next: Game) => {
   return off
 }
 
+/** Whether floor in room `b`'s box lies in room `a`'s box or beside floor in it: no wall between the two. */
+const isOpenBetween = (level: Level, a: Room, b: Room) => {
+  const inA = (p: Pos) => p.x >= a.x && p.x < a.x + a.w && p.y >= a.y && p.y < a.y + a.h && isFloor(level.tiles, p)
+  for (let y = b.y; y < b.y + b.h; y += 1) for (let x = b.x; x < b.x + b.w; x += 1) {
+    if (isFloor(level.tiles, { x, y }) && [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inA({ x: x + dx!, y: y + dy! }))) return true
+  }
+  return false
+}
+
 /**
  * Cells an action showed against the rules of sight: a room's floor with the hero never in it, on its door or in sight
  * range of it; a closed chest the hero never came in sight range of, where no room's view down a corridor reaches it.
@@ -392,11 +401,10 @@ export const sightBreaks = (before: Game, next: Game): Pos[] => {
   const reach = sightOf(next)
   const near = (c: Pos) => path.some(q => Math.max(Math.abs(q.x - c.x), Math.abs(q.y - c.y)) <= reach)
   const beside = (q: Pos) => [[1, 0], [-1, 0], [0, 1], [0, -1]].flatMap(([dx, dy]) => roomAt(level, { x: q.x + dx!, y: q.y + dy! }) ?? [])
-  // A room sharing floor with one stood in, or with one of those (a big boss's arena and the rooms it grew over), is
-  // the same space.
+  // A room open to one stood in, or to one of those (a big boss's arena and the rooms it grew over or against), is the
+  // same space.
   const stood = path.flatMap(q => roomAt(level, q) ?? beside(q))
-  const sharesFloor = (a: Room, b: Room) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
-  for (let i = 0; i < stood.length; i += 1) for (const r of level.rooms) if (!stood.includes(r) && sharesFloor(stood[i]!, r)) stood.push(r)
+  for (let i = 0; i < stood.length; i += 1) for (const r of level.rooms) if (!stood.includes(r) && isOpenBetween(level, stood[i]!, r)) stood.push(r)
   const roomsStoodIn = new Set(stood)
   return shown.filter(c => {
     const room = roomAt(level, c)

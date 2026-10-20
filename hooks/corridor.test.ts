@@ -97,6 +97,37 @@ describe('an arena grown over another room', () => {
   })
 })
 
+describe('an arena grown up against another room, no wall between', () => {
+  // Room A (1..3, 1..3) and the arena B (4..8, 1..3) side by side, their floors meeting across x 3 and 4; room C
+  // (11..13, 1..3) beside B's box with rock between: a room of its own.
+  //   01234567890123
+  // 0 ##############
+  // 1 #........##...#
+  // 2 #........##...#
+  // 3 #........##...#
+  const BESIDE: Level = {
+    tiles: Array.from({ length: MAP_H }, (_, y) => (['###############', '#........##...#', '#........##...#', '#........##...#'][y] ?? '').padEnd(MAP_W, '#')),
+    rooms: [{ x: 1, y: 1, w: 3, h: 3 }, { x: 4, y: 1, w: 5, h: 3 }, { x: 11, y: 1, w: 3, h: 3 }],
+    start: { x: 1, y: 1 },
+    stairs: { x: 6, y: 2 },
+  }
+  const seenFrom = (p: Pos) => new Set(visibleFrom(BESIDE, p).map(c => `${c.x},${c.y}`))
+
+  test('from either, the other is seen whole; a room beyond the rock is not', async () => {
+    expect(['8,1', '8,3', '9,2'].filter(c => !seenFrom({ x: 2, y: 2 }).has(c))).toEqual([])
+    expect(['1,1', '1,3', '0,2'].filter(c => !seenFrom({ x: 7, y: 2 }).has(c))).toEqual([])
+    expect(['11,1', '12,2'].filter(c => seenFrom({ x: 7, y: 2 }).has(c))).toEqual([])
+  })
+
+  test('on world 1 depth 100, the arena and the room against its east side show each other', async () => {
+    // The arena (1..14, 8..15) and the room (15..24, 13..15) meet on rows 13 to 15, open floor across x 14 and 15.
+    const level = generate(1, 100)
+    const seen = (p: Pos) => new Set(visibleFrom(level, p).map(c => `${c.x},${c.y}`))
+    expect(['15,14', '24,14', '20,13'].filter(c => !seen({ x: 14, y: 14 }).has(c))).toEqual([])
+    expect(['1,8', '8,12', '14,15'].filter(c => !seen({ x: 16, y: 14 }).has(c))).toEqual([])
+  })
+})
+
 /** A room's floor, less its dead ends: a dead end holds its chest back until the hero is beside it, in a room as anywhere. */
 const roomFloor = (level: Level, room: Room, ends: ReadonlySet<number>): Pos[] => {
   const cells = Array.from({ length: room.w * room.h }, (_, i) => ({ x: room.x + (i % room.w), y: room.y + Math.floor(i / room.w) }))

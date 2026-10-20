@@ -483,6 +483,14 @@ describe('going downstairs yourself', () => {
     expect(apply(near, { kind: 'goto', x: stairs.x, y: stairs.y }).depth).toBe(2)
   })
 
+  test('stopped on the stairs by a foe, a click on them once it is gone goes down; while it lives, it guards them', async () => {
+    const g = { ...newGame(4), seen: '1'.repeat(64 * 18) }
+    const { stairs } = levelOf(g)
+    const guarded = apply({ ...g, ...stairs, foe: foeAhead(g, 1, { hp: 9, maxHp: 9 }) }, { kind: 'goto', ...stairs })
+    expect([guarded.depth, guarded.log.at(-1)]).toEqual([1, `The ${guarded.foe!.name} guards the stairs.`])
+    expect(apply({ ...guarded, foe: null }, { kind: 'goto', ...stairs }).depth).toBe(2)
+  })
+
   test('a living foe still guards the stairs', async () => {
     const g = newGame(4)
     const on = { ...g, ...levelOf(g).stairs }

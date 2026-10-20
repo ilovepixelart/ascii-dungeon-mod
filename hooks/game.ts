@@ -1184,9 +1184,11 @@ const goTo = (g: Game, target: Pos) => {
     say(g, "You can't get there.")
     return
   }
-  // A click on the hero explores: a step toward the stairs.
+  // A click on the hero explores: a step toward the stairs. On the stairs it takes them, as walking onto them does,
+  // so a hero stopped there by a foe goes down once it is gone without stepping off and back.
   if (path.length === 1) {
-    step(g, 1)
+    if (same(g, level.stairs)) descend(g)
+    else step(g, 1)
     return
   }
   if (!walkWay(g, path, isFoe)) return

@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Fixed
+
+- A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the
+  task, so the hero had to step off the stairs and back.
+
 ## [0.4.0] - 2026-10-20
 
 Saves from 0.3.0 load as they are: one standing on a depth that now has a rounded, alcoved or island room (save

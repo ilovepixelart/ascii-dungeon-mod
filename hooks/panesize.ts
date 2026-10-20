@@ -4,9 +4,9 @@ import { WINDOW_W } from './window'
 
 /** The rows a window's lines take under it: a gap and the keys, then a gap and the log's last two lines. */
 export const UNDER_WINDOW = 5
-/** The pane the game plays best in: every window wide enough, the tallest (the codex, 72 rows) whole with its lines. */
+/** The pane the game plays best in: every window wide enough, the tallest (the bag and the merchant, 41 rows) whole with its lines. */
 export const BEST_COLUMNS = WINDOW_W
-export const BEST_ROWS = 78
+export const BEST_ROWS = 47
 
 /** A window of `rows` and `under` rows beneath it that the pane's `bodyRows` cannot show whole: how many it needs, counting this line. */
 export const fitNote = (rows: number, under: number, bodyRows: number): string | undefined => {

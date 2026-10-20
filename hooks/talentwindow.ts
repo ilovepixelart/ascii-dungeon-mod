@@ -12,6 +12,7 @@ import { asIs, bevelCard, flatCard, gem, recede, ribbon, sparkles } from './ui/k
 import type { Tone } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 import type { FamilyName } from './ui/tokens'
+import { heroChrome, heroTabAt } from './herotabs'
 import { wrap } from './recapwindow'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, drawable, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -100,7 +101,7 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
   offered.forEach((t, i) => drawCard(body, t, i, i === chosen))
   button(body, 'T', 'TAKE', takeRect().x, takeRect().y - top, 'armed')
   button(body, 'L', 'LATER', laterRect().x, laterRect().y - top, 'ready')
-  const c = windowPixels({ ...CHROME, title: `TALENT  LEVEL ${TALENT_EVERY * ((g.talents?.length ?? 0) + 1)}` }, body.px)
+  const c = windowPixels(heroChrome(g, 'talent'), body.px)
   for (const b of talentOverlay(g, ui)) drawBox(c, b)
   return c.px
 }
@@ -171,7 +172,7 @@ export const talentPixels = (g: Game, ui: TalentUi = TALENT_UI): string[][] => {
     button(body, String(i + 1), '', c.rect.x + 2, c.rect.y - top + 2, 'ready')
   })
   for (const line of talentLines(g)) word(body, line.text, line.x, line.y - top, line.ink)
-  return windowPixels(CHROME, body.px).px
+  return windowPixels(heroChrome(g, 'talent'), body.px).px
 }
 
 type Outcome = { ui: TalentUi; actions: Action[] }
@@ -187,6 +188,8 @@ export const talentGesture = (g: Game, ui: TalentUi, gesture: Gesture): Outcome 
   const at = pixel(gesture.at)
   if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return none
   const inside = (r: Rect) => isInside(at, r.x, r.y, r.w, r.h)
+  const tab = heroTabAt(g, 'talent', at)
+  if (tab !== undefined) return { ui, actions: tab }
   const close = { ui, actions: [{ kind: 'panel', panel: 'talent' } as Action] }
   const offered = offer(g)
   if (offered.length === 0) return isInside(at, ...CLOSE_BOX) ? close : none

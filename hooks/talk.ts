@@ -89,7 +89,7 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
 type Act = { key: string; label: string; cost?: number; canPay?: boolean; action: Action; state: ButtonState }
 const ACT: Readonly<Record<Speaker, (g: Game) => Act | undefined>> = {
   healer: () => undefined,
-  elder: g => (g.quest === null ? undefined : { key: 'C', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
+  elder: g => (g.quest === null ? undefined : { key: 'A', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
   mystic: g => ({ key: 'F', label: 'FORTUNE', cost: fortuneCost(g), canPay: g.gold >= fortuneCost(g), action: { kind: 'fortune' }, state: g.fortune === null && g.gold >= fortuneCost(g) ? 'ready' : 'off' }),
   guard: () => undefined,
   villager: () => undefined,

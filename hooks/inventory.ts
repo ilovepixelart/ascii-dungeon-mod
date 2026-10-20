@@ -6,7 +6,7 @@ import { CELL, ICONS } from './icons'
 import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
 import { GRID, SLOT, SLOT_BG, art, canvas, canvasCells, fill, frame, put } from './canvas'
 import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid } from './pieces'
-import { BODY_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
+import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
 import type { Pos } from './map'
 import type { Canvas } from './canvas'
 
@@ -23,7 +23,7 @@ export const BELT_Y = 57
 export const INV_H = BELT_Y + SLOT + 1
 export const BELT_X = 2
 /** The panel starts below the window's title bar and labels. */
-export const INV_TOP = BODY_TOP
+export const INV_TOP = WINDOW_TOP
 
 /** Each worn slot's inner rectangle (x, y, w, h), sized to the largest footprint its items have. */
 export const WORN_SLOTS: Readonly<Record<Slot, readonly [number, number, number, number]>> = {
@@ -117,7 +117,7 @@ export type PopoverFrame = { x: number; y: number; w: number; h: number; border:
  * the popovers' frames over it all.
  */
 export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []): string[][] => {
-  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [{ text: 'WORN', x: 2 }, { text: 'BAG', x: BAG_X + 1 }] }, inventoryPixels(g))
+  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [] }, inventoryPixels(g))
   if (drag !== undefined) drawDrag(c, g, drag)
   for (const b of popovers) drawBox(c, b)
   return c.px

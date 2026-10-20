@@ -4,7 +4,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 | Module | Holds |
 |---|---|
-| `hooks/window.ts` | the frame (title, gold when the window passes it, close box, section labels, the body below `BODY_TOP`); text boxes (`boxShape`, `drawBox`); where they go (`coverage`, `place`); gestures (`Gesture`, `pixel`, `CLICK_SLOP`) |
+| `hooks/window.ts` | the frame (title or a row of tabs, gold when the window passes it, close box, the body below `WINDOW_TOP`); tabs (`tabRow`, `tabRects`), in the title bar or for a window's pages; text boxes (`boxShape`, `drawBox`); where they go (`coverage`, `place`); gestures (`Gesture`, `pixel`, `CLICK_SLOP`) |
 | `hooks/pieces.ts` | what windows are built from: an item in its tier box with its marks (`drawItem`), an item grid (`itemGrid`, `cellBox`), the belt |
 | `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; flat and beveled cards with their ribbon, gem and sparkles. `tools/ui.ts` draws them all on one sheet, `tools/windows.ts` each window with its text boxes written in, for review |
 | `hooks/windowclient.ts` | the click layer: writes the text boxes it is handed and reports whole gestures |
@@ -24,8 +24,19 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 - The wares on a shelf on the left, three to a row, each price under its icon; a price that cannot be paid is grey. The bag and the belt sit where the inventory has them.
 - A click chooses a ware or a bag item and shows its card; a second click (or a right-click) opens its menu. A ware's menu is Buy, and stays open after a buy so each further one is a click; a bag item's is Sell and Equip. What cannot be done says why in the menu (`whyNot`: not enough gold, no room on the belt; the class that can wear it) and does nothing.
 - Choosing a ware lets go of the chosen bag item, and the other way round: one card at a time.
-- Every action has a key under the window; Sell junk shows how many items are marked and what they come to before it is pressed.
+- Every action has a key under the window; Sell junk shows how many items are marked before it is pressed.
 - Cards go where they hide the least of what the window shows (`cardWithMenu`) and never on what they are about.
+
+## Conventions
+
+Every window keeps these; review them with `tools/windows.ts`, which draws each window of `hooks/screens.ts` with its text boxes written in.
+
+- At most 41 rows (`BEST_ROWS` in `hooks/panesize.ts`, pinned by a test over every window drawn), so a pane of 47 shows any window whole with its keys and the log under it, and no button is scrolled out of reach.
+- A title bar with the close box, no section labels under it. The hero's windows share one bar of tabs (`hooks/herotabs.ts`); a window with pages shows them as tabs at the top of its body.
+- Sentences go in a text box, full width under the window's content, or beside a portrait; the pixel font is for titles, tabs, button keys and numbers.
+- Choosing among cards or pieces: a click chooses (framed white), a second click or the window's main button acts. The main button is framed white (`armed`): Take, Start, Retire, Wake, Play on. A row of buttons under the content is centered.
+- Close is `c` in every window, and the close box. Later where something stays owed (talents), Back only where a window returns to another (the start screen, retire).
+- The keys under a window fit one row: a key's label is short, the detail in the window.
 
 ## Gotchas
 
@@ -62,12 +73,12 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## The character sheet
 
-- The hero's portrait in what they wear; who they are, their HP, attack, defense and crit, and the points to spend; the XP bar; a row an attribute with its value, a `+` (lit while there are points) and what it does; Codex (`x`) under the rows opens the codex, Retire (`r`) beside it the retire window, lit once the hero has slain a big boss (`canRetire`), and Talent (`t`) under them the talent window, framed white while a talent is owed, Deep (`d`) beside it the deep window, framed white while a fork waits. New game is in settings.
+- The first of the hero's tabs (`hooks/herotabs.ts`: Hero, Talent, Deep, Codex, in the title bar; Talent and Deep marked gold while a talent is owed or a fork waits). The hero's portrait in what they wear, beside it who they are, their HP, attack, defense and crit, what Vigor and Insight give, and the points to spend; the XP bar; the attributes two to a row, each its value and a `+` (lit while there are points); Retire (`r`) under them, lit once the hero has slain a big boss (`canRetire`). New game is in settings.
 
 ## Settings
 
-- Opened from the gear in the strip, or Settings on the text dashboard. New game opens the start screen; Help beside it the how-it-plays window; View steps the view; Effects and Music each turn on or off; Volume steps a quarter at a time, from full round to a quarter, for every clip and the tune (`SoundSettings`, `nextSound`). Music turned on or off, or a new volume, restarts the tune at its level. The sound settings are kept across sessions; the `sound` and `music` options give them until the player sets them.
-- Hero orders, under a rule below the sound (`Game.orders`, kept with the game; `obey` and `ORDER_STEPS` in `hooks/game.ts`), each stepped by its button. Drink: a healing potion after a blow that leaves the hero under a quarter of max HP (the default), under half, or never. Smoke: never (the default), or when low, a smoke bomb under a quarter of max HP with no healing potion left and a foe near. Leave: take every item (the default), leave Commons, or leave anything below Rare; a kill's item below it stays on the floor, said. The orders' hotkeys (d, f, k) work only in the pixel window: on the text dashboard d descends and k moves up.
+- Opened from the gear in the strip, or Settings on the text dashboard. Two pages (`SettingsUi`), each a tab under the title bar and `p` under the window. Game: New game opens the start screen; Help beside it the how-it-plays window; Sound (the effects) and Music each turn on or off; View steps the view; Volume steps a quarter at a time, from full round to a quarter, for every clip and the tune (`SoundSettings`, `nextSound`). Music turned on or off, or a new volume, restarts the tune at its level. The sound settings are kept across sessions; the `sound` and `music` options give them until the player sets them.
+- Orders, the second page: the hero's standing orders (`Game.orders`, kept with the game; `obey` and `ORDER_STEPS` in `hooks/game.ts`), each stepped by its button. Drink: a healing potion after a blow that leaves the hero under a quarter of max HP (the default), under half, or never. Smoke: never (the default), or when low, a smoke bomb under a quarter of max HP with no healing potion left and a foe near. Leave: take every item (the default), leave Commons, or leave anything below Rare; a kill's item below it stays on the floor, said. The orders' hotkeys (d, f, k) work only in the pixel window: on the text dashboard d descends and k moves up.
 - What the drink order is for: the hero plays mostly while no one watches. Over 60 simulated games a class with a player who never drinks by hand, deaths per 1,000 steps are 4.73 with it off and 2.57 at a quarter; a player who drinks at 40% by hand sees no change (2.24 to 2.26).
 
 ## How it plays
@@ -83,14 +94,14 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 ## The recap
 
 - What the tool calls came to since the player last clicked or pressed a key (`Game.recap`, counted by `noted` in `hooks/recap.ts` in `apply`, for tool-driven actions only). The next click or key is a look (`isRecapShown` in `register.tsx`): after `RECAP_CALLS` calls or more it opens the `recap` panel instead of doing what was asked; after fewer, what was counted is forgotten. It never opens on its own, and never over the death window.
-- Drawn by `hooks/recapwindow.ts`: the hero's portrait, tool calls, depth and level from and to, kills, gold gained, champions and deaths, the work done (green test runs, commits, pushes, pull requests), and the best find of Rare or better with its name wrapped to even lines. A section with nothing to say is left out. Play on (`p`) and the close box close it; closing it, or any window opened over it, forgets what it told.
+- Drawn by `hooks/recapwindow.ts`: the hero's portrait and beside it the tool calls, depth and level from and to, kills, champions, gold gained and deaths, and the work done (green test runs, commits, pushes, pull requests); under it the best find of Rare or better in its box, its name beside it. What has nothing to say is left out. Play on (`p`, framed white) and the close box close it; closing it, or any window opened over it, forgets what it told.
 
 ## The codex
 
 - What every hero of the save has done (`Game.codex`, kept through a new game by `apply`'s `restart`): the uniques and big bosses slain and the Legendaries come to hand, and the records: deepest depth, top level, kills, bosses slain, deaths and gold found in the dungeon. `recorded` in `hooks/codex.ts` adds what each action did, compared before and after, so no rule has to report to it. A Legendary counts once it is in the bag, the stash or worn; one left on the floor of a full bag is not found.
 - A save from before the codex begins one at its first action (`firstCodex` in `hooks/game.ts`): uniques from `uniquesSlain`, every big boss up to `bossSlain` (each guards the way down), the Legendaries owned, the deepest depth, level and deaths. Kills and gold were never counted, so they start at 0. `Codex.retired` counts the heroes retired; a codex from before retiring has none.
 - A set made whole pays once a save, the moment it is (`paySets`): all five uniques an Epic or better, all five big bosses a Legendary. A save whose set was whole when the codex began is not paid for it. Over 30 simulated games a class at 8,000 steps the prizes take deaths per 1,000 steps from 2.72 to 2.27 and the deepest depth from 74 to 79; a run that rolls the prizes and withholds them stays at 2.74. Below depth 25 nothing changes.
-- Drawn by `hooks/codexwindow.ts`: a row each with its count, an entry lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag; the records under a rule, four lines of them ending the window on the map's height, with Card (`k`) beside the last. The close box and Close (`c`) close it. As text, each row names what is in it.
+- Drawn by `hooks/codexwindow.ts`, the hero's last tab, on two pages (`CodexUi`, a tab each, `p` under the window): Foes, the uniques and the big bosses; Finds, the Legendaries and Card (`k`). An entry is lit once slain or found and a dark shape until then, a Legendary found in its tier's box as in the bag. The box under them counts them, and on Finds holds the records. The close box and Close (`c`) close it. As text, each row names what is in it.
 
 ## The hero card
 

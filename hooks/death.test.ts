@@ -10,7 +10,7 @@ import { deathGesture, deathHeight, deathOverlay, killerArt, killerName } from '
 import { BOSS_ART, PX } from './pixelart'
 import { HIT_FRAMES, deathScene, frameOf, hitFramesFor, hitsBetween } from './pixels'
 import type { Hit } from './pixels'
-import { CLOSE_BOX } from './window'
+import { CLOSE_BOX, WINDOW_W } from './window'
 
 /** A hero on `depth` with 2 HP and 31 gold, a rat that cannot miss beside them, and the fatal blow struck. */
 const slain = (depth: number) => {
@@ -154,9 +154,10 @@ describe('the death window', () => {
   test('Wake and the close box close it; a click elsewhere does nothing', async () => {
     const at = (p: { x: number; y: number }) => deathGesture(after, { type: 'release', from: p, at: p, button: 'left' })
     const h = deathHeight(after)
-    expect(at({ x: 6, y: (h - 9) / 2 })).toEqual([{ kind: 'panel', panel: 'death' }])
+    // Wake sits centered under the boxes.
+    expect(at({ x: WINDOW_W / 2, y: (h - 9) / 2 })).toEqual([{ kind: 'panel', panel: 'death' }])
     expect(at(top({ x: CLOSE_BOX[0], y: CLOSE_BOX[1] }))).toEqual([{ kind: 'panel', panel: 'death' }])
-    expect(at({ x: 60, y: (h - 9) / 2 })).toEqual([])
+    expect(at({ x: 6, y: (h - 9) / 2 })).toEqual([])
   })
 })
 

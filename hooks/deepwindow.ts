@@ -6,6 +6,7 @@ import type { Game, Mark } from '../types'
 import type { Action, Run } from './game'
 import { DEEP_FROM, MARKS, TIER_DEPTHS, forkTier, markOf, pairOf, roman, tierOf, tierStart } from './deep'
 import { canvas, fill, frame } from './canvas'
+import { heroChrome, heroTabAt } from './herotabs'
 import { flatCard } from './ui/kit'
 import { INK, SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
@@ -133,7 +134,7 @@ export const deepPixels = (g: Game): string[][] => {
   fill(body, PAD, l.rule - top, WINDOW_W - 2 * PAD, 1, RULE)
   for (const c of l.cards) flatCard(body, { ...c.rect, y: c.rect.y - top }, c.isChosen)
   for (const line of deepLines(g)) word(body, line.text, line.x, line.y - top, line.ink)
-  const c = windowPixels(CHROME, body.px)
+  const c = windowPixels(heroChrome(g, 'deep'), body.px)
   for (const b of deepOverlay(g)) drawBox(c, b)
   return c.px
 }
@@ -144,6 +145,8 @@ export const deepGesture = (g: Game, gesture: Gesture): Action[] => {
   const from = pixel(gesture.from)
   const at = pixel(gesture.at)
   if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return []
+  const tab = heroTabAt(g, 'deep', at)
+  if (tab !== undefined) return tab
   const card = layout(g).cards.find(c => isInside(at, c.rect.x, c.rect.y, c.rect.w, c.rect.h))
   if (card !== undefined) return [{ kind: 'mark', mark: card.mark }]
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'deep' }] : []

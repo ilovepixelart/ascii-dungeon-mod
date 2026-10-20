@@ -10,7 +10,7 @@ import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
 import { CURSOR, OFF_CLASS, belt, beltSlotRect, cellBox, itemGrid } from './pieces'
-import { BODY_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels } from './window'
+import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 
@@ -22,16 +22,16 @@ const BELT_X = 1
 const BELT_Y = BAG_Y + BAG_H * CELL + 1 + 3
 const LIST_X = BAG_X + BAG_W * CELL + 3
 /** The screen's height in pixels: the bag, the belt, a pixel of room. */
-export const COMPACT_H = BODY_TOP + BELT_Y + 10 + 2
+export const COMPACT_H = WINDOW_TOP + BELT_Y + 10 + 2
 const ROWS = COMPACT_H / 2
 const KEY_INK = '#ffd34d'
 const SLOT_WORD: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 /** The worn list, in cells: two rows a slot, its name and what is worn there. */
-const LIST: Rect = { x: LIST_X, y: BODY_TOP / 2 + 1, w: COMPACT_W - LIST_X, h: SLOTS.length * 2 + 2 }
+const LIST: Rect = { x: LIST_X, y: WINDOW_TOP / 2 + 1, w: COMPACT_W - LIST_X, h: SLOTS.length * 2 + 2 }
 const CLOSE = closeBoxOf(COMPACT_W)
 
-const itemRect = (item: Item): Rect => cellBox(item, BAG_X, BODY_TOP + BAG_Y)
-const beltRect = (i: number): Rect => beltSlotRect(BELT_X, BODY_TOP + BELT_Y, i)
+const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
+const beltRect = (i: number): Rect => beltSlotRect(BELT_X, WINDOW_TOP + BELT_Y, i)
 
 const listLines = (g: Game): Run[][] => SLOTS.flatMap(slot => {
   const worn = g.gear[slot]
@@ -51,7 +51,7 @@ const shown = (g: Game): Weighted[] => [
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   { rect: { x: LIST.x, y: LIST.y * 2, w: LIST.w, h: LIST.h * 2 }, weight: 1 },
   ...g.belt.flatMap((b, i) => (b === null ? [] : [{ rect: beltRect(i), weight: 1 }])),
-  { rect: { x: 0, y: 0, w: COMPACT_W, h: BODY_TOP }, weight: 1 },
+  { rect: { x: 0, y: 0, w: COMPACT_W, h: WINDOW_TOP }, weight: 1 },
 ]
 
 /** The boxes over the screen: the worn list, and the chosen item's card with its menu when open. */
@@ -65,10 +65,10 @@ export const compactOverlay = (g: Game, ui: BagUi): OverlayBox[] => {
 
 /** The screen's pixels: title and gold, the bag, the belt, and the frames of the boxes over them. */
 export const compactPixels = (g: Game, boxes: readonly OverlayBox[] = []): string[][] => {
-  const body = canvas(COMPACT_W, COMPACT_H - BODY_TOP)
+  const body = canvas(COMPACT_W, COMPACT_H - WINDOW_TOP)
   itemGrid(body, g, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
   belt(body, g, BELT_X, BELT_Y)
-  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [{ text: 'BAG', x: BAG_X + 1 }, { text: 'WORN', x: LIST_X + 1 }] }, body.px, COMPACT_W)
+  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [] }, body.px, COMPACT_W)
   for (const b of boxes) drawBox(c, b)
   return c.px
 }

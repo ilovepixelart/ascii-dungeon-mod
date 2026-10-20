@@ -95,7 +95,7 @@ export const retirePixels = (g: Game, ui: RetireUi): string[][] => {
   const body = canvas(WINDOW_W, retireHeight(g, ui) - top)
   for (const b of l.boxes) pieceBox(body, g.gear[b.slot]!, b.x, b.y - top, b.slot === l.slot)
   for (const line of retireLines()) word(body, line.text, line.x, line.y - top, line.ink)
-  button(body, RETIRE.key, RETIRE.label, l.retire.x, l.retire.y - top, l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? 'ready' : 'off')
+  button(body, RETIRE.key, RETIRE.label, l.retire.x, l.retire.y - top, l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? 'armed' : 'off')
   button(body, BACK.key, BACK.label, l.back.x, l.back.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)
   for (const b of retireOverlay(g, ui)) drawBox(c, b)

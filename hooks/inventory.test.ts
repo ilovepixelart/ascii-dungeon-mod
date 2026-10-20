@@ -2,7 +2,8 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Rarity } from '../types'
 import { CELL, ICONS } from './icons'
-import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CURSOR, INV_H, INV_W, OFF_CLASS, UPGRADE, WORN_SLOTS, CLOSE_BOX, CLOSE_INK, GHOST_INK, INV_TOP, LABEL_INK, LABEL_Y, TITLE_INK, TITLE_X, TITLE_Y, beltLabel, dropTarget, inventoryPixels, inventoryScreenPixels, itemCard, POPOVER_BG } from './inventory'
+import { HEAD_H } from './window'
+import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CURSOR, INV_H, INV_W, OFF_CLASS, UPGRADE, WORN_SLOTS, CLOSE_BOX, CLOSE_INK, GHOST_INK, INV_TOP, LABEL_INK, TITLE_INK, TITLE_X, TITLE_Y, beltLabel, dropTarget, inventoryPixels, inventoryScreenPixels, itemCard, POPOVER_BG } from './inventory'
 import { BAG_W, RARITY_COLOR, plainItem } from './items'
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
 import { PAL, textMask } from './pixelart'
@@ -155,13 +156,12 @@ describe('the inventory screen', () => {
     expect(screen.slice(INV_TOP)).toEqual(inventoryPixels(g))
   })
 
-  test('writes INVENTORY in the title bar, WORN over the worn slots and BAG over the bag, in pixel letters', async () => {
+  test('writes INVENTORY in the title bar in pixel letters, and no labels under it', async () => {
     const screen = inventoryScreenPixels(knight())
     const inked = (text: string, x: number, y: number, ink: string) =>
       textMask(text).every((row, dy) => [...row].every((k, dx) => (k === '#') === (at(screen, x + dx, y + dy) === ink)))
     expect(inked('INVENTORY', TITLE_X, TITLE_Y, TITLE_INK)).toBe(true)
-    expect(inked('WORN', 2, LABEL_Y, LABEL_INK)).toBe(true)
-    expect(inked('BAG', BAG_X + 1, LABEL_Y, LABEL_INK)).toBe(true)
+    expect(screen.slice(HEAD_H, INV_TOP).flat().includes(LABEL_INK)).toBe(false)
   })
 
   test('draws a close box with a red X at its place', async () => {

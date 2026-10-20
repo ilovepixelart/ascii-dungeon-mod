@@ -37,7 +37,7 @@ const layout = (g: Game, f: Fallen) => {
   ]
   const tollY = Math.max(top + 2 + PORTRAIT, (whoBox.y + whoBox.h) * 2) + 2
   const tollBox: OverlayBox<'toll'> = { role: 'toll', x: PAD, y: tollY / 2, w: WINDOW_W - 2 * PAD, h: toll.length + 2, border: BORDER, lines: toll }
-  const wake: Rect = { x: PAD, y: (tollBox.y + tollBox.h) * 2 + 3, w: buttonW(WAKE.key, WAKE.label), h: BUTTON_H }
+  const wake: Rect = { x: Math.floor((WINDOW_W - buttonW(WAKE.key, WAKE.label)) / 2), y: (tollBox.y + tollBox.h) * 2 + 3, w: buttonW(WAKE.key, WAKE.label), h: BUTTON_H }
   // Even, so the window ends on a whole cell.
   const height = Math.ceil((wake.y + BUTTON_H + 3) / 2) * 2
   return { top, whoBox, tollBox, wake, height }
@@ -60,7 +60,7 @@ export const deathPixels = (g: Game): string[][] => {
   const l = layout(g, f)
   const body = canvas(WINDOW_W, l.height - l.top)
   portrait(body, killerArt(f), PAD, 2)
-  button(body, WAKE.key, WAKE.label, l.wake.x, l.wake.y - l.top, 'ready')
+  button(body, WAKE.key, WAKE.label, l.wake.x, l.wake.y - l.top, 'armed')
   const c = windowPixels(CHROME, body.px)
   drawBox(c, l.whoBox)
   drawBox(c, l.tollBox)

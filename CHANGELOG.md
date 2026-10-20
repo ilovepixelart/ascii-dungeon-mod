@@ -11,6 +11,17 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- Every window fits in 41 rows, and the game plays best in a pane 105 columns by 47 rows, where it was 78. The
+  character sheet, the talents, the deep and the codex are tabs of one window, named in its title bar (the talents
+  and the deep marked gold while one waits); the sheet loses its Codex, Talent and Deep buttons to them, its
+  attributes two to a row. The codex has two pages, Foes and Finds (the Legendaries, the records and Card);
+  settings two, Game and Orders, each a tab or `p`. The recap shows the portrait with what happened beside it and
+  the best find with its name. The inventory, the merchant, the smith and the stash drop the labels under their
+  title bars; the stash's count is in its title.
+- Close is `c` in every window, where the inventory and the town's windows took `i`; the elder's Claim moves to
+  `a`. Each window's main button is framed white: Wake, Play on and Retire too; settings' New game no longer.
+  The death window's Wake and the recap's Play on are centered. The merchant's keys stay on one row: Buy, Sell junk
+  with its count, Undo sale.
 - How it plays, the start screen, the deep and the retire window each fit in 40 rows, so a short pane shows them
   whole: their sentences are in a text box under them instead of the pixel font. How it plays keeps an icon a rule;
   the start screen is titled in its title bar, its cards a portrait and a name (the box says the lean); the deep's
@@ -58,7 +69,7 @@ again from its new start, gains kept. Nothing else needs doing.
 
 - A blow that comes to nothing shows it: MISS over a foe that darts aside or that the blow passes through, BLOCK over
   whoever's shield turns it, WARD over the hero when a ward absorbs it.
-- The pane's top row says when it is short of the size the game plays best in, 105 columns by 78 rows, and how big it
+- The pane's top row says when it is short of the size the game plays best in, 105 columns by 47 rows, and how big it
   is; a window it cannot show whole says how many rows it needs. The note on a pane too narrow for the pixel windows
   moves there from under the map.
 - Things to gather, one a theme, about one a level by a room's wall: a warding stone in the crypt and a rime crystal

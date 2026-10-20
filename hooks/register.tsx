@@ -11,8 +11,9 @@ import type { FrameSummary, TickStats } from './frames'
 import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
-import { recapGesture, recapHeight, recapPixels } from './recapwindow'
-import { codexGesture, codexHeight, codexPixels } from './codexwindow'
+import { recapGesture, recapHeight, recapOverlay, recapPixels } from './recapwindow'
+import { CODEX_UI, codexGesture, codexHeight, codexOverlay, codexPixels } from './codexwindow'
+import type { CodexUi } from './codexwindow'
 import { cardPixels, cardText, svgOf } from './herocard'
 import { retireGesture, retireHeight, retireOverlay, retirePixels } from './retirewindow'
 import { TALENT_UI, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
@@ -21,7 +22,8 @@ import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import { deepGesture, deepHeight, deepOverlay, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
-import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
+import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
+import type { SettingsUi } from './settings'
 import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
@@ -108,6 +110,10 @@ let chestUi: ChestUi = CHEST_UI_IDLE
 let startUi: StartUi | null = null
 /** The card chosen in the talent window, while it is open. */
 let talentUi: TalentUi = TALENT_UI
+/** The codex's page. */
+let codexUi: CodexUi = CODEX_UI
+/** The settings window's page. */
+let settingsUi: SettingsUi = SETTINGS_UI
 /** The how-it-plays window, open over whatever the pane shows: it closes back to that. */
 let isHelpOpen = false
 /** The pixel map's mounted size, which a repaint must match. */
@@ -860,9 +866,11 @@ const onRecapClick = async ($: EngineInterface, data: unknown) => actAll($, reca
 
 const onCodexClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
-  const outcome = codexGesture(g, data as Gesture)
+  const outcome = codexGesture(g, codexUi, data as Gesture)
+  codexUi = outcome.ui
   if (outcome.isCard) await saveCard($, g)
   await actAll($, outcome.actions)
+  $.ui.invalidate('ui.render')
 }
 
 /** The card's file name, in the player's Downloads (their home folder without one). */
@@ -887,7 +895,8 @@ const saveCard = async ($: EngineInterface, g: Game) => {
 
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
-  const outcome = settingsGesture(g, soundSettings, data as Gesture)
+  const outcome = settingsGesture(g, soundSettings, settingsUi, data as Gesture)
+  settingsUi = outcome.ui
   if (outcome.isHelp === true) isHelpOpen = true
   setSound($, g, outcome.sound)
   await actAll($, outcome.actions)
@@ -1103,18 +1112,26 @@ const settingsKeys = (p: Pane, isWindow = false) => {
     setSoundTo(nextSound(soundSettings, does))
     redraw()
   }
-  return [
+  const game = [
     <Button key="settings-new" label="New game..." hotkey="n" plain onPress={press({ kind: 'panel', panel: 'start' })} />,
     helpKey(p, isWindow ? 'h' : undefined),
-    <Button key="settings-view" label={VIEW_LABEL[g.zoom]} hotkey="v" plain onPress={press({ kind: 'zoom' })} />,
-    <Button key="settings-effects" label={soundSettings.effects ? 'Effects: on' : 'Effects: off'} hotkey="e" plain onPress={soundKey('effects')} />,
+    <Button key="settings-effects" label={soundSettings.effects ? 'Sound: on' : 'Sound: off'} hotkey="e" plain onPress={soundKey('effects')} />,
     <Button key="settings-music" label={soundSettings.music ? 'Music: on' : 'Music: off'} hotkey="m" plain onPress={soundKey('music')} />,
+    <Button key="settings-view" label={VIEW_LABEL[g.zoom]} hotkey="v" plain onPress={press({ kind: 'zoom' })} />,
     <Button key="settings-volume" label={`Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`} hotkey="l" plain onPress={soundKey('volume')} />,
-    orderKey('drink', 'd'),
-    orderKey('smoke', 'f'),
-    orderKey('leave', 'k'),
-    <Button key="settings-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'settings' })} />,
   ]
+  const orders = [orderKey('drink', 'd'), orderKey('smoke', 'f'), orderKey('leave', 'k')]
+  const close = <Button key="settings-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'settings' })} />
+  if (!isWindow) return [...game, ...orders, close]
+  // The window's keys are its page's, and the other page.
+  const isGame = settingsUi.page === 'game'
+  const other = (
+    <Button key="settings-page" label={isGame ? 'Orders' : 'Game'} hotkey="p" plain onPress={() => {
+      settingsUi = { page: isGame ? 'orders' : 'game' }
+      redraw()
+    }} />
+  )
+  return [...(isGame ? game : orders), other, close]
 }
 
 /** Help: the how-it-plays window, over whatever is open. */
@@ -1202,7 +1219,7 @@ const pixelBag = (p: Pane, l: Layout) => {
       <Box marginTop={1} columnGap={2}>
         {bagActions(p)}
         <Button key="destroy" label={bagUi.menu?.confirm === true ? 'Destroy? again' : 'Destroy'} hotkey="d" plain onPress={destroyKey} />
-        <Button key="bag" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
+        <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
       </Box>
       <Text dimColor>Click an item to compare it, again (or right-click) for its menu. Drag to move it, onto its slot to wear it.</Text>
       {p.logTail()}
@@ -1245,14 +1262,14 @@ const pixelShop = (p: Pane) => {
         </Box>
       </Box>
       <Box marginTop={1} columnGap={2}>
-        <Button key="shop-buy" label={chosen === null ? 'Buy' : `Buy ${nameOf(wareOf(chosen).kind, wareOf(chosen).tier)}`} hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
+        <Button key="shop-buy" label="Buy" hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
         <Button key="shop-ware" label="Next ware" hotkey="w" plain onPress={showWare(nextWare(shopUi))} />
         <Button key="shop-sell" label="Sell" hotkey="s" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'sell' })} />
-        <Button key="shop-junk" label={junk.count === 0 ? 'Sell junk' : `Sell junk (${junk.count}, ${junk.coins} gold)`} hotkey="x" plain dimColor={junk.count === 0} onPress={onItem({ kind: 'sellJunk' })} />
-        <Button key="shop-undo" label={undoLabel(g)} hotkey="u" plain dimColor={whyNotBuyBack(g) !== undefined} onPress={onItem({ kind: 'buyBack' })} />
+        <Button key="shop-junk" label={junk.count === 0 ? 'Sell junk' : `Sell junk (${junk.count})`} hotkey="x" plain dimColor={junk.count === 0} onPress={onItem({ kind: 'sellJunk' })} />
+        <Button key="shop-undo" label="Undo sale" hotkey="u" plain dimColor={whyNotBuyBack(g) !== undefined} onPress={onItem({ kind: 'buyBack' })} />
         <Button key="shop-next" label="Next item" hotkey="n" plain onPress={onItem({ kind: 'cycle' })} />
         <Button key="shop-equip" label="Equip" hotkey="e" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'equip' })} />
-        <Button key="shop-close" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
+        <Button key="shop-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
       </Box>
       <Text dimColor>Click a ware or an item to see it, again (or right-click) for its menu.</Text>
       {p.logTail()}
@@ -1304,7 +1321,7 @@ const compactBag = (p: Pane) => {
       </Box>
       <Box marginTop={1} columnGap={2} flexWrap="wrap">
         {bagActions(p)}
-        <Button key="bag" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
+        <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
       </Box>
       <Text dimColor>Click an item to compare it, again for its menu; drag it to move it. Click what you wear to take it off.</Text>
     </Box>
@@ -1386,7 +1403,7 @@ const forgeWindow = (p: Pane) => {
       forgeUi = nextWorn(g, forgeUi)
       redraw()
     }} />,
-    <Button key="forge-close" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'forge' })} />,
+    <Button key="forge-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'forge' })} />,
   ], 'Click a piece you wear to choose it, then a job.')
 }
 
@@ -1411,7 +1428,7 @@ const stashWindow = (p: Pane) => {
       redraw()
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
-    <Button key="stash-close" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
+    <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
   ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.')
 }
 
@@ -1436,7 +1453,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
       </Box>
       <Box marginTop={1} columnGap={2}>
         {deed !== undefined && <Button key="talk-act" label={deed.label[0] + deed.label.slice(1).toLowerCase()} hotkey={deed.key.toLowerCase()} plain dimColor={deed.state === 'off'} onPress={press(deed.action)} />}
-        <Button key={`${who}-close`} label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: who })} />
+        <Button key={`${who}-close`} label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: who })} />
       </Box>
       {p.logTail()}
     </Box>
@@ -1454,13 +1471,13 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'start', draw: startScreen },
   { is: (_, l) => l.isCompactBag, draw: compactBag },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)]) },
-  { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
-  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
+  { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), recapOverlay(p.g), [playOnKey(p, 'p')]) },
+  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
   { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true)) },
   { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), deepOverlay(p.g), deepKeys(p, true)) },
-  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [cardKey(p, 'k'), codexClose(p, 'c')]) },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g, codexUi), codexPixels(p.g, codexUi), codexOverlay(p.g, codexUi), [pageKey(p), cardKey(p, 'k'), codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },
@@ -1600,7 +1617,7 @@ const textElder = (p: Pane) => {
       </Text>
       <Text>{quest === null ? 'No quest in hand. Visit again for one.' : questLine(quest)}</Text>
       <Text dimColor>{quest === null ? ' ' : quest.have >= quest.need ? 'Done: make room in your bag, then claim your pay.' : `Pays ${questReward(quest)} gold and an item of Uncommon or better.`}</Text>
-      {quest !== null && quest.have >= quest.need && <Button key="claim" label="Claim" hotkey="c" plain onPress={press({ kind: 'claim' })} />}
+      {quest !== null && quest.have >= quest.need && <Button key="claim" label="Claim" hotkey="a" plain onPress={press({ kind: 'claim' })} />}
       {closer(p, 'elder')}
     </Box>
   )
@@ -1693,6 +1710,13 @@ const textRecap = (p: Pane) => {
 
 /** Card: the hero card saved and copied. */
 const cardKey = ({ Button, shareCard }: Pane, hotkey?: string) => <Button key="codex-card" label="Card" hotkey={hotkey} plain onPress={shareCard} />
+/** The codex's other page: Finds from Foes, Foes from Finds. */
+const pageKey = ({ Button, redraw }: Pane) => (
+  <Button key="codex-page" label={codexUi.page === 'foes' ? 'Finds' : 'Foes'} hotkey="p" plain onPress={() => {
+    codexUi = { page: codexUi.page === 'foes' ? 'finds' : 'foes' }
+    redraw()
+  }} />
+)
 const codexClose = ({ Button, press }: Pane, hotkey?: string) => <Button key="codex-close" label="Close" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'codex' })} />
 
 /** The codex as text: each row's count and what is in it, then the records. */
@@ -1904,6 +1928,8 @@ const drawPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
   if (g.panel !== 'stash') chestUi = CHEST_UI_IDLE
   if (g.panel !== 'start') startUi = null
   if (g.panel !== 'talent') talentUi = TALENT_UI
+  if (g.panel !== 'codex') codexUi = CODEX_UI
+  if (g.panel !== 'settings') settingsUi = SETTINGS_UI
   const p = paneOf($, e, g)
   const l = layOut(p)
   const tree = (FULL_WINDOWS.find(w => w.is(p, l))?.draw ?? dashboard)(p, l)

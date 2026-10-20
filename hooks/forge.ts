@@ -10,7 +10,7 @@ import { card } from './bagui'
 import { BUTTON_H, CURSOR, OFF_CLASS, UNPAID_INK, button, buttonW } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, fill, frame } from './canvas'
-import { BODY_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Gesture, OverlayBox, Rect } from './window'
 import type { Pos } from './map'
 
@@ -62,12 +62,12 @@ const layout = (g: Game, ui: ForgeUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
-  const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (BODY_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? '#6b6258' : RARITY_COLOR[item.rarity], lines }
+  const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? '#6b6258' : RARITY_COLOR[item.rarity], lines }
   const temperY = (box.y + box.h) * 2 + 3
   const temperAt: Rect = { x: WORK_X, y: temperY + 8, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
   const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w: buttonW('R', 'REFORGE'), h: BUTTON_H }
   const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x: WORK_X, y: reforgeAt.y + BUTTON_H + 2, w: buttonW('K', 'KEEP OLD'), h: BUTTON_H } : undefined
-  const end = Math.max(BODY_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
+  const end = Math.max(WINDOW_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
   return { slot, item, box, temperY, temperAt, reforgeAt, keepAt, height: Math.ceil((end + 3) / 2) * 2 }
 }
 
@@ -91,7 +91,7 @@ const stateOf = (why: string | undefined): ButtonState => (why === undefined ? '
 /** The window's pixels: title and gold, the worn slots with the chosen one framed white, the work side. */
 export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
   const l = layout(g, ui)
-  const body = canvas(WINDOW_W, l.height - BODY_TOP)
+  const body = canvas(WINDOW_W, l.height - WINDOW_TOP)
   wornSlots(body, g, () => GRID)
   // White just outside the slot's frame, where a worn piece's tier frame cannot cover it.
   if (l.slot !== undefined) {
@@ -99,17 +99,17 @@ export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
     frame(body, x - 2, y - 2, w + 4, h + 4, CURSOR)
   }
   if (l.item !== undefined) {
-    temperLine(body, l.item, l.temperY - BODY_TOP)
-    button(body, 'T', 'TEMPER', l.temperAt.x, l.temperAt.y - BODY_TOP, stateOf(whyNotTemper(g, l.item)))
-    button(body, 'R', 'REFORGE', l.reforgeAt.x, l.reforgeAt.y - BODY_TOP, stateOf(whyNotReforge(g, l.item)))
-    if (l.keepAt !== undefined) button(body, 'K', 'KEEP OLD', l.keepAt.x, l.keepAt.y - BODY_TOP, 'ready')
+    temperLine(body, l.item, l.temperY - WINDOW_TOP)
+    button(body, 'T', 'TEMPER', l.temperAt.x, l.temperAt.y - WINDOW_TOP, stateOf(whyNotTemper(g, l.item)))
+    button(body, 'R', 'REFORGE', l.reforgeAt.x, l.reforgeAt.y - WINDOW_TOP, stateOf(whyNotReforge(g, l.item)))
+    if (l.keepAt !== undefined) button(body, 'K', 'KEEP OLD', l.keepAt.x, l.keepAt.y - WINDOW_TOP, 'ready')
   }
-  const c = windowPixels({ title: 'SMITH', gold: g.gold, labels: [{ text: 'WORN', x: 2 }, { text: 'WORK', x: WORK_X + 1 }] }, body.px)
+  const c = windowPixels({ title: 'SMITH', gold: g.gold, labels: [] }, body.px)
   drawBox(c, l.box)
   return c.px
 }
 
-const wornAt = (g: Game, p: Pos) => SLOTS.find(s => g.gear[s] !== undefined && isInside({ x: p.x, y: p.y - BODY_TOP }, ...WORN_SLOTS[s]))
+const wornAt = (g: Game, p: Pos) => SLOTS.find(s => g.gear[s] !== undefined && isInside({ x: p.x, y: p.y - WINDOW_TOP }, ...WORN_SLOTS[s]))
 
 type Outcome = { ui: ForgeUi; actions: Action[] }
 

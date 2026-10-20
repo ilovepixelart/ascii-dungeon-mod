@@ -15,6 +15,8 @@ export const LABEL_Y = HEAD_H + 2
 export const BODY_TOP = HEAD_H + 9
 /** Without labels the body starts just under the title bar, on an even row so text boxes stay on whole cells. */
 const BARE_TOP = HEAD_H + 3
+/** Where a window's body starts with no labels over it: every window the game draws. */
+export const WINDOW_TOP = BARE_TOP
 export const TITLE_X = 3
 export const TITLE_Y = 3
 export const TITLE_INK = '#e8e4dc'
@@ -36,10 +38,44 @@ export const POPOVER_BG = '#0e0d13'
 /** A rectangle in window pixels. */
 export type Rect = { x: number; y: number; w: number; h: number }
 export type Label = { text: string; x: number }
-/** What a window shows around its body: its title, the gold when it matters there, and a label over each section. */
-export type Chrome = { title: string; gold?: number; labels: readonly Label[] }
+/** A tab in a window's title bar: its label, and a gold mark beside it while what it opens waits on the player. */
+export type Tab = { label: string; isMarked?: boolean }
+/** What a window shows around its body: its title (or, with tabs, the tabs in its place, `chosen` the one shown), the
+ * gold when it matters there, and a label over each section. */
+export type Chrome = { title: string; gold?: number; labels: readonly Label[]; tabs?: { items: readonly Tab[]; chosen: number } }
 
 export const isInside = (p: Pos, x: number, y: number, w: number, h: number) => p.x >= x && p.x < x + w && p.y >= y && p.y < y + h
+
+const TAB_GAP = 5
+const TAB_BG = '#24212c'
+const textW = (text: string) => textMask(text)[0]?.length ?? 0
+/** A row of tabs' height: the title bar's, less its line. */
+export const TABS_H = HEAD_H - 1
+/** Each tab's place in a row of tabs whose top is at y (the title bar's, 0, unless said), in window pixels: its label
+ * and room round it, what a click on it covers. */
+export const tabRects = (tabs: readonly Tab[], y = 0): Rect[] => {
+  let x = TITLE_X
+  return tabs.map(t => {
+    const r = { x: x - 2, y, w: textW(t.label) + 4, h: TABS_H }
+    x += textW(t.label) + TAB_GAP
+    return r
+  })
+}
+
+/** A row of tabs at y: the chosen one lit on a lighter ground with a gold rule under it, the others dim; a marked
+ * tab's gold dot in the gap after its label. In the title bar, or a window's pages in its body. */
+export const tabRow = (c: Canvas, items: readonly Tab[], chosen: number, y = 0) => {
+  tabRects(items, y).forEach((r, i) => {
+    const t = items[i]!
+    const isOn = i === chosen
+    if (isOn) {
+      fill(c, r.x, r.y, r.w, r.h, TAB_BG)
+      fill(c, r.x, r.y + r.h - 1, r.w, 1, GOLD_INK)
+    }
+    word(c, t.label, r.x + 2, r.y + TITLE_Y, isOn ? TITLE_INK : LABEL_INK)
+    if (t.isMarked === true) fill(c, r.x + r.w, r.y + TITLE_Y, 2, 2, GOLD_INK)
+  })
+}
 
 /** Words in the pixel font, their top-left at x, y. */
 export const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>
@@ -59,7 +95,8 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   const GOLD_X = Math.max(TITLE_X + (textMask(chrome.title)[0]?.length ?? 0) + 5, width - GOLD_FROM_RIGHT)
   fill(c, 0, 0, width, HEAD_H - 1, HEAD_BG)
   fill(c, 0, HEAD_H - 1, width, 1, GRID)
-  word(c, chrome.title, TITLE_X, TITLE_Y, TITLE_INK)
+  if (chrome.tabs === undefined) word(c, chrome.title, TITLE_X, TITLE_Y, TITLE_INK)
+  else tabRow(c, chrome.tabs.items, chrome.tabs.chosen)
   if (chrome.gold !== undefined) {
     coin(c, GOLD_X, TITLE_Y)
     digits(c, String(chrome.gold), GOLD_X + 5 + String(chrome.gold).length * 4, TITLE_Y + 4, GOLD_INK)

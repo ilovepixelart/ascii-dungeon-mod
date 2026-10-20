@@ -4,7 +4,7 @@ import type { Game, Item, Rarity, Slot } from '../types'
 import { CURSOR, GOLD_INK } from './pieces'
 import { WORN_SLOTS } from './inventory'
 import { plainItem } from './items'
-import { BODY_TOP, CLOSE_BOX } from './window'
+import { WINDOW_TOP, CLOSE_BOX } from './window'
 import type { Gesture } from './window'
 import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
 import { newGame } from './world'
@@ -14,7 +14,7 @@ const wear = (g: Game, slot: Slot, base: string, rarity: Rarity, over: Partial<I
 const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
 const onSlot = (slot: Slot) => {
   const [x, y, w, h] = WORN_SLOTS[slot]
-  return tap(x + Math.floor(w / 2), BODY_TOP + y + Math.floor(h / 2))
+  return tap(x + Math.floor(w / 2), WINDOW_TOP + y + Math.floor(h / 2))
 }
 const card = (g: Game, slot: Slot | null) => forgeOverlay(g, { slot })[0]!.lines.map(l => l.map(r => r.text).join(''))
 /** The gold key letters on the work side, top to bottom: one a ready button. */
@@ -23,7 +23,7 @@ const readyKeys = (g: Game, slot: Slot | null) => {
   // Each letter's first row: a gold row with no gold row right above it.
   const gold = (y: number) => px[y]?.slice(47, 54).includes(GOLD_INK) === true
   const rows: number[] = []
-  for (let y = BODY_TOP; y < px.length; y += 1) if (gold(y) && !gold(y - 1)) rows.push(y)
+  for (let y = WINDOW_TOP; y < px.length; y += 1) if (gold(y) && !gold(y - 1)) rows.push(y)
   return rows
 }
 
@@ -47,7 +47,7 @@ describe('the piece chosen', () => {
     const px = forgePixels(g, { slot: 'armor' })
     const edge = (slot: Slot) => {
       const [x, y] = WORN_SLOTS[slot]
-      return px[BODY_TOP + y - 2]?.[x + 2]
+      return px[WINDOW_TOP + y - 2]?.[x + 2]
     }
     expect(edge('armor')).toBe(CURSOR)
     expect(edge('weapon')).not.toBe(CURSOR)

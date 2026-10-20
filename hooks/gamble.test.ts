@@ -46,3 +46,12 @@ describe('the villager\'s sealed pack', () => {
     expect(gamble({ ...plainHero(3), gold: 1000 }).log).toContain('The villager is in town.')
   })
 })
+
+test('a pack refused for want of room leaves the game as it was: no roll, no id, no bad-luck count spent', async () => {
+  const g = atVillager(1000, { bag: fullBag(), dryKills: 20, sinceRare: 5 })
+  let x = g
+  for (let i = 0; i < 40; i += 1) x = gamble(x)
+  const { log: _a, fresh: _b, ...after } = x
+  const { log: _c, fresh: _d, ...before } = g
+  expect(after).toEqual(before)
+})

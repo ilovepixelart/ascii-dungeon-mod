@@ -10,6 +10,12 @@ const tap = (x: number, y: number): Gesture => ({ type: 'release', from: { x: x 
 describe('the how it plays window', () => {
   const text = (line: { text: string }[]) => line.map(r => r.text).join('')
 
+  test('heads its box with what it is about, bold in gold, a row of room under it', async () => {
+    const lines = helpOverlay()[0]!.lines
+    expect(lines[0]).toEqual([{ text: 'Your coding plays the hero.', bold: true, color: '#ffd34d' }])
+    expect(lines[1]).toEqual([])
+  })
+
   test('says what the coding does: a rule each, what happens and what it comes to', async () => {
     expect(HELP_ROWS.map(r => [r.when, r.does])).toEqual([
       ['Every tool call', 'A step or a blow'],
@@ -21,8 +27,8 @@ describe('the how it plays window', () => {
     ])
     const lines = helpOverlay()[0]!.lines
     HELP_ROWS.forEach((r, i) => {
-      expect(lines[3 * i]![0]).toMatchObject({ text: r.when, bold: true })
-      expect(lines[3 * i + 1]![0]).toMatchObject({ text: r.does, dim: true })
+      expect(lines[2 + 3 * i]![0]).toMatchObject({ text: r.when, bold: true })
+      expect(lines[3 + 3 * i]![0]).toMatchObject({ text: r.does, dim: true })
     })
     expect(text(lines[lines.length - 1]!)).toBe('You pick the gear and the talents, and set the orders.')
   })
@@ -37,7 +43,7 @@ describe('the how it plays window', () => {
     const px = helpPixels()
     const box = helpOverlay()[0]!
     HELP_ROWS.forEach((_, i) => {
-      const y = 2 * (box.y + 1 + 3 * i)
+      const y = 2 * (box.y + 3 + 3 * i)
       const inked = [0, 1, 2, 3, 4].some(dy => px[y + dy]!.slice(box.x + 1, box.x + 1 + 8).some(p => p !== POPOVER_BG))
       expect(inked).toBe(true)
     })

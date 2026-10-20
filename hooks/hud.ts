@@ -267,7 +267,7 @@ export const hudHot = (g: Game, width: number) => {
     at(settingsSlotX(w), 0, SLOT, SLOT),
     ...(g.foe === null ? [at(portalSlotX(w), 0, SLOT, SLOT)] : []),
     ...g.belt.flatMap((s, i) => (s === null ? [] : [at(beltSlotX(w, i), BELT_BELOW_Y, BELT_SLOT_W, SLOT)])),
-    at(0, SIDE_LINE_Y - 1, w, SIDE_LINE_H + 2),
+    at(0, SIDE_LINE_Y, w, SIDE_LINE_H),
   ]
 }
 

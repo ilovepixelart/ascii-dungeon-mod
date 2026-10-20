@@ -10,7 +10,8 @@ import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
 import type { Rect } from './window'
 import type { Pos } from './map'
 import type { Canvas } from './canvas'
-import { INK, SURFACE } from './ui/tokens'
+import { INK } from './ui/tokens'
+import { glow } from './ui/kit'
 
 export { BELT_STEP, CURSOR, GHOST_INK, OFF_CLASS, UPGRADE } from './pieces'
 export { CLOSE_BOX, CLOSE_INK, LABEL_INK, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
@@ -64,8 +65,6 @@ export const inventoryPixels = (g: Game): string[][] => {
   return c.px
 }
 
-const BLOCKED_TINT = SURFACE.blocked
-const FITS_TINT = SURFACE.fits
 
 /** What is being dragged: a bag item or a worn one, the pointer in screen pixels, and where on the item it was grabbed. */
 export type Drag = { source: { kind: 'bag'; id: number } | { kind: 'worn'; slot: Slot }; at: Pos; grab: Pos }
@@ -87,11 +86,10 @@ export const dropTarget = (g: Game, drag: Drag): DropTarget | undefined => {
 }
 
 /** A drag on the screen: the item's old place as a ghost, its target framed and tinted, the icon at the pointer. */
-/** Where a drag would drop: checkered in green where it fits, red where not, and framed. */
-const drawTarget = (c: Canvas, [tx, ty, tw, th]: readonly [number, number, number, number], fits: boolean) => {
-  for (let y = 0; y < th; y += 1) for (let x = 0; x < tw; x += 1) if ((x + y) % 2 === 0) put(c, tx + x, INV_TOP + ty + y, fits ? FITS_TINT : BLOCKED_TINT)
-  frame(c, tx - 1, INV_TOP + ty - 1, tw + 2, th + 2, fits ? CURSOR : OFF_CLASS)
-}
+/** Where a drag would drop, with its frame: lit as the hover lights what a click acts on, in white where it fits, in
+ * red where it will not go. */
+const drawTarget = (c: Canvas, [tx, ty, tw, th]: readonly [number, number, number, number], fits: boolean) =>
+  glow(c, { x: tx - 1, y: INV_TOP + ty - 1, w: tw + 2, h: th + 2 }, fits ? CURSOR : OFF_CLASS)
 
 const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
   const item = draggedItem(g, drag)

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren, RenderElement, RenderInput, ToolCallInput } from 'claude-code'
 
 import type { Game, HeroClass, Talent } from '../types'
-import { TOWN_TALK } from './town'
+import { TOWN_TALK, isTownWalkable, townSpotAt } from './town'
 import { BIG_BOSSES, LOG_KEPT, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
@@ -50,12 +50,12 @@ import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compa
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
 import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
-import { MAP_H, MAP_W, cellId, same } from './map'
+import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
-import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
-import type { Ambient, Hit } from './pixels'
+import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import type { Ambient, Hit, PixelRect } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
 import { workOf } from './work'
 import type { GitOperation } from './work'
@@ -500,7 +500,7 @@ const endHits = async ($: EngineInterface) => {
   if (size !== null) {
     const g = normalize(await read($, game))
     const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown), size)
+    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit), size)
   }
   $.ui.invalidate('ui.render')
 }
@@ -582,7 +582,7 @@ const ambientTick = async ($: EngineInterface) => {
   shown = next
   const size = mapSize
   const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown), size)
+  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit), size)
 }
 
 /** The time, for the idle motion's bookkeeping; a host without a clock leaves the last known time standing. */
@@ -817,26 +817,41 @@ const current = async ($: EngineInterface) => normalize(await read($, game))
 /** Each click layer's gestures, to its window: what the window makes of a gesture, its own state kept, and the pane
  * redrawn where the window's look depends on that state. A click on the pixel map walks the hero to the tile under it;
  * one on the strip opens the inventory or uses a belt slot. */
-/** The name of the item lying under the pointer on the map, over its tile (map cells), while the hero has seen it. */
-let mapLabel: { x: number; y: number; text: string; color: string } | null = null
+/** A name the map's click layer writes over a tile, in its cells. */
+type MapLabel = { x: number; y: number; text: string; color: string }
+/** Where the pointer rests over the map, in its cells, with the map's size; null off it. */
+let mapPointer: { x: number; y: number; columns: number; rows: number } | null = null
 
-/** The pointer over the map (or off it): the item lying on the tile under it named, drawn again when that changes. */
+/** Whether a click on `tile` acts: in the dungeon a seen floor tile, in town open ground or a townsperson's spot. */
+const isClickable = (g: Game, tile: Pos) => {
+  if (g.where === 'town') return isTownWalkable(tile) || townSpotAt(tile) !== undefined
+  return tile.x >= 0 && tile.y >= 0 && tile.x < MAP_W && tile.y < MAP_H && g.seen[cellId(tile)] === '1' && isFloor(levelOf(g).tiles, tile)
+}
+
+/**
+ * What the hover shows on the map for the game as it is now, the pointer where it rests: the tile lit while a click
+ * there would act, and the name of an item seen lying there. Worked out on every draw, so a step, a pickup or a new
+ * depth never leaves a stale one.
+ */
+const mapHoverOf = (g: Game): { lit?: PixelRect; label: MapLabel | null } => {
+  if (mapPointer === null) return { label: null }
+  const size = { columns: mapPointer.columns, rows: mapPointer.rows }
+  const view = camera?.place === placeOf(g) ? camera.at : undefined
+  const tile = clickToTile(g, mapPointer, view)
+  const lit = isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined
+  const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
+  if (lying === undefined) return { lit, label: null }
+  const at = tileToCell(g, tile, size, view)
+  const width = lying.item.name.length + 2
+  return { lit, label: { x: Math.max(0, Math.min(at.x, size.columns - width - 2)), y: at.y > 0 ? at.y - 1 : at.y + PX / 2, text: lying.item.name, color: RARITY_COLOR[lying.item.rarity] } }
+}
+
+/** The pointer over the map (or off it): where it rests kept, the map drawn again when what the hover shows changes. */
 const onMapHover = async ($: EngineInterface, data: { x?: number; y?: number; columns?: number; rows?: number }) => {
-  const before = JSON.stringify(mapLabel)
-  mapLabel = null
-  if (data.x !== undefined && data.y !== undefined && data.columns !== undefined && data.rows !== undefined) {
-    const g = await current($)
-    const size = { columns: data.columns, rows: data.rows }
-    const view = camera?.place === placeOf(g) ? camera.at : undefined
-    const tile = clickToTile(g, { x: data.x, y: data.y, ...size }, view)
-    const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
-    if (lying !== undefined) {
-      const text = ` ${lying.item.name} `
-      const at = tileToCell(g, tile, size, view)
-      mapLabel = { x: Math.max(0, Math.min(at.x, size.columns - text.length - 2)), y: at.y > 0 ? at.y - 1 : at.y + PX / 2, text: lying.item.name, color: RARITY_COLOR[lying.item.rarity] }
-    }
-  }
-  if (JSON.stringify(mapLabel) !== before) $.ui.invalidate('ui.render')
+  const g = await current($)
+  const before = JSON.stringify(mapHoverOf(g))
+  mapPointer = data.x !== undefined && data.y !== undefined && data.columns !== undefined && data.rows !== undefined ? { x: data.x, y: data.y, columns: data.columns, rows: data.rows } : null
+  if (JSON.stringify(mapHoverOf(g)) !== before) $.ui.invalidate('ui.render')
 }
 
 const onMapClick = async ($: EngineInterface, data: unknown) => {
@@ -1905,10 +1920,10 @@ const mapView = (p: Pane, l: Layout) => {
   const stride = l.heroAt !== undefined && walk !== null && isStrideFrame(walk.frame)
   return (
     <Box>
-      <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(pixelMap(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL))} />
+      <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(pixelMap(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? mapHoverOf(p.g).lit : undefined))} />
       {Client !== undefined && (
         <Box position="absolute" top={0} left={0}>
-          <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, label: mapLabel }} width={l.mapWidth} height={l.pixelRows} />
+          <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, label: mapHoverOf(p.g).label }} width={l.mapWidth} height={l.pixelRows} />
         </Box>
       )}
     </Box>

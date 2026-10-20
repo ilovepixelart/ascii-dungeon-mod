@@ -84,11 +84,11 @@ describe('the jobs', () => {
     expect(whyNotReforge(g, wear(g, 'ring', 'ring', 'legendary').gear.ring!)).toBe('a Legendary stays as it was made')
   })
 
-  test('the card ends with what each job costs, or why it cannot be done', async () => {
-    // A new knight's Common sword: 60 to temper; nothing to reforge.
-    expect(card(knight(0), 'weapon').slice(-2)).toEqual(['Temper 60  not enough gold', 'Reforge a Common has no affixes'])
-    expect(card(knight(100), 'weapon').slice(-2)).toEqual(['Temper 60', 'Reforge a Common has no affixes'])
-    expect(card(wear(knight(0), 'weapon', 'sword', 'common', { temper: 3 }), 'weapon').at(-2)).toBe('Temper tempered as far as it goes')
+  test('the card ends with what each job costs, or why it cannot be done; tempering says what it makes of the stat', async () => {
+    // A new knight's Common sword, 2 attack: 60 to temper; nothing to reforge.
+    expect(card(knight(0), 'weapon').slice(-2)).toEqual(['Temper 60  ATK 2 > 3  not enough gold', 'Reforge a Common has no affixes'])
+    expect(card(knight(100), 'weapon').slice(-2)).toEqual(['Temper 60  ATK 2 > 3', 'Reforge a Common has no affixes'])
+    expect(card(wear(knight(0), 'weapon', 'sword', 'common', { temper: 3 }), 'weapon').at(-2)).toBe('Temper tempered as far as it goes  ATK 2')
     expect(card({ ...knight(0), gear: {} }, null)).toEqual(['You wear nothing for the smith to work on.'])
   })
 

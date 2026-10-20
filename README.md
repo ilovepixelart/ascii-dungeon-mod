@@ -5,19 +5,21 @@ hero: a read explores, an edit or a shell command meets a foe, a failure lets it
 Real work pays: passing tests strike a sure critical, a commit kneels at a shrine, a push or a pull request opens a cache.
 Standing orders in settings say what the hero does on their own: when to drink, when to throw smoke, what loot to leave.
 Click the map to walk, open the inventory from the hero's portrait, and visit the town through the portal: a merchant,
-a smith, a healer, a stash, an elder with quests, a mystic with fortunes.
+a smith, a healer, a stash, an elder with quests, a mystic with fortunes, a villager with sealed packs and a guard who
+trades three spare pieces for one better.
 
 ## Running it
 
 It loads from this folder as a Claude Code mod; `/dungeon` opens the pane. The pixel view needs a terminal that draws
 truecolor half blocks; playing by mouse needs the fullscreen layout (`/tui fullscreen`). A pane at least 105 columns
-wide shows every pixel window, 80 the strip and a compact inventory; narrower, the game draws as text.
+wide shows every pixel window, 80 the strip and a compact inventory; narrower, the game draws as text. At 48 rows tall
+every window shows whole with its keys; a shorter pane scrolls, and says by how much on its top row.
 
 Options in the plugin's config: `sound` (effects) and `music` (the town's tune), both on by default.
 
 ## Install
 
-Requires Claude Code 2.1.287 or later (mods). Developed and tested on 2.1.296.
+Requires Claude Code 2.1.287 or later (mods). Developed and tested on 2.1.303.
 
 Straight from this repository, following `main`:
 
@@ -28,7 +30,7 @@ Straight from this repository, following `main`:
 To stay on one release, add this repository at its tag instead, then install from it:
 
 ```
-/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.3.0
+/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.4.0
 /plugin install ascii-dungeon@ascii-dungeon-mod
 ```
 

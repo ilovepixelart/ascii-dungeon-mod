@@ -1,6 +1,6 @@
 // The retire window: the pieces the hero wears to choose the heirloom from, Retire and Back, and in the box under them
-// the chosen piece's name, what passing it down means and who the hero was. Pure: the click layer reports whole
-// gestures, this decides the window's next state and the game actions they make.
+// what it asks with the chosen piece's name, what passing it down means and who the hero was. Pure: the click layer
+// reports whole gestures, this decides the window's next state and the game actions they make.
 import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { whyNotRetire } from './game'
@@ -12,7 +12,7 @@ import { art, canvas, fill, frame } from './canvas'
 import { chosenSlot } from './forge'
 import type { ForgeUi } from './forge'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'RETIRE THE HERO' }
@@ -23,10 +23,10 @@ const BOX_BG = SURFACE.sunken
 const BOX_W = 13
 const BOX_H = 23
 const BOX_STEP = 14
-const BOXES_Y = 12
+const BOXES_Y = 3
 const RETIRE = { key: 'R', label: 'RETIRE' }
 const BACK = { key: 'B', label: 'BACK' }
-const ASK = 'CHOOSE AN HEIRLOOM'
+const ASK = 'Choose an heirloom'
 const TELL = 'Every new hero starts wearing it, its power kept and its stats plain.'
 
 /** The piece the window has chosen: the one picked, else the first worn. */
@@ -47,16 +47,13 @@ const layout = (g: Game, ui: RetireUi) => {
   return { slot, item, boxes, retire, back }
 }
 
-/** The lines the window says in pixels, where (window pixels) and in what ink: what it asks. */
-export const retireLines = () => [{ text: ASK, x: PAD, y: top + 3, ink: INK.dim }]
-
-/** The box under the buttons, in cells: the chosen piece's name in its tier's color, what passing it down means,
- * who the hero was. */
+/** The box under the buttons, in cells: what it asks with the chosen piece's name in its tier's color, what passing
+ * it down means, who the hero was. */
 export const retireOverlay = (g: Game, ui: RetireUi): OverlayBox[] => {
   const l = layout(g, ui)
   const who = `Level ${g.level} ${CLASS_NAME[g.cls]}, deepest ${g.deepest}, ${many(Math.floor(g.bossSlain / BIG_EVERY), 'big boss', 'big bosses')}.`
   const lines: Run[][] = [
-    ...(l.item === undefined ? [] : [[{ text: l.item.name, bold: true, color: RARITY_COLOR[l.item.rarity] }]]),
+    l.item === undefined ? [{ text: `${ASK}.` }] : [{ text: `${ASK}: ` }, { text: l.item.name, bold: true, color: RARITY_COLOR[l.item.rarity] }],
     [{ text: TELL }],
     [{ text: who, dim: true }],
   ]
@@ -93,7 +90,6 @@ export const retirePixels = (g: Game, ui: RetireUi): string[][] => {
   const l = layout(g, ui)
   const body = canvas(WINDOW_W, retireHeight(g, ui) - top)
   for (const b of l.boxes) pieceBox(body, g.gear[b.slot]!, b.x, b.y - top, b.slot === l.slot)
-  for (const line of retireLines()) word(body, line.text, line.x, line.y - top, line.ink)
   button(body, RETIRE.key, RETIRE.label, l.retire.x, l.retire.y - top, l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? 'armed' : 'off')
   button(body, BACK.key, BACK.label, l.back.x, l.back.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)

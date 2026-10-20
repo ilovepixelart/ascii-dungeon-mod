@@ -6,11 +6,39 @@ release may change behaviour.
 
 ## [Unreleased]
 
-Saves from 0.3.0 standing on a depth that now has a rounded, alcoved or island room (save version 11) start that depth
-again from its new start, gains kept. Nothing else needs doing.
+## [0.4.0] - 2026-10-20
+
+Saves from 0.3.0 load as they are: one standing on a depth that now has a rounded, alcoved or island room (save
+version 11) starts that depth again from its new start, gains kept. Keys that moved: Close is `c` in every window
+(the inventory and the town's windows took `i`), the elder's Claim is `a` (it was `c`), and in the talent window a
+number chooses its card where it took the talent at once (Take, `t`, takes it). Nothing else needs doing.
 
 ### Changed behaviour
 
+- The windows are redone on one set of rules, and each fits in 41 rows, so the game plays best in a pane 105 columns
+  by 48 rows, where it was 78:
+  - Sentences sit in a text box under a window's content (or beside a portrait), where several windows wrote them in
+    the pixel font; a box's frame says what it holds, an item's card in its tier's color. The talents taken, the
+    mystic's fortunes, the deep's depth and tiers, the retire window's ask, How it plays' head and the stat a temper
+    raises are text in their boxes too: the mystic's window is 24 rows where it was 41, the deep's at a fork 25
+    where it was 34.
+  - The character sheet, the talents, the deep and the codex are tabs of one window, named in its title bar, the
+    talents and the deep marked with a gold dot while one waits; the sheet's attributes sit two to a row, its Codex,
+    Talent and Deep buttons gone to the tabs. The codex has two pages, Foes and Finds (the Legendaries, the records
+    and Card); settings two, Game and Orders; `p` turns the page.
+  - Talents are picked from three cards side by side, each with its family's ribbon (work, fight, road) and its own
+    icon, the chosen one lifted; the window opens on its own when a talent is earned, once no window is open and no
+    foe is alive, and Later leaves it owed until the next. Saves gain the optional `talentOffered`.
+  - The start screen is titled in its title bar, a portrait and a name a card; the deep's two marks sit side by side;
+    the retire window, the recap and How it plays put their words in boxes. The inventory, the merchant, the smith and
+    the stash drop the labels under their title bars; the stash's count is in its title.
+  - Each window's main button is framed white (Take, Start, Retire, Wake, Play on) and a row of buttons is centered;
+    the keys under a window fit one row.
+- What the pointer is over lights up before a click, in every window, on the strip and on the map: a button, a card,
+  a tab, a worn piece or an item in the bag, a ware, the close box, a belt slot, the tile a click would walk to. What
+  cannot act now (a dark button, the chosen tab, rock or what is unseen) does not.
+- The character sheet's train buttons show a plus alone, where each showed its key, 1 to 4, beside it; the keys still
+  train. A button with a key and no label sits centered.
 - The log keeps its last 30 lines, where it kept 5, so a busy moment (a kill that levels the hero and drops loot)
   no longer pushes its first lines out. A log window shows them all: from the strip's gold and depth line, from the
   text dashboard's latest line (`g`), or from the lines under any window. Saves keep up to 30 log lines.
@@ -25,39 +53,12 @@ again from its new start, gains kept. Nothing else needs doing.
 - An item found with the bag full lies where it fell, drawn on the map, and stepping onto it with room picks it up;
   it was lost, though the log said it stayed on the floor. It waits through a trip to town, and going down leaves it
   behind, said. The pointer over it on the map names it, in its tier's color. A prize goes to the stash in town
-  while it has room: a nemesis's trophy, a unique's or a boss's item,
-  the codex's, and a push's or pull request's cache. A full belt says it has no room, where it said the potion
-  stayed on the floor. Saves gain the optional `floor`.
-- In the talent window a number key chooses its card, as on the start screen, and Take (`t`) takes it; a number
-  took the talent at once.
-- In every window, what the pointer is over lights up before a click: a button, a card, a tab, a worn piece or an
-  item in the bag, a ware, the close box, and on the strip the portrait, the XP line, the gear, the portal and a
-  filled belt slot. What cannot act now (a dark button, the chosen tab, the portal while a foe lives) does not.
-- Every window fits in 41 rows, and the game plays best in a pane 105 columns by 48 rows, where it was 78. The
-  character sheet, the talents, the deep and the codex are tabs of one window, named in its title bar (the talents
-  and the deep marked gold while one waits); the sheet loses its Codex, Talent and Deep buttons to them, its
-  attributes two to a row. The codex has two pages, Foes and Finds (the Legendaries, the records and Card);
-  settings two, Game and Orders, each a tab or `p`. The recap shows the portrait with what happened beside it and
-  the best find with its name. The inventory, the merchant, the smith and the stash drop the labels under their
-  title bars; the stash's count is in its title.
-- Close is `c` in every window, where the inventory and the town's windows took `i`; the elder's Claim moves to
-  `a`. Each window's main button is framed white: Wake, Play on and Retire too; settings' New game no longer.
-  The death window's Wake and the recap's Play on are centered. The merchant's keys stay on one row: Buy, Sell junk
-  with its count, Undo sale.
-- How it plays, the start screen, the deep and the retire window each fit in 40 rows, so a short pane shows them
-  whole: their sentences are in a text box under them instead of the pixel font. How it plays keeps an icon a rule;
-  the start screen is titled in its title bar, its cards a portrait and a name (the box says the lean); the deep's
-  two marks are side by side; the retire window drops the portrait. Under the deep window, each mark's key shows
-  its name alone.
-- Talents are picked from three cards side by side, each with its family's ribbon (work, fight, road) and its own
-  icon; the chosen card is lifted, its name and what it does in the box below. The window fits in 40 rows, so a
-  short pane shows it whole. It opens on its own when a talent is earned, once no window is open and no foe is
-  alive; Later leaves it owed until the next. Taking the last one owed closes it. Saves gain the optional `talentOffered`.
+  while it has room: a nemesis's trophy, a unique's or a boss's item, the codex's, and a push's or pull request's
+  cache. A full belt says it has no room, where it said the potion stayed on the floor. Saves gain the optional
+  `floor`.
 - An answer finished walks the hero to the stairs on screen, picking up what lies on the way, then down, where the
   hero appeared on the next depth from wherever he stood. Simulated deaths per descent are unchanged (0.097 and
   0.099); the hero gets down a little sooner, so deaths per 1,000 steps go from 1.60 to 1.71.
-- The character sheet's train buttons show a plus alone, where each showed its key, 1 to 4, beside it; the keys still
-  train. A button with a key and no label (those and the deep window's A and B) sits centered.
 - A corridor shows at once when the hero steps into it, along its floor through its next junction, so one click walks
   its length; a chest at a dead end, the next door and the room past it show only once the hero is beside them. A
   room shows whole from its door, and no longer through a gap from a room beside it; from a room the hero no longer

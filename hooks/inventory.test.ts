@@ -5,6 +5,7 @@ import { CELL, ICONS } from './icons'
 import { HEAD_H } from './window'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CURSOR, INV_H, INV_W, OFF_CLASS, UPGRADE, WORN_SLOTS, CLOSE_BOX, CLOSE_INK, GHOST_INK, INV_TOP, LABEL_INK, TITLE_INK, TITLE_X, TITLE_Y, beltLabel, dropTarget, inventoryPixels, inventoryScreenPixels, itemCard, POPOVER_BG } from './inventory'
 import { BAG_W, RARITY_COLOR, plainItem } from './items'
+import { mix } from './pieces'
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
 import { PAL, textMask } from './pixelart'
 import { newGame } from './world'
@@ -164,11 +165,13 @@ describe('the inventory screen', () => {
     expect(screen.slice(HEAD_H, INV_TOP).flat().includes(LABEL_INK)).toBe(false)
   })
 
-  test('draws a close box with a red X at its place', async () => {
+  test('draws a small close box at the title bar\'s right end: 7 px square, its red X 3 px across, a pixel of room round it', async () => {
     const screen = inventoryScreenPixels(knight())
+    // In a 105 px window: from x 96 to 102, two pixels from the edge, y 2 to 8 in the 10 px bar.
+    expect(CLOSE_BOX).toEqual([96, 2, 7, 7])
     const [x, y, w, h] = CLOSE_BOX
-    const inside = screen.slice(y, y + h).flatMap(r => r.slice(x, x + w))
-    expect(inside.filter(p => p === CLOSE_INK).length).toBeGreaterThanOrEqual(9)
+    const red = screen.slice(y, y + h).flatMap((r, dy) => r.slice(x, x + w).flatMap((p, dx) => (p === CLOSE_INK ? [`${dx},${dy}`] : [])))
+    expect(red.sort()).toEqual(['2,2', '2,4', '3,3', '4,2', '4,4'])
   })
 })
 
@@ -179,6 +182,16 @@ describe('dragging', () => {
   put(g, 'chain', 'common', 0, 0)
   const cellAt = (x: number, y: number) => ({ x: BAG_X + x * CELL + 1, y: INV_TOP + BAG_Y + y * CELL + 1 })
   const holding = (to: { x: number; y: number }) => ({ source: { kind: 'bag' as const, id: helm.id }, at: { x: to.x + 3, y: to.y + 3 }, grab: { x: 3, y: 3 } })
+
+  test('the target glows as the hover does, through what is drawn there: in white where the item fits, in red where not', async () => {
+    const still = inventoryScreenPixels(g)
+    // The target's frame, a pixel outside the cell: its left edge, half way down.
+    const edge = (cx: number, cy: number) => ({ x: cellAt(cx, cy).x - 1, y: cellAt(cx, cy).y + 2 })
+    const fits = edge(5, 3)
+    const blocked = edge(1, 0)
+    expect(inventoryScreenPixels(g, holding(cellAt(5, 3)))[fits.y]![fits.x]).toBe(mix(still[fits.y]![fits.x]!, CURSOR, 0.5))
+    expect(inventoryScreenPixels(g, holding(cellAt(1, 0)))[blocked.y]![blocked.x]).toBe(mix(still[blocked.y]![blocked.x]!, OFF_CLASS, 0.5))
+  })
 
   test('over the bag, the target is the cell under the item\'s top-left; it fits on free cells or its own', async () => {
     expect(dropTarget(g, holding(cellAt(5, 3)))).toEqual({ kind: 'bag', x: 5, y: 3, fits: true })
@@ -202,16 +215,11 @@ describe('dragging', () => {
     expect(dropTarget(g, { ...holding({ x: 0, y: 0 }), at: { x: 1, y: 1 } })).toBeUndefined()
   })
 
-  test('draws the item\'s old place as a ghost, and a white frame round a target it fits, red where it does not', async () => {
+  test('draws the item\'s old place as a ghost', async () => {
     const from = box(helm)
     const fits = inventoryScreenPixels(g, holding(cellAt(5, 3)))
     const icon = new Set(fits.slice(INV_TOP + from.y, INV_TOP + from.y + from.h).flatMap(r => r.slice(from.x, from.x + from.w)))
     expect([...icon].some(p => p !== '#1a1820' && p !== GHOST_INK)).toBe(false)
-    const t = cellAt(5, 3)
-    expect(at(fits, t.x - 1, t.y - 1)).toBe(CURSOR)
-    const blocked = inventoryScreenPixels(g, holding(cellAt(1, 0)))
-    const b = cellAt(1, 0)
-    expect(at(blocked, b.x - 1, b.y - 1)).toBe(OFF_CLASS)
   })
 })
 

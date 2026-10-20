@@ -12,12 +12,27 @@ import type { Chrome, Gesture, OverlayBox } from './window'
 
 const CHROME: Chrome = { title: 'LOG' }
 
-/** The box, in cells: every line kept, or a word that there is none yet. */
+/** The box's width, and the characters a row of it holds: its frame and a cell of room each side. */
+const BOX_W = WINDOW_W - 4
+export const LOG_ROW = BOX_W - 4
+
+/** A line broken at its spaces into rows no longer than LOG_ROW, a word longer than a row cut. */
+const rowsOf = (text: string): string[] =>
+  text.split(' ').reduce<string[]>((rows, word) => {
+    const last = rows.at(-1)
+    if (last !== undefined && `${last} ${word}`.length <= LOG_ROW) rows[rows.length - 1] = `${last} ${word}`
+    else rows.push(word.slice(0, LOG_ROW))
+    return rows
+  }, [])
+
+/** The box, in cells: the lines kept, each broken into rows to fit, the newest LOG_KEPT rows of them; or a word that
+ * there is none yet. */
 export const logOverlay = (g: Game): OverlayBox[] => {
   const runs = logRuns(g, LOG_KEPT)
   // A click layer's props hold no undefined: a line not faded carries no dim at all.
-  const lines: Run[][] = runs.length === 0 ? [[{ text: 'Nothing has happened yet.', dim: true }]] : runs.map(r => [r.dim === true ? { text: r.text, dim: true } : { text: r.text }])
-  return [{ role: 'about', x: 2, y: WINDOW_TOP / 2 + 1, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
+  const rows: Run[][] = runs.flatMap(r => rowsOf(r.text).map(text => [r.dim === true ? { text, dim: true } : { text }]))
+  const lines = rows.length === 0 ? [[{ text: 'Nothing has happened yet.', dim: true }]] : rows.slice(-LOG_KEPT)
+  return [{ role: 'about', x: 2, y: WINDOW_TOP / 2 + 1, w: BOX_W, h: lines.length + 2, border: SURFACE.frame, lines }]
 }
 
 /** The window's height in pixels, title bar and all. */

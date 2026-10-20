@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { SAVE_VERSION, SHOP_PRICES, isBossDepth, alongTheWay, foeTierWeights, apply, isOnlyAWalk, championOf, classAbout, critChance, xpGain, levelOf, newGame, normalize, onToolStart, reforgeCost, routeToStairs } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { countOf } from './consumables'
-import { plainItem } from './items'
+import { BAG_H, BAG_W, plainItem } from './items'
 import { arrive } from './world'
 import { analyze, bfs, cellId, chestAt, floorThing, generate, isFloor, layoutOf, same, themedRoomOf } from './map'
 import { foeRuns, mapRows, statusRuns, tileAt } from './panels'
@@ -812,6 +812,16 @@ describe('opening a chest', () => {
     }
     throw new Error(`no ${kind} chest`)
   }
+
+  test('opened with the bag full, its item lies on its tile, said once', async () => {
+    const { g, chest } = besideChest('iron', 3)
+    const full = Array.from({ length: BAG_W }, (_, i) => ({ ...plainItem({ nextId: 8000 + i }, 'chain'), w: 1, h: BAG_H, x: i, y: 0 }))
+    const opened = apply({ ...g, bag: full }, { kind: 'goto', ...chest })
+    expect(opened.floor?.map(f => [f.x, f.y])).toEqual([[chest.x, chest.y]])
+    const said = opened.log.slice(opened.log.length - opened.fresh)
+    expect(said.filter(l => l.includes(opened.floor![0]!.item.name))).toHaveLength(1)
+    expect(said.at(-1)).toMatch(/your bag is full, so the .+ lies here\.$/)
+  })
 
   test('walking onto it opens it once: gold and an item, said in one line; it stays open', async () => {
     const { g, chest } = besideChest('wooden', 1)

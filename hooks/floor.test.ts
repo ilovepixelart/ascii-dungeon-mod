@@ -4,7 +4,7 @@ import type { Foe, Game, Item } from '../types'
 import { STASH_SIZE, apply, levelOf } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { BAG_H, BAG_W, RARITY_COLOR, plainItem } from './items'
-import { cellId } from './map'
+import { cellId, isFloor } from './map'
 import { tileAt } from './panels'
 import { arrive } from './world'
 
@@ -76,5 +76,37 @@ describe('a prize with the bag full', () => {
     const after = apply(g, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' })
     expect(after.stashed).toHaveLength(1)
     expect(after.bag).toHaveLength(BAG_W)
+  })
+})
+
+describe('the floor, at its edges', () => {
+  test('a cache earned in town with the bag and the stash full waits by the portal on the depth below, on its floor', async () => {
+    const down = { ...plainHero(5), ...arrive(5, 4), depth: 4, deepest: 4 }
+    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring')) }
+    const after = apply(inTown, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' })
+    expect(after.floor).toHaveLength(1)
+    const lying = after.floor![0]!
+    expect([lying.x, lying.y]).toEqual([down.x, down.y])
+    expect(isFloor(levelOf(down).tiles, lying)).toBe(true)
+    expect(after.log.some(l => l.endsWith('it waits by the portal in the dungeon.'))).toBe(true)
+  })
+
+  test('a step onto a tile with two items lying on it picks up both, room allowing', async () => {
+    const g = facing()
+    const next = g.foe!
+    const two = [{ x: next.x, y: next.y, item: plainItem({ nextId: 7001 }, 'ring') }, { x: next.x, y: next.y, item: plainItem({ nextId: 7002 }, 'amulet') }]
+    const after = step({ ...g, foe: null, bag: [], floor: two })
+    expect([after.floor, after.bag.length]).toEqual([[], 2])
+  })
+
+  test('slain, waking on the same depth keeps what lies on its floor; waking on another loses it, said', async () => {
+    const base = { ...plainHero(3), ...arrive(3, 3), depth: 3, deepest: 3, hp: 1 }
+    const lying = [{ x: base.x, y: base.y, item: plainItem({ nextId: 7101 }, 'ring') }]
+    const slayer = (g: Game) => apply({ ...g, foe: foeAhead(g, 1, { opened: true, atk: 99 }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+    const same = slayer({ ...base, waypoint: 3, floor: lying })
+    expect([same.depth, same.floor]).toEqual([3, lying])
+    const other = slayer({ ...base, ...arrive(3, 4), deepest: 4, floor: lying })
+    expect([other.depth, other.floor]).toEqual([1, []])
+    expect(other.log).toContain('The item left on the floor of depth 4 is lost.')
   })
 })

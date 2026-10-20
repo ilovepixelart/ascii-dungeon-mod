@@ -13,7 +13,7 @@ import type { Canvas } from './canvas'
 import { INK, SURFACE } from './ui/tokens'
 
 export { BELT_STEP, CURSOR, GHOST_INK, OFF_CLASS, UPGRADE } from './pieces'
-export { CLOSE_BOX, CLOSE_INK, LABEL_INK, LABEL_Y, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
+export { CLOSE_BOX, CLOSE_INK, LABEL_INK, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
 
 /** One pixel past the bag, so a selected item in its last column keeps its frame. */
 export const INV_W = WINDOW_W
@@ -24,7 +24,7 @@ export const BAG_Y = 2
 export const BELT_Y = 57
 export const INV_H = BELT_Y + SLOT + 1
 export const BELT_X = 2
-/** The panel starts below the window's title bar and labels. */
+/** The panel starts below the window's title bar. */
 export const INV_TOP = WINDOW_TOP
 
 /** Each worn slot's inner rectangle (x, y, w, h), sized to the largest footprint its items have. */
@@ -115,11 +115,11 @@ const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
 export type PopoverFrame = { x: number; y: number; w: number; h: number; border: string }
 
 /**
- * The whole inventory screen: title bar with gold and the close box, the section labels, the panel, any drag, and
+ * The whole inventory screen: title bar with gold and the close box, the panel, any drag, and
  * the popovers' frames over it all.
  */
 export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []): string[][] => {
-  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [] }, inventoryPixels(g))
+  const c = windowPixels({ title: 'INVENTORY', gold: g.gold }, inventoryPixels(g))
   if (drag !== undefined) drawDrag(c, g, drag)
   for (const b of popovers) drawBox(c, b)
   return c.px

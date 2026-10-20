@@ -10,7 +10,7 @@ import { themeOf } from './map'
 import type { Theme } from './map'
 import { BUTTON_H, CURSOR, GOLD_INK, PORTRAIT, barLabel, button, buttonW, flatBar, portrait } from './pieces'
 import type { ButtonState } from './pieces'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas, digits, fill, frame } from './canvas'
 import { SLOTS } from './items'
@@ -23,12 +23,12 @@ export const isSpeaker = (panel: Game['panel']): panel is Speaker => (SPEAKERS a
 
 const TITLE: Readonly<Record<Speaker, string>> = { healer: 'HEALER', elder: 'ELDER', mystic: 'MYSTIC', guard: 'GUARD', villager: 'VILLAGER', dog: 'DOG' }
 const CHROME: Readonly<Record<Speaker, (g: Game) => Chrome>> = {
-  healer: () => ({ title: TITLE.healer, labels: [] }),
-  elder: () => ({ title: TITLE.elder, labels: [] }),
-  mystic: g => ({ title: TITLE.mystic, gold: g.gold, labels: [] }),
-  guard: () => ({ title: TITLE.guard, labels: [] }),
-  villager: () => ({ title: TITLE.villager, labels: [] }),
-  dog: () => ({ title: TITLE.dog, labels: [] }),
+  healer: () => ({ title: TITLE.healer }),
+  elder: () => ({ title: TITLE.elder }),
+  mystic: g => ({ title: TITLE.mystic, gold: g.gold }),
+  guard: () => ({ title: TITLE.guard }),
+  villager: () => ({ title: TITLE.villager }),
+  dog: () => ({ title: TITLE.dog }),
 }
 
 /** What each fortune does, exactly, for the mystic's window and the text one. */
@@ -119,7 +119,7 @@ export const wrap = (lines: Run[][], width: number): Run[][] =>
 
 /** Where everything goes, in window pixels: the words' box, then the status and the button beside the portrait. */
 const layout = (g: Game, who: Speaker) => {
-  const top = bodyTop(CHROME[who](g))
+  const top = WINDOW_TOP
   const lines = wrap(WORDS[who](g), WORDS_W - 4)
   const box: OverlayBox<'words'> = { role: 'words', x: SIDE_X, y: (top + 2) / 2, w: WORDS_W, h: lines.length + 2, border: SURFACE.frame, lines }
   const statusY = (box.y + box.h) * 2 + 3

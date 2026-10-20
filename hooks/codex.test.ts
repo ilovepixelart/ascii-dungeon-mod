@@ -8,7 +8,7 @@ import { BAG_H, BAG_W, LEGENDARIES, plainItem } from './items'
 import { EMPTY_CODEX, recorded } from './codex'
 import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
 import type { CodexUi } from './codexwindow'
-import { CLOSE_BOX, TABS_H, bodyTop, tabRects } from './window'
+import { CLOSE_BOX, TABS_H, WINDOW_TOP, tabRects } from './window'
 
 const hit: Action = { kind: 'outcome', ok: true, what: 'Edit' }
 /** The hero at `depth` with a one-HP foe beside them, and the codex `codex`. */
@@ -153,7 +153,7 @@ describe('the codex window', () => {
 
   test('a click on a page\'s tab shows that page', async () => {
     const g = shown(told)
-    const [foes, finds] = tabRects([{ label: 'FOES' }, { label: 'FINDS' }], bodyTop({ title: '', labels: [] }))
+    const [foes, finds] = tabRects([{ label: 'FOES' }, { label: 'FINDS' }], WINDOW_TOP)
     const tap = (r: { x: number; y: number }) => codexGesture(g, FOES, { type: 'release', from: { x: r.x + 2.5, y: (r.y + 3) / 2 }, at: { x: r.x + 2.5, y: (r.y + 3) / 2 }, button: 'left' })
     expect(tap(finds!)).toEqual({ ui: FINDS, actions: [], isCard: false })
     expect(tap(foes!)).toEqual({ ui: FOES, actions: [], isCard: false })

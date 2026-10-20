@@ -51,12 +51,12 @@ export const shopPixels = (g: Game, ui: ShopUi, boxes: readonly OverlayBox[] = [
   // With a ware chosen no bag item is: the game's cursor is drawn only while the bag has the choice.
   itemGrid(body, ui.ware === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
   belt(body, g, BELT_X, BELT_Y)
-  const c = windowPixels({ title: 'MERCHANT', gold: g.gold, labels: [] }, body.px)
+  const c = windowPixels({ title: 'MERCHANT', gold: g.gold }, body.px)
   for (const b of boxes) drawBox(c, b)
   return c.px
 }
 
-/** What a box over the window would hide: every ware, bag item and filled belt slot, and the title bar and labels. */
+/** What a box over the window would hide: every ware, bag item and filled belt slot, and the title bar. */
 const shown = (g: Game): Weighted[] => [
   ...WARES.map((_, i) => ({ rect: wareRect(i), weight: 1 })),
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),

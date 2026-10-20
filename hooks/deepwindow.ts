@@ -9,11 +9,11 @@ import { canvas, fill, frame } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { flatCard } from './ui/kit'
 import { INK, SPACE, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
-const CHROME: Chrome = { title: 'THE DEEP', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'THE DEEP' }
+const top = WINDOW_TOP
 const PAD = 3
 const LINE = 7
 const ROW = 9

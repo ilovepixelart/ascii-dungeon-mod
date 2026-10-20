@@ -148,7 +148,7 @@ describe('the item card', () => {
 
 describe('the inventory screen', () => {
 
-  test('is the panel under a title bar and the section labels', async () => {
+  test('is the panel under a title bar', async () => {
     const g = knight()
     const screen = inventoryScreenPixels(g)
     expect(screen.length).toBe(INV_TOP + INV_H)

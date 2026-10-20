@@ -1,43 +1,31 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { BG } from './canvas'
-import { BODY_TOP, CLOSE_BOX, CLOSE_INK, HEAD_H, LABEL_INK, LABEL_Y, WINDOW_W, boxShape, cardWithMenu, coverage, place, windowPixels } from './window'
+import { CLOSE_BOX, CLOSE_INK, HEAD_H, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, coverage, place, windowPixels } from './window'
 
 const GOLD_INK = '#ffd34d'
 const inkIn = (px: string[][], ink: string, y0: number, y1: number) => px.slice(y0, y1).some(row => row.includes(ink))
 
 describe('the window', () => {
-  test('is WINDOW_W wide and as tall as its title bar, labels and body', async () => {
+  test('is WINDOW_W wide, its body 3 px under the title bar, on an even row so text boxes sit on whole cells', async () => {
     const body = Array.from({ length: 7 }, () => Array<string>(WINDOW_W).fill('#123456'))
-    const c = windowPixels({ title: 'SHOP', labels: [{ text: 'A', x: 2 }] }, body)
-    expect(c.px.length).toBe(BODY_TOP + 7)
+    const c = windowPixels({ title: 'SHOP' }, body)
+    expect([WINDOW_TOP, WINDOW_TOP % 2, c.px.length]).toEqual([HEAD_H + 3, 0, HEAD_H + 3 + 7])
     for (const row of c.px) expect(row.length).toBe(WINDOW_W)
-    expect(c.px[BODY_TOP - 1]?.[0]).toBe(BG)
-    expect(c.px[BODY_TOP]?.[0]).toBe('#123456')
-    expect(c.px[BODY_TOP + 6]?.[WINDOW_W - 1]).toBe('#123456')
-  })
-
-  test('without labels, the body starts 3 px under the title bar, on an even row so text boxes sit on whole cells', async () => {
-    const body = [Array<string>(WINDOW_W).fill('#123456')]
-    const c = windowPixels({ title: 'A', labels: [] }, body)
-    expect(c.px.length).toBe(HEAD_H + 3 + 1)
-    expect(c.px[HEAD_H + 2]?.[0]).toBe(BG)
-    expect(c.px[HEAD_H + 3]?.[0]).toBe('#123456')
-    expect((HEAD_H + 3) % 2).toBe(0)
+    expect(c.px[WINDOW_TOP - 1]?.[0]).toBe(BG)
+    expect(c.px[WINDOW_TOP]?.[0]).toBe('#123456')
+    expect(c.px[WINDOW_TOP + 6]?.[WINDOW_W - 1]).toBe('#123456')
   })
 
   test('shows the gold only when the window says so', async () => {
-    expect(inkIn(windowPixels({ title: 'A', labels: [] }, []).px, GOLD_INK, 0, HEAD_H)).toBe(false)
-    expect(inkIn(windowPixels({ title: 'A', gold: 12, labels: [] }, []).px, GOLD_INK, 0, HEAD_H)).toBe(true)
+    expect(inkIn(windowPixels({ title: 'A' }, []).px, GOLD_INK, 0, HEAD_H)).toBe(false)
+    expect(inkIn(windowPixels({ title: 'A', gold: 12 }, []).px, GOLD_INK, 0, HEAD_H)).toBe(true)
   })
 
-  test('always has its close box, and a label where it is asked for', async () => {
-    const c = windowPixels({ title: 'A', labels: [{ text: 'I', x: 40 }] }, [])
+  test('always has its close box', async () => {
+    const c = windowPixels({ title: 'A' }, [])
     const [x, y, w, h] = CLOSE_BOX
     expect(inkIn(c.px.slice(y, y + h).map(r => r.slice(x, x + w)), CLOSE_INK, 0, h)).toBe(true)
-    // 'I' is a column three pixels wide at most, starting at the label's x.
-    expect(c.px.slice(LABEL_Y, LABEL_Y + 5).some(row => row.slice(40, 43).includes(LABEL_INK))).toBe(true)
-    expect(c.px.slice(LABEL_Y, LABEL_Y + 5).some(row => [...row.slice(0, 40), ...row.slice(44)].includes(LABEL_INK))).toBe(false)
   })
 })
 
@@ -90,7 +78,7 @@ describe('placing text boxes', () => {
 })
 
 test('the close box is square, its X centred: a pixel of the box all round it inside the frame', async () => {
-  const c = windowPixels({ title: 'T', labels: [] }, [])
+  const c = windowPixels({ title: 'T' }, [])
   const [x, y, w, h] = CLOSE_BOX
   expect(w).toBe(h)
   const inkAt = (dx: number, dy: number) => c.px[y + dy]![x + dx] === CLOSE_INK

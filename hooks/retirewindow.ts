@@ -12,11 +12,11 @@ import { art, canvas, fill, frame } from './canvas'
 import { chosenSlot } from './forge'
 import type { ForgeUi } from './forge'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
-const CHROME: Chrome = { title: 'RETIRE THE HERO', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'RETIRE THE HERO' }
+const top = WINDOW_TOP
 const PAD = 3
 const BOX_BG = SURFACE.sunken
 /** A worn piece's box, and the step from one to the next. */

@@ -10,7 +10,7 @@ import { PX, heroArt } from './pixelart'
 import { BUTTON_H, button, buttonW, portrait } from './pieces'
 import { flatCard, textW } from './ui/kit'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { newGame } from './world'
 
@@ -20,7 +20,7 @@ const NAME: Readonly<Record<HeroClass, string>> = { knight: 'KNIGHT', mage: 'MAG
 /** What the screen shows beyond the game: the hero chosen. */
 export type StartUi = { cls: HeroClass }
 
-const CHROME: Chrome = { title: 'ASCII DUNGEON', labels: [] }
+const CHROME: Chrome = { title: 'ASCII DUNGEON' }
 /** A card: the portrait at twice the sprite's size, the name under it. */
 const FACE = PX * 2 + 4
 const CARD_W = 30
@@ -34,7 +34,7 @@ const BODY_H = BUTTON_Y + BUTTON_H + 3
 /** A game under way, worth going back to: anything won since a new game. */
 export const isUnderWay = (g: Game) => g.level > 1 || g.xp > 0 || g.deepest > 1 || g.deaths > 0 || g.gold > 0
 
-const top = bodyTop(CHROME)
+const top = WINDOW_TOP
 /** Each card's place, in window pixels. */
 const CARDS_X = Math.floor((WINDOW_W - 3 * CARD_W - 2 * CARD_GAP) / 2)
 export const cardRect = (i: number): Rect => ({ x: CARDS_X + i * (CARD_W + CARD_GAP), y: top + CARD_Y, w: CARD_W, h: CARD_H })

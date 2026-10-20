@@ -130,7 +130,7 @@ describe('the screen', () => {
 
   test('is titled ASCII DUNGEON in its title bar', async () => {
     const px = startPixels(onStart(), { cls: 'knight' })
-    const bar = windowPixels({ title: 'ASCII DUNGEON', labels: [] }, []).px
+    const bar = windowPixels({ title: 'ASCII DUNGEON' }, []).px
     expect(px.slice(0, HEAD_H)).toEqual(bar.slice(0, HEAD_H))
   })
 

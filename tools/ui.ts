@@ -67,7 +67,7 @@ y += CARD.h + 12
 heading('WINDOW  TEXT BOX')
 const body = canvas(WINDOW_W, 40)
 button(body, 'C', 'CLOSE', 4, 26, 'armed')
-const win = windowPixels({ title: 'WINDOW', labels: [] }, body.px)
+const win = windowPixels({ title: 'WINDOW' }, body.px)
 drawBox(win, { x: 2, y: 8, w: WINDOW_W - 4, h: 4, border: SURFACE.frame })
 blit(win, 4, y)
 y += win.h + 4

@@ -22,7 +22,6 @@ const tabsOf = (g: Game): Tab[] => TABS.map(t => ({ label: t.label, isMarked: (t
 /** The chrome of the hero's window showing `panel`: the tabs in the title bar, that one chosen. */
 export const heroChrome = (g: Game, panel: HeroPanel): Chrome => ({
   title: TABS.find(t => t.panel === panel)!.label,
-  labels: [],
   tabs: { items: tabsOf(g), chosen: TABS.findIndex(t => t.panel === panel) },
 })
 

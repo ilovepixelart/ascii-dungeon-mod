@@ -16,7 +16,7 @@ const put = (g: Game, base: string, x: number, y: number): Item => {
   return item
 }
 const tap = (cx: number, cy: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x: cx, y: cy }, at: { x: cx, y: cy }, button })
-/** The middle of a bag item, in cells: the bag's grid starts a pixel in, two below the labels. */
+/** The middle of a bag item, in cells: the bag's grid starts a pixel in, two below the title bar's room. */
 const onItem = (item: Item) => tap(1 + item.x * CELL + 4.5, (WINDOW_TOP + 2 + item.y * CELL + 4) / 2 + 0.25)
 
 describe('the compact inventory', () => {

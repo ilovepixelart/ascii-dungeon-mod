@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
 import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, settingsRect, soundFrom } from './settings'
 import type { SettingsUi, SoundSettings } from './settings'
-import { CLOSE_BOX, WINDOW_W, bodyTop, tabRects } from './window'
+import { CLOSE_BOX, WINDOW_TOP, WINDOW_W, tabRects } from './window'
 import type { Gesture, Rect } from './window'
 import { newGame } from './world'
 
@@ -46,7 +46,7 @@ describe('the settings window', () => {
   })
 
   test('a click on a page\'s tab shows that page', async () => {
-    const [game, orders] = tabRects([{ label: 'GAME' }, { label: 'ORDERS' }], bodyTop({ title: '', labels: [] }))
+    const [game, orders] = tabRects([{ label: 'GAME' }, { label: 'ORDERS' }], WINDOW_TOP)
     expect(settingsGesture(hero(), ON, GAME, middle(orders!)).ui).toEqual(ORDERS)
     expect(settingsGesture(hero(), ON, ORDERS, middle(game!)).ui).toEqual(GAME)
   })

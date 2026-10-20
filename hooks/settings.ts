@@ -8,11 +8,11 @@ import { ordersOf } from './game'
 import { canvas, fill } from './canvas'
 import { BUTTON_H, button, buttonW } from './pieces'
 import { SPACE, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, bodyTop, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
+import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
 import type { Chrome, Gesture, Rect } from './window'
 
-const CHROME: Chrome = { title: 'SETTINGS', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'SETTINGS' }
+const top = WINDOW_TOP
 const PAD = 3
 const VIEW_WORD: Readonly<Record<Game['zoom'], string>> = { 1: 'VIEW MAP', 2: 'VIEW ASCII', 3: 'VIEW PIXEL' }
 

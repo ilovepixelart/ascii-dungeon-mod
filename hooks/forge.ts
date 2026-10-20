@@ -103,7 +103,7 @@ export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
     button(body, 'R', 'REFORGE', l.reforgeAt.x, l.reforgeAt.y - WINDOW_TOP, stateOf(whyNotReforge(g, l.item)))
     if (l.keepAt !== undefined) button(body, 'K', 'KEEP OLD', l.keepAt.x, l.keepAt.y - WINDOW_TOP, 'ready')
   }
-  const c = windowPixels({ title: 'SMITH', gold: g.gold, labels: [] }, body.px)
+  const c = windowPixels({ title: 'SMITH', gold: g.gold }, body.px)
   drawBox(c, l.box)
   return c.px
 }

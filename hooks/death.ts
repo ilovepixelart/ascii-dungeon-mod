@@ -6,13 +6,13 @@ import type { Action, Run } from './game'
 import { themeOf } from './map'
 import { THING_ART, foeArtOf } from './pixelart'
 import { BUTTON_H, PORTRAIT, button, buttonW, portrait } from './pieces'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas } from './canvas'
 import { theFoe } from './names'
 import { INK, SURFACE } from './ui/tokens'
 
-const CHROME: Chrome = { title: 'YOU DIED', labels: [] }
+const CHROME: Chrome = { title: 'YOU DIED' }
 const PAD = 3
 const SIDE_X = PAD + PORTRAIT + 4
 const SLAIN = INK.danger
@@ -26,7 +26,7 @@ export const killerName = (f: Fallen) => (f.foe === undefined ? f.by : theFoe(f.
 
 /** Where everything goes, in window pixels: who and where beside the portrait, then the toll, then Wake. */
 const layout = (g: Game, f: Fallen) => {
-  const top = bodyTop(CHROME)
+  const top = WINDOW_TOP
   const who: Run[][] = [[{ text: 'Slain by', color: INK.dim }], [{ text: killerName(f), color: SLAIN, bold: true }], [{ text: `on depth ${f.depth}.`, color: INK.text }]]
   const whoBox: OverlayBox<'who'> = { role: 'who', x: SIDE_X, y: (top + 2) / 2, w: WINDOW_W - SIDE_X - PAD, h: who.length + 2, border: SURFACE.frame, lines: who }
   const toll: Run[][] = [

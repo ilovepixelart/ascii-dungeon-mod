@@ -47,7 +47,7 @@ const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
 /** A stored item's row, in window pixels. */
 const rowRect = (i: number): Rect => ({ x: LIST.x, y: (LIST.y + 1 + i) * 2, w: LIST.w, h: 2 })
 
-/** What a card over the window would hide: the bag's items, the chest's list, the title bar and labels. */
+/** What a card over the window would hide: the bag's items, the chest's list, the title bar. */
 const shown = (g: Game): Weighted[] => [
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   { rect: { x: LIST.x, y: LIST.y * 2, w: LIST.w, h: LIST.h * 2 }, weight: 1 },
@@ -72,7 +72,7 @@ export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] =
   const body = canvas(WINDOW_W, CHEST_H - WINDOW_TOP)
   // With a stored item chosen no bag item is: the game's cursor is drawn only while the bag has the choice.
   itemGrid(body, ui.stored === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
-  const c = windowPixels({ title: `STASH ${g.stashed.length}/${STASH_SIZE}`, labels: [] }, body.px)
+  const c = windowPixels({ title: `STASH ${g.stashed.length}/${STASH_SIZE}` }, body.px)
   for (const b of boxes) drawBox(c, b)
   return c.px
 }

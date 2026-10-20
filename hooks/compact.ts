@@ -46,7 +46,7 @@ const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
   [{ text: 'g', color: INK.gold, bold: true }, { text: item.locked === true ? ' Unlock' : ' Lock' }],
 ]
 
-/** What a card would hide: the bag's items, the worn list, the filled belt slots, the title bar and labels. */
+/** What a card would hide: the bag's items, the worn list, the filled belt slots, the title bar. */
 const shown = (g: Game): Weighted[] => [
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   { rect: { x: LIST.x, y: LIST.y * 2, w: LIST.w, h: LIST.h * 2 }, weight: 1 },
@@ -68,7 +68,7 @@ export const compactPixels = (g: Game, boxes: readonly OverlayBox[] = []): strin
   const body = canvas(COMPACT_W, COMPACT_H - WINDOW_TOP)
   itemGrid(body, g, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
   belt(body, g, BELT_X, BELT_Y)
-  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [] }, body.px, COMPACT_W)
+  const c = windowPixels({ title: 'INVENTORY', gold: g.gold }, body.px, COMPACT_W)
   for (const b of boxes) drawBox(c, b)
   return c.px
 }

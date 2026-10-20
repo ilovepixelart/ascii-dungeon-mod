@@ -13,11 +13,11 @@ import { art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, bodyTop, drawBox, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
+import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
-const CHROME: Chrome = { title: 'CODEX', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'CODEX' }
+const top = WINDOW_TOP
 const PAD = 3
 const BOX_BG = SURFACE.sunken
 const EDGE = SURFACE.litEdge

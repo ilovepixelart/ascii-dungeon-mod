@@ -5,11 +5,11 @@ import type { Run } from './game'
 import { MARK, mark } from './hud'
 import { canvas } from './canvas'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox } from './window'
 
-const CHROME: Chrome = { title: 'HOW IT PLAYS', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'HOW IT PLAYS' }
+const top = WINDOW_TOP
 const HEAD = 'YOUR CODING PLAYS THE HERO'
 const YOURS = 'You pick the gear and the talents, and set the orders.'
 /** Each rule takes three rows of the box: what happens, what it comes to, a row of room. */

@@ -14,11 +14,11 @@ import { FAMILIES, INK, SURFACE } from './ui/tokens'
 import type { FamilyName } from './ui/tokens'
 import { heroChrome, heroTabAt } from './herotabs'
 import { wrap } from './recapwindow'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, drawable, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, drawable, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
-const CHROME: Chrome = { title: 'TALENT', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'TALENT' }
+const top = WINDOW_TOP
 
 /** The window's state beyond the game: the card chosen, by its place in the row. */
 export type TalentUi = { chosen: number }

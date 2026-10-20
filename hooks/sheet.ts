@@ -13,11 +13,11 @@ import { BUTTON_H, barLabel, button, buttonW, flatBar, portrait } from './pieces
 import { MARK, NUM_INK, mark } from './hud'
 import { heroChrome, heroTabAt } from './herotabs'
 import { INK, SPACE, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
-const CHROME: Chrome = { title: 'HERO', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'HERO' }
+const top = WINDOW_TOP
 const PAD = 3
 /** The portrait at twice the sprite's size; the head box and the XP bar beside it. */
 const FACE = PX * 2 + 4

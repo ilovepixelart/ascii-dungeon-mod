@@ -15,7 +15,7 @@ import { newGame } from './world'
 const hero = (): Game => ({ ...newGame(1, 'knight'), bag: [], stashed: [] })
 const item = (g: Game, base: string, rarity: Rarity, over: Partial<Item> = {}): Item => ({ ...plainItem(g, base, rarity), x: 0, y: 0, ...over })
 const click = (x: number, y: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x, y }, at: { x, y }, button })
-/** A click on the chest's row i: the list starts a cell below the labels, its rows a cell under its frame. */
+/** A click on the chest's row i: the list starts a cell below the window's top, its rows a cell under its frame. */
 const onRow = (i: number, button: 'left' | 'right' = 'left') => click(5.5, WINDOW_TOP / 2 + 2 + i + 0.5, button)
 const onBag = (it: Item) => click(BAG_X + it.x * CELL + 3.5, (WINDOW_TOP + BAG_Y + it.y * CELL + 3) / 2 + 0.25)
 const lines = (g: Game, ui: ChestUi, role: string) => chestOverlay(g, ui).find(b => b.role === role)?.lines.map(l => l.map(r => r.text).join(''))

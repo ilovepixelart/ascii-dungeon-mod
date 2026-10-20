@@ -6,13 +6,13 @@ import { PX, heroArt, textMask } from './pixelart'
 import { BUTTON_H, button, buttonW, drawItem, portrait } from './pieces'
 import { RARITY_COLOR } from './items'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas } from './canvas'
 import { begun } from './recap'
 
-const CHROME: Chrome = { title: 'WHILE YOU WORKED', labels: [] }
-const top = bodyTop(CHROME)
+const CHROME: Chrome = { title: 'WHILE YOU WORKED' }
+const top = WINDOW_TOP
 const PAD = 3
 /** The portrait at twice the sprite's size, the find's box under it; the text beside each. */
 const FACE = PX * 2 + 4

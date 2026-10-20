@@ -174,11 +174,11 @@ export const KEEP = 100000
  * A card near what it is about, never on it, where it hides the least of what the window shows (`shown`); its menu,
  * when open, under it the same way. `rows` is the window's height in cells.
  */
-export const cardWithMenu = <Role extends string>(rows: number, shown: readonly Weighted[], near: Rect, card: OverlayBox<Role>, menu?: OverlayBox<Role>, width = WINDOW_W): OverlayBox<Role>[] => {
+export const cardWithMenu = <Role extends string>(rows: number, shown: readonly Weighted[], near: Rect, card: OverlayBox<Role>, menu?: OverlayBox<Role>, width = WINDOW_W, others: readonly OverlayBox[] = []): OverlayBox<Role>[] => {
   const cost = coverage(rows, [...shown, { rect: near, weight: KEEP }], width)
-  const at = place(cost, rows, [], near, card.w, card.h, width)
+  const at = place(cost, rows, others, near, card.w, card.h, width)
   const placed = { ...card, x: at.x, y: at.y }
   if (menu === undefined) return [placed]
-  const under = place(cost, rows, [placed], { x: placed.x, y: (placed.y + placed.h) * 2, w: placed.w, h: 2 }, menu.w, menu.h, width)
+  const under = place(cost, rows, [...others, placed], { x: placed.x, y: (placed.y + placed.h) * 2, w: placed.w, h: 2 }, menu.w, menu.h, width)
   return [placed, { ...menu, x: under.x, y: under.y }]
 }

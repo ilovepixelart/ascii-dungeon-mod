@@ -4,9 +4,9 @@ import type { Game, Item, Rarity } from '../types'
 import { STASH_SIZE } from './game'
 import { BAG_X, BAG_Y } from './inventory'
 import { CELL } from './icons'
-import { plainItem } from './items'
+import { BAG_H, BAG_W, plainItem } from './items'
 import { WINDOW_TOP, CLOSE_BOX } from './window'
-import type { Gesture } from './window'
+import type { Gesture, OverlayBox } from './window'
 import { CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
 import { CURSOR } from './pieces'
 import type { ChestUi } from './chest'
@@ -123,5 +123,36 @@ describe('the bag beside it', () => {
     const [x, y] = CLOSE_BOX
     expect(chestGesture(g, CHEST_UI_IDLE, click(x + 2.5, (y + 2) / 2)).actions).toEqual([{ kind: 'panel', panel: 'stash' }])
     expect(chestGesture(g, CHEST_UI_IDLE, { type: 'drag', from: { x: 5, y: 15 }, at: { x: 30, y: 15 } }).actions).toEqual([])
+  })
+})
+
+describe('the stash, crowded', () => {
+  /** A bag with a ring in every cell, and the chest full: a card has no clear spot over the bag. */
+  const crowded = (): Game => {
+    const g = hero()
+    const bag = Array.from({ length: BAG_W * BAG_H }, (_, i) => ({ ...plainItem({ nextId: 7000 + i }, 'ring'), w: 1, h: 1, x: Math.floor(i / BAG_H), y: i % BAG_H }))
+    // Epics with every stat and a trigger: cards too tall to fit under the list, the last row's reaching furthest down.
+    return { ...g, bag, stashed: Array.from({ length: STASH_SIZE }, (_, i) => item(g, 'amulet', 'epic', { id: 8000 + i, trigger: 'thorns', atk: 1, def: 1, hp: 1, crit: 1, xp: 1 })) }
+  }
+  const overlap = (a: OverlayBox, b: OverlayBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+
+  test('a chosen stored item\'s card and menu never lie over the chest\'s list', async () => {
+    const g = crowded()
+    const hits: string[] = []
+    for (const stored of g.stashed) for (const menu of [false, true]) {
+      const boxes = chestOverlay(g, { stored: stored.id, menu })
+      boxes.forEach((a, i) => boxes.slice(i + 1).forEach(b => {
+        if (overlap(a, b)) hits.push(`${stored.id} ${menu}: ${a.role} over ${b.role}`)
+      }))
+    }
+    expect(hits).toEqual([])
+  })
+
+  test('a stored name too long for its row shows as its base\'s name', async () => {
+    const g = hero()
+    const long = item(g, 'boots', 'rare', { name: 'Refactored Leather Boots of Fast Feedback' })
+    const list = chestOverlay({ ...g, stashed: [long] }, CHEST_UI_IDLE)[0]!
+    expect(lines({ ...g, stashed: [long] }, CHEST_UI_IDLE, 'list')![0]).toBe('  Leather Boots')
+    expect(list.lines.every(l => l.map(r => r.text).join('').length <= list.w - 4)).toBe(true)
   })
 })

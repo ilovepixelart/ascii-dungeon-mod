@@ -5,7 +5,7 @@
 import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
 import { STASH_SIZE } from './game'
-import { BAG_H, BAG_W, RARITY_COLOR, fit } from './items'
+import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit } from './items'
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y } from './inventory'
 import { card } from './bagui'
@@ -37,7 +37,9 @@ const listLines = (g: Game, ui: ChestUi): Run[][] =>
     const item = g.stashed[i]
     if (item === undefined) return [{ text: '-', dim: true }]
     const isChosen = item.id === ui.stored
-    return [{ text: isChosen ? '> ' : '  ', color: CURSOR, bold: true }, { text: item.name, color: RARITY_COLOR[item.rarity], bold: isChosen }]
+    // A name too long for the row shows as its base's: the card says the whole.
+    const name = item.name.length <= LIST.w - 6 ? item.name : (baseOf(item.base)?.name ?? item.name.slice(0, LIST.w - 6))
+    return [{ text: isChosen ? '> ' : '  ', color: CURSOR, bold: true }, { text: name, color: RARITY_COLOR[item.rarity], bold: isChosen }]
   })
 
 const entry = (key: string, label: string, why?: string): Run[] =>
@@ -60,11 +62,11 @@ export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
   const stored = chosenStored(g, ui)
   if (stored !== undefined) {
     const near = rowRect(g.stashed.indexOf(stored))
-    return [list, ...cardWithMenu(ROWS, shown(g), near, boxShape('card', card(g, stored, 'In your stash', true), RARITY_COLOR[stored.rarity]), ui.menu ? boxShape('menu', [entry('t', 'Take', whyNotTake(g, stored))], CURSOR) : undefined)]
+    return [list, ...cardWithMenu(ROWS, shown(g), near, boxShape('card', card(g, stored, 'In your stash', true), RARITY_COLOR[stored.rarity]), ui.menu ? boxShape('menu', [entry('t', 'Take', whyNotTake(g, stored))], CURSOR) : undefined, WINDOW_W, [list])]
   }
   const item = chosenBag(g, ui)
   if (item === undefined) return [list]
-  return [list, ...cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), ui.menu ? boxShape('menu', [entry('s', 'Store', whyNotStore(g))], CURSOR) : undefined)]
+  return [list, ...cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), ui.menu ? boxShape('menu', [entry('s', 'Store', whyNotStore(g))], CURSOR) : undefined, WINDOW_W, [list])]
 }
 
 /** The window's pixels: title, the chest's count over its list, the bag, and the frames of the boxes over them. */

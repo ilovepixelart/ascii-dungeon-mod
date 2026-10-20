@@ -34,6 +34,9 @@ release may change behaviour.
   merchant's chosen ware, which a second click opens. A worn piece the full bag has no room for, the deep's mark
   already chosen, and the elder's Claim, the villager's Gamble and the guard's Trade in when the bag has no room for
   what they give are dark: a press would change nothing. A talent card acts exactly where it is lit.
+- The stash's item card could lie over its list by a row, a tall card chosen on the list's last rows with a full bag;
+  it now keeps clear of the list. A stored name too long for its row (over 38 characters) shows as its base's name,
+  where it was cut.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

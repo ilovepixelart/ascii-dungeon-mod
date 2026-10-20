@@ -29,6 +29,11 @@ release may change behaviour.
 - The compact inventory (a pane 80 to 104 columns wide) cut a worn piece's name at 16 characters, which most rolled
   names pass ("Refactored Leath"). A name too long for a row now takes both of its slot's rows, and one too long for
   both shows as its base's name ("Leather Boots"), in its tier's color.
+- The hover now lights everything a click acts on, and nothing a click there cannot do: a belt slot holding something
+  in the bag, the compact bag and the merchant; a stored item's row in the stash; a worn row in the compact bag; the
+  merchant's chosen ware, which a second click opens. A worn piece the full bag has no room for, the deep's mark
+  already chosen, and the elder's Claim, the villager's Gamble and the guard's Trade in when the bag has no room for
+  what they give are dark: a press would change nothing. A talent card acts exactly where it is lit.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

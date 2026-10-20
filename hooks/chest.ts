@@ -128,5 +128,5 @@ export const nextStored = (g: Game, ui: ChestUi): ChestUi => {
   return { stored: g.stashed[(at + 1) % g.stashed.length]!.id, menu: false }
 }
 
-/** What a click acts on, in window pixels: the bag's items. */
-export const chestHot = (g: Game): Rect[] => g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))
+/** What a click acts on, in window pixels: the stored items' rows, and the bag's items. */
+export const chestHot = (g: Game): Rect[] => [...g.stashed.map((_, i) => rowRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))]

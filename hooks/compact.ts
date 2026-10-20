@@ -5,6 +5,7 @@ import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { BAG_H, BAG_W, RARITY_COLOR, SLOTS, baseOf, canWear, classLabel, fitsAt } from './items'
 import { wrap } from './talk'
+import { beltHot, removable } from './inventory'
 import { canvas } from './canvas'
 import { CELL } from './icons'
 import { card } from './bagui'
@@ -148,5 +149,15 @@ const clickOn = (g: Game, ui: BagUi, h: ReturnType<typeof hit>, isRight: boolean
   return { ui, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
 }
 
-/** What a click acts on, in window pixels: the bag's items. */
-export const compactHot = (g: Game): Rect[] => g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))
+/** A worn slot's two rows of the list, in window pixels: where a click takes its piece off. */
+const wornRow = (i: number): Rect => ({ x: LIST.x + 1, y: (LIST.y + 1 + 2 * i) * 2, w: LIST.w - 2, h: 4 })
+
+/** What a click acts on, in window pixels: the bag's items, the worn rows whose piece can come off, the belt. */
+export const compactHot = (g: Game): Rect[] => {
+  const off = removable(g)
+  return [
+    ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)),
+    ...SLOTS.flatMap((s, i) => (off.gear[s] === undefined ? [] : [wornRow(i)])),
+    ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y),
+  ]
+}

@@ -45,6 +45,8 @@ const chosenOf = (g: Game, ui: TalentUi) => Math.min(Math.max(0, ui.chosen), Mat
 const rowX = Math.floor((WINDOW_W - (3 * CARD_W + 2 * GAP)) / 2)
 /** A card's place: its column, lifted when chosen; what a click on it covers, lifted or not. */
 export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y: top + CARD_Y - LIFT, w: CARD_W, h: CARD_H + LIFT })
+/** A card's face as drawn, the chosen one lifted: where a click on it acts and the hover lights it. */
+const faceRect = (i: number, chosen: number): Rect => ({ ...cardRect(i), y: top + CARD_Y - (i === chosen ? LIFT : 0), h: CARD_H })
 const BUTTONS_Y = CARD_Y + CARD_H + 5
 export const takeRect = (): Rect => {
   const w = buttonW('T', 'TAKE')
@@ -153,7 +155,7 @@ export const talentGesture = (g: Game, ui: TalentUi, gesture: Gesture): Outcome 
   const offered = offer(g)
   if (offered.length === 0) return isInside(at, ...CLOSE_BOX) ? close : none
   const chosen = chosenOf(g, ui)
-  const card = offered.findIndex((_, i) => inside(cardRect(i)))
+  const card = offered.findIndex((_, i) => inside(faceRect(i, chosen)))
   if (card >= 0) return card === chosen ? { ui, actions: [{ kind: 'talent', talent: offered[card]! }] } : { ui: { chosen: card }, actions: [] }
   if (inside(takeRect())) return { ui, actions: [{ kind: 'talent', talent: offered[chosen]! }] }
   return inside(laterRect()) || isInside(at, ...CLOSE_BOX) ? close : none
@@ -164,6 +166,6 @@ export const talentGesture = (g: Game, ui: TalentUi, gesture: Gesture): Outcome 
 export const talentHot = (g: Game, ui: TalentUi): Rect[] => {
   if (offer(g).length === 0) return []
   const chosen = chosenOf(g, ui)
-  const faces = offer(g).map((_, i) => ({ ...cardRect(i), y: top + CARD_Y - (i === chosen ? LIFT : 0), h: CARD_H }))
+  const faces = offer(g).map((_, i) => faceRect(i, chosen))
   return [...faces, takeRect(), laterRect()]
 }

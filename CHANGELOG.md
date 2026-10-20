@@ -14,6 +14,8 @@ release may change behaviour.
   where the two met, the hero saw only the smaller room, the rest of the arena dark and drawn without its walls, a foe
   beside the hero included; standing in the arena, the smaller room stayed dark. Each now shows the other whole. The
   levels are as they were.
+- A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
+  of the drop luck. A refusal now leaves the game as it was.
 
 ## [0.4.0] - 2026-10-20
 

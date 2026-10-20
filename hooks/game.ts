@@ -1422,8 +1422,11 @@ const elder = (g: Game) => {
     say(g, `The elder: "${ASK[g.quest.kind](g.quest)}"`)
   } else if (q.have < q.need) say(g, `The elder: "${STANDING[q.kind](q)}"`)
   else {
+    // A refusal leaves the game as it was: the roll, the item's id and the bad-luck counts too.
+    const before = { ...g }
     const item = makeItem(g, 'uncommon')
     if (!stash(g, item)) {
+      Object.assign(g, before)
       say(g, 'The elder: "Make room in your bag for your reward."')
       return
     }

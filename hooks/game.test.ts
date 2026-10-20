@@ -1600,6 +1600,17 @@ describe('the townsfolk windows', () => {
     expect(apply({ ...newGame(4), quest: done }, { kind: 'claim' }).log.at(-1)).toBe('The elder is in town.')
   })
 
+  test('a claim refused for want of room leaves the game as it was, pressed again and again: no roll, no id spent', async () => {
+    const done = { kind: 'slay' as const, depth: 6, need: 8, have: 8 }
+    const g = inTown({ quest: done, gold: 0, dryKills: 20, sinceRare: 5 })
+    const full = { ...g, bag: [{ ...plainItem(g, 'ring', 'common'), w: BAG_W, h: BAG_H, x: 0, y: 0 }] }
+    let x = full
+    for (let i = 0; i < 40; i += 1) x = apply(x, { kind: 'claim' })
+    const { log: _a, fresh: _b, ...after } = x
+    const { log: _c, fresh: _d, ...before } = full
+    expect(after).toEqual(before)
+  })
+
   test('leaving town closes any of their windows', async () => {
     for (const who of ['healer', 'elder', 'mystic', 'guard', 'villager', 'dog'] as const) expect(apply(visit(inTown(), who), { kind: 'portal' }).panel).toBe('none')
   })

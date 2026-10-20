@@ -22,6 +22,10 @@ release may change behaviour.
   saying what was worn before. The smith's card now shows what smithing changes: stats on one line, a power, trigger
   or set by name (the bag's card says what each does), and what it was before on two lines; the temper pips sit beside
   Temper. With Keep old it is at most 40 rows.
+- The log window kept the newest 30 rows rather than lines, so long lines (a trade-in's run past 120 characters) pushed
+  earlier ones out and the top row could start part way through a line; a word longer than a row was cut. It now shows
+  the newest lines whole, as many as its 30 rows hold, under a row saying how many earlier ones do not fit, and wraps a
+  long word.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

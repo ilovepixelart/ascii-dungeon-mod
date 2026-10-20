@@ -792,8 +792,8 @@ const NOTHING: readonly [RegExp, 'miss' | 'block' | 'ward', 'foe' | 'hero'][] = 
 
 /**
  * The blows between two games in the same place: the foe's HP lost (a crit when the hero's last lines say so), the
- * foe slain, a blow that came to nothing (missed, blocked, warded), the hero's HP lost. Nothing across a change of
- * place, where there is nothing left to point at.
+ * foe slain, a blow that came to nothing (missed, blocked, warded), the blows the hero took. Nothing across a
+ * change of place, where there is nothing left to point at.
  */
 /** The blows of an action that came to nothing, by its own lines: the foe's side first, so the hero's lunge goes the way of his own blow. */
 const nothingHits = (before: Game, after: Game): Hit[] => {
@@ -823,7 +823,12 @@ export const hitsBetween = (before: Game, after: Game): Hit[] => {
     if (tier !== undefined) hits.push({ at: { x: foe.x, y: foe.y }, amount: 0, kind: 'loot', tier })
   }
   hits.push(...nothingHits(before, after))
-  if (after.hp < before.hp) hits.push({ at: { x: after.x, y: after.y }, amount: before.hp - after.hp, kind: 'hurt' })
+  // The blows the hero took, as their lines tell them: a potion, a heal or a shrine on the same action can leave his
+  // HP no lower, the blow still taken; harm with no such line (a trap) is the HP lost.
+  const fresh = after.log.slice(after.log.length - after.fresh)
+  const struck = fresh.reduce((sum, l) => sum + Number(/ strikes you for (\d+)/.exec(l)?.[1] ?? 0), 0)
+  const hurt = struck > 0 ? struck : before.hp - after.hp
+  if (hurt > 0) hits.push({ at: { x: after.x, y: after.y }, amount: hurt, kind: 'hurt' })
   return hits
 }
 

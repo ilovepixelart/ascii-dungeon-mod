@@ -11,9 +11,11 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- In the talent window a number key chooses its card, as on the start screen, and Take (`t`) takes it; a number
+  took the talent at once.
 - In every window, what the pointer is over lights up before a click: a button, a card, a tab, a worn piece or an
   item in the bag, a ware, the close box. What cannot act now (a dark button, the chosen tab) does not.
-- Every window fits in 41 rows, and the game plays best in a pane 105 columns by 47 rows, where it was 78. The
+- Every window fits in 41 rows, and the game plays best in a pane 105 columns by 48 rows, where it was 78. The
   character sheet, the talents, the deep and the codex are tabs of one window, named in its title bar (the talents
   and the deep marked gold while one waits); the sheet loses its Codex, Talent and Deep buttons to them, its
   attributes two to a row. The codex has two pages, Foes and Finds (the Legendaries, the records and Card);
@@ -71,7 +73,7 @@ again from its new start, gains kept. Nothing else needs doing.
 
 - A blow that comes to nothing shows it: MISS over a foe that darts aside or that the blow passes through, BLOCK over
   whoever's shield turns it, WARD over the hero when a ward absorbs it.
-- The pane's top row says when it is short of the size the game plays best in, 105 columns by 47 rows, and how big it
+- The pane's top row says when it is short of the size the game plays best in, 105 columns by 48 rows, and how big it
   is; a window it cannot show whole says how many rows it needs. The note on a pane too narrow for the pixel windows
   moves there from under the map.
 - Things to gather, one a theme, about one a level by a room's wall: a warding stone in the crypt and a rime crystal

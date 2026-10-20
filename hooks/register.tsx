@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren, RenderElement, RenderInput, ToolCallInput } from 'claude-code'
 
-import type { Game, HeroClass } from '../types'
+import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK } from './town'
 import { BIG_BOSSES, STASH_SIZE, UNIQUES, canRetire, firstCodex, whyNotRetire, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
@@ -40,7 +40,7 @@ import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeHot, forgeOv
 import type { ForgeUi } from './forge'
 import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
-import { UNDER_WINDOW, fitNote, sizeNote } from './panesize'
+import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
 import { openingGame } from './save'
@@ -1195,7 +1195,7 @@ const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], bo
   const px = litWindow(key, drawn, hot)
   return (
     <Box flexDirection="column">
-      {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : 1))}
+      {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : HINT_ROWS))}
       <Box flexDirection="column" alignItems="center">
         <Box>
           {Raster !== undefined && <Raster key={key} columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px })} />}
@@ -1247,7 +1247,7 @@ const pixelBag = (p: Pane, l: Layout) => {
         <Button key="destroy" label={bagUi.menu?.confirm === true ? 'Destroy? again' : 'Destroy'} hotkey="d" plain onPress={destroyKey} />
         <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
       </Box>
-      <Text dimColor>Click an item to compare it, again (or right-click) for its menu. Drag to move it, onto its slot to wear it.</Text>
+      <Text dimColor>Click an item to compare it, again (or right-click) for its menu; drag it onto its slot to wear it.</Text>
       {p.logTail()}
     </Box>
   )
@@ -1276,7 +1276,7 @@ const pixelShop = (p: Pane) => {
   const junk = junkValue(g)
   return (
     <Box flexDirection="column">
-      {fitLine(p, rows, UNDER_WINDOW + 1)}
+      {fitLine(p, rows, UNDER_WINDOW + HINT_ROWS)}
       <Box flexDirection="column" alignItems="center">
         <Box>
           {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi)) })} />}
@@ -1394,11 +1394,19 @@ const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
 }
 
 /** The talents offered, a key each taking it; in the window Take for the chosen card, and Later; the window's own close. */
-const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
+const talentKeys = ({ g, Button, press, redraw }: Pane, isWindow: boolean) => {
   const offered = offer(g)
   const chosen = offered[Math.min(talentUi.chosen, offered.length - 1)]
+  // In the window a number chooses its card, as on the start screen, and Take takes it; as text each takes its own.
+  const choose = (i: number) => () => {
+    talentUi = { chosen: i }
+    redraw()
+  }
+  const windowKey = (t: Talent, i: number) => (
+    <Button key={`talent-${t}`} label={t === chosen ? `[${TALENTS[t].name}]` : TALENTS[t].name} hotkey={String(i + 1)} plain dimColor={t !== chosen} onPress={choose(i)} />
+  )
   return [
-    ...offered.map((t, i) => <Button key={`talent-${t}`} label={isWindow ? TALENTS[t].name : `${TALENTS[t].name}: ${TALENTS[t].does}`} hotkey={isWindow ? String(i + 1) : undefined} plain onPress={press({ kind: 'talent', talent: t })} />),
+    ...offered.map((t, i) => (isWindow ? windowKey(t, i) : <Button key={`talent-${t}`} label={`${TALENTS[t].name}: ${TALENTS[t].does}`} plain onPress={press({ kind: 'talent', talent: t })} />)),
     ...(isWindow && chosen !== undefined ? [<Button key="talent-take" label="Take" hotkey="t" plain onPress={press({ kind: 'talent', talent: chosen })} />] : []),
     <Button key="talent-close" label={offered.length > 0 ? 'Later' : 'Close'} hotkey={isWindow ? (offered.length > 0 ? 'l' : 'c') : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
   ]

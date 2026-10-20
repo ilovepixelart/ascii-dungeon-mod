@@ -21,7 +21,7 @@ import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
 import { retireButtons } from './retirewindow'
-import { offer } from './talents'
+import { TALENTS, offer } from './talents'
 import { takeRect, talentCards } from './talentwindow'
 import { pairOf } from './deep'
 import { deepCards } from './deepwindow'
@@ -477,6 +477,22 @@ test('the pointer over Take lights its outline; moved off it, or out of the wind
   expect(await cells()).toEqual(lit)
   await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'talent-clicks' } as never)
   expect(await cells()).toEqual(idle)
+  await ui.unmount()
+})
+
+test('on a wide pane a talent\'s number key chooses its card, as on the start screen; Take takes the one chosen', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const third = offer({ ...newGame(), level: 10 })[2]!
+  await ui.press({ key: `talent-${third}` })
+  expect((kept.get('save') as Game).talents ?? []).toEqual([])
+  expect(await ui.find({ type: 'Button', key: `talent-${third}`, text: `[${TALENTS[third].name}]` })).toBeDefined()
+  await ui.press({ key: 'talent-take' })
+  expect((kept.get('save') as Game).talents).toEqual([third])
   await ui.unmount()
 })
 
@@ -1984,13 +2000,13 @@ describe('a pane short of the size the game plays best in', () => {
 
   test('says so on its top row, wide enough but short; narrow, the width note alone', async $ => {
     const short = await $.ui.mount(sized(110, 40))
-    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 47 rows tall; this one is 110 by 40.' })).toBeDefined()
+    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 48 rows tall; this one is 110 by 40.' })).toBeDefined()
     await short.unmount()
     const narrow = await $.ui.mount(sized(90, 40))
     expect(await narrow.find({ type: 'Text', text: /^Widen the pane for the full pixel windows/ })).toBeDefined()
     expect(await narrow.find({ type: 'Text', text: /^ASCII Dungeon plays best/ })).toBeUndefined()
     await narrow.unmount()
-    const best = await $.ui.mount(sized(110, 47))
+    const best = await $.ui.mount(sized(110, 48))
     expect(await best.find({ type: 'Text', text: /^ASCII Dungeon plays best|^Widen the pane/ })).toBeUndefined()
     await best.unmount()
   })
@@ -2002,7 +2018,7 @@ describe('a pane short of the size the game plays best in', () => {
       await ui.unmount()
       return n
     }
-    expect((await rowsAt(47)) - (await rowsAt(46))).toBe(2)
+    expect((await rowsAt(48)) - (await rowsAt(47))).toBe(2)
   })
 
   test('a window it cannot show whole says on its top row the rows it needs; a pane that holds it says nothing', async ($, on) => {

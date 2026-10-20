@@ -32,10 +32,10 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 Every window keeps these; review them with `tools/windows.ts`, which draws each window of `hooks/screens.ts` with its text boxes written in.
 
 - Colors by role from `hooks/ui/tokens.ts`, never a code of a window's own: `scripts/check-colors.mjs`, a gate, fails on a raw color in any module that draws a window or takes the tokens.
-- At most 41 rows (`BEST_ROWS` in `hooks/panesize.ts`, pinned by a test over every window drawn), so a pane of 47 shows any window whole with its keys and the log under it, and no button is scrolled out of reach.
+- At most 41 rows (`BEST_ROWS` in `hooks/panesize.ts`, pinned by a test over every window drawn), so a pane of 48 shows any window whole with its keys, its hint and the log under it, and no button is scrolled out of reach.
 - A title bar with the close box, no section labels under it. The hero's windows share one bar of tabs (`hooks/herotabs.ts`); a window with pages shows them as tabs at the top of its body.
 - Sentences go in a text box, full width under the window's content, or beside a portrait; the pixel font is for titles, tabs, button keys and numbers.
-- Choosing among cards or pieces: a click chooses (framed white), a second click or the window's main button acts. The main button is framed white (`armed`): Take, Start, Retire, Wake, Play on. A row of buttons under the content is centered.
+- Choosing among cards or pieces: a click (or the card's number key) chooses it, framed white; a second click or the window's main button acts. The main button is framed white (`armed`): Take, Start, Retire, Wake, Play on. A row of buttons under the content is centered.
 - The hover: the click layer reports where the pointer is while no button is held (`windowclient.ts`), and the window lights what it is over, its outline half way to white and its inside a tenth (`lightUp` in `hooks/ui/kit.ts`). Each window lists what a click acts on as drawn (`startHot`, `talentHot` and the like, the hero's tabs from `heroTabsHot`), what cannot act now left out; the pane adds the close box and redraws only when what is lit changes (`litWindow` in `register.tsx`).
 - Close is `c` in every window, and the close box. Later where something stays owed (talents), Back only where a window returns to another (the start screen, retire).
 - The keys under a window fit one row: a key's label is short, the detail in the window.

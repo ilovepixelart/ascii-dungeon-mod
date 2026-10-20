@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { xpToLevel } from './balance'
 import { depthMod } from './game'
 import type { DepthMod } from './game'
-import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, canvasCells, digits, fill, frame, put } from './canvas'
+import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, digits, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
 import { CURSOR, barLabel, beltSlot, flatBar } from './pieces'
 import { TIERS, activeTier, nameOf } from './consumables'
@@ -224,7 +224,6 @@ export const hudPixels = (g: Game, width: number, boxes: readonly OverlayBox[] =
   return c
 }
 
-export const hudCells = (g: Game, width: number, boxes: readonly OverlayBox[] = []) => canvasCells(hudPixels(g, width, boxes))
 
 /** What a click on the strip does: `x`, `y` in cells of the strip (a cell is one pixel across, two down). */
 export const hudHit = (width: number, click: { x: number; y: number }): { kind: 'panel'; panel: 'bag' | 'sheet' | 'settings' } | { kind: 'use'; slot: number } | { kind: 'portal' } | undefined => {
@@ -255,6 +254,20 @@ const beltHit = (px: number, py: number, width: number): HudAction => {
     if (px >= x && px < x + BELT_SLOT_W) return { kind: 'use', slot }
   }
   return undefined
+}
+
+/** What a click on the strip acts on, in its pixels, as `hudHit` reads them: the portrait, the XP line, the gear, the
+ * portal while it can open, and each belt slot holding something. */
+export const hudHot = (g: Game, width: number) => {
+  const w = width - 2 * INSET
+  const at = (x: number, y: number, rw: number, rh: number) => ({ x: INSET + x, y: INSET + y, w: rw, h: rh })
+  return [
+    at(0, 0, PORTRAIT, PORTRAIT),
+    at(HEART_X, LINE2_Y, settingsSlotX(w) - HEART_X, HP_H),
+    at(settingsSlotX(w), 0, SLOT, SLOT),
+    ...(g.foe === null ? [at(portalSlotX(w), 0, SLOT, SLOT)] : []),
+    ...g.belt.flatMap((s, i) => (s === null ? [] : [at(beltSlotX(w, i), BELT_BELOW_Y, BELT_SLOT_W, SLOT)])),
+  ]
 }
 
 /** Two boxes, in cells, that share a cell. */

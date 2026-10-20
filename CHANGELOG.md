@@ -14,7 +14,8 @@ again from its new start, gains kept. Nothing else needs doing.
 - In the talent window a number key chooses its card, as on the start screen, and Take (`t`) takes it; a number
   took the talent at once.
 - In every window, what the pointer is over lights up before a click: a button, a card, a tab, a worn piece or an
-  item in the bag, a ware, the close box. What cannot act now (a dark button, the chosen tab) does not.
+  item in the bag, a ware, the close box, and on the strip the portrait, the XP line, the gear, the portal and a
+  filled belt slot. What cannot act now (a dark button, the chosen tab, the portal while a foe lives) does not.
 - Every window fits in 41 rows, and the game plays best in a pane 105 columns by 48 rows, where it was 78. The
   character sheet, the talents, the deep and the codex are tabs of one window, named in its title bar (the talents
   and the deep marked gold while one waits); the sheet loses its Codex, Talent and Deep buttons to them, its

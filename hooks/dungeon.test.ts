@@ -496,6 +496,17 @@ test('on a wide pane a talent\'s number key chooses its card, as on the start sc
   await ui.unmount()
 })
 
+test('the pointer over the strip\'s portrait lights it; out of the strip, as it was', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  const cells = async () => (await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells
+  const idle = await cells()
+  await ui.pointer({ type: 'move', x: 5, y: 2, in: 'hud-clicks' } as never)
+  expect(await cells()).not.toEqual(idle)
+  await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'hud-clicks' } as never)
+  expect(await cells()).toEqual(idle)
+  await ui.unmount()
+})
+
 /** A hero at depth 60 with its big boss slain: the fork for tier II waits. */
 const atFork = () => {
   const g = newGame()

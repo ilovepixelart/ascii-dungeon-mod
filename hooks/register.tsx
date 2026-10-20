@@ -8,7 +8,7 @@ import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
-import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
+import { beltMenuBox, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
@@ -134,10 +134,16 @@ const onHover = ($: EngineInterface, element: string, at: Pos | null) => {
   if (!sameRect(before, litIn(key))) $.ui.invalidate('ui.render')
 }
 
-/** A window's clickable places with its close box; and its pixels with the one under the pointer lit. */
-const litWindow = (key: string, px: string[][], hot: readonly Rect[], width = INV_W) => {
+/** The strip as Raster cells, what the pointer is over lit. */
+const stripCells = (g: Game, width: number, boxes: readonly OverlayBox[]) => {
+  const c = hudPixels(g, width, boxes)
+  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width), width, false) })
+}
+
+/** A window's clickable places with its close box (the strip has none); and its pixels with the one under the pointer lit. */
+const litWindow = (key: string, px: string[][], hot: readonly Rect[], width = INV_W, hasClose = true) => {
   const [x, y, w, h] = closeBoxOf(width)
-  hotOf.set(key, [...hot, { x, y, w, h }])
+  hotOf.set(key, hasClose ? [...hot, { x, y, w, h }] : hot)
   const lit = litIn(key)
   return lit === undefined ? px : lightUp(px, lit)
 }
@@ -1865,7 +1871,7 @@ const stripView = (p: Pane, l: Layout) => {
   return (
     <Box flexDirection="column">
       <Box>
-        <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={hudCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
+        <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={stripCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
         {Client !== undefined && (
           <Box position="absolute" top={0} left={0}>
             <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes) }} width={e.props.bodyColumns} height={l.hudRows} />

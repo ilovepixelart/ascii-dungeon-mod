@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Foe, Game, Item } from '../types'
-import { STASH_SIZE, apply, levelOf } from './game'
+import { STASH_SIZE, alongTheWay, apply, isOnlyAWalk, levelOf } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { BAG_H, BAG_W, RARITY_COLOR, plainItem } from './items'
-import { cellId, isFloor } from './map'
+import { bfs, cellId, isFloor } from './map'
 import { tileAt } from './panels'
 import { arrive } from './world'
 
@@ -129,5 +129,34 @@ describe('the floor, at its edges', () => {
     const other = slayer({ ...base, ...arrive(3, 4), deepest: 4, floor: lying })
     expect([other.depth, other.floor]).toEqual([1, []])
     expect(other.log).toContain('The item left on the floor of depth 4 is lost.')
+  })
+})
+
+describe('a walk begun on a tile with something lying on it', () => {
+  // A bag with one free cell: room for one ring. Ring A lies under the hero, ring B on the way to the stairs.
+  const oneFree = (): Item[] => Array.from({ length: BAG_W }, (_, i) => ({ ...plainItem({ nextId: 3000 + i }, 'chain'), w: 1, h: i === BAG_W - 1 ? BAG_H - 1 : BAG_H, x: i, y: 0 }))
+  const ring = (id: number) => ({ ...plainItem({ nextId: id }, 'ring'), w: 1, h: 1 })
+  const set = () => {
+    const base = { ...plainHero(3), ...arrive(3, 3), depth: 3, deepest: 3 }
+    const path = bfs(levelOf(base).tiles, base, levelOf(base).stairs)!
+    const mid = path[Math.floor(path.length / 2)]!
+    return { g: { ...base, bag: oneFree(), floor: [{ x: base.x, y: base.y, item: ring(7001) }, { x: mid.x, y: mid.y, item: ring(7002) }] }, mid }
+  }
+
+  test('an answer finished picks up what lies underfoot first, and the walk the pane plays agrees on every tile', async () => {
+    const { g } = set()
+    const plan = apply(g, { kind: 'descend' })
+    expect([plan.bag.some(i => i.id === 7001), plan.bag.some(i => i.id === 7002)]).toEqual([true, false])
+    const tiles = alongTheWay(g, plan)!
+    expect(tiles.filter(t => t.bag.some(i => i.id === 7002))).toEqual([])
+    expect(tiles.every(t => t.bag.some(i => i.id === 7001))).toBe(true)
+  })
+
+  test('a click away picks up what lies underfoot too, and is still only a walk', async () => {
+    const { g, mid } = set()
+    const plan = apply({ ...g, seen: '1'.repeat(g.seen.length) }, { kind: 'goto', ...mid })
+    expect([plan.bag.some(i => i.id === 7001), (plan.floor ?? []).map(f => f.item.id)]).toEqual([true, [7002]])
+    expect(isOnlyAWalk({ ...g, seen: '1'.repeat(g.seen.length) }, plan)).toBe(true)
+    expect(alongTheWay({ ...g, seen: '1'.repeat(g.seen.length) }, plan)!.every(t => t.bag.some(i => i.id === 7001))).toBe(true)
   })
 })

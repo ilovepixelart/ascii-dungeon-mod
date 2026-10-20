@@ -363,6 +363,7 @@ const step = (g: Game, steps: number) => {
     return
   }
   const deaths = g.deaths
+  startWalk(g)
   for (const p of path.slice(1, steps + 1)) {
     if (g.deaths !== deaths) return
     moveTo(g, p)
@@ -679,6 +680,12 @@ const pickUpFloor = (g: Game, isQuiet = false) => {
     say(g, `You pick up the ${lying.item.name} (${RARITY_NAME[lying.item.rarity]}).`)
   }
 }
+
+/**
+ * A walk's first move: what lies on the tile it starts from, into the bag as far as it fits, quietly. Every walk does
+ * it (a click, an explore, an answer finished, a trail) and so does the walk the pane plays, so the two agree.
+ */
+const startWalk = (g: Game) => pickUpFloor(g, true)
 
 /** What a kill drops besides gear (`killConsumable`), onto the belt; none on a barren depth. */
 const dropConsumable = (g: Game, isBarren: boolean) => {
@@ -1163,6 +1170,7 @@ const wayTo = (g: Game, level: Level, target: Pos, isFoe: boolean) => {
 /** Walks the way, stopped by a foe that stands on it or steps up beside the hero, or by a fall: whether it went on to its end. */
 const walkWay = (g: Game, path: readonly Pos[], isFoe: boolean) => {
   const deaths = g.deaths
+  if (path.length > 1) startWalk(g)
   for (const p of path.slice(1, isFoe ? -1 : undefined)) {
     if (g.foe !== null && same(p, g.foe)) {
       say(g, `${TheFoe(g.foe)} blocks your way.`)
@@ -1214,8 +1222,6 @@ const descendAfterWalk = (g: Game) => {
 const walkDown = (g: Game) => {
   const level = levelOf(g)
   const path = g.foe === null && !same(g, level.stairs) ? bfs(level.tiles, g, level.stairs) : null
-  // The tile the walk starts from is on the way too.
-  if (path !== null) pickUpFloor(g, true)
   if (path !== null && !walkWay(g, path, false)) return
   descendAfterWalk(g)
 }
@@ -1233,6 +1239,7 @@ export const isOnlyAWalk = (g: Game, plan: Game) => {
 /** The hero walks exactly these tiles, taking up what lies on them, as far as he lives. */
 const trail = (g: Game, path: readonly Pos[]) => {
   const deaths = g.deaths
+  if (path.length > 0) startWalk(g)
   for (const p of path) {
     moveTo(g, p)
     if (g.deaths !== deaths) return
@@ -1940,6 +1947,7 @@ export const alongTheWay = (game: Game, plan: Game): Game[] | null => {
   const last = plan.walked.length - 1
   if (last < 0) return null
   const g: Game = { ...normalize(game), log: [...game.log], toast: null, fresh: 0, walked: [] }
+  if (g.where === 'dungeon') startWalk(g)
   const tiles: Game[] = []
   for (const p of plan.walked.slice(0, last)) {
     if (g.where === 'town') Object.assign(g, { x: p.x, y: p.y, walked: [...g.walked, { x: p.x, y: p.y }] })

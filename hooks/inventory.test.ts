@@ -165,11 +165,13 @@ describe('the inventory screen', () => {
     expect(screen.slice(HEAD_H, INV_TOP).flat().includes(LABEL_INK)).toBe(false)
   })
 
-  test('draws a close box with a red X at its place', async () => {
+  test('draws a small close box at the title bar\'s right end: 7 px square, its red X 3 px across, a pixel of room round it', async () => {
     const screen = inventoryScreenPixels(knight())
+    // In a 105 px window: from x 96 to 102, two pixels from the edge, y 2 to 8 in the 10 px bar.
+    expect(CLOSE_BOX).toEqual([96, 2, 7, 7])
     const [x, y, w, h] = CLOSE_BOX
-    const inside = screen.slice(y, y + h).flatMap(r => r.slice(x, x + w))
-    expect(inside.filter(p => p === CLOSE_INK).length).toBeGreaterThanOrEqual(9)
+    const red = screen.slice(y, y + h).flatMap((r, dy) => r.slice(x, x + w).flatMap((p, dx) => (p === CLOSE_INK ? [`${dx},${dy}`] : [])))
+    expect(red.sort()).toEqual(['2,2', '2,4', '3,3', '4,2', '4,4'])
   })
 })
 

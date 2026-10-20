@@ -22,9 +22,9 @@ const HEAD_BG = SURFACE.titleBar
 const GOLD_INK = INK.gold
 /** The gold this far left of the window's right edge. */
 const GOLD_FROM_RIGHT = 41
-/** The close box (x, y, w, h) at the title bar's right end of a window `width` wide. */
-/** The close box: 9 px square under the title bar's line, its X centred with a pixel all round. */
-export const closeBoxOf = (width: number) => [width - 10, 1, 9, 9] as const
+/** The close box (x, y, w, h) at the title bar's right end of a window `width` wide: 7 px square, two pixels from the
+ * edge, centred in the bar; its X 3 px across with a pixel of room round it. */
+export const closeBoxOf = (width: number) => [width - 9, 2, 7, 7] as const
 export const CLOSE_BOX = closeBoxOf(WINDOW_W)
 export const CLOSE_INK = INK.danger
 const CLOSE_BG = SURFACE.closeGround
@@ -97,7 +97,7 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   const [cx, cy, cw, ch] = closeBoxOf(width)
   fill(c, cx, cy, cw, ch, CLOSE_BG)
   frame(c, cx, cy, cw, ch, CLOSE_EDGE)
-  art(c, ['w...w', '.w.w.', '..w..', '.w.w.', 'w...w'], cx + 2, cy + 2, CLOSE_INK)
+  art(c, ['w.w', '.w.', 'w.w'], cx + 2, cy + 2, CLOSE_INK)
   body.forEach((row, y) => row.forEach((p, x) => put(c, x, top + y, p)))
   return c
 }

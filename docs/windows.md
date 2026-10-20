@@ -6,6 +6,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 |---|---|
 | `hooks/window.ts` | the frame (title, gold when the window passes it, close box, section labels, the body below `BODY_TOP`); text boxes (`boxShape`, `drawBox`); where they go (`coverage`, `place`); gestures (`Gesture`, `pixel`, `CLICK_SLOP`) |
 | `hooks/pieces.ts` | what windows are built from: an item in its tier box with its marks (`drawItem`), an item grid (`itemGrid`, `cellBox`), the belt |
+| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; flat and beveled cards with their ribbon, gem and sparkles. `tools/ui.ts` draws them all on one sheet |
 | `hooks/windowclient.ts` | the click layer: writes the text boxes it is handed and reports whole gestures |
 | `hooks/inventory.ts`, `hooks/bagui.ts` | the inventory (see `inventory.md`) |
 | `hooks/shop.ts` | the merchant |

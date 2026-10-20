@@ -58,3 +58,17 @@ describe('the guard\'s trade-in', () => {
     expect(trade({ ...plainHero(3), bag: [] }).log).toContain('The guard is in town.')
   })
 })
+
+test('a trade-in refused for want of room leaves the game as it was: the three, the roll, the bad-luck counts', async () => {
+  const three = [piece(1, 'common', 0), piece(2, 'common', 1), piece(3, 'common', 2)]
+  const filler = Array.from({ length: BAG_W - 3 }, (_, i) => ({ ...plainItem({ nextId: 50 + i }, 'chain', 'epic'), w: 1, h: BAG_H, x: 3 + i, y: 0 }))
+  const below = Array.from({ length: 3 }, (_, i) => ({ ...plainItem({ nextId: 70 + i }, 'chain', 'epic'), w: 1, h: BAG_H - 1, x: i, y: 1 }))
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+    const g = atGuard([...three, ...filler, ...below], { seed, world: seed, dryKills: 20, sinceRare: 5 })
+    const after = trade(g)
+    if (!after.log.includes('The guard: "No room in your bag for what I would give you."')) continue
+    const { log: _a, fresh: _b, ...rest } = after
+    const { log: _c, fresh: _d, ...was } = g
+    expect(rest).toEqual(was)
+  }
+})

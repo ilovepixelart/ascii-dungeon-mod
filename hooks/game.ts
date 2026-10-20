@@ -168,7 +168,10 @@ const die = (g: Game, killer: string) => {
   const wake = g.waypoint !== undefined && g.waypoint >= first && g.waypoint <= g.depth ? g.waypoint : first
   say(g, `You were slain by ${killer} on depth ${g.depth}. You wake on depth ${wake}.`)
   remember(g)
-  Object.assign(g, arrive(g.world, wake), { walked: [], fortune: null, tension: 0, calm: 0, lastSold: null })
+  // Waking on the same depth, what lies on its floor still lies there; on another, it is lost, said.
+  const lying = g.floor ?? []
+  if (wake !== depth && lying.length > 0) say(g, `${lying.length === 1 ? 'The item' : `The ${lying.length} items`} left on the floor of depth ${depth} ${lying.length === 1 ? 'is' : 'are'} lost.`)
+  Object.assign(g, arrive(g.world, wake), { walked: [], fortune: null, tension: 0, calm: 0, lastSold: null }, wake === depth ? { floor: lying } : {})
   // The waking depth's twist is said; the toast stays the death's.
   const mod = depthMod(g.world, wake)
   if (mod !== undefined) say(g, `${MOD_SAID[mod]}.`)
@@ -317,7 +320,7 @@ const openChest = (g: Game, kind: ChestKind) => {
   if (item !== undefined) announce(g, item)
   const isKept = item === undefined || stash(g, item)
   if (!isKept) leaveOnFloor(g, item, g)
-  const found = item === undefined ? '' : isKept ? ` and ${item.name} (${RARITY_NAME[item.rarity]})` : `; your bag is full, so the ${item.name} lies beside it`
+  const found = item === undefined ? '' : isKept ? ` and ${item.name} (${RARITY_NAME[item.rarity]})` : `; your bag is full, so the ${item.name} lies here`
   say(g, `You open the ${kind} chest: ${coins} gold${found}.`)
 }
 
@@ -330,8 +333,9 @@ const moveTo = (g: Game, p: Pos) => {
   g.walked = [...g.walked, { x: p.x, y: p.y }]
   const level = levelOf(g)
   g.seen = reveal(g.seen, [...visibleFrom(level, p, sightOf(g)), ...corridorAhead(level, p)])
-  pickUp(g)
+  // What lies here first, so a chest opened with the bag full says once where its item lies.
   pickUpFloor(g)
+  pickUp(g)
 }
 
 /** The way from the hero to the stairs, around the foe; null when the foe cuts it. */
@@ -653,22 +657,26 @@ const keepPrize = (g: Game, item: Item, at: Pos, said: (named: string) => string
   else if (g.stashed.length < STASH_SIZE) {
     g.stashed = [...g.stashed, item]
     say(g, `${told} Your bag is full: it waits in your stash in town.`)
+  } else if (g.where === 'town') {
+    // Found in town: it waits on the floor of the depth the portal leads back to, by the portal's tile.
+    leaveOnFloor(g, item, g.portal ?? levelOf(g).start)
+    say(g, `${told} Your bag and your stash are full: it waits by the portal in the dungeon.`)
   } else {
     leaveOnFloor(g, item, at)
     say(g, `${told} Your bag and your stash are full: it lies where it fell.`)
   }
 }
 
-/** Steps onto an item lying on the floor: picked up with room, said; still too full, said that it lies there. */
+/** Steps onto items lying on the floor: each picked up while there is room, said; what is left, said that it lies there. */
 const pickUpFloor = (g: Game) => {
-  const lying = (g.floor ?? []).find(f => f.x === g.x && f.y === g.y)
-  if (lying === undefined) return
-  if (!stash(g, lying.item)) {
-    say(g, `The ${lying.item.name} lies here; your bag is still full.`)
-    return
+  for (const lying of (g.floor ?? []).filter(f => f.x === g.x && f.y === g.y)) {
+    if (!stash(g, lying.item)) {
+      say(g, `The ${lying.item.name} lies here; your bag is still full.`)
+      continue
+    }
+    g.floor = (g.floor ?? []).filter(f => f !== lying)
+    say(g, `You pick up the ${lying.item.name} (${RARITY_NAME[lying.item.rarity]}).`)
   }
-  g.floor = (g.floor ?? []).filter(f => f !== lying)
-  say(g, `You pick up the ${lying.item.name} (${RARITY_NAME[lying.item.rarity]}).`)
 }
 
 /** What a kill drops besides gear (`killConsumable`), onto the belt; none on a barren depth. */
@@ -1461,8 +1469,11 @@ const gamble = (g: Game) => {
     say(g, `The villager: "A sealed pack is ${cost} gold. No peeking."`)
     return
   }
+  // A refusal leaves the game as it was: the roll, the item's id and the bad-luck counts too.
+  const before = { ...g }
   const item = makeItem(g, 'uncommon')
   if (!stash(g, item)) {
+    Object.assign(g, before)
     say(g, 'The villager: "Make room in your bag first."')
     return
   }
@@ -1493,7 +1504,8 @@ const tradeIn = (g: Game) => {
     return
   }
   const tier = three[0]!.rarity
-  const before = { bag: g.bag, cursor: g.cursor }
+  // A refusal leaves the game as it was: the three where they lay, the roll, the item's id, the bad-luck counts.
+  const before = { ...g }
   for (const i of three) take(g, i.id)
   const item = makeItem(g, RARITY_RANK[RARITY_RANK.indexOf(tier) + 1]!)
   if (!stash(g, item)) {

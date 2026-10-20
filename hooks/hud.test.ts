@@ -5,7 +5,7 @@ import { foeAhead } from './fixtures'
 import { depthMod, isBossDepth, newGame } from './game'
 import {
   BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_Y, XP_FILL, XP_Y,
-  BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
+  BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudHot, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
 import type { Gesture } from './window'
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
@@ -520,4 +520,13 @@ test('the iron frame is the riveted metal band alone, one pixel: no dark edge, n
   expect([...ring].every(p => ['#5a5f6b', '#3a3e48', '#c8ccd4'].includes(p))).toBe(true)
   expect([...ring]).not.toContain('#0e0c12')
   expect([...ring]).not.toContain('#1a1820')
+})
+
+test('the side line lights over just the rows a click on it opens the log from', async () => {
+  const width = 100
+  const g = hero()
+  const line = hudHot(g, width).at(-1)!
+  expect([line.y, line.h]).toEqual([INSET + SIDE_LINE_Y, 5])
+  const tap = (py: number) => hudGesture(g, null, { type: 'release', from: { x: 10, y: py / 2 }, at: { x: 10, y: py / 2 }, button: 'left' }, width)
+  expect([tap(line.y).isLog, tap(line.y + line.h - 1).isLog, tap(line.y - 1).isLog, tap(line.y + line.h).isLog]).toEqual([true, true, undefined, undefined])
 })

@@ -24,7 +24,7 @@ const GOLD_INK = INK.gold
 const GOLD_FROM_RIGHT = 41
 
 /** The title bar's gold as written: in full to six digits, the room it has before the close box; past that in
- * thousands (K), then millions (M), so it is never more than six characters. */
+ * thousands (K), then millions (M): at most six characters up to 99,999,999,999, far past what a hero gathers. */
 export const goldText = (gold: number) =>
   gold < 1_000_000 ? String(gold) : gold < 100_000_000 ? `${Math.floor(gold / 1000)}K` : `${Math.floor(gold / 1_000_000)}M`
 /** The close box (x, y, w, h) at the title bar's right end of a window `width` wide: 7 px square, two pixels from the

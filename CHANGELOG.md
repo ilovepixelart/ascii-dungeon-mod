@@ -11,6 +11,10 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- Talents are picked from three cards side by side, each with its family's ribbon (work, fight, road) and its own
+  icon; the chosen card is lifted, its name and what it does in the box below. The window fits in 40 rows, so a
+  short pane shows it whole. It opens on its own when a talent is earned, once no window is open and no foe is
+  alive; Later leaves it owed until the next. Taking the last one owed closes it. Saves gain the optional `talentOffered`.
 - An answer finished walks the hero to the stairs on screen, picking up what lies on the way, then down, where the
   hero appeared on the next depth from wherever he stood. Simulated deaths per descent are unchanged (0.097 and
   0.099); the hero gets down a little sooner, so deaths per 1,000 steps go from 1.60 to 1.71.

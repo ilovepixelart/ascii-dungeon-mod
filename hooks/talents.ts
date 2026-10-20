@@ -28,8 +28,11 @@ const ALL = Object.keys(TALENTS) as Talent[]
 
 export const hasTalent = (g: Pick<Game, 'talents'>, t: Talent) => g.talents?.includes(t) === true
 
-/** Talents earned and not yet picked: one every TALENT_EVERY levels, while any are left to pick. */
-export const owed = (g: Pick<Game, 'level' | 'talents'>) => Math.max(0, Math.min(Math.floor(g.level / TALENT_EVERY), ALL.length) - (g.talents?.length ?? 0))
+/** Talents earned: one every TALENT_EVERY levels, as many as there are. */
+export const earned = (g: Pick<Game, 'level'>) => Math.min(Math.floor(g.level / TALENT_EVERY), ALL.length)
+
+/** Talents earned and not yet picked. */
+export const owed = (g: Pick<Game, 'level' | 'talents'>) => Math.max(0, earned(g) - (g.talents?.length ?? 0))
 
 /** The three talents offered now, none already picked: by the world and the picks so far; none when none is owed. */
 export const offer = (g: Pick<Game, 'level' | 'talents' | 'world'>): Talent[] => {

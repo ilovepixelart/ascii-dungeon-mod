@@ -15,7 +15,8 @@ import { recapGesture, recapHeight, recapPixels } from './recapwindow'
 import { codexGesture, codexHeight, codexPixels } from './codexwindow'
 import { cardPixels, cardText, svgOf } from './herocard'
 import { retireGesture, retireHeight, retirePixels } from './retirewindow'
-import { talentGesture, talentHeight, talentPixels } from './talentwindow'
+import { TALENT_UI, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
+import type { TalentUi } from './talentwindow'
 import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import { deepGesture, deepHeight, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
@@ -105,6 +106,8 @@ let forgeUi: ForgeUi = FORGE_UI_IDLE
 let retireUi: RetireUi = FORGE_UI_IDLE
 let chestUi: ChestUi = CHEST_UI_IDLE
 let startUi: StartUi | null = null
+/** The card chosen in the talent window, while it is open. */
+let talentUi: TalentUi = TALENT_UI
 /** The how-it-plays window, open over whatever the pane shows: it closes back to that. */
 let isHelpOpen = false
 /** The pixel map's mounted size, which a repaint must match. */
@@ -817,7 +820,12 @@ const onForgeClick = async ($: EngineInterface, data: unknown) => {
   $.ui.invalidate('ui.render')
 }
 
-const onTalentClick = async ($: EngineInterface, data: unknown) => actAll($, talentGesture(await current($), data as Gesture))
+const onTalentClick = async ($: EngineInterface, data: unknown) => {
+  const outcome = talentGesture(await current($), talentUi, data as Gesture)
+  talentUi = outcome.ui
+  await actAll($, outcome.actions)
+  $.ui.invalidate('ui.render')
+}
 const onDeepClick = async ($: EngineInterface, data: unknown) => actAll($, deepGesture(await current($), data as Gesture))
 
 const onRetireClick = async ($: EngineInterface, data: unknown) => {
@@ -1343,11 +1351,16 @@ const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
   ]
 }
 
-/** The talents offered, a key each; the window's own close. */
-const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => [
-  ...offer(g).map((t, i) => <Button key={`talent-${t}`} label={`${TALENTS[t].name}: ${TALENTS[t].does}`} hotkey={isWindow ? String(i + 1) : undefined} plain onPress={press({ kind: 'talent', talent: t })} />),
-  <Button key="talent-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
-]
+/** The talents offered, a key each taking it; in the window Take for the chosen card, and Later; the window's own close. */
+const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
+  const offered = offer(g)
+  const chosen = offered[Math.min(talentUi.chosen, offered.length - 1)]
+  return [
+    ...offered.map((t, i) => <Button key={`talent-${t}`} label={isWindow ? TALENTS[t].name : `${TALENTS[t].name}: ${TALENTS[t].does}`} hotkey={isWindow ? String(i + 1) : undefined} plain onPress={press({ kind: 'talent', talent: t })} />),
+    ...(isWindow && chosen !== undefined ? [<Button key="talent-take" label="Take" hotkey="t" plain onPress={press({ kind: 'talent', talent: chosen })} />] : []),
+    <Button key="talent-close" label={offered.length > 0 ? 'Later' : 'Close'} hotkey={isWindow ? (offered.length > 0 ? 'l' : 'c') : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
+  ]
+}
 
 const retireWindow = (p: Pane) => {
   const { redraw, g, Button, press } = p
@@ -1446,7 +1459,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
-  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g), talentPixels(p.g), [], talentKeys(p, true)) },
+  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true)) },
   { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [], deepKeys(p, true)) },
   { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [cardKey(p, 'k'), codexClose(p, 'c')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
@@ -1891,6 +1904,7 @@ const drawPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
   if (g.panel !== 'retire') retireUi = FORGE_UI_IDLE
   if (g.panel !== 'stash') chestUi = CHEST_UI_IDLE
   if (g.panel !== 'start') startUi = null
+  if (g.panel !== 'talent') talentUi = TALENT_UI
   const p = paneOf($, e, g)
   const l = layOut(p)
   const tree = (FULL_WINDOWS.find(w => w.is(p, l))?.draw ?? dashboard)(p, l)

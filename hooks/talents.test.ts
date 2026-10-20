@@ -8,7 +8,7 @@ import { killConsumable, slotOf } from './consumables'
 import { MAP_W, isFloor, roomAt, visibleFrom } from './map'
 import { visibleSet } from './panels'
 import { levelOf } from './world'
-import { talentCards, talentGesture, talentHeight, talentLines, talentPixels } from './talentwindow'
+import { familyOf, laterRect, takeRect, talentCards, talentGesture, talentHeight, talentLines, talentOverlay, talentPixels } from './talentwindow'
 import { CLOSE_BOX } from './window'
 import type { Gesture } from './window'
 import { MAP_H } from './map'
@@ -192,14 +192,62 @@ describe('what each talent does', () => {
 describe('the talent window', () => {
   const tap = (p: { x: number; y: number }): Gesture => ({ type: 'release', from: { x: p.x + 0.5, y: p.y / 2 + 0.25 }, at: { x: p.x + 0.5, y: p.y / 2 + 0.25 }, button: 'left' })
   const g = { ...plainHero(3), level: 10, panel: 'talent' as const }
+  const ui = (chosen: number) => ({ chosen })
+  const middle = (r: { x: number; y: number; w: number; h: number }) => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })
 
-  test('a card a talent offered, its name and what it does; a click on one takes it', async () => {
+  test('offers the three as cards; a card clicked is chosen, clicked again taken', async () => {
     const cards = talentCards(g)
     expect(cards.map(c => c.talent)).toEqual(offer(g))
-    const texts = talentLines(g).map(l => l.text)
-    expect(texts[0]).toBe('LEVEL 10  CHOOSE ONE')
-    for (const t of offer(g)) expect(texts).toContain(TALENTS[t].name.toUpperCase())
-    expect(talentGesture(g, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 6 }))).toEqual([{ kind: 'talent', talent: cards[1]!.talent }])
+    expect(talentGesture(g, ui(0), tap(middle(cards[1]!.rect)))).toEqual({ ui: ui(1), actions: [] })
+    expect(talentGesture(g, ui(1), tap(middle(cards[1]!.rect)))).toEqual({ ui: ui(1), actions: [{ kind: 'talent', talent: cards[1]!.talent }] })
+  })
+
+  test('Take takes the chosen card; Later and the close box close, the talent still owed; elsewhere nothing', async () => {
+    const [, second] = offer(g)
+    expect(talentGesture(g, ui(1), tap(middle(takeRect()))).actions).toEqual([{ kind: 'talent', talent: second }])
+    expect(talentGesture(g, ui(1), tap(middle(laterRect()))).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
+    expect(talentGesture(g, ui(0), tap({ x: CLOSE_BOX[0] + 1, y: CLOSE_BOX[1] + 1 })).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
+    expect(talentGesture(g, ui(0), tap({ x: 50, y: 15 }))).toEqual({ ui: ui(0), actions: [] })
+  })
+
+  test('the box below says the chosen talent: its name and what it does', async () => {
+    offer(g).forEach((t, i) => {
+      const [box] = talentOverlay(g, ui(i))
+      expect(box!.lines.map(l => l.map(r => r.text).join(''))).toEqual([`${TALENTS[t].name}: ${TALENTS[t].does}`])
+    })
+  })
+
+  test('the chosen card stands lifted and rimmed white; the others in their family\'s colors, not white', async () => {
+    for (let chosen = 0; chosen < 3; chosen += 1) {
+      const px = talentPixels(g, ui(chosen))
+      talentCards(g).forEach((c, i) => {
+        // The rim's top edge: at the click area's top when lifted, LIFT lower otherwise.
+        const lifted = px[c.rect.y]![c.rect.x + 5]
+        expect(lifted === '#ffffff').toBe(i === chosen)
+      })
+    }
+  })
+
+  test('each card flies its family\'s ribbon: work green, fight red, road gold', async () => {
+    const families = { work: '#5ccf6a', fight: '#f06a5a', road: '#ffd34d' }
+    const all = Object.keys(TALENTS) as Talent[]
+    for (const t of all) expect(Object.keys(families)).toContain(familyOf(t))
+    expect(all.filter(t => familyOf(t) === 'work')).toEqual(['testDriven', 'cleanCommit', 'shipIt', 'rubberDucking'])
+    // The chosen card's ribbon in its family's own color, a pixel beside its notch.
+    const t = offer(g)[0]!
+    const c = talentCards(g)[0]!
+    expect(talentPixels(g, ui(0))[c.rect.y + 4]![c.rect.x + 3]).toBe(families[familyOf(t)])
+  })
+
+  test('fits in 40 rows, so a short pane shows it whole and its buttons are never scrolled away', async () => {
+    // Every pick from 0 to 11 talents taken, each card chosen.
+    for (let taken = 0; taken < ALL.length; taken += 1) {
+      const x = { ...g, level: 200, talents: ALL.slice(0, taken) }
+      for (let chosen = 0; chosen < offer(x).length; chosen += 1) {
+        expect(talentHeight(x, ui(chosen))).toBeLessThanOrEqual(80)
+        expect(talentPixels(x, ui(chosen)).length).toBe(talentHeight(x, ui(chosen)))
+      }
+    }
   })
 
   test('with none owed, the talents taken and the level of the next; with all taken, says so', async () => {
@@ -207,25 +255,38 @@ describe('the talent window', () => {
     expect(talentCards(done)).toEqual([])
     expect(talentLines(done).map(l => l.text)).toEqual(['NEXT AT LEVEL 30', 'GRUDGE', 'HAGGLER'])
     expect(talentLines({ ...g, level: 200, talents: ALL })[0]!.text).toBe('EVERY TALENT TAKEN')
-  })
-
-  test('while offering, the talents already taken are not listed', async () => {
-    const texts = talentLines({ ...g, level: 20, talents: ['grudge'] }).map(l => l.text)
-    expect(texts).not.toContain('GRUDGE')
-    expect(texts.at(-1)).toBe('CLICK ONE TO TAKE IT')
-  })
-
-  test('the close box closes it; a click elsewhere does nothing', async () => {
-    expect(talentGesture(g, tap({ x: CLOSE_BOX[0] + 1, y: CLOSE_BOX[1] + 1 }))).toEqual([{ kind: 'panel', panel: 'talent' }])
-    expect(talentGesture(g, tap({ x: 50, y: 15 }))).toEqual([])
-  })
-
-  test('fits over the map with any three talents offered, and with every talent taken', async () => {
-    for (const world of Array.from({ length: 60 }, (_, i) => i + 1)) {
-      const x = { ...g, world }
-      expect(talentHeight(x)).toBeLessThanOrEqual(MAP_H * PX)
-      expect(talentPixels(x).length).toBe(talentHeight(x))
-    }
     expect(talentHeight({ ...g, level: 200, talents: ALL })).toBeLessThanOrEqual(MAP_H * PX)
+  })
+})
+
+describe('the talent window opening on its own', () => {
+  const at9 = { ...plainHero(3), level: 9, xp: xpToLevel(9) - 1 }
+  const slay = (g: Game) => apply({ ...g, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, xp: 999 }) }, { kind: 'attack' })
+
+  test('the blow that earns a talent, its foe slain, opens it, once', async () => {
+    const up = slay(at9)
+    expect([up.level >= 10, up.panel, up.talentOffered]).toEqual([true, 'talent', 1])
+    const later = apply(up, { kind: 'panel', panel: 'talent' })
+    expect(later.panel).toBe('none')
+    // Later, it stays closed through what follows until the next talent is earned.
+    expect(apply(later, { kind: 'explore', steps: 1 }).panel).toBe('none')
+    expect(owed(later)).toBe(1)
+  })
+
+  test('not while a foe is alive or another window is open; once they are not, it opens', async () => {
+    const g = { ...at9, level: 10, xp: xpToLevel(10) }
+    const fighting = apply({ ...g, foe: foeAhead(g, 2, { hp: 99, maxHp: 99, atk: 0 }) }, { kind: 'explore', steps: 0 })
+    expect(fighting.panel).toBe('none')
+    const inBag = apply({ ...g, panel: 'bag' }, { kind: 'explore', steps: 0 })
+    expect(inBag.panel).toBe('bag')
+    expect(apply({ ...g, foe: null }, { kind: 'explore', steps: 0 }).panel).toBe('talent')
+  })
+
+  test('the next talent earned opens it again; the last owed taken closes it', async () => {
+    const g = { ...at9, level: 20, talents: ['grudge'] as Talent[], talentOffered: 1 }
+    const opened = apply(g, { kind: 'explore', steps: 0 })
+    expect([opened.panel, opened.talentOffered]).toEqual(['talent', 2])
+    const taken = apply(opened, { kind: 'talent', talent: offer(opened)[0]! })
+    expect(taken.panel).toBe('none')
   })
 })

@@ -1,9 +1,9 @@
 // The townsfolk's window: a portrait, what they say (chosen from how the hero stands, first match wins), what they
 // show (the healer the hero's HP, the elder the quest's progress, the mystic the three fortunes, the dog its pets)
 // and at most one button. Pure: the click layer reports whole gestures, this decides the game actions they make.
-import type { Game } from '../types'
+import type { Game, Rarity } from '../types'
 import type { Action, Run } from './game'
-import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, fortuneCost, gambleCost, questReward } from './game'
+import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, fortuneCost, gambleCost, questReward, tradeInOf } from './game'
 import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
@@ -13,7 +13,7 @@ import type { ButtonState } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas, digits, fill, frame } from './canvas'
-import { SLOTS } from './items'
+import { RARITY_NAME, SLOTS } from './items'
 import { INK, SURFACE } from './ui/tokens'
 
 /** Whoever has a window of talk: the townsfolk but the merchant, the smith and the stash. */
@@ -36,6 +36,9 @@ export const FORTUNE_NAME: Readonly<Record<NonNullable<Game['fortune']>['kind'],
 const FORTUNES = ['luck', 'riches', 'insight'] as const
 /** Each fortune's row in pixels: its name, and what it does in the pixel font's few signs. */
 const FORTUNE_ROW: Readonly<Record<(typeof FORTUNES)[number], readonly [string, string]>> = { luck: ['LUCK', '+15 CRIT'], riches: ['RICHES', '+1/2 GOLD'], insight: ['INSIGHT', '+1/2 XP'] }
+
+/** The tier a trade-in gives for three of a tier. */
+const NEXT_TIER: Readonly<Partial<Record<Rarity, Rarity>>> = { common: 'uncommon', uncommon: 'rare', rare: 'epic' }
 
 const said = (text: string): Run[] => [{ text, color: INK.text }]
 const aside = (text: string): Run[] => [{ text, dim: true }]
@@ -66,12 +69,16 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
     : g.gold >= fortuneCost(g) ? [said('"The cards favor those who pay for them."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)]
     : [said('"Come back when your purse is heavier."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)],
   guard: g => {
+    const three = tradeInOf(g)
+    const trade = aside(three.length === 3
+      ? `Trade in your ${three.map(i => i.name).join(', ')} for one ${RARITY_NAME[NEXT_TIER[three[0]!.rarity]!]} or better.`
+      : 'Three spare pieces of a tier trade for one of the next, up to Epic.')
     const deepest = aside(`Your deepest: depth ${g.deepest}. Times fallen: ${g.deaths}.`)
     const guardian = nextGuardian(g)
-    if (guardian - g.depth <= 1) return [said(`"A guardian holds the stairs of depth ${guardian}. Go ready."`), deepest]
-    if (themeOf(g.depth + 1) !== themeOf(g.depth)) return [said(`"Past depth ${g.depth}, they say, the halls turn ${THEME_WORD[themeOf(g.depth + 1)]}."`), deepest]
-    if (g.deaths > 0) return [said('"Fell down there and came back? Mind the stairs this time."'), deepest]
-    return [said('"The dungeon is through the portal. Mind the stairs."'), deepest]
+    if (guardian - g.depth <= 1) return [said(`"A guardian holds the stairs of depth ${guardian}. Go ready."`), deepest, trade]
+    if (themeOf(g.depth + 1) !== themeOf(g.depth)) return [said(`"Past depth ${g.depth}, they say, the halls turn ${THEME_WORD[themeOf(g.depth + 1)]}."`), deepest, trade]
+    if (g.deaths > 0) return [said('"Fell down there and came back? Mind the stairs this time."'), deepest, trade]
+    return [said('"The dungeon is through the portal. Mind the stairs."'), deepest, trade]
   },
   villager: g => {
     const pack = aside(`A sealed pack: ${gambleCost(g)} gold for an item of Uncommon or better, rarely an Epic or a Legendary.`)
@@ -93,7 +100,10 @@ const ACT: Readonly<Record<Speaker, (g: Game) => Act | undefined>> = {
   healer: () => undefined,
   elder: g => (g.quest === null ? undefined : { key: 'A', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
   mystic: g => ({ key: 'F', label: 'FORTUNE', cost: fortuneCost(g), canPay: g.gold >= fortuneCost(g), action: { kind: 'fortune' }, state: g.fortune === null && g.gold >= fortuneCost(g) ? 'ready' : 'off' }),
-  guard: () => undefined,
+  guard: g => {
+    const n = tradeInOf(g).length
+    return { key: 'T', label: 'TRADE IN', action: { kind: 'tradeIn' }, state: n === 3 ? 'ready' : 'off' }
+  },
   villager: g => ({ key: 'G', label: 'GAMBLE', cost: gambleCost(g), canPay: g.gold >= gambleCost(g), action: { kind: 'gamble' }, state: g.gold >= gambleCost(g) ? 'ready' : 'off' }),
   dog: () => ({ key: 'P', label: 'PET', action: { kind: 'pet' }, state: 'ready' }),
 }

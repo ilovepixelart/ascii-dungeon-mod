@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, corridorAhead, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -51,6 +51,7 @@ export type Action =
   | { kind: 'store' }
   | { kind: 'fortune' }
   | { kind: 'gamble' }
+  | { kind: 'tradeIn' }
   /** The elder's pay for a quest done, asked for again: after a visit found the bag too full for the item. */
   | { kind: 'claim' }
   | { kind: 'pet' }
@@ -1297,6 +1298,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   store: g => say(g, 'Your stash is in town.'),
   fortune: g => say(g, 'The mystic is in town.'),
   gamble: g => say(g, 'The villager is in town.'),
+  tradeIn: g => say(g, 'The guard is in town.'),
   claim: g => say(g, 'The elder is in town.'),
   pet: g => say(g, 'The dog is in town.'),
   retrieve: g => say(g, 'Your stash is in town.'),
@@ -1466,6 +1468,40 @@ const gamble = (g: Game) => {
   g.gold -= cost
   announce(g, item)
   say(g, `You pay the villager ${cost} gold and open the pack: ${item.name} (${RARITY_NAME[item.rarity]}).`)
+}
+
+/** The tiers the guard takes three of for one of the next, lowest first. */
+const TRADED: readonly Rarity[] = ['common', 'uncommon', 'rare']
+
+/** The three bag pieces the guard would take: of the lowest tier with three to spare (not locked), those marked junk
+ * first, then the cheapest; none when no tier has three. */
+export const tradeInOf = (g: Pick<Game, 'bag'>): Item[] => {
+  for (const tier of TRADED) {
+    const spare = g.bag.filter(i => i.rarity === tier && i.locked !== true)
+    if (spare.length >= 3) return [...spare].sort((a, b) => Number(b.junk === true) - Number(a.junk === true) || priceOf(a) - priceOf(b)).slice(0, 3)
+  }
+  return []
+}
+
+/** The guard's trade: three spare pieces of a tier for one of the next tier or better from the armory, into the bag;
+ * with no room for it there, the three are given back. */
+const tradeIn = (g: Game) => {
+  const three = tradeInOf(g)
+  if (three.length === 0) {
+    say(g, 'The guard: "Bring me three spare pieces of a kind, and the armory has better."')
+    return
+  }
+  const tier = three[0]!.rarity
+  const before = { bag: g.bag, cursor: g.cursor }
+  for (const i of three) take(g, i.id)
+  const item = makeItem(g, RARITY_RANK[RARITY_RANK.indexOf(tier) + 1]!)
+  if (!stash(g, item)) {
+    Object.assign(g, before)
+    say(g, 'The guard: "No room in your bag for what I would give you."')
+    return
+  }
+  announce(g, item)
+  say(g, `The guard takes your ${three.map(i => i.name).join(', ')} and hands you ${item.name} (${RARITY_NAME[item.rarity]}).`)
 }
 
 /** How many items the town stash holds. */
@@ -1645,6 +1681,7 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   store: g => store(g),
   fortune: g => mystic(g),
   gamble: g => gamble(g),
+  tradeIn: g => tradeIn(g),
   claim: g => elder(g),
   pet: g => {
     g.petted += 1

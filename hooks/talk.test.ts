@@ -103,10 +103,11 @@ describe('the button', () => {
     expect(talkAction(hero({ quest: null }), 'elder')).toBeUndefined()
   })
 
-  test('the dog\'s pets it; the villager\'s sells a sealed pack; the healer and the guard have none', async () => {
+  test('the dog\'s pets it; the villager\'s sells a sealed pack; the guard\'s trades in; the healer has none', async () => {
     expect(talkAction(hero(), 'dog')).toMatchObject({ action: { kind: 'pet' }, state: 'ready' })
     expect(talkAction(hero(), 'villager')).toMatchObject({ key: 'G', action: { kind: 'gamble' } })
-    for (const who of ['healer', 'guard'] as const) expect(talkAction(hero(), who)).toBeUndefined()
+    expect(talkAction(hero(), 'guard')).toMatchObject({ key: 'T', action: { kind: 'tradeIn' } })
+    expect(talkAction(hero(), 'healer')).toBeUndefined()
   })
 
   test('a click on a button that can act does it; on one that cannot, nothing; the close box closes the window', async () => {

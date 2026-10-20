@@ -113,6 +113,7 @@ const summary = {
     questsDonePerGame: sum(r => r.stats.questsDone) / results.length,
     fortunesPerGame: sum(r => r.stats.fortunes) / results.length,
     gamblesPerGame: sum(r => r.stats.gambles) / results.length,
+    tradeInsPerGame: sum(r => r.stats.tradeIns) / results.length,
     bossesMetPerGame: sum(r => r.stats.bossesMet) / results.length,
     bossesSlainPerGame: sum(r => r.stats.bossesSlain) / results.length,
     bossDeathsPerGame: sum(r => r.stats.bossDeaths) / results.length,

@@ -11,6 +11,10 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- The guard in town trades in (`t`): three spare pieces of a tier, Common to Rare, for one of the next tier or
+  better. Pieces marked junk go first, then the cheapest; a locked one never. With no room for what it gives, the
+  three stay. Over 90 simulated games items thrown away fall from 33 to 21 a game, and the deepest depth rises from
+  40 to 43 with deaths unchanged.
 - The villager in town sells a sealed pack (`g`): 50 gold and 12 a depth of the deepest reached, for an item of
   Uncommon or better rolled as a drop is, about 1 in 20 an Epic and 1 in 70 a Legendary. With no room in the bag
   nothing is paid. Over 90 simulated games of 3,000 steps the gold a hero holds halves (4,896 to 2,271) with deaths

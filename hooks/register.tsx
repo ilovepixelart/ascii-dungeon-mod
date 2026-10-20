@@ -54,6 +54,7 @@ import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
+import { INK } from './ui/tokens'
 import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, mapLabelAt, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit, PixelRect } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
@@ -1247,7 +1248,7 @@ const textHelp = (p: Pane) => {
   return (
     <Box flexDirection="column">
       <Text bold>How it plays: your coding plays the hero</Text>
-      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
+      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? INK.good : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
       <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text>
       <Box columnGap={2}>{helpClose(p)}</Box>
     </Box>
@@ -1659,7 +1660,7 @@ const textShop = ({ g, Box, Text, Button, press }: Pane) => (
   <Box flexDirection="column">
     <Text>
       <Text bold>The merchant</Text>
-      <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
+      <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
     </Text>
     {WARES.map(ware => (
       <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware, g)} gold`} plain dimColor={g.gold < priceOfWare(ware, g)} onPress={press({ kind: 'buy', ware })} />
@@ -1679,7 +1680,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
       <Text>
         <Text bold>The smith</Text>
         <Text dimColor>{`  Temper: +1 to the main stat, up to ${TEMPER_MAX} times. Reforge: new affixes, ${reforgeCost(g)} gold`}</Text>
-        <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
+        <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
       </Text>
       {worn.length === 0 && <Text dimColor>You wear nothing for the smith to work on.</Text>}
       {worn.map(({ slot, item }) => {
@@ -1738,7 +1739,7 @@ const textMystic = (p: Pane) => {
     <Box flexDirection="column">
       <Text>
         <Text bold>The mystic</Text>
-        <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
+        <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
       </Text>
       <Text>{g.fortune === null ? 'No fortune in force.' : `${FORTUNE_NAME[g.fortune.kind]}, until you change depth.`}</Text>
       {g.fortune === null
@@ -1960,7 +1961,7 @@ const dashKeys = ({ g, Box, Text, Button, press }: Pane) => (
       <Text bold>Inventory</Text>
     </Button>
     <Button key="sheet" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })}>
-      Character{g.points > 0 ? <Text color="#e0b84a"> ({g.points})</Text> : ''}
+      Character{g.points > 0 ? <Text color={INK.easy}> ({g.points})</Text> : ''}
     </Button>
     <Text dimColor>|</Text>
     <Button key="attack" label="attack" hotkey="a" plain onPress={press({ kind: 'attack' })} />

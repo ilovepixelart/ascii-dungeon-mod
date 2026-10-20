@@ -31,7 +31,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 Every window keeps these; review them with `tools/windows.ts`, which draws each window of `hooks/screens.ts` with its text boxes written in.
 
-- Colors by role from `hooks/ui/tokens.ts`, never a code of a window's own: `scripts/check-colors.mjs`, a gate, fails on a raw color in any module that draws a window or takes the tokens.
+- Colors by role from `hooks/ui/tokens.ts`, never a code of a window's own: `scripts/check-colors.mjs`, a gate, fails on a raw color (any quotes, three or six digits) in any module that draws a window, takes the tokens or draws the pane's text (a `.tsx`); a click layer, which cannot import the tokens, may hold only a copy of a token's value.
 - At most 41 rows (`BEST_ROWS` in `hooks/panesize.ts`, pinned by a test over every window drawn), so a pane of 48 shows any window whole with its keys, its hint and the log under it, and no button is scrolled out of reach.
 - A title bar with the close box, and the body right under it. The hero's windows share one bar of tabs (`hooks/herotabs.ts`); a window with pages shows them as tabs at the top of its body.
 - What is read as information (sentences, heads, lists, a stat before and after) goes in a text box, full width under the window's content, or beside a portrait: a line of terminal text is 2 px tall where one of the pixel font takes 7. The pixel font is for titles, tabs, button keys, names on things (a card, a ware) and numbers on art. A box's frame says what it holds: what the window says in `SURFACE.frame`; an item's card in its tier's color (a ware is a Common), the worn piece it is weighed against in `SURFACE.frame`; a menu in white.

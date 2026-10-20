@@ -41,6 +41,8 @@ release may change behaviour.
   map on a map four rows tall. It is held inside the map, cut to fit with an ellipsis.
 - Gold of 1,000,000 or more ran under the close box in a window's title bar. Past six digits it is written in
   thousands (1234K), past 99,999,999 in millions (2000M).
+- The text dashboard names its colors by role: the points to spend on the Character button are drawn in the
+  sheet's green, where they were a gold of their own.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

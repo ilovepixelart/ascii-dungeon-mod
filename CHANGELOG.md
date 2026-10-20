@@ -37,6 +37,8 @@ release may change behaviour.
 - The stash's item card could lie over its list by a row, a tall card chosen on the list's last rows with a full bag;
   it now keeps clear of the list. A stored name too long for its row (over 38 characters) shows as its base's name,
   where it was cut.
+- The name of an item lying on the map ran past the map's right edge on a map narrower than the name, and below the
+  map on a map four rows tall. It is held inside the map, cut to fit with an ellipsis.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

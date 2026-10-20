@@ -3,13 +3,13 @@
 import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { CELL } from './icons'
-import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, dropTarget } from './inventory'
+import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, beltHot, dropTarget, removable, wornOutlines } from './inventory'
 import type { Drag } from './inventory'
 import { POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
 import { wrap } from './talk'
 import type { Pos } from './map'
-import { beltSlotRect } from './pieces'
-import { CLICK_SLOP, boxShape, coverage as coverageOf, isInside, pixel, place } from './window'
+import { beltSlotRect, itemOutline } from './pieces'
+import { CLICK_SLOP, boxShape, coverage as coverageOf, isInside, pixel, place, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -207,3 +207,7 @@ export const bagGesture = (g: Game, ui: BagUi, gesture: Gesture): { ui: BagUi; a
   if (moved && grabbed !== undefined) return { ui: BAG_UI_IDLE, actions: drop(g, { ...grabbed, at }) }
   return click(g, { ...ui, drag: null }, gesture.at, gesture.button)
 }
+
+/** What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt. */
+export const inventoryHot = (g: Game, ui: BagUi): Rect[] =>
+  uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)], bagOverlay(g, ui))

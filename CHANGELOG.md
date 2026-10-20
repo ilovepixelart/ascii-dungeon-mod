@@ -33,7 +33,8 @@ release may change behaviour.
   in the bag, the compact bag and the merchant; a stored item's row in the stash; a worn row in the compact bag; the
   merchant's chosen ware, which a second click opens. A worn piece the full bag has no room for, the deep's mark
   already chosen, and the elder's Claim, the villager's Gamble and the guard's Trade in when the bag has no room for
-  what they give are dark: a press would change nothing. A talent card acts exactly where it is lit.
+  what they give are dark: a press would change nothing, and so is what lies under an open item card, where a click
+  lands on the card. A talent card acts exactly where it is lit.
 - The stash's item card could lie over its list by a row, a tall card chosen on the list's last rows with a full bag;
   it now keeps clear of the list. A stored name too long for its row (over 38 characters) shows as its base's name,
   where it was cut.

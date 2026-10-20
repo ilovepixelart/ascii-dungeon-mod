@@ -173,6 +173,13 @@ export const CLICK_SLOP = 2
 /** A point in cells as the window pixel under it. */
 export const pixel = (p: Pos): Pos => ({ x: Math.floor(p.x), y: Math.floor(p.y * 2) })
 
+/**
+ * The clickable places whose middle no box over them covers: a click on a card or a menu lands on it, not on what it
+ * covers, so what lies under one is not lit. `boxes` are the ones that take a click.
+ */
+export const uncovered = (hot: readonly Rect[], boxes: readonly OverlayBox[]): Rect[] =>
+  hot.filter(r => !boxes.some(b => isInside({ x: r.x + Math.floor(r.w / 2) + 0.5, y: (r.y + Math.floor(r.h / 2)) / 2 }, b.x, b.y, b.w, b.h)))
+
 /** Covering what a card is about costs this much against one pixel of anything else: it is never worth it. */
 export const KEEP = 100000
 

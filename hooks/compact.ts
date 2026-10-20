@@ -12,7 +12,7 @@ import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
 import { CURSOR, OFF_CLASS, belt, beltSlotRect, cellBox, itemGrid, itemOutline } from './pieces'
-import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels } from './window'
+import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 import { INK, SURFACE } from './ui/tokens'
@@ -153,11 +153,12 @@ const clickOn = (g: Game, ui: BagUi, h: ReturnType<typeof hit>, isRight: boolean
 const wornRow = (i: number): Rect => ({ x: LIST.x + 1, y: (LIST.y + 1 + 2 * i) * 2, w: LIST.w - 2, h: 4 })
 
 /** What a click acts on, in window pixels: the bag's items, the worn rows whose piece can come off, the belt. */
-export const compactHot = (g: Game): Rect[] => {
+export const compactHot = (g: Game, ui: BagUi): Rect[] => {
   const off = removable(g)
-  return [
+  const hot = [
     ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)),
     ...SLOTS.flatMap((s, i) => (off.gear[s] === undefined ? [] : [wornRow(i)])),
     ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y),
   ]
+  return uncovered(hot, compactOverlay(g, ui).filter(b => b.role !== 'worn'))
 }

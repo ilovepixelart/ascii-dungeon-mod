@@ -27,8 +27,8 @@ import type { SettingsUi } from './settings'
 import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import { logGesture, logHeight, logOverlay, logPixels } from './logwindow'
 import type { SoundSettings } from './settings'
-import { INV_H, INV_TOP, INV_W, beltLabel, inventoryHot, inventoryScreenPixels, itemCard } from './inventory'
-import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
+import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenPixels, itemCard } from './inventory'
+import { BAG_UI_IDLE, bagGesture, bagOverlay, inventoryHot } from './bagui'
 import type { BagUi, Gesture } from './bagui'
 import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverlay, shopPixels, whyNot } from './shop'
 import type { ShopUi } from './shop'
@@ -1308,7 +1308,7 @@ const pixelBag = (p: Pane, l: Layout) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g)) })} />}
+          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: popovers }} width={INV_W} height={rows} />
@@ -1354,7 +1354,7 @@ const pixelShop = (p: Pane) => {
       {fitLine(p, rows, UNDER_WINDOW + HINT_ROWS)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g)) })} />}
+          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes }} width={INV_W} height={rows} />
@@ -1412,7 +1412,7 @@ const compactBag = (p: Pane) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g), COMPACT_W) })} />}
+          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes }} width={COMPACT_W} height={COMPACT_H / 2} />
@@ -1538,7 +1538,7 @@ const stashWindow = (p: Pane) => {
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g))
+  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi))
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */

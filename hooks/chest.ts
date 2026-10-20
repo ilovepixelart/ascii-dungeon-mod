@@ -10,7 +10,7 @@ import { canvas } from './canvas'
 import { BAG_X, BAG_Y } from './inventory'
 import { card } from './bagui'
 import { CURSOR, OFF_CLASS, cellBox, itemGrid, itemOutline } from './pieces'
-import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
+import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -131,4 +131,5 @@ export const nextStored = (g: Game, ui: ChestUi): ChestUi => {
 }
 
 /** What a click acts on, in window pixels: the stored items' rows, and the bag's items. */
-export const chestHot = (g: Game): Rect[] => [...g.stashed.map((_, i) => rowRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))]
+export const chestHot = (g: Game, ui: ChestUi): Rect[] =>
+  uncovered([...g.stashed.map((_, i) => rowRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))], chestOverlay(g, ui).filter(b => b.role !== 'list'))

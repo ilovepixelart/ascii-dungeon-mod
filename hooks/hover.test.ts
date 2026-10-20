@@ -6,8 +6,8 @@ import type { Game, Item } from '../types'
 import { apply } from './game'
 import { plainHero } from './fixtures'
 import { BAG_H, BAG_W, plainItem } from './items'
-import { BAG_UI_IDLE, bagGesture } from './bagui'
-import { BELT_X, BELT_Y, INV_TOP, beltHot, inventoryHot } from './inventory'
+import { BAG_UI_IDLE, bagGesture, inventoryHot } from './bagui'
+import { BELT_X, BELT_Y, INV_TOP, beltHot } from './inventory'
 import { compactGesture, compactHot, compactOverlay } from './compact'
 import { shopGesture, shopHot } from './shop'
 import { CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay } from './chest'
@@ -24,6 +24,7 @@ const tap = (x: number, y: number): Gesture => ({ type: 'release', from: { x: x 
 const centre = (r: Rect) => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })
 const lit = (hot: readonly Rect[], p: { x: number; y: number }) => hot.some(r => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h)
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+const IDLE_SHOP = { ware: null, menu: false }
 /** A bag with no free cell: a column-tall piece in each column. */
 const fullBag = (): Item[] => Array.from({ length: BAG_W }, (_, i) => ({ ...plainItem({ nextId: 5000 + i }, 'chain'), w: 1, h: BAG_H, x: i, y: 0 }))
 const inTown = (over: Partial<Game> = {}): Game => ({ ...apply({ ...plainHero(3), ...arrive(3, 3), depth: 3, deepest: 3 }, { kind: 'portal' }), ...over })
@@ -34,16 +35,16 @@ describe('the hover lights what a click acts on', () => {
     const held = beltSlotRect(BELT_X, INV_TOP + BELT_Y, g.belt.findIndex(s => s !== null))
     const empty = beltSlotRect(BELT_X, INV_TOP + BELT_Y, g.belt.findIndex(s => s === null))
     expect(bagGesture(g, BAG_UI_IDLE, tap(centre(held).x, centre(held).y)).actions).toEqual([{ kind: 'use', slot: g.belt.findIndex(s => s !== null) }])
-    expect([lit(inventoryHot(g), centre(held)), lit(inventoryHot(g), centre(empty))]).toEqual([true, false])
+    expect([lit(inventoryHot(g, BAG_UI_IDLE), centre(held)), lit(inventoryHot(g, BAG_UI_IDLE), centre(empty))]).toEqual([true, false])
   })
 
   test('the bag: a worn piece is lit while there is room to take it off, not with the bag full', async () => {
     const g = { ...plainHero(3), bag: [] }
     // Every worn piece's outline, lit with room in the bag: what is lit beside the bag's items and the belt.
     const belt = beltHot(g, BELT_X, INV_TOP + BELT_Y)
-    const worn = inventoryHot(g).slice(g.bag.length).filter(r => !belt.some(b => same(b, r)))
+    const worn = inventoryHot(g, BAG_UI_IDLE).slice(g.bag.length).filter(r => !belt.some(b => same(b, r)))
     expect(worn.length).toBe(Object.keys(g.gear).length)
-    expect(inventoryHot({ ...g, bag: fullBag() }).filter(r => worn.some(w => same(w, r)))).toEqual([])
+    expect(inventoryHot({ ...g, bag: fullBag() }, BAG_UI_IDLE).filter(r => worn.some(w => same(w, r)))).toEqual([])
   })
 
   test('the compact bag: a filled belt slot and a worn row that can come off are lit; a full bag\'s worn rows are not', async () => {
@@ -52,18 +53,18 @@ describe('the hover lights what a click acts on', () => {
     // The weapon's row: the list's first slot, its second row, in window pixels.
     const row = { x: list.x + 3, y: (list.y + 2) * 2 + 1 }
     expect(compactGesture(g, BAG_UI_IDLE, tap(row.x, row.y)).actions).toEqual([{ kind: 'unequip', slot: 'weapon' }])
-    expect([lit(compactHot(g), row), lit(compactHot({ ...g, bag: fullBag() }), row)]).toEqual([true, false])
+    expect([lit(compactHot(g, BAG_UI_IDLE), row), lit(compactHot({ ...g, bag: fullBag() }, BAG_UI_IDLE), row)]).toEqual([true, false])
     const held = g.belt.findIndex(s => s !== null)
-    const unused = compactHot({ ...g, belt: g.belt.map(() => null) })
-    expect(compactHot(g).length - unused.length).toBe(held >= 0 ? 1 : 0)
+    const unused = compactHot({ ...g, belt: g.belt.map(() => null) }, BAG_UI_IDLE)
+    expect(compactHot(g, BAG_UI_IDLE).length - unused.length).toBe(held >= 0 ? 1 : 0)
   })
 
   test('the merchant: the chosen ware stays lit, a second click opening its menu; a filled belt slot is lit', async () => {
     const g = inTown()
-    const ware = centre(shopHot(g)[0]!)
+    const ware = centre(shopHot(g, IDLE_SHOP)[0]!)
     const chosen = shopGesture(g, { ware: null, menu: false }, tap(ware.x, ware.y)).ui
-    expect([chosen.ware !== null, shopGesture(g, chosen, tap(ware.x, ware.y)).ui.menu, lit(shopHot(g), ware)]).toEqual([true, true, true])
-    expect(shopHot(g).length - shopHot({ ...g, belt: g.belt.map(() => null) }).length).toBe(1)
+    expect([chosen.ware !== null, shopGesture(g, chosen, tap(ware.x, ware.y)).ui.menu, lit(shopHot(g, IDLE_SHOP), ware)]).toEqual([true, true, true])
+    expect(shopHot(g, IDLE_SHOP).length - shopHot({ ...g, belt: g.belt.map(() => null) }, IDLE_SHOP).length).toBe(1)
   })
 
   test('the stash: each stored item\'s row is lit, and a click on it chooses it', async () => {
@@ -73,7 +74,7 @@ describe('the hover lights what a click acts on', () => {
     stored.forEach((item, i) => {
       const p = { x: list.x + 3, y: (list.y + 1 + i) * 2 + 1 }
       expect(chestGesture(g, CHEST_UI_IDLE, tap(p.x, p.y)).ui.stored).toBe(item.id)
-      expect(lit(chestHot(g), p)).toBe(true)
+      expect(lit(chestHot(g, CHEST_UI_IDLE), p)).toBe(true)
     })
   })
 
@@ -107,5 +108,39 @@ describe('the hover lights what a click acts on', () => {
     for (const who of ['elder', 'villager'] as const) expect([talkAction(full, who)?.state, talkHot(full, who)]).toEqual(['off', []])
     const room = { ...full, bag: [] }
     for (const who of ['elder', 'villager'] as const) expect(talkHot(room, who)).toHaveLength(1)
+  })
+})
+
+describe('the hover with a card open', () => {
+  /** In town with a ring in every cell of the bag and tall cards in the stash: an open card has no clear spot. */
+  const crowded = (): Game => {
+    const tall = (id: number) => ({ ...plainItem({ nextId: id }, 'amulet', 'epic'), trigger: 'thorns' as const, atk: 1, def: 1, hp: 1, crit: 1, xp: 1 })
+    const bag = Array.from({ length: BAG_W * BAG_H }, (_, i) => ({ ...plainItem({ nextId: 9100 + i }, 'ring'), w: 1, h: 1, x: Math.floor(i / BAG_H), y: i % BAG_H }))
+    return inTown({ bag, stashed: [tall(6101), tall(6102)] })
+  }
+  /** Each lit centre a click on which changes nothing: under a card, where the click lands on the card. */
+  const dead = <U>(hot: readonly Rect[], gesture: (p: { x: number; y: number }) => { ui: U; actions: readonly unknown[] }, ui: U) =>
+    hot.map(centre).filter(p => {
+      const out = gesture(p)
+      return out.actions.length === 0 && same(out.ui, ui)
+    })
+
+  test('in the bag, the compact bag, the merchant and the stash, nothing lit under an open card is dead', async () => {
+    const g = crowded()
+    const found: string[] = []
+    // Every fifth item chosen in turn: its card lands all over the window.
+    for (const item of g.bag.filter((_, i) => i % 5 === 0)) {
+      const chosen = { ...g, cursor: item.id }
+      const bagUi = { ...BAG_UI_IDLE }
+      found.push(...dead(inventoryHot(chosen, bagUi), p => bagGesture(chosen, bagUi, tap(p.x, p.y)), bagUi).map(p => `bag ${item.id} ${p.x},${p.y}`))
+      found.push(...dead(compactHot(chosen, bagUi), p => compactGesture(chosen, bagUi, tap(p.x, p.y)), bagUi).map(p => `compact ${item.id} ${p.x},${p.y}`))
+      const shopUi = { ware: null, menu: false }
+      found.push(...dead(shopHot(chosen, shopUi), p => shopGesture(chosen, shopUi, tap(p.x, p.y)), shopUi).map(p => `shop ${item.id} ${p.x},${p.y}`))
+    }
+    for (const stored of g.stashed) {
+      const ui = { stored: stored.id, menu: false }
+      found.push(...dead(chestHot(g, ui), p => chestGesture(g, ui, tap(p.x, p.y)), ui).map(p => `stash ${stored.id} ${p.x},${p.y}`))
+    }
+    expect(found.slice(0, 6)).toEqual([])
   })
 })

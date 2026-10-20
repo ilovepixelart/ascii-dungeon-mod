@@ -175,5 +175,3 @@ export const removable = (g: Game): Game => ({ ...g, gear: Object.fromEntries(Ob
 /** The belt slots holding something, in window pixels for a belt whose top left is at `x`, `y`: a click uses one. */
 export const beltHot = (g: Game, x: number, y: number): Rect[] => g.belt.flatMap((s, i) => (s === null ? [] : [beltSlotRect(x, y, i)]))
 
-/** What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt. */
-export const inventoryHot = (g: Game): Rect[] => [...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)]

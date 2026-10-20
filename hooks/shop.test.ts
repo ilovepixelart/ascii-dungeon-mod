@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Rarity } from '../types'
 import { CURSOR, UNPAID_INK, GOLD_INK } from './pieces'
-import { junkValue, plainItem } from './items'
+import { RARITY_COLOR, junkValue, plainItem } from './items'
 import { BAG_X, BAG_Y, BELT_Y } from './inventory'
 import { CELL } from './icons'
 import { WINDOW_TOP, CLOSE_BOX, WINDOW_W } from './window'
@@ -197,4 +197,10 @@ test('the shelf holds its wares in three rows of three, clear of the belt below 
     expect(r.x + r.w).toBeLessThanOrEqual(BAG_X)
     expect(r.y + r.h).toBeLessThan(WINDOW_TOP + BELT_Y)
   }
+})
+
+test('a ware\'s card is framed as a Common item\'s, its menu in white, as every card and menu is', async () => {
+  const g = { ...newGame(4), where: 'town' as const, gold: 300 }
+  const ui = { ware: WARES[0]!, menu: true }
+  expect(shopOverlay(g, ui).map(b => [b.role, b.border])).toEqual([['card', RARITY_COLOR.common], ['menu', CURSOR]])
 })

@@ -24,7 +24,6 @@ export const WARES = Object.keys(SHOP_PRICES) as Ware[]
 export type ShopUi = { ware: Ware | null; menu: boolean }
 export const SHOP_UI_IDLE: ShopUi = { ware: null, menu: false }
 
-const CARD_BORDER = INK.text
 /** The window's height in pixels and cells: the bag's. */
 export const SHOP_H = WINDOW_TOP + INV_H
 const ROWS = SHOP_H / 2
@@ -84,7 +83,7 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
 export const shopOverlay = (g: Game, ui: ShopUi): OverlayBox<'card' | 'menu'>[] => {
   if (ui.ware !== null) {
     const near = wareRect(WARES.indexOf(ui.ware))
-    return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), CARD_BORDER), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)
+    return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), RARITY_COLOR.common), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)
   }
   const item = chosenItem(g, ui)
   if (item === undefined) return []

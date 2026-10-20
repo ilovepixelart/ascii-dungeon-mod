@@ -13,7 +13,7 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
-import { BELT_BELOW_Y, INSET, LINE2_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
+import { BELT_BELOW_Y, INSET, LINE2_Y, SIDE_LINE_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
@@ -494,6 +494,26 @@ test('on a wide pane a talent\'s number key chooses its card, as on the start sc
   expect(await ui.find({ type: 'Button', key: `talent-${third}`, text: `[${TALENTS[third].name}]` })).toBeDefined()
   await ui.press({ key: 'talent-take' })
   expect((kept.get('save') as Game).talents).toEqual([third])
+  await ui.unmount()
+})
+
+test('a click on the strip\'s gold and depth line opens the log over the map; its close box closes it', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  await clickStrip(ui, 10, SIDE_LINE_Y + 2)
+  expect(await ui.find({ type: 'Raster', key: 'log' })).toBeDefined()
+  const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
+  await ui.pointer({ type: 'down', ...close, button: 'left', in: 'log-clicks' } as never)
+  await ui.pointer({ type: 'up', ...close, button: 'left', in: 'log-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'log' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('on the text dashboard the log\'s latest line is a button: g opens the whole log', async $ => {
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'log-line' })
+  expect(await ui.find({ type: 'Text', text: 'Log' })).toBeDefined()
+  await ui.press({ key: 'log-close' })
+  expect(await ui.find({ type: 'Text', text: 'Log' })).toBeUndefined()
   await ui.unmount()
 })
 

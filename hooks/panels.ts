@@ -281,9 +281,14 @@ export const foeRuns = (g: Game): Run[] => {
   ]
 }
 
-/** The log, oldest first: the latest action's lines at full strength, older ones faded. */
-export const logRuns = (g: Game): Run[] =>
-  g.log.map((line, i) => ({ text: line, dim: i < g.log.length - g.fresh ? true : undefined }))
+/** The log lines the dashboard shows, the last of those the game keeps. */
+export const LOG_SHOWN = 5
+
+/** The log's last `n` lines, oldest first: the latest action's lines at full strength, older ones faded. */
+export const logRuns = (g: Game, n = LOG_SHOWN): Run[] => {
+  const from = Math.max(0, g.log.length - n)
+  return g.log.slice(from).map((line, i) => ({ text: line, dim: from + i < g.log.length - g.fresh ? true : undefined }))
+}
 
 export const ATTRIBUTES: readonly { stat: Attribute; label: string; effect: (g: Game) => string }[] = [
   { stat: 'might', label: 'Might  ', effect: g => `+${attackBonus(g)} attack (half Might + gear)` },

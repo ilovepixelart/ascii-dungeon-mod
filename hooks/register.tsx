@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK } from './town'
-import { BIG_BOSSES, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
+import { BIG_BOSSES, LOG_KEPT, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -25,6 +25,7 @@ import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsHot, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SettingsUi } from './settings'
 import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
+import { logGesture, logHeight, logOverlay, logPixels } from './logwindow'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryHot, inventoryScreenPixels, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
@@ -119,6 +120,8 @@ let codexUi: CodexUi = CODEX_UI
 let settingsUi: SettingsUi = SETTINGS_UI
 /** The how-it-plays window, open over whatever the pane shows: it closes back to that. */
 let isHelpOpen = false
+/** The log window: the pane's own, as the help is, opened over whatever is open and closed back to it. */
+let isLogOpen = false
 /** The pointer over a window, in its pixels, by the window's key; and what each window drawn last can be clicked on. */
 let hover: { key: string; at: Pos } | null = null
 const hotOf = new Map<string, readonly Rect[]>()
@@ -185,6 +188,8 @@ const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, 
 
 /** The how-it-plays window's rows as text: its head, a line a rule, where things are, the close key. */
 const HELP_TEXT_ROWS = HELP_ROWS.length + 3
+/** The log as text: its head, every line kept, and Close. */
+const LOG_TEXT_ROWS = LOG_KEPT + 3
 
 /** The townsfolk without work, by window: who they are, as their window's title says. */
 const TALKER_NAME: Readonly<Record<'guard' | 'villager' | 'dog', string>> = { guard: 'The guard', villager: 'A villager', dog: 'The dog' }
@@ -909,6 +914,7 @@ const onTalkClick = async ($: EngineInterface, data: unknown) => {
 const onHudClick = async ($: EngineInterface, data: unknown) => {
   const outcome = hudGesture(await current($), beltMenu, data as Gesture, hudWidth)
   beltMenu = outcome.menu
+  if (outcome.isLog === true) isLogOpen = true
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
 }
@@ -1007,6 +1013,10 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
     case 'deep-clicks':
       await onDeepClick($, data)
       return true
+    case 'log-clicks':
+      if (logGesture(data as Gesture)) isLogOpen = false
+      $.ui.invalidate('ui.render')
+      return true
     case 'help-clicks':
       if (helpGesture(data as Gesture)) isHelpOpen = false
       $.ui.invalidate('ui.render')
@@ -1081,13 +1091,16 @@ const paneOf = ($: EngineInterface, e: RenderInput<'Pane'>, g: Game) => {
     </Text>
   )
   /** The last two lines of the log, dim, under a window. */
+  // The log's last two lines under a window; a click on them opens the whole log (no key: a window's keys take g).
   const logTail = () => (
     <Box flexDirection="column" marginTop={1}>
-      {logRuns(g).slice(-2).map(entry => (
-        <Text dimColor wrap="truncate-end">
-          {'> '}
-          {entry.text}
-        </Text>
+      {logRuns(g, 2).map((entry, i) => (
+        <Button key={`log-tail-${i}`} plain onPress={() => { isLogOpen = true; redraw() }}>
+          <Text dimColor wrap="truncate-end">
+            {'> '}
+            {entry.text}
+          </Text>
+        </Button>
       ))}
     </Box>
   )
@@ -1107,7 +1120,7 @@ const sizesOf = (p: Pane) => {
   const hasHud = Raster !== undefined && columns >= HUD_COLUMNS
   const hudRows = hudLayout(columns).height / 2
   // The dashboard's rows: the pixel strip alone, or five text rows and a 5-line log; the character sheet's when open.
-  const dashRows = (hasHud ? hudRows : 14) + (isHelpOpen ? HELP_TEXT_ROWS : (PANEL_ROWS[g.panel] ?? 0))
+  const dashRows = (hasHud ? hudRows : 14) + (isLogOpen ? LOG_TEXT_ROWS : isHelpOpen ? HELP_TEXT_ROWS : (PANEL_ROWS[g.panel] ?? 0))
   // The pane's top row, while it is short of the size the game plays best in: too narrow first, else too short.
   const topNote = Raster === undefined ? undefined : (widthNote(columns) ?? sizeNote(columns, e.props.scroll.bodyRows))
   // The pixel inventory opens as a window over the map, so the map keeps its rows; the text bag sits inline below.
@@ -1191,6 +1204,26 @@ const settingsKeys = (p: Pane, isWindow = false) => {
 const helpKey = ({ Button, redraw }: Pane, hotkey?: string) => (
   <Button key="help-open" label="How it plays" hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
 )
+/** The log's latest line under the map, a button that opens the whole log (g). */
+const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined) => (
+  <Button key="log-line" hotkey="g" plain onPress={() => { isLogOpen = true; redraw() }}>
+    <Text dimColor={entry?.dim} wrap="truncate-end">{`> ${entry?.text ?? ''}`}</Text>
+  </Button>
+)
+
+const logClose = ({ Button, redraw }: Pane, hotkey?: string) => (
+  <Button key="log-close" label="Close" hotkey={hotkey} plain onPress={() => { isLogOpen = false; redraw() }} />
+)
+
+/** The log as text: every line kept, oldest first, and Close. */
+const textLog = (p: Pane) => (
+  <p.Box flexDirection="column">
+    <p.Text bold>Log</p.Text>
+    {logRuns(p.g, LOG_KEPT).map(entry => <p.Text dimColor={entry.dim} wrap="truncate-end">{entry.text}</p.Text>)}
+    <p.Box columnGap={2}>{logClose(p)}</p.Box>
+  </p.Box>
+)
+
 const helpClose = ({ Button, redraw }: Pane, hotkey?: string) => (
   <Button key="help-close" label="Close" hotkey={hotkey} plain onPress={() => { isHelpOpen = false; redraw() }} />
 )
@@ -1527,6 +1560,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
  * windows need the pane wide enough (`isWindowWide`); the start screen draws as text when it is not.
  */
 const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
+  { is: p => isLogOpen && p.isWindowWide, draw: p => pixelWindow(p, 'log', logHeight(p.g), logPixels(p.g), logOverlay(p.g), [logClose(p, 'c')]) },
   { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), helpOverlay(), [helpClose(p, 'c')]) },
   { is: (_, l) => l.isPixelBag, draw: pixelBag },
   { is: p => p.g.panel === 'shop' && p.isWindowWide, draw: pixelShop },
@@ -1933,6 +1967,7 @@ const dashKeys = ({ g, Box, Text, Button, press }: Pane) => (
 
 /** The windows the dashboard draws inline under the map, in their order: each when it is open and not drawn whole-pane. */
 const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
+  { is: () => isLogOpen, draw: textLog },
   { is: () => isHelpOpen, draw: textHelp },
   { is: (p, l) => p.g.panel === 'bag' && !l.isPixelBag && !l.isCompactBag, draw: textBag },
   { is: p => p.g.panel === 'sheet', draw: textSheet },
@@ -1969,12 +2004,12 @@ const dashboard = (p: Pane, l: Layout) => {
       {!l.hasHud && dashKeys(p)}
       {!l.hasHud && g.panel !== 'sheet' && textBelt(p)}
       {INLINE.map(w => w.is(p, l) && w.draw(p, l))}
-      {!l.hasHud && logRuns(l.told).map(entry => (
+      {!l.hasHud && logRuns(l.told).map((entry, i, all) => (i === all.length - 1 ? logLine(p, entry) : (
         <Text dimColor={entry.dim} wrap="truncate-end">
           {'> '}
           {entry.text}
         </Text>
-      ))}
+      )))}
     </Box>
   )
 }

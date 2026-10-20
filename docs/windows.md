@@ -83,6 +83,10 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 - Orders, the second page: the hero's standing orders (`Game.orders`, kept with the game; `obey` and `ORDER_STEPS` in `hooks/game.ts`), each stepped by its button. Drink: a healing potion after a blow that leaves the hero under a quarter of max HP (the default), under half, or never. Smoke: never (the default), or when low, a smoke bomb under a quarter of max HP with no healing potion left and a foe near. Leave: take every item (the default), leave Commons, or leave anything below Rare; a kill's item below it stays on the floor, said. The orders' hotkeys (d, f, k) work only in the pixel window: on the text dashboard d descends and k moves up.
 - What the drink order is for: the hero plays mostly while no one watches. Over 60 simulated games a class with a player who never drinks by hand, deaths per 1,000 steps are 4.73 with it off and 2.57 at a quarter; a player who drinks at 40% by hand sees no change (2.24 to 2.26).
 
+## The log
+
+- The game keeps its last 30 log lines (`LOG_KEPT` in `hooks/game.ts`); the text dashboard shows the last 5 (`LOG_SHOWN`), a window's tail the last 2. The log window (`hooks/logwindow.ts`) shows all 30, oldest first, the latest action's at full strength. It is the pane's own state (`isLogOpen`), as How it plays is: it opens over whatever is open and closes back to it. With the strip it opens from the strip's gold and depth line (`hudGesture`'s `isLog`), as text from the log's latest line (`g`), and from any window's tail by a click.
+
 ## How it plays
 
 - What the session's coding does to the hero, in one text box: a rule each with the strip's own icon beside it (`HELP_ROWS` in `hooks/helpwindow.ts`), what happens over what it comes to: every tool call a step or a blow, a failed call the foe's strike, passing tests a sure critical, a commit a shrine and full HP, a push or a pull request a cache, a finished answer the stairs; the work it rewards in green. Last, what is the player's: gear, talents, orders.

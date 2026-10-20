@@ -2,7 +2,7 @@
 // smith, the stash, settings, the start screen, the codex, retiring, every talent and mark, the recap and every
 // townsperson, each with the text boxes over it. Pure, for the assets audit, the pane size and the window previews.
 import type { Game, HeroClass, Rarity, Talent } from '../types'
-import { apply, newGame } from './game'
+import { LOG_KEPT, apply, newGame } from './game'
 import { hudPixels } from './hud'
 import { BASES } from './items/catalog'
 import { plainItem } from './items/loot'
@@ -24,6 +24,7 @@ import { talentOverlay, talentPixels } from './talentwindow'
 import { pairOf } from './deep'
 import { deepOverlay, deepPixels } from './deepwindow'
 import { helpOverlay, helpPixels } from './helpwindow'
+import { logOverlay, logPixels } from './logwindow'
 import { recapOverlay, recapPixels } from './recapwindow'
 import type { OverlayBox } from './window'
 import { arrive } from './world'
@@ -59,8 +60,11 @@ const kitted = (cls: HeroClass, rarity: Rarity): Game => {
 const heroShots = (g: Game): Shot[] => {
   const codexed: Game = { ...g, codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }
   const retiring = { ...g, bossSlain: 10, deepest: 12, gear: { weapon: g.bag[0]! } }
+  // The log full: every line it keeps.
+  const logged = { ...g, log: Array.from({ length: LOG_KEPT }, (_, i) => `Line ${i + 1} of the log.`) }
   const out: Shot[] = [
     shot('help', helpPixels(), helpOverlay()),
+    shot('log', logPixels(logged), logOverlay(logged)),
     ...(['foes', 'finds'] as const).map(page => shot(`codex-${page}`, codexPixels(codexed, { page }), codexOverlay(codexed, { page }))),
     shot('retire', retirePixels(retiring, { slot: 'weapon' }), retireOverlay(retiring, { slot: 'weapon' })),
   ]

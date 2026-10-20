@@ -9,8 +9,8 @@ import { join } from 'node:path'
 
 const HOOKS = 'hooks'
 const TOKENS = join(HOOKS, 'ui', 'tokens.ts')
-// A color code in any quotes, three or six digits.
-const RAW = /["'`]#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})["'`]/g
+// A color code in any quotes, of three, four, six or eight digits (the last digit pair or digit an alpha).
+const RAW = /["'`]#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})["'`]/g
 const code = raw => raw.slice(1, -1).toLowerCase()
 
 const sources = dir => readdirSync(dir, { withFileTypes: true }).flatMap(e => {
@@ -21,7 +21,7 @@ const sources = dir => readdirSync(dir, { withFileTypes: true }).flatMap(e => {
 
 const isClient = text => text.includes('ClientModule')
 const isChecked = (path, text) =>
-  path !== TOKENS && (path.endsWith('.tsx') || isClient(text) || text.includes('windowPixels(') || /from '\.{1,2}\/(ui\/)?tokens'/.test(text))
+  path !== TOKENS && (path.endsWith('.tsx') || isClient(text) || text.includes('windowPixels(') || /from ["']\.{1,2}\/(ui\/)?tokens["']/.test(text))
 
 const tokenCodes = new Set((readFileSync(TOKENS, 'utf8').match(RAW) ?? []).map(code))
 

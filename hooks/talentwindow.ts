@@ -76,7 +76,7 @@ const drawArt = (body: Canvas, t: Talent, x: number, ay: number, tone: Tone) => 
   fill(body, ax, ay, ART, ART, tone(SURFACE.backdrop))
   fill(body, ax + 1, ay + ART - 4, ART - 2, 3, tone(SURFACE.floor))
   frame(body, ax, ay, ART, ART, tone(SURFACE.frame))
-  TALENT_ICON[t].forEach((row, iy) => [...row].forEach((k, ix) => k !== '.' && put(body, ax + 1 + ix, ay + 1 + iy, tone(PAL[k] ?? '#ff00ff'))))
+  TALENT_ICON[t].forEach((row, iy) => [...row].forEach((k, ix) => k !== '.' && put(body, ax + 1 + ix, ay + 1 + iy, tone(PAL[k] ?? INK.missing))))
 }
 
 /** A card: its family's beveled face, the ribbon, the icon, the gem; lifted with sparkles when chosen, else receded. */
@@ -107,7 +107,6 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
 }
 const PAD = 3
 const LINE = 7
-const WORK = '#3ccf4e'
 /** A card's text: its name beside the number key, what it does under both. */
 const NAME_X = PAD + 16
 const TEXT_X = PAD + 3
@@ -116,7 +115,7 @@ const TEXT_W = WINDOW_W - 2 * PAD - 6
 export type TalentLine = { text: string; x: number; y: number; ink: string }
 type Card = { talent: Talent; rect: Rect; lines: string[] }
 
-const inkOf = (t: Talent) => (TALENTS[t].work === true ? WORK : INK.text)
+const inkOf = (t: Talent) => (TALENTS[t].work === true ? INK.good : INK.text)
 
 /** Where everything goes, in window pixels: the head, a card each offered talent, or the list of those taken. */
 const layout = (g: Game) => {

@@ -10,14 +10,12 @@ import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, win
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas } from './canvas'
 import { theFoe } from './names'
+import { INK, SURFACE } from './ui/tokens'
 
 const CHROME: Chrome = { title: 'YOU DIED', labels: [] }
 const PAD = 3
 const SIDE_X = PAD + PORTRAIT + 4
-const BORDER = '#6b6258'
-const SAY = '#e8e4dc'
-const DIM = '#8a8494'
-const SLAIN = '#ff5a4f'
+const SLAIN = INK.danger
 const WAKE = { key: 'W', label: 'WAKE' }
 
 /** What slew the hero, as the portrait draws it: the foe as it stood on its depth's theme, or the trap. */
@@ -29,14 +27,14 @@ export const killerName = (f: Fallen) => (f.foe === undefined ? f.by : theFoe(f.
 /** Where everything goes, in window pixels: who and where beside the portrait, then the toll, then Wake. */
 const layout = (g: Game, f: Fallen) => {
   const top = bodyTop(CHROME)
-  const who: Run[][] = [[{ text: 'Slain by', color: DIM }], [{ text: killerName(f), color: SLAIN, bold: true }], [{ text: `on depth ${f.depth}.`, color: SAY }]]
-  const whoBox: OverlayBox<'who'> = { role: 'who', x: SIDE_X, y: (top + 2) / 2, w: WINDOW_W - SIDE_X - PAD, h: who.length + 2, border: BORDER, lines: who }
+  const who: Run[][] = [[{ text: 'Slain by', color: INK.dim }], [{ text: killerName(f), color: SLAIN, bold: true }], [{ text: `on depth ${f.depth}.`, color: INK.text }]]
+  const whoBox: OverlayBox<'who'> = { role: 'who', x: SIDE_X, y: (top + 2) / 2, w: WINDOW_W - SIDE_X - PAD, h: who.length + 2, border: SURFACE.frame, lines: who }
   const toll: Run[][] = [
-    [{ text: `Level ${g.level}, deaths ${g.deaths}. Lost ${f.lost} gold.`, color: DIM }],
-    [{ text: `You wake on depth ${f.wake}.`, color: SAY }],
+    [{ text: `Level ${g.level}, deaths ${g.deaths}. Lost ${f.lost} gold.`, color: INK.dim }],
+    [{ text: `You wake on depth ${f.wake}.`, color: INK.text }],
   ]
   const tollY = Math.max(top + 2 + PORTRAIT, (whoBox.y + whoBox.h) * 2) + 2
-  const tollBox: OverlayBox<'toll'> = { role: 'toll', x: PAD, y: tollY / 2, w: WINDOW_W - 2 * PAD, h: toll.length + 2, border: BORDER, lines: toll }
+  const tollBox: OverlayBox<'toll'> = { role: 'toll', x: PAD, y: tollY / 2, w: WINDOW_W - 2 * PAD, h: toll.length + 2, border: SURFACE.frame, lines: toll }
   const wake: Rect = { x: Math.floor((WINDOW_W - buttonW(WAKE.key, WAKE.label)) / 2), y: (tollBox.y + tollBox.h) * 2 + 3, w: buttonW(WAKE.key, WAKE.label), h: BUTTON_H }
   // Even, so the window ends on a whole cell.
   const height = Math.ceil((wake.y + BUTTON_H + 3) / 2) * 2

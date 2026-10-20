@@ -6,6 +6,7 @@ import type { Canvas } from './canvas'
 import { textMask } from './pixelart'
 import type { Pos } from './map'
 import { coin } from './pieces'
+import { INK, SURFACE } from './ui/tokens'
 
 /** Every window is this many pixels (and columns) wide: one pane width shows them all, or none. */
 export const WINDOW_W = 105
@@ -19,21 +20,21 @@ const BARE_TOP = HEAD_H + 3
 export const WINDOW_TOP = BARE_TOP
 export const TITLE_X = 3
 export const TITLE_Y = 3
-export const TITLE_INK = '#e8e4dc'
-export const LABEL_INK = '#8a8494'
-const HEAD_BG = '#15131b'
-const GOLD_INK = '#ffd34d'
+export const TITLE_INK = INK.text
+export const LABEL_INK = INK.dim
+const HEAD_BG = SURFACE.titleBar
+const GOLD_INK = INK.gold
 /** The gold this far left of the window's right edge. */
 const GOLD_FROM_RIGHT = 41
 /** The close box (x, y, w, h) at the title bar's right end of a window `width` wide. */
 /** The close box: 9 px square under the title bar's line, its X centred with a pixel all round. */
 export const closeBoxOf = (width: number) => [width - 10, 1, 9, 9] as const
 export const CLOSE_BOX = closeBoxOf(WINDOW_W)
-export const CLOSE_INK = '#ff5a4f'
-const CLOSE_BG = '#2a1e24'
-const CLOSE_EDGE = '#6b6258'
+export const CLOSE_INK = INK.danger
+const CLOSE_BG = SURFACE.closeGround
+const CLOSE_EDGE = SURFACE.frame
 /** A text box's fill: the click layer writes its text on the same color, inside the frame. */
-export const POPOVER_BG = '#0e0d13'
+export const POPOVER_BG = SURFACE.popover
 
 /** A rectangle in window pixels. */
 export type Rect = { x: number; y: number; w: number; h: number }
@@ -47,7 +48,7 @@ export type Chrome = { title: string; gold?: number; labels: readonly Label[]; t
 export const isInside = (p: Pos, x: number, y: number, w: number, h: number) => p.x >= x && p.x < x + w && p.y >= y && p.y < y + h
 
 const TAB_GAP = 5
-const TAB_BG = '#24212c'
+const TAB_BG = SURFACE.tab
 const textW = (text: string) => textMask(text)[0]?.length ?? 0
 /** A row of tabs' height: the title bar's, less its line. */
 export const TABS_H = HEAD_H - 1

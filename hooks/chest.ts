@@ -12,13 +12,12 @@ import { card } from './bagui'
 import { CURSOR, OFF_CLASS, cellBox, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
+import { INK, SURFACE } from './ui/tokens'
 
 /** What the window shows beyond the game: the stored item chosen (a bag item is chosen in the game), and its menu. */
 export type ChestUi = { stored: number | null; menu: boolean }
 export const CHEST_UI_IDLE: ChestUi = { stored: null, menu: false }
 
-const KEY_INK = '#ffd34d'
-const LIST_BORDER = '#6b6258'
 /** The window's height: the bag and a row of room under it. */
 export const CHEST_H = WINDOW_TOP + BAG_Y + BAG_H * 7 + 1 + 3
 const ROWS = CHEST_H / 2
@@ -42,7 +41,7 @@ const listLines = (g: Game, ui: ChestUi): Run[][] =>
   })
 
 const entry = (key: string, label: string, why?: string): Run[] =>
-  why === undefined ? [{ text: key, color: KEY_INK, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
+  why === undefined ? [{ text: key, color: INK.gold, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
 
 const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
 /** A stored item's row, in window pixels. */
@@ -57,7 +56,7 @@ const shown = (g: Game): Weighted[] => [
 
 /** The boxes over the window: the chest's list, and the chosen item's card with its menu when open. */
 export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
-  const list: OverlayBox = { role: 'list', ...LIST, border: LIST_BORDER, lines: listLines(g, ui) }
+  const list: OverlayBox = { role: 'list', ...LIST, border: SURFACE.frame, lines: listLines(g, ui) }
   const stored = chosenStored(g, ui)
   if (stored !== undefined) {
     const near = rowRect(g.stashed.indexOf(stored))

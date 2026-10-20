@@ -18,8 +18,7 @@ import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 const CHROME: Chrome = { title: 'RETIRE THE HERO', labels: [] }
 const top = bodyTop(CHROME)
 const PAD = 3
-const RULE = '#2c2834'
-const BOX_BG = '#141219'
+const BOX_BG = SURFACE.sunken
 /** A worn piece's box, and the step from one to the next. */
 const BOX_W = 13
 const BOX_H = 23
@@ -82,7 +81,7 @@ export const retireButtons = (g: Game, ui: RetireUi) => {
 const pieceBox = (c: ReturnType<typeof canvas>, item: Item, x: number, y: number, isChosen: boolean) => {
   if (item.rarity === 'common') {
     fill(c, x, y, BOX_W, BOX_H, BOX_BG)
-    frame(c, x, y, BOX_W, BOX_H, RULE)
+    frame(c, x, y, BOX_W, BOX_H, SURFACE.line)
   } else tierBox(c, x + 1, y + 1, BOX_W - 2, BOX_H - 2, item.rarity)
   const icon = ICONS[item.base]?.art ?? []
   art(c, icon, x + Math.floor((BOX_W - (icon[0]?.length ?? 0)) / 2), y + Math.floor((BOX_H - icon.length) / 2))

@@ -13,6 +13,7 @@ import { GRID, canvas, fill, frame } from './canvas'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Gesture, OverlayBox, Rect } from './window'
 import type { Pos } from './map'
+import { INK, SURFACE } from './ui/tokens'
 
 /** What the window shows beyond the game: the worn piece chosen. */
 export type ForgeUi = { slot: Slot | null }
@@ -20,10 +21,8 @@ export const FORGE_UI_IDLE: ForgeUi = { slot: null }
 
 const WORK_X = 47
 const WORK_W = WINDOW_W - WORK_X - 1
-const KEY_INK = '#ffd34d'
-const STAT_INK = '#e8e4dc'
-const PIP_ON = '#d9b54a'
-const PIP_OFF = '#3a3644'
+const PIP_ON = INK.xp
+const PIP_OFF = SURFACE.cardEdge
 
 /** The worn pieces in slot order. */
 const worn = (g: Game) => SLOTS.filter(s => g.gear[s] !== undefined)
@@ -38,7 +37,7 @@ export const whyNotReforge = (g: Game, item: Item) =>
 
 const cost = (label: string, price: number | undefined, why: string | undefined): Run[] =>
   why === undefined || why === 'not enough gold'
-    ? [{ text: `${label} `, dim: true }, { text: String(price), color: why === undefined ? KEY_INK : OFF_CLASS }, ...(why === undefined ? [] : [{ text: `  ${why}`, color: OFF_CLASS }])]
+    ? [{ text: `${label} `, dim: true }, { text: String(price), color: why === undefined ? INK.gold : OFF_CLASS }, ...(why === undefined ? [] : [{ text: `  ${why}`, color: OFF_CLASS }])]
     : [{ text: `${label} `, dim: true }, { text: why, color: OFF_CLASS }]
 
 /** The chosen piece's card: name, tier and stats, then what each job costs or why it cannot be done. */
@@ -62,7 +61,7 @@ const layout = (g: Game, ui: ForgeUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
-  const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? '#6b6258' : RARITY_COLOR[item.rarity], lines }
+  const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : RARITY_COLOR[item.rarity], lines }
   const temperY = (box.y + box.h) * 2 + 3
   const temperAt: Rect = { x: WORK_X, y: temperY + 8, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
   const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w: buttonW('R', 'REFORGE'), h: BUTTON_H }
@@ -83,7 +82,7 @@ const temperLine = (c: ReturnType<typeof canvas>, item: Item, y: number) => {
   }
   const stat = temperStat(item)
   const now = item[stat]
-  word(c, done >= TEMPER_MAX ? `${stat.toUpperCase()} ${now} MAX` : `${stat.toUpperCase()} ${now} > ${now + 1}`, WORK_X + TEMPER_MAX * 5 + 3, y, done >= TEMPER_MAX ? UNPAID_INK : STAT_INK)
+  word(c, done >= TEMPER_MAX ? `${stat.toUpperCase()} ${now} MAX` : `${stat.toUpperCase()} ${now} > ${now + 1}`, WORK_X + TEMPER_MAX * 5 + 3, y, done >= TEMPER_MAX ? UNPAID_INK : INK.text)
 }
 
 const stateOf = (why: string | undefined): ButtonState => (why === undefined ? 'ready' : 'off')

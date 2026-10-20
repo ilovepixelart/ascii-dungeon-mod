@@ -31,6 +31,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 Every window keeps these; review them with `tools/windows.ts`, which draws each window of `hooks/screens.ts` with its text boxes written in.
 
+- Colors by role from `hooks/ui/tokens.ts`, never a code of a window's own: `scripts/check-colors.mjs`, a gate, fails on a raw color in any module that draws a window or takes the tokens.
 - At most 41 rows (`BEST_ROWS` in `hooks/panesize.ts`, pinned by a test over every window drawn), so a pane of 47 shows any window whole with its keys and the log under it, and no button is scrolled out of reach.
 - A title bar with the close box, no section labels under it. The hero's windows share one bar of tabs (`hooks/herotabs.ts`); a window with pages shows them as tabs at the top of its body.
 - Sentences go in a text box, full width under the window's content, or beside a portrait; the pixel font is for titles, tabs, button keys and numbers.

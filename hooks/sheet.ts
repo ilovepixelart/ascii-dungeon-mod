@@ -22,8 +22,8 @@ const PAD = 3
 /** The portrait at twice the sprite's size; the head box and the XP bar beside it. */
 const FACE = PX * 2 + 4
 const SIDE_X = PAD + FACE + 3
-const XP_TONES = ['#f0d070', '#d9b54a', '#a88430'] as const
-const XP_EMPTY = '#2a2618'
+const XP_TONES = [INK.xpLight, INK.xp, INK.xpShade] as const
+const XP_EMPTY = SURFACE.xpEmpty
 const NAMES = ['MIGHT', 'FOCUS', 'VIGOR', 'INSIGHT'] as const
 /** The attributes two to a row under the portrait, each a framed row as tall as its + button. */
 const ROWS_Y = top + 2 + FACE + 3
@@ -52,7 +52,7 @@ const headLines = (g: Game): Run[][] => [
   [{ text: `Level ${g.level} ${CLASS_NAME[g.cls]}`, bold: true }, { text: `   HP ${Math.max(0, g.hp)}/${g.maxHp}`, dim: true }],
   [{ text: `Attack +${attackBonus(g)}  Defense ${defense(g)}  Crit ${critChance(g)}%`, dim: true }],
   [{ text: `Vigor +3 max HP a point, Insight +${g.stats.insight * 10}% XP`, dim: true }],
-  g.points > 0 ? [{ text: `${plural(g.points, 'point')} to spend`, color: '#5ccf6a', bold: true }] : [{ text: 'Level up for points to spend', dim: true }],
+  g.points > 0 ? [{ text: `${plural(g.points, 'point')} to spend`, color: INK.easy, bold: true }] : [{ text: 'Level up for points to spend', dim: true }],
 ]
 
 /** The XP bar under the head box, in window pixels: beside the star, on an odd row (its number on its middle), to the window's edge. */

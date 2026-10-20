@@ -19,11 +19,10 @@ import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 const CHROME: Chrome = { title: 'CODEX', labels: [] }
 const top = bodyTop(CHROME)
 const PAD = 3
-const RULE = '#2c2834'
-const BOX_BG = '#141219'
-const EDGE = '#3a3440'
+const BOX_BG = SURFACE.sunken
+const EDGE = SURFACE.litEdge
 /** What is not yet slain or found: its shape alone, in one dark ink. */
-const SHADE = '#2e2a38'
+const SHADE = SURFACE.shade
 /** A foe's box, and the step from one to the next; a Legendary's narrower, taller box and step. */
 const FOE_BOX = 19
 const FOE_STEP = 20
@@ -50,7 +49,7 @@ const scaled = (c: Canvas, rows: readonly string[], x: number, y: number, scale:
 
 const box = (c: Canvas, x: number, y: number, w: number, h: number, isLit: boolean) => {
   fill(c, x, y, w, h, BOX_BG)
-  frame(c, x, y, w, h, isLit ? EDGE : RULE)
+  frame(c, x, y, w, h, isLit ? EDGE : SURFACE.line)
 }
 
 const codexOf = (g: Game): Codex => g.codex ?? firstCodex(g)
@@ -128,7 +127,7 @@ export const codexPixels = (g: Game, ui: CodexUi = CODEX_UI): string[][] => {
   const lit = codexLit(g)
   const body = canvas(WINDOW_W, codexHeight(g, ui) - top)
   tabRow(body, PAGES, pageIndex(ui), 0)
-  fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, RULE)
+  fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, SURFACE.line)
   if (ui.page === 'foes') drawFoes(body, lit)
   else drawFinds(body, lit)
   const c = windowPixels(heroChrome(g, 'codex'), body.px)

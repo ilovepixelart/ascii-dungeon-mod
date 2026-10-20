@@ -11,6 +11,7 @@ import type { Pos } from './map'
 import { beltSlotRect } from './pieces'
 import { CLICK_SLOP, boxShape, coverage as coverageOf, isInside, pixel, place } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
+import { INK, SURFACE } from './ui/tokens'
 
 export type { Gesture } from './window'
 
@@ -22,8 +23,7 @@ export const BAG_UI_IDLE: BagUi = { menu: null, drag: null }
 export type OverlayBox = Box<'worn' | 'item' | 'menu'>
 
 const SLOT_WORD: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
-const WORN_BORDER = '#6b6258'
-const KEY_INK = '#ffd34d'
+const WORN_BORDER = SURFACE.frame
 
 /** The stat a line is about, without its number or arrow: '+7 def' and '-4 HP v' both give their label. */
 const statKey = (text: string) => text.replace(/^[+-]?\d+%?\s*/, '').replace(/ [\^v]$/, '')
@@ -51,7 +51,7 @@ export const card = (g: Game, item: Item, title: string | undefined, compare: bo
   ...(item.power === undefined ? [] : [[{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }]]),
   ...triggerLines(g, item),
   ...setLines(g, item),
-  [{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: KEY_INK }],
+  [{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: INK.gold }],
 ]
 
 /** A card's text width for what a trigger does, so the card stays as narrow as its other lines. */
@@ -81,11 +81,11 @@ const triggerLines = (g: Game, item: Item): Run[][] => {
 const ROWS = (INV_TOP + INV_H) / 2
 
 const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
-  canWear(g, item) ? [{ text: 'e', color: KEY_INK, bold: true }, { text: ' Equip' }] : [{ text: 'e Equip', dim: true }, { text: `  ${classLabel(item)}`, color: OFF_CLASS }],
+  canWear(g, item) ? [{ text: 'e', color: INK.gold, bold: true }, { text: ' Equip' }] : [{ text: 'e Equip', dim: true }, { text: `  ${classLabel(item)}`, color: OFF_CLASS }],
   item.locked === true
     ? [{ text: 'd Destroy', dim: true }, { text: '  locked', color: OFF_CLASS }]
-    : [{ text: 'd', color: KEY_INK, bold: true }, confirm ? { text: ' Destroy? click again', color: OFF_CLASS, bold: true } : { text: ' Destroy' }],
-  [{ text: 'g', color: KEY_INK, bold: true }, { text: item.locked === true ? ' Unlock' : ' Lock' }],
+    : [{ text: 'd', color: INK.gold, bold: true }, confirm ? { text: ' Destroy? click again', color: OFF_CLASS, bold: true } : { text: ' Destroy' }],
+  [{ text: 'g', color: INK.gold, bold: true }, { text: item.locked === true ? ' Unlock' : ' Lock' }],
 ]
 
 /** Covering an item being compared costs this much against one pixel of any other: it is never worth it. */

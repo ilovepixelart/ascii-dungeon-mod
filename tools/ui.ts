@@ -23,7 +23,7 @@ const blit = (src: Canvas, x: number, y: number) => src.px.forEach((row, dy) => 
 let y = 4
 const heading = (text: string) => {
   word(sheet, text, 4, y, INK.dim)
-  fill(sheet, 4, y + 7, W - 8, 1, SURFACE.rule)
+  fill(sheet, 4, y + 7, W - 8, 1, SURFACE.line)
   y += 11
 }
 

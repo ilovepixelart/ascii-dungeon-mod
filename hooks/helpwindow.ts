@@ -10,7 +10,6 @@ import type { Chrome, Gesture, OverlayBox } from './window'
 
 const CHROME: Chrome = { title: 'HOW IT PLAYS', labels: [] }
 const top = bodyTop(CHROME)
-const WORK = '#3ccf4e'
 const HEAD = 'YOUR CODING PLAYS THE HERO'
 const YOURS = 'You pick the gear and the talents, and set the orders.'
 /** Each rule takes three rows of the box: what happens, what it comes to, a row of room. */
@@ -32,7 +31,7 @@ export const HELP_ROWS: readonly { icon: keyof typeof MARK; when: string; does: 
  * to, then what is the player's own. */
 export const helpOverlay = (): OverlayBox[] => {
   const lines: Run[][] = [
-    ...HELP_ROWS.flatMap(r => [[{ text: r.when, bold: true, ...(r.work === true ? { color: WORK } : {}) }], [{ text: r.does, dim: true }], []]),
+    ...HELP_ROWS.flatMap(r => [[{ text: r.when, bold: true, ...(r.work === true ? { color: INK.good } : {}) }], [{ text: r.does, dim: true }], []]),
     [{ text: YOURS, dim: true }],
   ]
   return [{ role: 'about', x: 2, y: top / 2 + 6, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines, pad: ICON_PAD }]

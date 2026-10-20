@@ -7,14 +7,13 @@ import type { Action } from './game'
 import { ordersOf } from './game'
 import { canvas, fill } from './canvas'
 import { BUTTON_H, button, buttonW } from './pieces'
-import { SPACE } from './ui/tokens'
+import { SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, bodyTop, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
 import type { Chrome, Gesture, Rect } from './window'
 
 const CHROME: Chrome = { title: 'SETTINGS', labels: [] }
 const top = bodyTop(CHROME)
 const PAD = 3
-const RULE = '#2c2834'
 const VIEW_WORD: Readonly<Record<Game['zoom'], string>> = { 1: 'VIEW MAP', 2: 'VIEW ASCII', 3: 'VIEW PIXEL' }
 
 /** The sound as set: effects and music each on or off, and the volume in quarters, 1 to VOLUME_STEPS. */
@@ -87,7 +86,7 @@ export const settingsRect = (g: Game, sound: SoundSettings, ui: SettingsUi, does
 export const settingsPixels = (g: Game, sound: SoundSettings, ui: SettingsUi = SETTINGS_UI): string[][] => {
   const body = canvas(WINDOW_W, SETTINGS_H - top)
   tabRow(body, PAGES, ui.page === 'game' ? 0 : 1, 0)
-  fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, RULE)
+  fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, SURFACE.line)
   for (const k of placed(g, sound, ui)) button(body, k.key, k.label, k.rect.x, k.rect.y - top, 'ready')
   return windowPixels(CHROME, body.px).px
 }

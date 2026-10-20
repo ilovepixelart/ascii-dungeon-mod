@@ -5,7 +5,7 @@ import type { Action, Run } from './game'
 import { PX, heroArt, textMask } from './pixelart'
 import { BUTTON_H, button, buttonW, drawItem, portrait } from './pieces'
 import { RARITY_COLOR } from './items'
-import { SURFACE } from './ui/tokens'
+import { INK, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas } from './canvas'
@@ -19,9 +19,7 @@ const FACE = PX * 2 + 4
 const FIND_BOX = 17
 const SIDE_X = PAD + FACE + 3
 const FIND_X = PAD + Math.floor((FACE - FIND_BOX) / 2)
-const GOOD = '#3ccf4e'
-const GOLD = '#ffd34d'
-const SLAIN = '#ff5a4f'
+const SLAIN = INK.danger
 const PLAY = { key: 'P', label: 'PLAY ON' }
 const FIND_Y = top + 2 + FACE + 3
 
@@ -49,7 +47,7 @@ export const wrap = (text: string, width: number) => {
 /** The work done, on one line: green test runs, commits, pushes and pull requests; none, no line. */
 const workLine = (r: Recap): Run[][] => {
   const done = [r.tests > 0 ? many(r.tests, 'green test run') : '', r.commits > 0 ? many(r.commits, 'commit') : '', r.pushes > 0 ? many(r.pushes, 'push', 'pushes') : '', r.prs > 0 ? many(r.prs, 'PR') : ''].filter(t => t !== '')
-  return done.length > 0 ? [[{ text: `${done.join(', ')}.`, color: GOOD }]] : []
+  return done.length > 0 ? [[{ text: `${done.join(', ')}.`, color: INK.good }]] : []
 }
 
 const recapOf = (g: Game): Recap => g.recap ?? begun(g)
@@ -57,10 +55,10 @@ const recapOf = (g: Game): Recap => g.recap ?? begun(g)
 /** What happened, beside the portrait: the calls, the depth and level, the fighting, the work. */
 const toldLines = (g: Game, r: Recap): Run[][] => [
   [{ text: `${r.calls} tool calls`, bold: true }],
-  [{ text: `${fromTo('Depth', r.depth, g.depth)}, ${fromTo('level', r.level, g.level)}.`, ...(g.level > r.level ? { color: GOOD } : {}) }],
+  [{ text: `${fromTo('Depth', r.depth, g.depth)}, ${fromTo('level', r.level, g.level)}.`, ...(g.level > r.level ? { color: INK.good } : {}) }],
   [
     { text: `${many(r.kills, 'kill')}${r.champions > 0 ? `, ${many(r.champions, 'champion')}` : ''}, ` },
-    { text: `+${r.gold} gold`, color: GOLD },
+    { text: `+${r.gold} gold`, color: INK.gold },
     { text: ', ' },
     { text: many(r.deaths, 'death'), ...(r.deaths > 0 ? { color: SLAIN } : { dim: true }) },
     { text: '.' },

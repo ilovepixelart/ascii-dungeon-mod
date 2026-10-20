@@ -17,10 +17,9 @@ const top = bodyTop(CHROME)
 const PAD = 3
 const LINE = 7
 const ROW = 9
-const EASY = '#5ccf6a'
-const HARD = '#ff7a59'
-const NOW_BG = '#1f1c27'
-const RULE = '#2c2834'
+const EASY = INK.easy
+const HARD = INK.hard
+const NOW_BG = SURFACE.raised
 /** The tiers the window lists, the deepest reached last: fewer while a fork's cards need the room. */
 const SHOWN = 3
 const SHOWN_AT_FORK = 2
@@ -131,7 +130,7 @@ export const deepPixels = (g: Game): string[][] => {
     fill(body, PAD, r.y - top - 2, WINDOW_W - 2 * PAD, ROW, NOW_BG)
     frame(body, PAD, r.y - top - 2, WINDOW_W - 2 * PAD, ROW, INK.focus)
   }
-  fill(body, PAD, l.rule - top, WINDOW_W - 2 * PAD, 1, RULE)
+  fill(body, PAD, l.rule - top, WINDOW_W - 2 * PAD, 1, SURFACE.line)
   for (const c of l.cards) flatCard(body, { ...c.rect, y: c.rect.y - top }, c.isChosen)
   for (const line of deepLines(g)) word(body, line.text, line.x, line.y - top, line.ink)
   const c = windowPixels(heroChrome(g, 'deep'), body.px)

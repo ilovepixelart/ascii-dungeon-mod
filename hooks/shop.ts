@@ -15,6 +15,7 @@ import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltSlotRect, cellBox, itemGrid,
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
+import { INK } from './ui/tokens'
 
 /** The wares in shelf order, three to a row. */
 export const WARES = Object.keys(SHOP_PRICES) as Ware[]
@@ -23,8 +24,7 @@ export const WARES = Object.keys(SHOP_PRICES) as Ware[]
 export type ShopUi = { ware: Ware | null; menu: boolean }
 export const SHOP_UI_IDLE: ShopUi = { ware: null, menu: false }
 
-const KEY_INK = '#ffd34d'
-const CARD_BORDER = '#e8e4dc'
+const CARD_BORDER = INK.text
 /** The window's height in pixels and cells: the bag's. */
 export const SHOP_H = WINDOW_TOP + INV_H
 const ROWS = SHOP_H / 2
@@ -65,7 +65,7 @@ const shown = (g: Game): Weighted[] => [
 ]
 
 const entry = (key: string, label: string, why?: string): Run[] =>
-  why === undefined ? [{ text: key, color: KEY_INK, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
+  why === undefined ? [{ text: key, color: INK.gold, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
 
 const wareMenu = (g: Game, ware: Ware): Run[][] => [entry('b', `Buy for ${priceOfWare(ware, g)}`, whyNot(g, ware))]
 const itemMenu = (g: Game, item: Item): Run[][] => [entry('s', `Sell for ${priceOf(item)}`, item.locked === true ? 'locked' : undefined), entry('e', 'Equip', canWear(g, item) ? undefined : classLabel(item))]
@@ -76,7 +76,7 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
   return [
     [{ text: CONSUMABLES[kind][tier].name, bold: true }],
     [{ text: CONSUMABLES[kind][tier].about }],
-    [{ text: 'Price ', dim: true }, { text: String(price), color: g.gold >= price ? KEY_INK : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
+    [{ text: 'Price ', dim: true }, { text: String(price), color: g.gold >= price ? INK.gold : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
   ]
 }
 

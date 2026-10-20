@@ -10,6 +10,7 @@ import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
 import type { Rect } from './window'
 import type { Pos } from './map'
 import type { Canvas } from './canvas'
+import { INK, SURFACE } from './ui/tokens'
 
 export { BELT_STEP, CURSOR, GHOST_INK, OFF_CLASS, UPGRADE } from './pieces'
 export { CLOSE_BOX, CLOSE_INK, LABEL_INK, LABEL_Y, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
@@ -63,8 +64,8 @@ export const inventoryPixels = (g: Game): string[][] => {
   return c.px
 }
 
-const BLOCKED_TINT = '#4a1c22'
-const FITS_TINT = '#2e2c38'
+const BLOCKED_TINT = SURFACE.blocked
+const FITS_TINT = SURFACE.fits
 
 /** What is being dragged: a bag item or a worn one, the pointer in screen pixels, and where on the item it was grabbed. */
 export type Drag = { source: { kind: 'bag'; id: number } | { kind: 'worn'; slot: Slot }; at: Pos; grab: Pos }
@@ -155,7 +156,7 @@ export const itemCard = (g: Game): Run[][] => {
     lines.push([{ text: `${set.name}, ${setWorn(g, item.set)} of ${set.pieces.length} worn: `, color: SET_COLOR, bold: true }, { text: `2, ${set.twoSaid}; ${set.pieces.length}, ${set.three}`, dim: true }])
   }
   if (item.trigger !== undefined) lines.push([{ text: `${TRIGGERS[item.trigger].name}: `, color: RARITY_COLOR[item.rarity], bold: true }, { text: TRIGGERS[item.trigger].does, dim: true }, ...(isTriggerWornElsewhere(g, item) ? [{ text: '  same trigger as worn: no effect', color: OFF_CLASS }] : [])])
-  lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: '#ffd34d' }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
+  lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: INK.gold }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
   return lines
 }
 

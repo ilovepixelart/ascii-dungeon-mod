@@ -1,12 +1,13 @@
 // A small pixel canvas the interface panels draw on: '#rrggbb' cells, and the frames, fills, art and digits they share.
 import { PAL, POPUP_OUTLINE, PX, textMask } from './pixelart'
 import { hexToInt, rasterCells } from './pixels'
+import { INK, SURFACE } from './ui/tokens'
 
 export type Canvas = { w: number; h: number; px: string[][] }
 
-export const BG = '#0b0b10'
-export const SLOT_BG = '#1a1820'
-export const GRID = '#2c2834'
+export const BG = SURFACE.ground
+export const SLOT_BG = SURFACE.slot
+export const GRID = SURFACE.line
 /** An icon slot: a PX by PX icon inside a 1 px frame. */
 export const SLOT = PX + 2
 /** A belt slot: the icon on the left, its count (or key) beside it, so nothing is drawn over the icon. */
@@ -36,10 +37,10 @@ export const frame = (c: Canvas, x: number, y: number, w: number, h: number, col
 
 /** Sprite rows over the canvas; '.' leaves what is below, `ink` paints every pixel one color (a ghost). */
 export const art = (c: Canvas, rows: readonly string[], x: number, y: number, ink?: string) =>
-  rows.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, x + dx, y + dy, ink ?? PAL[k] ?? '#ff00ff')))
+  rows.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, x + dx, y + dy, ink ?? PAL[k] ?? INK.missing)))
 
 /** Outlined digits in the pixel font, their bottom-right corner at `right`, `bottom`. */
-export const digits = (c: Canvas, text: string, right: number, bottom: number, ink = '#ffffff') => {
+export const digits = (c: Canvas, text: string, right: number, bottom: number, ink: string = INK.white) => {
   const mask = textMask(text)
   const x0 = right - (mask[0]?.length ?? 0)
   const y0 = bottom - mask.length

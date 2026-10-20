@@ -11,6 +11,10 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- The villager in town sells a sealed pack (`g`): 50 gold and 12 a depth of the deepest reached, for an item of
+  Uncommon or better rolled as a drop is, about 1 in 20 an Epic and 1 in 70 a Legendary. With no room in the bag
+  nothing is paid. Over 90 simulated games of 3,000 steps the gold a hero holds halves (4,896 to 2,271) with deaths
+  and depth unchanged.
 - An item found with the bag full lies where it fell, drawn on the map, and stepping onto it with room picks it up;
   it was lost, though the log said it stayed on the floor. It waits through a trip to town, and going down leaves it
   behind, said. A prize goes to the stash in town while it has room: a nemesis's trophy, a unique's or a boss's item,

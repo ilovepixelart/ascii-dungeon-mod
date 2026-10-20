@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK } from './town'
-import { BIG_BOSSES, STASH_SIZE, UNIQUES, canRetire, firstCodex, whyNotRetire, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
+import { BIG_BOSSES, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -1687,6 +1687,7 @@ const textTalker = (p: Pane, who: 'guard' | 'villager' | 'dog') => {
       <Text bold>{TALKER_NAME[who]}</Text>
       <Text>{TOWN_TALK[who]}</Text>
       {who === 'dog' && <Button key="pet" label={`Pet the dog (${g.petted} so far)`} hotkey="p" plain onPress={press({ kind: 'pet' })} />}
+      {who === 'villager' && <Button key="gamble" label={`Buy a sealed pack: ${gambleCost(g)} gold`} plain dimColor={g.gold < gambleCost(g)} onPress={press({ kind: 'gamble' })} />}
       {closer(p, who)}
     </Box>
   )

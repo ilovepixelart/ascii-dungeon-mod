@@ -2,7 +2,7 @@
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
 import type { Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
-import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, sightOf, threat } from './game'
+import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, onToolStart, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same } from './map'
@@ -76,6 +76,8 @@ export type SimStats = {
   frameMs: number[]
   questsDone: number
   fortunes: number
+  /** Sealed packs bought from the villager. */
+  gambles: number
   /** Bosses risen, slain, and deaths to one. */
   bossesMet: number
   bossesSlain: number
@@ -187,14 +189,17 @@ const mendInTown = (g: Game): Action | undefined => {
 
 /**
  * To the elder for a quest, or to be paid for one done (now and then, so a full bag cannot hold the hero there); with
- * gold to spare, a potion when the belt runs low on healing, and a fortune now and then.
+ * gold to spare, a potion when the belt runs low on healing, a fortune now and then, and with three packs' gold a pack.
  */
 const errands = (g: Game, d: Dice): Action | undefined => {
   if ((g.quest === null || g.quest.have >= g.quest.need) && d(2) === 1) return { kind: 'goto', ...TOWN_SPOTS.elder }
   if (g.gold >= SHOP_PRICES.health1 && countOf(g.belt[slotOf('health')]) < 2) return { kind: 'buy', ware: 'health1' }
   const canAffordFortune = g.fortune === null && g.gold >= fortuneCost(g) + 2 * SHOP_PRICES.health1
   if (canAffordFortune && g.panel === 'mystic') return { kind: 'fortune' }
-  return canAffordFortune && d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.mystic } : undefined
+  if (canAffordFortune && d(3) === 1) return { kind: 'goto', ...TOWN_SPOTS.mystic }
+  const canGamble = g.gold >= 3 * gambleCost(g)
+  if (canGamble && g.panel === 'villager') return { kind: 'gamble' }
+  return canGamble && d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.villager } : undefined
 }
 
 /** At the smith, with gold to spare: the cheapest tempering, now and then a reforge of the weapon. */
@@ -551,6 +556,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight',
     tempered: count(records, /^The smith tempers /),
     questsDone: count(records, /^The elder pays you /),
     fortunes: count(records, /^The mystic reads your fortune /),
+    gambles: count(records, /^You pay the villager /),
     bossesMet: count(records, / rises to bar the way down!$/),
     bossesSlain: count(records, /^You slay the [\w ]+ overlord!/),
     bossDeaths: count(records, /^You were slain by the [\w ]+ overlord /),

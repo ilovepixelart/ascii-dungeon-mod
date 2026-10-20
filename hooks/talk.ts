@@ -3,7 +3,7 @@
 // and at most one button. Pure: the click layer reports whole gestures, this decides the game actions they make.
 import type { Game } from '../types'
 import type { Action, Run } from './game'
-import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, fortuneCost, questReward } from './game'
+import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, fortuneCost, gambleCost, questReward } from './game'
 import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
@@ -73,12 +73,14 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
     if (g.deaths > 0) return [said('"Fell down there and came back? Mind the stairs this time."'), deepest]
     return [said('"The dungeon is through the portal. Mind the stairs."'), deepest]
   },
-  villager: g =>
-    g.stashed.length === 0 ? [said('"Your stash by the square keeps things safe between trips."')]
-    : g.quest === null && g.questsDone === 0 ? [said('"The elder pays well for a job done. Go and ask."')]
-    : !hasWorked(g) ? [said('"The smith can temper what you wear. Worth the gold."')]
-    : g.fortune === null ? [said('"The mystic in blue reads fortunes: luck, riches or insight."')]
-    : [said('"Fine day for it."')],
+  villager: g => {
+    const pack = aside(`A sealed pack: ${gambleCost(g)} gold for an item of Uncommon or better, rarely an Epic or a Legendary.`)
+    return g.stashed.length === 0 ? [said('"Your stash by the square keeps things safe between trips."'), pack]
+      : g.quest === null && g.questsDone === 0 ? [said('"The elder pays well for a job done. Go and ask."'), pack]
+      : !hasWorked(g) ? [said('"The smith can temper what you wear. Worth the gold."'), pack]
+      : g.fortune === null ? [said('"The mystic in blue reads fortunes: luck, riches or insight."'), pack]
+      : [said('"A pack from the road, sealed. Care to try your luck?"'), pack]
+  },
   dog: g =>
     g.petted === 0 ? [said('The dog wags its tail and looks at you hopefully.')]
     : g.petted < 10 ? [said('The dog leans into your hand, tail going.')]
@@ -92,7 +94,7 @@ const ACT: Readonly<Record<Speaker, (g: Game) => Act | undefined>> = {
   elder: g => (g.quest === null ? undefined : { key: 'A', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
   mystic: g => ({ key: 'F', label: 'FORTUNE', cost: fortuneCost(g), canPay: g.gold >= fortuneCost(g), action: { kind: 'fortune' }, state: g.fortune === null && g.gold >= fortuneCost(g) ? 'ready' : 'off' }),
   guard: () => undefined,
-  villager: () => undefined,
+  villager: g => ({ key: 'G', label: 'GAMBLE', cost: gambleCost(g), canPay: g.gold >= gambleCost(g), action: { kind: 'gamble' }, state: g.gold >= gambleCost(g) ? 'ready' : 'off' }),
   dog: () => ({ key: 'P', label: 'PET', action: { kind: 'pet' }, state: 'ready' }),
 }
 export const talkAction = (g: Game, who: Speaker) => ACT[who](g)

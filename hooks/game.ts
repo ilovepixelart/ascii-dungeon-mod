@@ -50,6 +50,7 @@ export type Action =
   | { kind: 'temper'; slot: Slot }
   | { kind: 'store' }
   | { kind: 'fortune' }
+  | { kind: 'gamble' }
   /** The elder's pay for a quest done, asked for again: after a visit found the bag too full for the item. */
   | { kind: 'claim' }
   | { kind: 'pet' }
@@ -1295,6 +1296,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   temper: g => say(g, 'The smith is in town.'),
   store: g => say(g, 'Your stash is in town.'),
   fortune: g => say(g, 'The mystic is in town.'),
+  gamble: g => say(g, 'The villager is in town.'),
   claim: g => say(g, 'The elder is in town.'),
   pet: g => say(g, 'The dog is in town.'),
   retrieve: g => say(g, 'Your stash is in town.'),
@@ -1443,6 +1445,27 @@ const mystic = (g: Game) => {
     g.fortune = { kind, depth: g.depth }
     say(g, `The mystic reads your fortune for ${cost} gold: ${FORTUNE_SAID[kind]} until you change depth.`)
   }
+}
+
+/** The villager's sealed pack: its price, by the deepest depth reached, about two and a half times what it fetches. */
+export const gambleCost = (g: Pick<Game, 'deepest'>) => 50 + 12 * g.deepest
+
+/** Buys the villager's sealed pack: an item of Uncommon or better, rolled as a drop is, into the bag; with no room for
+ * it nothing is paid, said. */
+const gamble = (g: Game) => {
+  const cost = gambleCost(g)
+  if (g.gold < cost) {
+    say(g, `The villager: "A sealed pack is ${cost} gold. No peeking."`)
+    return
+  }
+  const item = makeItem(g, 'uncommon')
+  if (!stash(g, item)) {
+    say(g, 'The villager: "Make room in your bag first."')
+    return
+  }
+  g.gold -= cost
+  announce(g, item)
+  say(g, `You pay the villager ${cost} gold and open the pack: ${item.name} (${RARITY_NAME[item.rarity]}).`)
 }
 
 /** How many items the town stash holds. */
@@ -1621,6 +1644,7 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   temper: (g, a) => temper(g, a.slot),
   store: g => store(g),
   fortune: g => mystic(g),
+  gamble: g => gamble(g),
   claim: g => elder(g),
   pet: g => {
     g.petted += 1

@@ -10,6 +10,10 @@ release may change behaviour.
 
 - A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the
   task, so the hero had to step off the stairs and back.
+- On a big boss depth the arena often grows over a room beside the stairs (in about 4 such levels in 10). Standing
+  where the two met, the hero saw only the smaller room, the rest of the arena dark and drawn without its walls, a foe
+  beside the hero included; standing in the arena, the smaller room stayed dark. Each now shows the other whole. The
+  levels are as they were.
 
 ## [0.4.0] - 2026-10-20
 

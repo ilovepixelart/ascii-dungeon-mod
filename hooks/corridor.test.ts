@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { apply } from './game'
-import { MAP_H, MAP_W, cellId, corridorAhead, generate, isFloor, roomAt, visibleFrom } from './map'
+import { MAP_H, MAP_W, analyze, cellId, corridorAhead, generate, isFloor, roomAt, visibleFrom } from './map'
 import type { Level, Pos, Room } from './map'
 import { newGame, reveal } from './world'
 
@@ -67,6 +67,64 @@ describe('a room', () => {
     // The door's own ring around it, too, as from any corridor cell.
     expect(['11,1', '11,3'].every(c => fromDoor.has(c))).toBe(true)
   })
+})
+
+describe('an arena grown over another room', () => {
+  // Room A (1..3, 1..3) listed first, the arena B (2..7, 2..5) after it, sharing A's lower right: one space on the map.
+  //   0123456789
+  // 0 ##########
+  // 1 #...######
+  // 2 #.......##
+  // 3 #.......##
+  // 4 ##......##
+  // 5 ##......##
+  const OVER: Level = {
+    tiles: Array.from({ length: MAP_H }, (_, y) => (['##########', '#...######', '#.......##', '#.......##', '##......##', '##......##'][y] ?? '').padEnd(MAP_W, '#')),
+    rooms: [{ x: 1, y: 1, w: 3, h: 3 }, { x: 2, y: 2, w: 6, h: 4 }],
+    start: { x: 1, y: 1 },
+    stairs: { x: 6, y: 4 },
+  }
+  const seenFrom = (p: Pos) => new Set(visibleFrom(OVER, p).map(c => `${c.x},${c.y}`))
+
+  test('from where the two meet, the arena is seen whole, its far corner and its walls', async () => {
+    const seen = seenFrom({ x: 2, y: 2 })
+    expect(['7,5', '2,5', '7,2', '8,5', '7,6'].filter(c => !seen.has(c))).toEqual([])
+  })
+
+  test('from the arena alone, the room it grew over is seen whole', async () => {
+    const seen = seenFrom({ x: 6, y: 4 })
+    expect(['1,1', '3,1', '1,3', '0,1', '1,0'].filter(c => !seen.has(c))).toEqual([])
+  })
+})
+
+/** A room's floor, less its dead ends: a dead end holds its chest back until the hero is beside it, in a room as anywhere. */
+const roomFloor = (level: Level, room: Room, ends: ReadonlySet<number>): Pos[] => {
+  const cells = Array.from({ length: room.w * room.h }, (_, i) => ({ x: room.x + (i % room.w), y: room.y + Math.floor(i / room.w) }))
+  return cells.filter(c => isFloor(level.tiles, c) && !ends.has(cellId(c)))
+}
+
+/**
+ * Each floor cell of a room from which some of that room's floor goes unseen, as "x,y". In a room what the hero sees
+ * follows from the room the cell is first counted in (`roomAt`), so one cell for each such room stands for them all:
+ * where an arena meets another room, a cell of each.
+ */
+const blindSpots = (level: Level, room: Room, ends: ReadonlySet<number>) => {
+  const floor = roomFloor(level, room, ends)
+  const one = [...new Map(floor.map(p => [roomAt(level, p), p] as const)).values()]
+  return one.filter(p => {
+    const seen = new Set(visibleFrom(level, p).map(cellId))
+    return floor.some(c => !seen.has(cellId(c)))
+  }).map(p => `${p.x},${p.y}`)
+}
+
+test('on every big boss depth, a hero on any floor of a room sees all of its floor but a dead end\'s chest', async () => {
+  const misses: string[] = []
+  for (let world = 1; world <= 40; world += 1) for (const depth of [10, 20, 170]) {
+    const level = generate(world, depth)
+    const ends = new Set(analyze(level).deadEnds.map(cellId))
+    for (const room of level.rooms) misses.push(...blindSpots(level, room, ends).map(p => `${world}:${depth} from ${p}`))
+  }
+  expect(misses.slice(0, 5)).toEqual([])
 })
 
 describe('in play', () => {

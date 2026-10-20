@@ -793,6 +793,34 @@ test('a click on the pixel map reaches the game through the click layer', async 
   await ui.unmount()
 })
 
+test('the pointer over a floor tile lights it, as the windows light theirs; over rock or what is unseen, nothing', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const map = await ui.find({ type: 'Raster', key: 'map' })
+  const columns = map?.props.columns as number
+  const rows = map?.props.rows as number
+  const g = newGame()
+  const level = levelOf(g)
+  const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g, columns, rows))
+  const floor = cells.find(c => {
+    const t = tileUnder(c)
+    return Math.abs(t.x - g.x) + Math.abs(t.y - g.y) === 1 && level.tiles[t.y]?.[t.x] === '.'
+  })!
+  const rock = cells.find(c => {
+    const t = tileUnder(c)
+    return t.x >= 0 && t.y >= 0 && t.x < 64 && t.y < 18 && (g.seen[t.y * 64 + t.x] === '0' || level.tiles[t.y]?.[t.x] !== '.')
+  })!
+  const cellsNow = async () => (await ui.find({ type: 'Raster', key: 'map' }))?.props.cells
+  const idle = await cellsNow()
+  await ui.pointer({ type: 'move', ...rock, in: 'map-clicks' } as never)
+  expect(await cellsNow()).toEqual(idle)
+  await ui.pointer({ type: 'move', ...floor, in: 'map-clicks' } as never)
+  expect(await cellsNow()).not.toEqual(idle)
+  await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'map-clicks' } as never)
+  expect(await cellsNow()).toEqual(idle)
+  await ui.unmount()
+})
+
 test('the pointer over an item lying on the map names it there, in its tier\'s color; off it, no name', async ($, on) => {
   const g0 = newGame()
   const level = levelOf(g0)

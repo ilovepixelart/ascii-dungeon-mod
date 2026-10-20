@@ -1046,8 +1046,25 @@ export const stampOf = (cells: string) => {
 export type Ambient = { bob: boolean; shimmer: boolean }
 export const STILL: Ambient = { bob: false, shimmer: false }
 
-export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL) =>
-  rasterCells(frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient }), columns, rows)
+/** A rectangle of a frame's pixels. */
+export type PixelRect = { x: number; y: number; w: number; h: number }
+
+/** The frame with `r` lit for the hover, as the windows light theirs: its outline half way to white, its inside a tenth. */
+const lightRect = (frame: Uint32Array, width: number, height: number, r: PixelRect) => {
+  for (let y = Math.max(0, r.y); y < Math.min(height, r.y + r.h); y += 1) {
+    for (let x = Math.max(0, r.x); x < Math.min(width, r.x + r.w); x += 1) {
+      const isEdge = x === r.x || x === r.x + r.w - 1 || y === r.y || y === r.y + r.h - 1
+      frame[y * width + x] = blend(frame[y * width + x]!, 0xffffff, isEdge ? 0.5 : 0.1)
+    }
+  }
+  return frame
+}
+
+/** The map's cells; `lit`, the tile under the pointer, lit for the hover over everything else. */
+export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect) => {
+  const frame = frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient })
+  return rasterCells(lit === undefined ? frame : lightRect(frame, columns, rows * 2, lit), columns, rows)
+}
 
 /**
  * The map tile under a click on the pixel map: `x`, `y` in cells of the map's region (fractions where the terminal
@@ -1058,6 +1075,12 @@ export const clickToTile = (g: Located, click: { x: number; y: number; columns: 
   const px = origin.x + Math.floor(click.x)
   const py = origin.y + Math.floor(click.y * 2)
   return { x: Math.floor(px / PX), y: Math.floor(py / PX) }
+}
+
+/** A tile's pixels on the map, `size` its cells, the camera at `camera`: what the hover lights. */
+export const tileRect = (g: Located, tile: Pos, size: { columns: number; rows: number }, camera?: Pos): PixelRect => {
+  const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2) : originAt(camera, size.columns, size.rows * 2, worldSize(g))
+  return { x: tile.x * PX - origin.x, y: tile.y * PX - origin.y, w: PX, h: PX }
 }
 
 /** Where a tile's top-left lands on the map, in its cells: `clickToTile` the other way. */

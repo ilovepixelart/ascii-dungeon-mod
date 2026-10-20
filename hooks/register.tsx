@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren, RenderElement, RenderInput, ToolCallInput } from 'claude-code'
 
 import type { Game, HeroClass, Talent } from '../types'
-import { TOWN_TALK } from './town'
+import { TOWN_TALK, isTownWalkable, townSpotAt } from './town'
 import { BIG_BOSSES, LOG_KEPT, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
@@ -50,12 +50,12 @@ import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compa
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
 import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
-import { MAP_H, MAP_W, cellId, same } from './map'
+import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
-import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
-import type { Ambient, Hit } from './pixels'
+import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import type { Ambient, Hit, PixelRect } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
 import { workOf } from './work'
 import type { GitOperation } from './work'
@@ -500,7 +500,7 @@ const endHits = async ($: EngineInterface) => {
   if (size !== null) {
     const g = normalize(await read($, game))
     const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown), size)
+    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapLit), size)
   }
   $.ui.invalidate('ui.render')
 }
@@ -582,7 +582,7 @@ const ambientTick = async ($: EngineInterface) => {
   shown = next
   const size = mapSize
   const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown), size)
+  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapLit), size)
 }
 
 /** The time, for the idle motion's bookkeeping; a host without a clock leaves the last known time standing. */
@@ -819,16 +819,26 @@ const current = async ($: EngineInterface) => normalize(await read($, game))
  * one on the strip opens the inventory or uses a belt slot. */
 /** The name of the item lying under the pointer on the map, over its tile (map cells), while the hero has seen it. */
 let mapLabel: { x: number; y: number; text: string; color: string } | null = null
+/** The map tile under the pointer, in the map's pixels, while a click there would act: what the hover lights. */
+let mapLit: PixelRect | undefined
+
+/** Whether a click on `tile` acts: in the dungeon a seen floor tile, in town open ground or a townsperson's spot. */
+const isClickable = (g: Game, tile: Pos) => {
+  if (g.where === 'town') return isTownWalkable(tile) || townSpotAt(tile) !== undefined
+  return tile.x >= 0 && tile.y >= 0 && tile.x < MAP_W && tile.y < MAP_H && g.seen[cellId(tile)] === '1' && isFloor(levelOf(g).tiles, tile)
+}
 
 /** The pointer over the map (or off it): the item lying on the tile under it named, drawn again when that changes. */
 const onMapHover = async ($: EngineInterface, data: { x?: number; y?: number; columns?: number; rows?: number }) => {
-  const before = JSON.stringify(mapLabel)
+  const before = JSON.stringify([mapLabel, mapLit])
   mapLabel = null
+  mapLit = undefined
   if (data.x !== undefined && data.y !== undefined && data.columns !== undefined && data.rows !== undefined) {
     const g = await current($)
     const size = { columns: data.columns, rows: data.rows }
     const view = camera?.place === placeOf(g) ? camera.at : undefined
     const tile = clickToTile(g, { x: data.x, y: data.y, ...size }, view)
+    if (isClickable(g, tile)) mapLit = tileRect(g, tile, size, view)
     const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
     if (lying !== undefined) {
       const text = ` ${lying.item.name} `
@@ -836,7 +846,7 @@ const onMapHover = async ($: EngineInterface, data: { x?: number; y?: number; co
       mapLabel = { x: Math.max(0, Math.min(at.x, size.columns - text.length - 2)), y: at.y > 0 ? at.y - 1 : at.y + PX / 2, text: lying.item.name, color: RARITY_COLOR[lying.item.rarity] }
     }
   }
-  if (JSON.stringify(mapLabel) !== before) $.ui.invalidate('ui.render')
+  if (JSON.stringify([mapLabel, mapLit]) !== before) $.ui.invalidate('ui.render')
 }
 
 const onMapClick = async ($: EngineInterface, data: unknown) => {
@@ -1905,7 +1915,7 @@ const mapView = (p: Pane, l: Layout) => {
   const stride = l.heroAt !== undefined && walk !== null && isStrideFrame(walk.frame)
   return (
     <Box>
-      <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(pixelMap(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL))} />
+      <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(pixelMap(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? mapLit : undefined))} />
       {Client !== undefined && (
         <Box position="absolute" top={0} left={0}>
           <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, label: mapLabel }} width={l.mapWidth} height={l.pixelRows} />

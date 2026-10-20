@@ -62,7 +62,7 @@ describe('what each says, from how the hero stands', () => {
     expect(first(hero({ stashed: [item] }), 'villager')).toMatch(/elder/)
     expect(first(hero({ stashed: [item], quest: q }), 'villager')).toMatch(/smith/)
     expect(first(hero({ stashed: [item], quest: q, reforges: 1 }), 'villager')).toMatch(/mystic/)
-    expect(first(hero({ stashed: [item], quest: q, reforges: 1, fortune: { kind: 'luck', depth: 4 } }), 'villager')).toBe('"Fine day for it."')
+    expect(first(hero({ stashed: [item], quest: q, reforges: 1, fortune: { kind: 'luck', depth: 4 } }), 'villager')).toBe('"A pack from the road, sealed. Care to try your luck?"')
   })
 
   test('the dog, by how often it has been petted', async () => {
@@ -103,9 +103,11 @@ describe('the button', () => {
     expect(talkAction(hero({ quest: null }), 'elder')).toBeUndefined()
   })
 
-  test('the dog\'s pets it; the healer, the guard and the villager have none', async () => {
+  test('the dog\'s pets it; the villager\'s sells a sealed pack; the guard\'s trades in; the healer has none', async () => {
     expect(talkAction(hero(), 'dog')).toMatchObject({ action: { kind: 'pet' }, state: 'ready' })
-    for (const who of ['healer', 'guard', 'villager'] as const) expect(talkAction(hero(), who)).toBeUndefined()
+    expect(talkAction(hero(), 'villager')).toMatchObject({ key: 'G', action: { kind: 'gamble' } })
+    expect(talkAction(hero(), 'guard')).toMatchObject({ key: 'T', action: { kind: 'tradeIn' } })
+    expect(talkAction(hero(), 'healer')).toBeUndefined()
   })
 
   test('a click on a button that can act does it; on one that cannot, nothing; the close box closes the window', async () => {

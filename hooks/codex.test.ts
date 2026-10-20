@@ -127,10 +127,12 @@ describe('sets made whole', () => {
     expect(apply(facing(UNIQUE, 23, whole), hit).log.some(l => l.startsWith('Every unique'))).toBe(false)
   })
 
-  test('with the bag full the prize stays on the floor, said', async () => {
+  test('with the bag full the prize waits in the stash in town, said', async () => {
     const full = { ...plainHero(3), bag: Array.from({ length: BAG_W }, (_, i) => ({ ...plainItem({ nextId: 2000 + i }, 'chain'), w: 1, h: BAG_H, x: i, y: 0 })) }
     const after = apply(facing(UNIQUE, 23, FOUR, full), hit)
-    expect(after.log.some(l => l.startsWith('Every unique is slain. Your bag is full: the '))).toBe(true)
+    const paid = after.log.find(l => l.startsWith('Every unique is slain. The codex pays: '))
+    expect(paid?.endsWith('Your bag is full: it waits in your stash in town.')).toBe(true)
+    expect(after.stashed.some(i => paid!.includes(i.name))).toBe(true)
   })
 })
 

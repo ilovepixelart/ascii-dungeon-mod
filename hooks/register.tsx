@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK } from './town'
-import { BIG_BOSSES, STASH_SIZE, UNIQUES, canRetire, firstCodex, whyNotRetire, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
+import { BIG_BOSSES, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -49,11 +49,11 @@ import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compa
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
 import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
-import { MAP_H, MAP_W, same } from './map'
+import { MAP_H, MAP_W, cellId, same } from './map'
 import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
-import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
 import { workOf } from './work'
@@ -812,6 +812,28 @@ const current = async ($: EngineInterface) => normalize(await read($, game))
 /** Each click layer's gestures, to its window: what the window makes of a gesture, its own state kept, and the pane
  * redrawn where the window's look depends on that state. A click on the pixel map walks the hero to the tile under it;
  * one on the strip opens the inventory or uses a belt slot. */
+/** The name of the item lying under the pointer on the map, over its tile (map cells), while the hero has seen it. */
+let mapLabel: { x: number; y: number; text: string; color: string } | null = null
+
+/** The pointer over the map (or off it): the item lying on the tile under it named, drawn again when that changes. */
+const onMapHover = async ($: EngineInterface, data: { x?: number; y?: number; columns?: number; rows?: number }) => {
+  const before = JSON.stringify(mapLabel)
+  mapLabel = null
+  if (data.x !== undefined && data.y !== undefined && data.columns !== undefined && data.rows !== undefined) {
+    const g = await current($)
+    const size = { columns: data.columns, rows: data.rows }
+    const view = camera?.place === placeOf(g) ? camera.at : undefined
+    const tile = clickToTile(g, { x: data.x, y: data.y, ...size }, view)
+    const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
+    if (lying !== undefined) {
+      const text = ` ${lying.item.name} `
+      const at = tileToCell(g, tile, size, view)
+      mapLabel = { x: Math.max(0, Math.min(at.x, size.columns - text.length - 2)), y: at.y > 0 ? at.y - 1 : at.y + PX / 2, text: lying.item.name, color: RARITY_COLOR[lying.item.rarity] }
+    }
+  }
+  if (JSON.stringify(mapLabel) !== before) $.ui.invalidate('ui.render')
+}
+
 const onMapClick = async ($: EngineInterface, data: unknown) => {
   await resume($)
   const g = await current($)
@@ -1687,6 +1709,8 @@ const textTalker = (p: Pane, who: 'guard' | 'villager' | 'dog') => {
       <Text bold>{TALKER_NAME[who]}</Text>
       <Text>{TOWN_TALK[who]}</Text>
       {who === 'dog' && <Button key="pet" label={`Pet the dog (${g.petted} so far)`} hotkey="p" plain onPress={press({ kind: 'pet' })} />}
+      {who === 'guard' && <Button key="trade-in" label="Trade in three spare pieces" plain dimColor={tradeInOf(g).length < 3} onPress={press({ kind: 'tradeIn' })} />}
+      {who === 'villager' && <Button key="gamble" label={`Buy a sealed pack: ${gambleCost(g)} gold`} plain dimColor={g.gold < gambleCost(g)} onPress={press({ kind: 'gamble' })} />}
       {closer(p, who)}
     </Box>
   )
@@ -1850,7 +1874,7 @@ const mapView = (p: Pane, l: Layout) => {
       <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(pixelMap(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL))} />
       {Client !== undefined && (
         <Box position="absolute" top={0} left={0}>
-          <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows }} width={l.mapWidth} height={l.pixelRows} />
+          <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, label: mapLabel }} width={l.mapWidth} height={l.pixelRows} />
         </Box>
       )}
     </Box>
@@ -2023,7 +2047,8 @@ export const register: Register = (on, options) => {
   // A gesture on one of the pane's click layers, to its window (`onClick`).
   on('ui.message', async ($, e, next) => {
     if ((e.data as { type?: string } | undefined)?.type === 'hover') {
-      onHover($, e.element ?? '', (e.data as { at: Pos | null }).at)
+      if (e.element === 'map-clicks') await onMapHover($, e.data as { x?: number; y?: number; columns?: number; rows?: number })
+      else onHover($, e.element ?? '', (e.data as { at: Pos | null }).at)
       return {}
     }
     return (await onClick($, e.element ?? '', e.data)) ? {} : next(e)

@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, corridorAhead, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -50,6 +50,8 @@ export type Action =
   | { kind: 'temper'; slot: Slot }
   | { kind: 'store' }
   | { kind: 'fortune' }
+  | { kind: 'gamble' }
+  | { kind: 'tradeIn' }
   /** The elder's pay for a quest done, asked for again: after a visit found the bag too full for the item. */
   | { kind: 'claim' }
   | { kind: 'pet' }
@@ -312,7 +314,9 @@ const openChest = (g: Game, kind: ChestKind) => {
   g.gold += coins
   const item = roll(g, 100) <= loot.itemChance ? makeItem(g, loot.atLeast) : undefined
   if (item !== undefined) announce(g, item)
-  const found = item === undefined ? '' : stash(g, item) ? ` and ${item.name} (${RARITY_NAME[item.rarity]})` : `; ${item.name} will not fit in your bag`
+  const isKept = item === undefined || stash(g, item)
+  if (!isKept) leaveOnFloor(g, item, g)
+  const found = item === undefined ? '' : isKept ? ` and ${item.name} (${RARITY_NAME[item.rarity]})` : `; your bag is full, so the ${item.name} lies beside it`
   say(g, `You open the ${kind} chest: ${coins} gold${found}.`)
 }
 
@@ -326,6 +330,7 @@ const moveTo = (g: Game, p: Pos) => {
   const level = levelOf(g)
   g.seen = reveal(g.seen, [...visibleFrom(level, p, sightOf(g)), ...corridorAhead(level, p)])
   pickUp(g)
+  pickUpFloor(g)
 }
 
 /** The way from the hero to the stairs, around the foe; null when the foe cuts it. */
@@ -556,11 +561,11 @@ const remember = (g: Game) => {
 }
 
 /** A nemesis slain at last: a trophy of Epic or better, half again a champion's gold, and it is gone. */
-const trophy = (g: Game, n: Nemesis) => {
+const trophy = (g: Game, n: Nemesis, at: Pos) => {
   const item = makeItem(g, 'epic', 2)
   const title = nemesisTitle(n)
   g.nemesis = null
-  say(g, stash(g, item) ? `${title} falls at last. Trophy: ${item.name} (${RARITY_NAME[item.rarity]}).` : `${title} falls at last. Your bag is full: the ${item.name} stays on the floor.`)
+  keepPrize(g, item, at, named => `${title} falls at last. Trophy: ${named}.`)
   g.toast = `${title} is slain!`
 }
 
@@ -625,10 +630,44 @@ const RARITY_RANK: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'l
 export const itemChance = (depth: number) => Math.min(55, 35 + depth)
 
 /** What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Rare or better. */
-/** An item found: into the bag, said, or left on the floor when the bag is full. */
-const stashOrLeave = (g: Game, item: Item) => {
+/** An item that will not fit in the bag, left where it fell (`at`), to be picked up once there is room. */
+const leaveOnFloor = (g: Game, item: Item, at: Pos) => {
+  g.floor = [...(g.floor ?? []), { x: at.x, y: at.y, item }]
+}
+
+/** An item found at `at`: into the bag, said; with the bag full, onto the floor there, said. */
+const stashOrLeave = (g: Game, item: Item, at: Pos) => {
   if (stash(g, item)) say(g, `Loot: ${item.name} (${RARITY_NAME[item.rarity]}).`)
-  else say(g, `Your bag is full. The ${item.name} stays on the floor.`)
+  else {
+    leaveOnFloor(g, item, at)
+    say(g, `Your bag is full. The ${item.name} lies where it fell.`)
+  }
+}
+
+/** A prize too good to leave lying (a trophy, a unique's or a boss's, the codex's, work's cache): into the bag, else sent to the
+ * stash in town while it has room, else onto the floor at `at`. Said by `said` with the item named, then where it went. */
+const keepPrize = (g: Game, item: Item, at: Pos, said: (named: string) => string) => {
+  const told = said(`${item.name} (${RARITY_NAME[item.rarity]})`)
+  if (stash(g, item)) say(g, told)
+  else if (g.stashed.length < STASH_SIZE) {
+    g.stashed = [...g.stashed, item]
+    say(g, `${told} Your bag is full: it waits in your stash in town.`)
+  } else {
+    leaveOnFloor(g, item, at)
+    say(g, `${told} Your bag and your stash are full: it lies where it fell.`)
+  }
+}
+
+/** Steps onto an item lying on the floor: picked up with room, said; still too full, said that it lies there. */
+const pickUpFloor = (g: Game) => {
+  const lying = (g.floor ?? []).find(f => f.x === g.x && f.y === g.y)
+  if (lying === undefined) return
+  if (!stash(g, lying.item)) {
+    say(g, `The ${lying.item.name} lies here; your bag is still full.`)
+    return
+  }
+  g.floor = (g.floor ?? []).filter(f => f !== lying)
+  say(g, `You pick up the ${lying.item.name} (${RARITY_NAME[lying.item.rarity]}).`)
 }
 
 /** What a kill drops besides gear (`killConsumable`), onto the belt; none on a barren depth. */
@@ -636,10 +675,10 @@ const dropConsumable = (g: Game, isBarren: boolean) => {
   const drop = isBarren ? undefined : killConsumable(g)
   if (drop === undefined) return
   const name = nameOf(drop.kind, drop.tier)
-  say(g, addToBelt(g, drop.kind, drop.tier) ? `Loot: ${name}.` : `Your belt is full. The ${name} stays on the floor.`)
+  say(g, addToBelt(g, drop.kind, drop.tier) ? `Loot: ${name}.` : `Your belt has no room for the ${name}.`)
 }
 
-const loot = (g: Game, isChampion = false) => {
+const loot = (g: Game, at: Pos, isChampion = false) => {
   const isBarren = modHere(g) === 'barren'
   dropConsumable(g, isBarren)
   // Good loot is never long in coming: the RARE_KILLS-th kill without any leaves a Rare at least.
@@ -655,15 +694,16 @@ const loot = (g: Game, isChampion = false) => {
     return
   }
   announce(g, item, isChampion ? g.log.at(-1)?.match(/^You slay the (.+)! \+/)?.[1] : undefined)
-  stashOrLeave(g, item)
+  stashOrLeave(g, item, at)
 }
 
 /** A boss's hoard: the best of three rolls, Rare at least (a big boss's Epic at least), and an Elixir; the way down opens. */
-const bossLoot = (g: Game, name: string, isBig = false) => {
-  say(g, addToBelt(g, 'health', 3) ? 'Loot: Elixir.' : 'Your belt is full. The Elixir stays on the floor.')
+const bossLoot = (g: Game, foe: Foe, isBig = false) => {
+  const name = foe.name
+  say(g, addToBelt(g, 'health', 3) ? 'Loot: Elixir.' : 'Your belt has no room for the Elixir.')
   // Half a big boss's Epics, by the depth and the world, are a piece of the hero's class's set.
   const item = isBig && hash(g.depth, g.world, 41) < SET_SHARE ? setPiece(g, setOf(g.cls)) : makeItem(g, isBig ? 'epic' : 'rare', 3)
-  stashOrLeave(g, item)
+  keepPrize(g, item, foe, named => `Loot: ${named}.`)
   if (item.rarity !== 'legendary' && item.rarity !== 'epic') g.toast = `The ${name} falls: ${item.name}. The way down is open.`
   else announce(g, item)
 }
@@ -697,15 +737,15 @@ const killPay = (g: Game, foe: Foe) => {
 const spoils = (g: Game, foe: Foe) => {
   if (foe.boss === true) {
     g.bossSlain = g.depth
-    bossLoot(g, foe.name, foe.big !== undefined)
+    bossLoot(g, foe, foe.big !== undefined)
     announceFork(g)
-  } else if (foe.nemesis === true && g.nemesis !== null) trophy(g, g.nemesis)
+  } else if (foe.nemesis === true && g.nemesis !== null) trophy(g, g.nemesis, foe)
   else if (foe.unique !== undefined) {
     g.uniquesSlain = [...g.uniquesSlain, bandOf(g.depth)]
     const item = makeItem(g, 'epic', 2)
-    say(g, stash(g, item) ? `${foe.name} is no more. It leaves ${item.name} (${RARITY_NAME[item.rarity]}).` : `${foe.name} is no more. Your bag is full: the ${item.name} stays on the floor.`)
+    keepPrize(g, item, foe, named => `${foe.name} is no more. It leaves ${named}.`)
     g.toast = `${foe.name} slain!`
-  } else loot(g, foe.champion !== undefined)
+  } else loot(g, foe, foe.champion !== undefined)
 }
 
 /** The foe slain: paid, the class's and the quest's part, its spoils, and a level if it came. */
@@ -921,6 +961,8 @@ const descend = (g: Game) => {
     return
   }
   const fork = forkTier(g)
+  const behind = g.floor?.length ?? 0
+  if (behind > 0) say(g, `You leave ${behind === 1 ? 'an item' : `${behind} items`} on the floor behind you.`)
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
   g.hp = Math.min(g.maxHp, g.hp + Math.ceil(g.maxHp / 4))
   if (g.depth > g.deepest) {
@@ -1061,11 +1103,11 @@ const shrine = (g: Game) => {
   g.toast = `Shrine: you will wake on depth ${g.depth}.`
 }
 
-/** Found by work: an item of `atLeast` or better, best of two rolls, into the bag. */
+/** Found by work: an item of `atLeast` or better, best of two rolls, kept as a prize is. */
 const cache = (g: Game, said: string, atLeast: Rarity) => {
   say(g, said)
   const item = makeItem(g, atLeast, hasTalent(g, 'shipIt') ? 4 : 2)
-  stashOrLeave(g, item)
+  keepPrize(g, item, g, named => `Loot: ${named}.`)
   g.toast = `${RARITY_NAME[item.rarity]}! ${item.name}`
 }
 
@@ -1255,6 +1297,8 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   temper: g => say(g, 'The smith is in town.'),
   store: g => say(g, 'Your stash is in town.'),
   fortune: g => say(g, 'The mystic is in town.'),
+  gamble: g => say(g, 'The villager is in town.'),
+  tradeIn: g => say(g, 'The guard is in town.'),
   claim: g => say(g, 'The elder is in town.'),
   pet: g => say(g, 'The dog is in town.'),
   retrieve: g => say(g, 'Your stash is in town.'),
@@ -1403,6 +1447,61 @@ const mystic = (g: Game) => {
     g.fortune = { kind, depth: g.depth }
     say(g, `The mystic reads your fortune for ${cost} gold: ${FORTUNE_SAID[kind]} until you change depth.`)
   }
+}
+
+/** The villager's sealed pack: its price, by the deepest depth reached, about two and a half times what it fetches. */
+export const gambleCost = (g: Pick<Game, 'deepest'>) => 50 + 12 * g.deepest
+
+/** Buys the villager's sealed pack: an item of Uncommon or better, rolled as a drop is, into the bag; with no room for
+ * it nothing is paid, said. */
+const gamble = (g: Game) => {
+  const cost = gambleCost(g)
+  if (g.gold < cost) {
+    say(g, `The villager: "A sealed pack is ${cost} gold. No peeking."`)
+    return
+  }
+  const item = makeItem(g, 'uncommon')
+  if (!stash(g, item)) {
+    say(g, 'The villager: "Make room in your bag first."')
+    return
+  }
+  g.gold -= cost
+  announce(g, item)
+  say(g, `You pay the villager ${cost} gold and open the pack: ${item.name} (${RARITY_NAME[item.rarity]}).`)
+}
+
+/** The tiers the guard takes three of for one of the next, lowest first. */
+const TRADED: readonly Rarity[] = ['common', 'uncommon', 'rare']
+
+/** The three bag pieces the guard would take: of the lowest tier with three to spare (not locked), those marked junk
+ * first, then the cheapest; none when no tier has three. */
+export const tradeInOf = (g: Pick<Game, 'bag'>): Item[] => {
+  for (const tier of TRADED) {
+    const spare = g.bag.filter(i => i.rarity === tier && i.locked !== true)
+    if (spare.length >= 3) return [...spare].sort((a, b) => Number(b.junk === true) - Number(a.junk === true) || priceOf(a) - priceOf(b)).slice(0, 3)
+  }
+  return []
+}
+
+/** The guard's trade: three spare pieces of a tier for one of the next tier or better from the armory, into the bag;
+ * with no room for it there, the three are given back. */
+const tradeIn = (g: Game) => {
+  const three = tradeInOf(g)
+  if (three.length === 0) {
+    say(g, 'The guard: "Bring me three spare pieces of a kind, and the armory has better."')
+    return
+  }
+  const tier = three[0]!.rarity
+  const before = { bag: g.bag, cursor: g.cursor }
+  for (const i of three) take(g, i.id)
+  const item = makeItem(g, RARITY_RANK[RARITY_RANK.indexOf(tier) + 1]!)
+  if (!stash(g, item)) {
+    Object.assign(g, before)
+    say(g, 'The guard: "No room in your bag for what I would give you."')
+    return
+  }
+  announce(g, item)
+  say(g, `The guard takes your ${three.map(i => i.name).join(', ')} and hands you ${item.name} (${RARITY_NAME[item.rarity]}).`)
 }
 
 /** How many items the town stash holds. */
@@ -1581,6 +1680,8 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   temper: (g, a) => temper(g, a.slot),
   store: g => store(g),
   fortune: g => mystic(g),
+  gamble: g => gamble(g),
+  tradeIn: g => tradeIn(g),
   claim: g => elder(g),
   pet: g => {
     g.petted += 1
@@ -1626,7 +1727,7 @@ const paySets = (g: Game, was: Codex, now: Codex) => {
   const made = CODEX_SETS.filter(s => s.count(was) < s.of && s.count(now) >= s.of)
   for (const s of made) {
     const item = makeItem(g, s.prize, 2)
-    say(g, stash(g, item) ? `${s.said}. The codex pays: ${item.name} (${RARITY_NAME[item.rarity]}).` : `${s.said}. Your bag is full: the ${item.name} stays on the floor.`)
+    keepPrize(g, item, g, named => `${s.said}. The codex pays: ${named}.`)
     g.toast = `${s.said}!`
   }
   return made.length > 0

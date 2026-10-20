@@ -140,6 +140,8 @@ export type Game = {
   seen: string
   /** Cell ids on this depth whose gold, potion or trap is used up. */
   taken: number[]
+  /** Items lying on this depth where they fell when the bag was full, picked up by stepping on them with room. */
+  floor?: { x: number; y: number; item: Item }[]
   /** The tiles the last action stepped through, in order: what the pane animates. */
   walked: { x: number; y: number }[]
   hp: number

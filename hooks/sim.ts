@@ -2,7 +2,7 @@
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
 import type { Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
-import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, keptChoice, onToolStart, reforgeCost, sightOf, threat } from './game'
+import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same } from './map'
@@ -76,6 +76,10 @@ export type SimStats = {
   frameMs: number[]
   questsDone: number
   fortunes: number
+  /** Sealed packs bought from the villager. */
+  gambles: number
+  /** Three pieces traded in to the guard for one better. */
+  tradeIns: number
   /** Bosses risen, slain, and deaths to one. */
   bossesMet: number
   bossesSlain: number
@@ -187,14 +191,22 @@ const mendInTown = (g: Game): Action | undefined => {
 
 /**
  * To the elder for a quest, or to be paid for one done (now and then, so a full bag cannot hold the hero there); with
- * gold to spare, a potion when the belt runs low on healing, and a fortune now and then.
+ * gold to spare, a potion when the belt runs low on healing, a fortune now and then, and the town's deals.
  */
 const errands = (g: Game, d: Dice): Action | undefined => {
   if ((g.quest === null || g.quest.have >= g.quest.need) && d(2) === 1) return { kind: 'goto', ...TOWN_SPOTS.elder }
   if (g.gold >= SHOP_PRICES.health1 && countOf(g.belt[slotOf('health')]) < 2) return { kind: 'buy', ware: 'health1' }
   const canAffordFortune = g.fortune === null && g.gold >= fortuneCost(g) + 2 * SHOP_PRICES.health1
   if (canAffordFortune && g.panel === 'mystic') return { kind: 'fortune' }
-  return canAffordFortune && d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.mystic } : undefined
+  if (canAffordFortune && d(3) === 1) return { kind: 'goto', ...TOWN_SPOTS.mystic }
+  return deals(g, d)
+}
+
+/** Three spare pieces to the guard for one better; with three packs' gold, a pack from the villager. */
+const deals = (g: Game, d: Dice): Action | undefined => {
+  if (tradeInOf(g).length === 3) return g.panel === 'guard' ? { kind: 'tradeIn' } : d(2) === 1 ? { kind: 'goto', ...TOWN_SPOTS.guard } : undefined
+  if (g.gold < 3 * gambleCost(g)) return undefined
+  return g.panel === 'villager' ? { kind: 'gamble' } : d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.villager } : undefined
 }
 
 /** At the smith, with gold to spare: the cheapest tempering, now and then a reforge of the weapon. */
@@ -338,8 +350,9 @@ function* session(g: () => Game, d: (n: number) => number): Generator<Action> {
 }
 
 /** A click on the hero explores; any other ends on its tile, or says why not: refused, already there, stopped by a foe, a fight, a death, the stairs, or in town a visit. */
-const CLICK_EXPLAINED = /^You can't get there\.|^You are already there\.|blocks your way|^You (CRITICALLY )?hit |^You slay |^You draw on the fallen |strikes you|^You were slain|descend to depth|^The healer |^You step back through the portal|^Your stash holds |^The merchant |^The smith |^The elder[: ]|^The mystic[: ]|^The guard|^A villager |^The dog /
-const isUnexplainedClick = (r: StepRecord) =>
+const CLICK_EXPLAINED = /^You can't get there\.|^You are already there\.|blocks your way|^You (CRITICALLY )?hit |^You slay | darts aside\.$| fades into the dark|shield turns your blow\.$|^You swing at the darkness\.|^You draw on the fallen |strikes you|^You were slain|descend to depth|^The healer |^You step back through the portal|^Your stash holds |^The merchant |^The smith |^The elder[: ]|^The mystic[: ]|^The guard|^A villager |^The dog /
+/** A click that ended neither on its tile nor with a line saying why: what the simulator counts as a bug. */
+export const isUnexplainedClick = (r: StepRecord) =>
   r.action.kind === 'goto' && (r.action.x !== r.from.x || r.action.y !== r.from.y) && (r.hero.x !== r.action.x || r.hero.y !== r.action.y) && !r.said.some(l => CLICK_EXPLAINED.test(l))
 
 /**
@@ -550,6 +563,8 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight',
     tempered: count(records, /^The smith tempers /),
     questsDone: count(records, /^The elder pays you /),
     fortunes: count(records, /^The mystic reads your fortune /),
+    gambles: count(records, /^You pay the villager /),
+    tradeIns: count(records, /^The guard takes your /),
     bossesMet: count(records, / rises to bar the way down!$/),
     bossesSlain: count(records, /^You slay the [\w ]+ overlord!/),
     bossDeaths: count(records, /^You were slain by the [\w ]+ overlord /),

@@ -52,7 +52,8 @@ export const logOverlay = (g: Game): OverlayBox[] => {
   const all = logRuns(g, LOG_KEPT).map(r => rowsOf(r.text).map((text): Run[] => [r.dim === true ? { text, dim: true } : { text }]))
   const fits = all.reduce((n, rows) => n + rows.length, 0) <= LOG_KEPT
   const shown = fits ? all : newestWhole(all, LOG_KEPT - 1)
-  const note: Run[][] = fits ? [] : [[{ text: `${all.length - shown.length} earlier lines do not fit here.`, dim: true }]]
+  const left = all.length - shown.length
+  const note: Run[][] = left === 0 ? [] : [[{ text: left === 1 ? '1 earlier line does not fit here.' : `${left} earlier lines do not fit here.`, dim: true }]]
   const lines = all.length === 0 ? [[{ text: 'Nothing has happened yet.', dim: true }]] : [...note, ...shown.flat()]
   return [{ role: 'about', x: 2, y: WINDOW_TOP / 2 + 1, w: BOX_W, h: lines.length + 2, border: SURFACE.frame, lines }]
 }

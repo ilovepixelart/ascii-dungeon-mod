@@ -63,3 +63,12 @@ test('a word longer than a row of the log window wraps onto the next, every char
   expect(rows.map(r => r.length)).toEqual([97, 97, 97, 9])
   expect(rows.join('')).toBe(word)
 })
+
+test('the log window\'s note counts in words that agree, and says nothing when no earlier line is left out', async () => {
+  const rows = (log: string[]) => logOverlay({ ...logged(0), log, fresh: 1 })[0]!.lines.map(l => l.map(r => r.text).join(''))
+  // One earlier line of 29 rows' worth, one newest of 2: the newest whole, one left out.
+  const word = (n: number) => Array.from({ length: n }, () => 'abcdefghi').join(' ')
+  expect(rows([word(9 * 29), word(19)])[0]).toBe('1 earlier line does not fit here.')
+  // One line alone too long for the box: no earlier line to count.
+  expect(rows([word(9 * 40)])[0]!.startsWith('abcdefghi')).toBe(true)
+})

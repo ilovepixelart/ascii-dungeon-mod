@@ -6,7 +6,7 @@ import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, 
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same } from './map'
-import type { Level, Pos } from './map'
+import type { Level, Pos, Room } from './map'
 import { violations } from './invariants'
 import { workOf } from './work'
 import type { GitOperation } from './work'
@@ -392,7 +392,12 @@ export const sightBreaks = (before: Game, next: Game): Pos[] => {
   const reach = sightOf(next)
   const near = (c: Pos) => path.some(q => Math.max(Math.abs(q.x - c.x), Math.abs(q.y - c.y)) <= reach)
   const beside = (q: Pos) => [[1, 0], [-1, 0], [0, 1], [0, -1]].flatMap(([dx, dy]) => roomAt(level, { x: q.x + dx!, y: q.y + dy! }) ?? [])
-  const roomsStoodIn = new Set(path.flatMap(q => roomAt(level, q) ?? beside(q)))
+  // A room sharing floor with one stood in, or with one of those (a big boss's arena and the rooms it grew over), is
+  // the same space.
+  const stood = path.flatMap(q => roomAt(level, q) ?? beside(q))
+  const sharesFloor = (a: Room, b: Room) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+  for (let i = 0; i < stood.length; i += 1) for (const r of level.rooms) if (!stood.includes(r) && sharesFloor(stood[i]!, r)) stood.push(r)
+  const roomsStoodIn = new Set(stood)
   return shown.filter(c => {
     const room = roomAt(level, c)
     if (room !== undefined) return !roomsStoodIn.has(room) && !near(c)

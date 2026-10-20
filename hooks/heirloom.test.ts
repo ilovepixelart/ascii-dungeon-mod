@@ -1,15 +1,14 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { Game, Item } from '../types'
+import type { Game, Item, Slot } from '../types'
 import { apply, whyNotRetire } from './game'
 import { plainHero } from './fixtures'
-import { BASES, LEGENDARIES, PREFIXES, SLOTS, SUFFIXES, heirloomOf, plainItem } from './items'
-import { retireBoxes, retireButtons, retireGesture, retireHeight, retireLines, retirePixels } from './retirewindow'
+import { BASES, LEGENDARIES, PREFIXES, RARITY_COLOR, SLOTS, SUFFIXES, heirloomOf, plainItem } from './items'
+import { retireBoxes, retireButtons, retireGesture, retireHeight, retireLines, retireOverlay, retirePixels } from './retirewindow'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { GOLD_INK } from './pieces'
-import { MAP_H } from './map'
-import { PX, textMask } from './pixelart'
+import { textMask } from './pixelart'
 import { EMPTY_CODEX } from './codex'
 
 const piece = (key: string, over: Partial<Item> = {}): Item => ({ ...plainItem({ nextId: 700 }, key, 'rare'), ...over })
@@ -133,18 +132,19 @@ describe('the retire window', () => {
   const helm = piece('steelHelm', { name: 'Steel Helm of Fast Feedback' })
   const g = veteran(helm, { panel: 'retire' })
   const IDLE = { slot: null }
-  const TELL = ['EVERY NEW HERO STARTS', 'WEARING IT WITH ITS POWER', 'KEPT AND ITS STATS PLAIN']
+  const said = (x: Game, ui: { slot: Slot | null }) => retireOverlay(x, ui)[0]!.lines.map(l => l.map(r => r.text).join(''))
 
-  test('says who the hero was, asks for the heirloom, names the chosen piece and what passing it down means', async () => {
-    const texts = retireLines(g, { slot: 'helm' }).map(l => l.text)
-    expect(texts).toEqual(['LEVEL 14 KNIGHT', 'DEEPEST 12', '1 BIG BOSS', 'CHOOSE AN HEIRLOOM', 'STEEL HELM OF FAST FEEDBACK', ...TELL])
-    expect(retireLines({ ...g, bossSlain: 30 }, IDLE)[2]!.text).toBe('3 BIG BOSSES')
+  test('asks for the heirloom; the box names the chosen piece, what passing it down means and who the hero was', async () => {
+    expect(retireLines().map(l => l.text)).toEqual(['CHOOSE AN HEIRLOOM'])
+    expect(said(g, { slot: 'helm' })).toEqual(['Steel Helm of Fast Feedback', 'Every new hero starts wearing it, its power kept and its stats plain.', 'Level 14 Knight, deepest 12, 1 big boss.'])
+    expect(retireOverlay(g, { slot: 'helm' })[0]!.lines[0]![0]!.color).toBe(RARITY_COLOR[helm.rarity])
+    expect(said({ ...g, bossSlain: 30 }, IDLE).at(-1)).toBe('Level 14 Knight, deepest 12, 3 big bosses.')
   })
 
   test('a box a worn piece; a click on one chooses it, and the first worn is chosen before any', async () => {
     const boxes = retireBoxes(g, IDLE)
     expect(boxes.map(b => b.slot)).toEqual(['weapon', 'helm'])
-    expect(retireLines(g, IDLE)[4]!.text).toBe(g.gear.weapon!.name.toUpperCase())
+    expect(said(g, IDLE)[0]).toBe(g.gear.weapon!.name)
     expect(retireGesture(g, IDLE, tap({ x: boxes[1]!.x + 3, y: boxes[1]!.y + 4 }))).toEqual({ ui: { slot: 'helm' }, actions: [] })
   })
 
@@ -165,13 +165,13 @@ describe('the retire window', () => {
     expect(lit(g)).toBe(true)
   })
 
-  test('fits over the map wearing all seven pieces with the longest name a piece can have', async () => {
+  test('fits in 40 rows wearing all seven pieces with the longest name a piece can have', async () => {
     const widest = (names: readonly string[]) => [...names].sort((a, b) => textMask(b.toUpperCase())[0]!.length - textMask(a.toUpperCase())[0]!.length)[0]!
     const affixed = [PREFIXES, BASES, SUFFIXES].map(list => widest(list.map(x => x.name))).join(' ')
     const longest = widest([affixed, ...LEGENDARIES.map(l => l.name)])
     const full = { ...g, gear: Object.fromEntries(SLOTS.map((slot, i) => [slot, { ...piece('ring', { id: 800 + i, slot }), name: longest }])) }
     expect(retireBoxes(full, IDLE).length).toBe(7)
-    expect(retireHeight(full, IDLE)).toBeLessThanOrEqual(MAP_H * PX)
+    expect(retireHeight(full, IDLE)).toBeLessThanOrEqual(80)
     expect(retirePixels(full, IDLE).length).toBe(retireHeight(full, IDLE))
     const last = retireBoxes(full, IDLE).at(-1)!
     expect(last.x + 13).toBeLessThanOrEqual(WINDOW_W)

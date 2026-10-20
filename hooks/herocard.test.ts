@@ -5,8 +5,6 @@ import { CARD_W, cardHead, cardPixels, cardText, svgOf } from './herocard'
 import { plainHero } from './fixtures'
 import { plainItem } from './items'
 import { CARD_KEY, codexCardRect, codexGesture, codexHeight, codexPixels } from './codexwindow'
-import { MAP_H } from './map'
-import { PX } from './pixelart'
 import { missingGlyphs } from './pixelart'
 import { WINDOW_W } from './window'
 
@@ -90,20 +88,22 @@ describe('as an SVG', () => {
 
 describe('Card in the codex', () => {
   const g = { ...hero(), panel: 'codex' as const }
-  const tap = (x: number, y: number) => codexGesture(g, { type: 'release', from: { x: x + 0.5, y: y / 2 + 0.25 }, at: { x: x + 0.5, y: y / 2 + 0.25 }, button: 'left' })
+  const FINDS = { page: 'finds' as const }
+  const tap = (x: number, y: number) => codexGesture(g, FINDS, { type: 'release', from: { x: x + 0.5, y: y / 2 + 0.25 }, at: { x: x + 0.5, y: y / 2 + 0.25 }, button: 'left' })
 
-  test('a click on it asks for the card, and only that', async () => {
-    const r = codexCardRect(g)
-    expect(tap(r.x + 2, r.y + 4)).toEqual({ actions: [], isCard: true })
+  test('on Finds a click on it asks for the card, and only that; Foes has none', async () => {
+    const r = codexCardRect(FINDS)!
+    expect(tap(r.x + 2, r.y + 4)).toEqual({ ui: FINDS, actions: [], isCard: true })
+    expect(codexCardRect({ page: 'foes' })).toBeUndefined()
     expect(tap(r.x - 4, r.y + 4).isCard).toBe(false)
   })
 
-  test('it sits inside the window, which still fits over the map', async () => {
-    const r = codexCardRect(g)
-    expect([r.x + r.w <= WINDOW_W, r.y + r.h <= codexHeight(g)]).toEqual([true, true])
-    expect(codexHeight(g)).toBeLessThanOrEqual(MAP_H * PX)
+  test('it sits inside the window, which fits in 40 rows', async () => {
+    const r = codexCardRect(FINDS)!
+    expect([r.x + r.w <= WINDOW_W, r.y + r.h <= codexHeight(g, FINDS)]).toEqual([true, true])
+    expect(codexHeight(g, FINDS)).toBeLessThanOrEqual(80)
     expect(CARD_KEY).toEqual({ key: 'K', label: 'CARD' })
     // The button's gold key letter is drawn where the button is.
-    expect(codexPixels(g).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + r.w).includes('#ffd34d'))).toBe(true)
+    expect(codexPixels(g, FINDS).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + r.w).includes('#ffd34d'))).toBe(true)
   })
 })

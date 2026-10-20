@@ -1,4 +1,4 @@
-// The pixel window every menu is drawn in: the title bar (title, gold, close box), section labels, the body below,
+// The pixel window every menu is drawn in: the title bar (title or tabs, gold, close box), the body below,
 // and text boxes laid over it where they hide the least. Pure: a window says what it holds, this draws and places it.
 import type { Run } from './game'
 import { GRID, art, canvas, digits, fill, frame, put } from './canvas'
@@ -6,40 +6,72 @@ import type { Canvas } from './canvas'
 import { textMask } from './pixelart'
 import type { Pos } from './map'
 import { coin } from './pieces'
+import { INK, SURFACE } from './ui/tokens'
 
 /** Every window is this many pixels (and columns) wide: one pane width shows them all, or none. */
 export const WINDOW_W = 105
-/** The title bar's height, the labels' row under it; the body starts at BODY_TOP. */
+/** The title bar's height. */
 export const HEAD_H = 11
-export const LABEL_Y = HEAD_H + 2
-export const BODY_TOP = HEAD_H + 9
-/** Without labels the body starts just under the title bar, on an even row so text boxes stay on whole cells. */
-const BARE_TOP = HEAD_H + 3
+/** Where a window's body starts: just under the title bar, on an even row so text boxes stay on whole cells. */
+export const WINDOW_TOP = HEAD_H + 3
 export const TITLE_X = 3
 export const TITLE_Y = 3
-export const TITLE_INK = '#e8e4dc'
-export const LABEL_INK = '#8a8494'
-const HEAD_BG = '#15131b'
-const GOLD_INK = '#ffd34d'
+export const TITLE_INK = INK.text
+export const LABEL_INK = INK.dim
+const HEAD_BG = SURFACE.titleBar
+const GOLD_INK = INK.gold
 /** The gold this far left of the window's right edge. */
 const GOLD_FROM_RIGHT = 41
 /** The close box (x, y, w, h) at the title bar's right end of a window `width` wide. */
 /** The close box: 9 px square under the title bar's line, its X centred with a pixel all round. */
 export const closeBoxOf = (width: number) => [width - 10, 1, 9, 9] as const
 export const CLOSE_BOX = closeBoxOf(WINDOW_W)
-export const CLOSE_INK = '#ff5a4f'
-const CLOSE_BG = '#2a1e24'
-const CLOSE_EDGE = '#6b6258'
+export const CLOSE_INK = INK.danger
+const CLOSE_BG = SURFACE.closeGround
+const CLOSE_EDGE = SURFACE.frame
 /** A text box's fill: the click layer writes its text on the same color, inside the frame. */
-export const POPOVER_BG = '#0e0d13'
+export const POPOVER_BG = SURFACE.popover
 
 /** A rectangle in window pixels. */
 export type Rect = { x: number; y: number; w: number; h: number }
-export type Label = { text: string; x: number }
-/** What a window shows around its body: its title, the gold when it matters there, and a label over each section. */
-export type Chrome = { title: string; gold?: number; labels: readonly Label[] }
+/** A tab in a window's title bar: its label, and a gold mark beside it while what it opens waits on the player. */
+export type Tab = { label: string; isMarked?: boolean }
+/** What a window shows around its body: its title (or, with tabs, the tabs in its place, `chosen` the one shown), and
+ * the gold when it matters there. */
+export type Chrome = { title: string; gold?: number; tabs?: { items: readonly Tab[]; chosen: number } }
 
 export const isInside = (p: Pos, x: number, y: number, w: number, h: number) => p.x >= x && p.x < x + w && p.y >= y && p.y < y + h
+
+const TAB_GAP = 5
+const TAB_BG = SURFACE.tab
+const textW = (text: string) => textMask(text)[0]?.length ?? 0
+/** A row of tabs' height: the title bar's, less its line. */
+export const TABS_H = HEAD_H - 1
+/** Each tab's place in a row of tabs whose top is at y (the title bar's, 0, unless said), in window pixels: its label
+ * and room round it, what a click on it covers. */
+export const tabRects = (tabs: readonly Tab[], y = 0): Rect[] => {
+  let x = TITLE_X
+  return tabs.map(t => {
+    const r = { x: x - 2, y, w: textW(t.label) + 4, h: TABS_H }
+    x += textW(t.label) + TAB_GAP
+    return r
+  })
+}
+
+/** A row of tabs at y: the chosen one lit on a lighter ground with a gold rule under it, the others dim; a marked
+ * tab's gold dot at its top right, above the end of its label. In the title bar, or a window's pages in its body. */
+export const tabRow = (c: Canvas, items: readonly Tab[], chosen: number, y = 0) => {
+  tabRects(items, y).forEach((r, i) => {
+    const t = items[i]!
+    const isOn = i === chosen
+    if (isOn) {
+      fill(c, r.x, r.y, r.w, r.h, TAB_BG)
+      fill(c, r.x, r.y + r.h - 1, r.w, 1, GOLD_INK)
+    }
+    word(c, t.label, r.x + 2, r.y + TITLE_Y, isOn ? TITLE_INK : LABEL_INK)
+    if (t.isMarked === true) fill(c, r.x + r.w - 2, r.y + 1, 2, 2, GOLD_INK)
+  })
+}
 
 /** Words in the pixel font, their top-left at x, y. */
 export const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>
@@ -48,18 +80,16 @@ export const word = (c: Canvas, text: string, x: number, y: number, ink: string)
 /** Text as the font can draw it: without the full stops and commas it lacks. */
 export const drawable = (text: string) => text.replace(/[.,]/g, '')
 
-/** Where a window's body starts: below its labels, or just under the title bar when it has none. */
-export const bodyTop = (chrome: Chrome) => (chrome.labels.length > 0 ? BODY_TOP : BARE_TOP)
-
-/** A window: its title bar and labels, then the body's pixel rows laid in at `bodyTop`, as tall as the body. */
+/** A window: its title bar, then the body's pixel rows laid in at WINDOW_TOP, as tall as the body. */
 export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[], width = WINDOW_W): Canvas => {
-  const top = bodyTop(chrome)
+  const top = WINDOW_TOP
   const c = canvas(width, top + body.length)
   // Clear of the title in a narrow window.
   const GOLD_X = Math.max(TITLE_X + (textMask(chrome.title)[0]?.length ?? 0) + 5, width - GOLD_FROM_RIGHT)
   fill(c, 0, 0, width, HEAD_H - 1, HEAD_BG)
   fill(c, 0, HEAD_H - 1, width, 1, GRID)
-  word(c, chrome.title, TITLE_X, TITLE_Y, TITLE_INK)
+  if (chrome.tabs === undefined) word(c, chrome.title, TITLE_X, TITLE_Y, TITLE_INK)
+  else tabRow(c, chrome.tabs.items, chrome.tabs.chosen)
   if (chrome.gold !== undefined) {
     coin(c, GOLD_X, TITLE_Y)
     digits(c, String(chrome.gold), GOLD_X + 5 + String(chrome.gold).length * 4, TITLE_Y + 4, GOLD_INK)
@@ -68,7 +98,6 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   fill(c, cx, cy, cw, ch, CLOSE_BG)
   frame(c, cx, cy, cw, ch, CLOSE_EDGE)
   art(c, ['w...w', '.w.w.', '..w..', '.w.w.', 'w...w'], cx + 2, cy + 2, CLOSE_INK)
-  for (const l of chrome.labels) word(c, l.text, l.x, LABEL_Y, LABEL_INK)
   body.forEach((row, y) => row.forEach((p, x) => put(c, x, top + y, p)))
   return c
 }

@@ -1,47 +1,52 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren, RenderElement, RenderInput, ToolCallInput } from 'claude-code'
 
-import type { Game, HeroClass } from '../types'
+import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK } from './town'
 import { BIG_BOSSES, STASH_SIZE, UNIQUES, canRetire, firstCodex, whyNotRetire, priceOfWare, alongTheWay, keptChoice, apply, isOnlyAWalk, classAbout, fortuneCost, newGame, normalize, onToolStart, questLine, questReward, reforgeCost, threat } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
-import { beltMenuBox, hudBoxes, hudCells, hudGesture, hudLayout } from './hud'
+import { beltMenuBox, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels } from './hud'
 import type { BeltMenu } from './hud'
-import { deathGesture, deathHeight, deathOverlay, deathPixels, killerName } from './death'
-import { recapGesture, recapHeight, recapPixels } from './recapwindow'
-import { codexGesture, codexHeight, codexPixels } from './codexwindow'
+import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
+import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
+import { CODEX_UI, codexGesture, codexHeight, codexHot, codexOverlay, codexPixels } from './codexwindow'
+import type { CodexUi } from './codexwindow'
 import { cardPixels, cardText, svgOf } from './herocard'
-import { retireGesture, retireHeight, retirePixels } from './retirewindow'
-import { TALENT_UI, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
+import { retireGesture, retireHeight, retireHot, retireOverlay, retirePixels } from './retirewindow'
+import { TALENT_UI, talentGesture, talentHeight, talentHot, talentOverlay, talentPixels } from './talentwindow'
 import type { TalentUi } from './talentwindow'
 import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
-import { deepGesture, deepHeight, deepPixels } from './deepwindow'
+import { deepGesture, deepHeight, deepHot, deepOverlay, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
-import { SETTINGS_H, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsPixels, soundFrom, volumeShare } from './settings'
-import { HELP_ROWS, helpGesture, helpHeight, helpPixels } from './helpwindow'
+import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsHot, settingsPixels, soundFrom, volumeShare } from './settings'
+import type { SettingsUi } from './settings'
+import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import type { SoundSettings } from './settings'
-import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenCells, itemCard } from './inventory'
+import { INV_H, INV_TOP, INV_W, beltLabel, inventoryHot, inventoryScreenPixels, itemCard } from './inventory'
 import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
 import type { BagUi, Gesture } from './bagui'
-import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopOverlay, shopPixels, whyNot } from './shop'
+import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverlay, shopPixels, whyNot } from './shop'
 import type { ShopUi } from './shop'
-import type { OverlayBox } from './window'
+import { closeBoxOf, pixel } from './window'
+import type { OverlayBox, Rect } from './window'
+import { hoveredRect, lightUp } from './ui/kit'
+import { heroTabsHot } from './herotabs'
 import { canvasCells } from './canvas'
-import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
+import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeHot, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
 import type { ForgeUi } from './forge'
-import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
+import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
-import { UNDER_WINDOW, fitNote, sizeNote } from './panesize'
-import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
+import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
+import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
 import { openingGame } from './save'
-import { SHEET_H, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
-import { COMPACT_H, COMPACT_W, compactGesture, compactOverlay, compactPixels } from './compact'
-import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkOverlay, talkPixels } from './talk'
+import { SHEET_H, sheetGesture, sheetHot, sheetOverlay, sheetPixels } from './sheet'
+import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compactPixels } from './compact'
+import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
 import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
 import { MAP_H, MAP_W, same } from './map'
@@ -108,8 +113,40 @@ let chestUi: ChestUi = CHEST_UI_IDLE
 let startUi: StartUi | null = null
 /** The card chosen in the talent window, while it is open. */
 let talentUi: TalentUi = TALENT_UI
+/** The codex's page. */
+let codexUi: CodexUi = CODEX_UI
+/** The settings window's page. */
+let settingsUi: SettingsUi = SETTINGS_UI
 /** The how-it-plays window, open over whatever the pane shows: it closes back to that. */
 let isHelpOpen = false
+/** The pointer over a window, in its pixels, by the window's key; and what each window drawn last can be clicked on. */
+let hover: { key: string; at: Pos } | null = null
+const hotOf = new Map<string, readonly Rect[]>()
+/** What the hover lights in the window `key`: the clickable place under the pointer, if any. */
+const litIn = (key: string) => (hover?.key === key ? hoveredRect(hotOf.get(key) ?? [], hover.at) : undefined)
+const sameRect = (a: Rect | undefined, b: Rect | undefined) => a?.x === b?.x && a?.y === b?.y && a?.w === b?.w && a?.h === b?.h
+
+/** The pointer moved over a window (or left it): drawn again only when what it lights changes. */
+const onHover = ($: EngineInterface, element: string, at: Pos | null) => {
+  const key = element.replace(/-clicks$/, '')
+  const before = litIn(key)
+  hover = at === null ? null : { key, at: pixel(at) }
+  if (!sameRect(before, litIn(key))) $.ui.invalidate('ui.render')
+}
+
+/** The strip as Raster cells, what the pointer is over lit. */
+const stripCells = (g: Game, width: number, boxes: readonly OverlayBox[]) => {
+  const c = hudPixels(g, width, boxes)
+  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width), width, false) })
+}
+
+/** A window's clickable places with its close box (the strip has none); and its pixels with the one under the pointer lit. */
+const litWindow = (key: string, px: string[][], hot: readonly Rect[], width = INV_W, hasClose = true) => {
+  const [x, y, w, h] = closeBoxOf(width)
+  hotOf.set(key, hasClose ? [...hot, { x, y, w, h }] : hot)
+  const lit = litIn(key)
+  return lit === undefined ? px : lightUp(px, lit)
+}
 /** The pixel map's mounted size, which a repaint must match. */
 let mapSize: { columns: number; rows: number } | null = null
 /** Where the camera looks, in world pixels, and in which place: it holds still while the hero stays mid-view. */
@@ -860,9 +897,11 @@ const onRecapClick = async ($: EngineInterface, data: unknown) => actAll($, reca
 
 const onCodexClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
-  const outcome = codexGesture(g, data as Gesture)
+  const outcome = codexGesture(g, codexUi, data as Gesture)
+  codexUi = outcome.ui
   if (outcome.isCard) await saveCard($, g)
   await actAll($, outcome.actions)
+  $.ui.invalidate('ui.render')
 }
 
 /** The card's file name, in the player's Downloads (their home folder without one). */
@@ -887,7 +926,8 @@ const saveCard = async ($: EngineInterface, g: Game) => {
 
 const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
-  const outcome = settingsGesture(g, soundSettings, data as Gesture)
+  const outcome = settingsGesture(g, soundSettings, settingsUi, data as Gesture)
+  settingsUi = outcome.ui
   if (outcome.isHelp === true) isHelpOpen = true
   setSound($, g, outcome.sound)
   await actAll($, outcome.actions)
@@ -1103,18 +1143,26 @@ const settingsKeys = (p: Pane, isWindow = false) => {
     setSoundTo(nextSound(soundSettings, does))
     redraw()
   }
-  return [
+  const game = [
     <Button key="settings-new" label="New game..." hotkey="n" plain onPress={press({ kind: 'panel', panel: 'start' })} />,
     helpKey(p, isWindow ? 'h' : undefined),
-    <Button key="settings-view" label={VIEW_LABEL[g.zoom]} hotkey="v" plain onPress={press({ kind: 'zoom' })} />,
-    <Button key="settings-effects" label={soundSettings.effects ? 'Effects: on' : 'Effects: off'} hotkey="e" plain onPress={soundKey('effects')} />,
+    <Button key="settings-effects" label={soundSettings.effects ? 'Sound: on' : 'Sound: off'} hotkey="e" plain onPress={soundKey('effects')} />,
     <Button key="settings-music" label={soundSettings.music ? 'Music: on' : 'Music: off'} hotkey="m" plain onPress={soundKey('music')} />,
+    <Button key="settings-view" label={VIEW_LABEL[g.zoom]} hotkey="v" plain onPress={press({ kind: 'zoom' })} />,
     <Button key="settings-volume" label={`Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`} hotkey="l" plain onPress={soundKey('volume')} />,
-    orderKey('drink', 'd'),
-    orderKey('smoke', 'f'),
-    orderKey('leave', 'k'),
-    <Button key="settings-close" label="Close" plain onPress={press({ kind: 'panel', panel: 'settings' })} />,
   ]
+  const orders = [orderKey('drink', 'd'), orderKey('smoke', 'f'), orderKey('leave', 'k')]
+  const close = <Button key="settings-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'settings' })} />
+  if (!isWindow) return [...game, ...orders, close]
+  // The window's keys are its page's, and the other page.
+  const isGame = settingsUi.page === 'game'
+  const other = (
+    <Button key="settings-page" label={isGame ? 'Orders' : 'Game'} hotkey="p" plain onPress={() => {
+      settingsUi = { page: isGame ? 'orders' : 'game' }
+      redraw()
+    }} />
+  )
+  return [...(isGame ? game : orders), other, close]
 }
 
 /** Help: the how-it-plays window, over whatever is open. */
@@ -1128,11 +1176,10 @@ const helpClose = ({ Button, redraw }: Pane, hotkey?: string) => (
 /** The how-it-plays window as text: a line a rule, then where things are. */
 const textHelp = (p: Pane) => {
   const { Box, Text } = p
-  const said = (s: string) => s.charAt(0) + s.slice(1).toLowerCase()
   return (
     <Box flexDirection="column">
       <Text bold>How it plays: your coding plays the hero</Text>
-      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${said(r.when)}: ${r.does.toLowerCase()}.`}</Text>)}
+      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
       <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text>
       <Box columnGap={2}>{helpClose(p)}</Box>
     </Box>
@@ -1149,11 +1196,12 @@ const fitLine = (p: Pane, rows: number, under: number) => {
   return note === undefined ? undefined : <p.Text dimColor wrap="truncate-end">{note}</p.Text>
 }
 
-const pixelWindow = (p: Pane, key: string, height: number, px: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string) => {
+const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = []) => {
   const { Box, Text, Raster, Client } = p
+  const px = litWindow(key, drawn, hot)
   return (
     <Box flexDirection="column">
-      {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : 1))}
+      {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : HINT_ROWS))}
       <Box flexDirection="column" alignItems="center">
         <Box>
           {Raster !== undefined && <Raster key={key} columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px })} />}
@@ -1191,7 +1239,7 @@ const pixelBag = (p: Pane, l: Layout) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={inventoryScreenCells(g, bagUi.drag ?? undefined, popovers)} />}
+          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: popovers }} width={INV_W} height={rows} />
@@ -1203,9 +1251,9 @@ const pixelBag = (p: Pane, l: Layout) => {
       <Box marginTop={1} columnGap={2}>
         {bagActions(p)}
         <Button key="destroy" label={bagUi.menu?.confirm === true ? 'Destroy? again' : 'Destroy'} hotkey="d" plain onPress={destroyKey} />
-        <Button key="bag" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
+        <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
       </Box>
-      <Text dimColor>Click an item to compare it, again (or right-click) for its menu. Drag to move it, onto its slot to wear it.</Text>
+      <Text dimColor>Click an item to compare it, again (or right-click) for its menu; drag it onto its slot to wear it.</Text>
       {p.logTail()}
     </Box>
   )
@@ -1234,10 +1282,10 @@ const pixelShop = (p: Pane) => {
   const junk = junkValue(g)
   return (
     <Box flexDirection="column">
-      {fitLine(p, rows, UNDER_WINDOW + 1)}
+      {fitLine(p, rows, UNDER_WINDOW + HINT_ROWS)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: shopPixels(g, shopUi, boxes) })} />}
+          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes }} width={INV_W} height={rows} />
@@ -1246,14 +1294,14 @@ const pixelShop = (p: Pane) => {
         </Box>
       </Box>
       <Box marginTop={1} columnGap={2}>
-        <Button key="shop-buy" label={chosen === null ? 'Buy' : `Buy ${nameOf(wareOf(chosen).kind, wareOf(chosen).tier)}`} hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
+        <Button key="shop-buy" label="Buy" hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
         <Button key="shop-ware" label="Next ware" hotkey="w" plain onPress={showWare(nextWare(shopUi))} />
         <Button key="shop-sell" label="Sell" hotkey="s" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'sell' })} />
-        <Button key="shop-junk" label={junk.count === 0 ? 'Sell junk' : `Sell junk (${junk.count}, ${junk.coins} gold)`} hotkey="x" plain dimColor={junk.count === 0} onPress={onItem({ kind: 'sellJunk' })} />
-        <Button key="shop-undo" label={undoLabel(g)} hotkey="u" plain dimColor={whyNotBuyBack(g) !== undefined} onPress={onItem({ kind: 'buyBack' })} />
+        <Button key="shop-junk" label={junk.count === 0 ? 'Sell junk' : `Sell junk (${junk.count})`} hotkey="x" plain dimColor={junk.count === 0} onPress={onItem({ kind: 'sellJunk' })} />
+        <Button key="shop-undo" label="Undo sale" hotkey="u" plain dimColor={whyNotBuyBack(g) !== undefined} onPress={onItem({ kind: 'buyBack' })} />
         <Button key="shop-next" label="Next item" hotkey="n" plain onPress={onItem({ kind: 'cycle' })} />
         <Button key="shop-equip" label="Equip" hotkey="e" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'equip' })} />
-        <Button key="shop-close" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
+        <Button key="shop-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
       </Box>
       <Text dimColor>Click a ware or an item to see it, again (or right-click) for its menu.</Text>
       {p.logTail()}
@@ -1276,7 +1324,7 @@ const startScreen = (p: Pane) => {
     helpKey(p, 'h'),
     ...(isUnderWay(g) ? [<Button key="start-back" label="Back to your game" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'start' })} />] : []),
   ]
-  if (p.isWindowWide) return pixelWindow(p, 'start', startHeight(g, ui), startPixels(g, ui), startOverlay(g, ui), keys, 'Click a hero to choose, again (or Start) to begin.')
+  if (p.isWindowWide) return pixelWindow(p, 'start', startHeight(g, ui), startPixels(g, ui), startOverlay(g, ui), keys, 'Click a hero to choose, again (or Start) to begin.', startHot(g))
   return (
     <Box flexDirection="column">
       <Text bold>New game: choose your hero</Text>
@@ -1295,7 +1343,7 @@ const compactBag = (p: Pane) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: compactPixels(g, boxes) })} />}
+          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g), COMPACT_W) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes }} width={COMPACT_W} height={COMPACT_H / 2} />
@@ -1305,7 +1353,7 @@ const compactBag = (p: Pane) => {
       </Box>
       <Box marginTop={1} columnGap={2} flexWrap="wrap">
         {bagActions(p)}
-        <Button key="bag" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
+        <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
       </Box>
       <Text dimColor>Click an item to compare it, again for its menu; drag it to move it. Click what you wear to take it off.</Text>
     </Box>
@@ -1321,7 +1369,7 @@ const sheetWindow = (p: Pane) => {
     talentKey(p, 't'),
     deepKey(p, 'd'),
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
-  ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined)
+  ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined, [...sheetHot(g), ...heroTabsHot(g, 'sheet')])
 }
 
 /** Retire on the sheet: dimmed, and doing nothing, until the hero has slain a big boss. */
@@ -1345,18 +1393,26 @@ const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
   const chosen = fork === undefined ? undefined : g.marks?.[fork]
   return [
     ...(fork === undefined ? [] : pairOf(g.world, fork)).map((m, i) => (
-      <Button key={`deep-${m}`} label={`${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
+      <Button key={`deep-${m}`} label={isWindow ? MARKS[m].name : `${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
     )),
     <Button key="deep-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'deep' })} />,
   ]
 }
 
 /** The talents offered, a key each taking it; in the window Take for the chosen card, and Later; the window's own close. */
-const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
+const talentKeys = ({ g, Button, press, redraw }: Pane, isWindow: boolean) => {
   const offered = offer(g)
   const chosen = offered[Math.min(talentUi.chosen, offered.length - 1)]
+  // In the window a number chooses its card, as on the start screen, and Take takes it; as text each takes its own.
+  const choose = (i: number) => () => {
+    talentUi = { chosen: i }
+    redraw()
+  }
+  const windowKey = (t: Talent, i: number) => (
+    <Button key={`talent-${t}`} label={t === chosen ? `[${TALENTS[t].name}]` : TALENTS[t].name} hotkey={String(i + 1)} plain dimColor={t !== chosen} onPress={choose(i)} />
+  )
   return [
-    ...offered.map((t, i) => <Button key={`talent-${t}`} label={isWindow ? TALENTS[t].name : `${TALENTS[t].name}: ${TALENTS[t].does}`} hotkey={isWindow ? String(i + 1) : undefined} plain onPress={press({ kind: 'talent', talent: t })} />),
+    ...offered.map((t, i) => (isWindow ? windowKey(t, i) : <Button key={`talent-${t}`} label={`${TALENTS[t].name}: ${TALENTS[t].does}`} plain onPress={press({ kind: 'talent', talent: t })} />)),
     ...(isWindow && chosen !== undefined ? [<Button key="talent-take" label="Take" hotkey="t" plain onPress={press({ kind: 'talent', talent: chosen })} />] : []),
     <Button key="talent-close" label={offered.length > 0 ? 'Later' : 'Close'} hotkey={isWindow ? (offered.length > 0 ? 'l' : 'c') : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
   ]
@@ -1365,14 +1421,14 @@ const talentKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
 const retireWindow = (p: Pane) => {
   const { redraw, g, Button, press } = p
   const slot = chosenSlot(g, retireUi)
-  return pixelWindow(p, 'retire', retireHeight(g, retireUi), retirePixels(g, retireUi), [], [
+  return pixelWindow(p, 'retire', retireHeight(g, retireUi), retirePixels(g, retireUi), retireOverlay(g, retireUi), [
     <Button key="retire-go" label="Retire" hotkey="r" plain dimColor={slot === undefined || whyNotRetire(g, slot) !== undefined} onPress={slot === undefined ? () => undefined : press({ kind: 'retire', slot })} />,
     <Button key="retire-next" label="Next piece" hotkey="w" plain onPress={() => {
       retireUi = nextWorn(g, retireUi)
       redraw()
     }} />,
     <Button key="retire-back" label="Back" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
-  ], 'Click a piece you wear to pass it down.')
+  ], 'Click a piece you wear to pass it down.', retireHot(g, retireUi))
 }
 
 const forgeWindow = (p: Pane) => {
@@ -1387,8 +1443,8 @@ const forgeWindow = (p: Pane) => {
       forgeUi = nextWorn(g, forgeUi)
       redraw()
     }} />,
-    <Button key="forge-close" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'forge' })} />,
-  ], 'Click a piece you wear to choose it, then a job.')
+    <Button key="forge-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'forge' })} />,
+  ], 'Click a piece you wear to choose it, then a job.', forgeHot(g, forgeUi))
 }
 
 const stashWindow = (p: Pane) => {
@@ -1412,8 +1468,8 @@ const stashWindow = (p: Pane) => {
       redraw()
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
-    <Button key="stash-close" label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.')
+    <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
+  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g))
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */
@@ -1427,7 +1483,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
       {fitLine(p, height / 2, UNDER_WINDOW)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="talk" columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px: talkPixels(g, who) })} />}
+          {Raster !== undefined && <Raster key="talk" columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px: litWindow('talk', talkPixels(g, who), talkHot(g, who)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="talk-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes }} width={INV_W} height={height / 2} />
@@ -1437,7 +1493,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
       </Box>
       <Box marginTop={1} columnGap={2}>
         {deed !== undefined && <Button key="talk-act" label={deed.label[0] + deed.label.slice(1).toLowerCase()} hotkey={deed.key.toLowerCase()} plain dimColor={deed.state === 'off'} onPress={press(deed.action)} />}
-        <Button key={`${who}-close`} label="Close" hotkey="i" plain onPress={press({ kind: 'panel', panel: who })} />
+        <Button key={`${who}-close`} label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: who })} />
       </Box>
       {p.logTail()}
     </Box>
@@ -1449,19 +1505,19 @@ const talkWindow = (p: Pane, who: Speaker) => {
  * windows need the pane wide enough (`isWindowWide`); the start screen draws as text when it is not.
  */
 const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
-  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), [], [helpClose(p, 'c')]) },
+  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), helpOverlay(), [helpClose(p, 'c')]) },
   { is: (_, l) => l.isPixelBag, draw: pixelBag },
   { is: p => p.g.panel === 'shop' && p.isWindowWide, draw: pixelShop },
   { is: p => p.g.panel === 'start', draw: startScreen },
   { is: (_, l) => l.isCompactBag, draw: compactBag },
-  { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)]) },
-  { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), [], [playOnKey(p, 'p')]) },
-  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings), [], settingsKeys(p, true)) },
+  { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)], undefined, deathHot(p.g)) },
+  { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), recapOverlay(p.g), [playOnKey(p, 'p')], undefined, recapHot(p.g)) },
+  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), [], settingsKeys(p, true), undefined, settingsHot(p.g, soundSettings, settingsUi)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
-  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true)) },
-  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [], deepKeys(p, true)) },
-  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g), codexPixels(p.g), [], [cardKey(p, 'k'), codexClose(p, 'c')]) },
+  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true), undefined, [...talentHot(p.g, talentUi), ...heroTabsHot(p.g, 'talent')]) },
+  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), deepOverlay(p.g), deepKeys(p, true), undefined, [...deepHot(p.g), ...heroTabsHot(p.g, 'deep')]) },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g, codexUi), codexPixels(p.g, codexUi), codexOverlay(p.g, codexUi), [pageKey(p), cardKey(p, 'k'), codexClose(p, 'c')], undefined, [...codexHot(codexUi), ...heroTabsHot(p.g, 'codex')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },
@@ -1601,7 +1657,7 @@ const textElder = (p: Pane) => {
       </Text>
       <Text>{quest === null ? 'No quest in hand. Visit again for one.' : questLine(quest)}</Text>
       <Text dimColor>{quest === null ? ' ' : quest.have >= quest.need ? 'Done: make room in your bag, then claim your pay.' : `Pays ${questReward(quest)} gold and an item of Uncommon or better.`}</Text>
-      {quest !== null && quest.have >= quest.need && <Button key="claim" label="Claim" hotkey="c" plain onPress={press({ kind: 'claim' })} />}
+      {quest !== null && quest.have >= quest.need && <Button key="claim" label="Claim" hotkey="a" plain onPress={press({ kind: 'claim' })} />}
       {closer(p, 'elder')}
     </Box>
   )
@@ -1694,6 +1750,13 @@ const textRecap = (p: Pane) => {
 
 /** Card: the hero card saved and copied. */
 const cardKey = ({ Button, shareCard }: Pane, hotkey?: string) => <Button key="codex-card" label="Card" hotkey={hotkey} plain onPress={shareCard} />
+/** The codex's other page: Finds from Foes, Foes from Finds. */
+const pageKey = ({ Button, redraw }: Pane) => (
+  <Button key="codex-page" label={codexUi.page === 'foes' ? 'Finds' : 'Foes'} hotkey="p" plain onPress={() => {
+    codexUi = { page: codexUi.page === 'foes' ? 'finds' : 'foes' }
+    redraw()
+  }} />
+)
 const codexClose = ({ Button, press }: Pane, hotkey?: string) => <Button key="codex-close" label="Close" hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'codex' })} />
 
 /** The codex as text: each row's count and what is in it, then the records. */
@@ -1808,7 +1871,7 @@ const stripView = (p: Pane, l: Layout) => {
   return (
     <Box flexDirection="column">
       <Box>
-        <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={hudCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
+        <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={stripCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
         {Client !== undefined && (
           <Box position="absolute" top={0} left={0}>
             <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes) }} width={e.props.bodyColumns} height={l.hudRows} />
@@ -1905,6 +1968,8 @@ const drawPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
   if (g.panel !== 'stash') chestUi = CHEST_UI_IDLE
   if (g.panel !== 'start') startUi = null
   if (g.panel !== 'talent') talentUi = TALENT_UI
+  if (g.panel !== 'codex') codexUi = CODEX_UI
+  if (g.panel !== 'settings') settingsUi = SETTINGS_UI
   const p = paneOf($, e, g)
   const l = layOut(p)
   const tree = (FULL_WINDOWS.find(w => w.is(p, l))?.draw ?? dashboard)(p, l)
@@ -1957,6 +2022,10 @@ export const register: Register = (on, options) => {
 
   // A gesture on one of the pane's click layers, to its window (`onClick`).
   on('ui.message', async ($, e, next) => {
+    if ((e.data as { type?: string } | undefined)?.type === 'hover') {
+      onHover($, e.element ?? '', (e.data as { at: Pos | null }).at)
+      return {}
+    }
     return (await onClick($, e.element ?? '', e.data)) ? {} : next(e)
   })
 

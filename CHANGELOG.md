@@ -11,6 +11,27 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- In the talent window a number key chooses its card, as on the start screen, and Take (`t`) takes it; a number
+  took the talent at once.
+- In every window, what the pointer is over lights up before a click: a button, a card, a tab, a worn piece or an
+  item in the bag, a ware, the close box, and on the strip the portrait, the XP line, the gear, the portal and a
+  filled belt slot. What cannot act now (a dark button, the chosen tab, the portal while a foe lives) does not.
+- Every window fits in 41 rows, and the game plays best in a pane 105 columns by 48 rows, where it was 78. The
+  character sheet, the talents, the deep and the codex are tabs of one window, named in its title bar (the talents
+  and the deep marked gold while one waits); the sheet loses its Codex, Talent and Deep buttons to them, its
+  attributes two to a row. The codex has two pages, Foes and Finds (the Legendaries, the records and Card);
+  settings two, Game and Orders, each a tab or `p`. The recap shows the portrait with what happened beside it and
+  the best find with its name. The inventory, the merchant, the smith and the stash drop the labels under their
+  title bars; the stash's count is in its title.
+- Close is `c` in every window, where the inventory and the town's windows took `i`; the elder's Claim moves to
+  `a`. Each window's main button is framed white: Wake, Play on and Retire too; settings' New game no longer.
+  The death window's Wake and the recap's Play on are centered. The merchant's keys stay on one row: Buy, Sell junk
+  with its count, Undo sale.
+- How it plays, the start screen, the deep and the retire window each fit in 40 rows, so a short pane shows them
+  whole: their sentences are in a text box under them instead of the pixel font. How it plays keeps an icon a rule;
+  the start screen is titled in its title bar, its cards a portrait and a name (the box says the lean); the deep's
+  two marks are side by side; the retire window drops the portrait. Under the deep window, each mark's key shows
+  its name alone.
 - Talents are picked from three cards side by side, each with its family's ribbon (work, fight, road) and its own
   icon; the chosen card is lifted, its name and what it does in the box below. The window fits in 40 rows, so a
   short pane shows it whole. It opens on its own when a talent is earned, once no window is open and no foe is
@@ -53,14 +74,14 @@ again from its new start, gains kept. Nothing else needs doing.
 
 - A blow that comes to nothing shows it: MISS over a foe that darts aside or that the blow passes through, BLOCK over
   whoever's shield turns it, WARD over the hero when a ward absorbs it.
-- The pane's top row says when it is short of the size the game plays best in, 105 columns by 78 rows, and how big it
+- The pane's top row says when it is short of the size the game plays best in, 105 columns by 48 rows, and how big it
   is; a window it cannot show whole says how many rows it needs. The note on a pane too narrow for the pixel windows
   moves there from under the map.
 - Things to gather, one a theme, about one a level by a room's wall: a warding stone in the crypt and a rime crystal
   in the frozen caverns (ward runes), reeds in the flooded halls and glowing caps in the fungal deep (herbs), a powder
   keg in the forge (smoke bombs). Stepped onto, each goes onto the belt at a tier for the depth.
 - The start screen is titled ASCII DUNGEON and has Help beside Start, framed white on a first game. Under the chosen
-  hero it says what each attribute does and, after a retirement, the heirloom and whether the hero wears it.
+  hero it says what each attribute does or, after a retirement, the heirloom and whether the hero wears it.
 - How it plays, from Help in settings or on the start screen: what the session's coding does to the hero (tool calls, failed calls, passing
   tests, commits, pushes and pull requests, finished answers), a row each, and what is the player's to choose.
 - A session that starts with talents owed or a fork open says so in the log ("9 talents to choose: open the character

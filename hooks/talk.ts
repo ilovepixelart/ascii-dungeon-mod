@@ -10,10 +10,11 @@ import { themeOf } from './map'
 import type { Theme } from './map'
 import { BUTTON_H, CURSOR, GOLD_INK, PORTRAIT, barLabel, button, buttonW, flatBar, portrait } from './pieces'
 import type { ButtonState } from './pieces'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_W, bodyTop, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas, digits, fill, frame } from './canvas'
 import { SLOTS } from './items'
+import { INK, SURFACE } from './ui/tokens'
 
 /** Whoever has a window of talk: the townsfolk but the merchant, the smith and the stash. */
 export type Speaker = 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
@@ -22,12 +23,12 @@ export const isSpeaker = (panel: Game['panel']): panel is Speaker => (SPEAKERS a
 
 const TITLE: Readonly<Record<Speaker, string>> = { healer: 'HEALER', elder: 'ELDER', mystic: 'MYSTIC', guard: 'GUARD', villager: 'VILLAGER', dog: 'DOG' }
 const CHROME: Readonly<Record<Speaker, (g: Game) => Chrome>> = {
-  healer: () => ({ title: TITLE.healer, labels: [] }),
-  elder: () => ({ title: TITLE.elder, labels: [] }),
-  mystic: g => ({ title: TITLE.mystic, gold: g.gold, labels: [] }),
-  guard: () => ({ title: TITLE.guard, labels: [] }),
-  villager: () => ({ title: TITLE.villager, labels: [] }),
-  dog: () => ({ title: TITLE.dog, labels: [] }),
+  healer: () => ({ title: TITLE.healer }),
+  elder: () => ({ title: TITLE.elder }),
+  mystic: g => ({ title: TITLE.mystic, gold: g.gold }),
+  guard: () => ({ title: TITLE.guard }),
+  villager: () => ({ title: TITLE.villager }),
+  dog: () => ({ title: TITLE.dog }),
 }
 
 /** What each fortune does, exactly, for the mystic's window and the text one. */
@@ -36,8 +37,7 @@ const FORTUNES = ['luck', 'riches', 'insight'] as const
 /** Each fortune's row in pixels: its name, and what it does in the pixel font's few signs. */
 const FORTUNE_ROW: Readonly<Record<(typeof FORTUNES)[number], readonly [string, string]>> = { luck: ['LUCK', '+15 CRIT'], riches: ['RICHES', '+1/2 GOLD'], insight: ['INSIGHT', '+1/2 XP'] }
 
-const SAY = '#e8e4dc'
-const said = (text: string): Run[] => [{ text, color: SAY }]
+const said = (text: string): Run[] => [{ text, color: INK.text }]
 const aside = (text: string): Run[] => [{ text, dim: true }]
 
 /** The next boss depth not yet won, from the depth the hero left. */
@@ -89,7 +89,7 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
 type Act = { key: string; label: string; cost?: number; canPay?: boolean; action: Action; state: ButtonState }
 const ACT: Readonly<Record<Speaker, (g: Game) => Act | undefined>> = {
   healer: () => undefined,
-  elder: g => (g.quest === null ? undefined : { key: 'C', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
+  elder: g => (g.quest === null ? undefined : { key: 'A', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
   mystic: g => ({ key: 'F', label: 'FORTUNE', cost: fortuneCost(g), canPay: g.gold >= fortuneCost(g), action: { kind: 'fortune' }, state: g.fortune === null && g.gold >= fortuneCost(g) ? 'ready' : 'off' }),
   guard: () => undefined,
   villager: () => undefined,
@@ -119,9 +119,9 @@ export const wrap = (lines: Run[][], width: number): Run[][] =>
 
 /** Where everything goes, in window pixels: the words' box, then the status and the button beside the portrait. */
 const layout = (g: Game, who: Speaker) => {
-  const top = bodyTop(CHROME[who](g))
+  const top = WINDOW_TOP
   const lines = wrap(WORDS[who](g), WORDS_W - 4)
-  const box: OverlayBox<'words'> = { role: 'words', x: SIDE_X, y: (top + 2) / 2, w: WORDS_W, h: lines.length + 2, border: '#6b6258', lines }
+  const box: OverlayBox<'words'> = { role: 'words', x: SIDE_X, y: (top + 2) / 2, w: WORDS_W, h: lines.length + 2, border: SURFACE.frame, lines }
   const statusY = (box.y + box.h) * 2 + 3
   const hasStatus = who === 'healer' || who === 'dog' || (who === 'elder' && g.quest !== null)
   const act = ACT[who](g)
@@ -150,8 +150,8 @@ const barOf = (g: Game, who: Speaker): { share: number; color: string; empty: st
   if (who === 'elder' && g.quest !== null) return { share: g.quest.have / g.quest.need, color: QUEST_FILL, empty: QUEST_EMPTY, text: `${g.quest.have}/${g.quest.need}` }
   return undefined
 }
-const QUEST_FILL = '#d9b54a'
-const QUEST_EMPTY = '#2a2618'
+const QUEST_FILL = INK.xp
+const QUEST_EMPTY = SURFACE.xpEmpty
 
 /** The text boxes over the window: what they say, and the numbers on their bar. */
 export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => {
@@ -174,9 +174,9 @@ const STATUS: Readonly<Record<Speaker, (c: ReturnType<typeof canvas>, g: Game, y
   },
 }
 
-const FORTUNE_EDGE = '#3a3644'
-const FORTUNE_BG = '#15131b'
-const FORTUNE_DIM = '#8a8494'
+const FORTUNE_EDGE = SURFACE.cardEdge
+const FORTUNE_BG = SURFACE.card
+const FORTUNE_DIM = INK.dim
 
 /** The mystic's three fortunes, a row each: name and what it does; the one in force framed white, its name in gold. */
 const fortuneRows = (c: ReturnType<typeof canvas>, g: Game, y0: number) =>
@@ -186,9 +186,9 @@ const fortuneRows = (c: ReturnType<typeof canvas>, g: Game, y0: number) =>
     fill(c, PAD, y, WINDOW_W - 2 * PAD, FORTUNE_ROW_H, FORTUNE_BG)
     frame(c, PAD, y, WINDOW_W - 2 * PAD, FORTUNE_ROW_H, isOn ? CURSOR : FORTUNE_EDGE)
     const [name, does] = FORTUNE_ROW[kind]
-    word(c, name, PAD + 3, y + 2, isOn ? GOLD_INK : SAY)
+    word(c, name, PAD + 3, y + 2, isOn ? GOLD_INK : INK.text)
     const doesW = does.length * 4 - 1
-    word(c, does, WINDOW_W - PAD - 3 - doesW, y + 2, isOn ? SAY : FORTUNE_DIM)
+    word(c, does, WINDOW_W - PAD - 3 - doesW, y + 2, isOn ? INK.text : FORTUNE_DIM)
   })
 
 /** The window's pixels: title bar, portrait, status, button, the mystic's fortunes, and the words' frame. */
@@ -220,4 +220,10 @@ export const talkGesture = (g: Game, who: Speaker, gesture: Gesture): Action[] =
   const r = l.buttonRect
   if (r !== undefined && l.act !== undefined && l.act.state !== 'off' && isInside(at, r.x, r.y, r.w, r.h)) return [l.act.action]
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: who }] : []
+}
+
+/** What a click acts on, in window pixels: the button while it can act. */
+export const talkHot = (g: Game, who: Speaker): Rect[] => {
+  const l = layout(g, who)
+  return l.buttonRect !== undefined && l.act !== undefined && l.act.state !== 'off' ? [l.buttonRect] : []
 }

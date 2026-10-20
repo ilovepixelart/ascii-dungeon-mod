@@ -15,7 +15,7 @@ describe('the number font', () => {
     for (const ch of '0123456789+-! XPLVU') expect(FONT[ch] !== undefined ? ch : `missing ${ch}`).toBe(ch)
   })
 
-  test('writes every capital, each letter its own shape, for the inventory\'s pixel labels', async () => {
+  test('writes every capital, each letter its own shape, for the windows\' titles, tabs and keys', async () => {
     const letters = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
     for (const ch of letters) expect(FONT[ch] !== undefined ? ch : `missing ${ch}`).toBe(ch)
     expect(new Set(letters.map(ch => (FONT[ch] ?? []).join('/'))).size).toBe(26)

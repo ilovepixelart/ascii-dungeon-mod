@@ -4,7 +4,7 @@ import type { Game, Item } from '../types'
 import { apply, keptChoice, reforgeCost } from './game'
 import { GOLD_INK } from './pieces'
 import { plainItem } from './items'
-import { BODY_TOP } from './window'
+import { WINDOW_TOP } from './window'
 import type { Gesture } from './window'
 import { forgeGesture, forgeOverlay, forgePixels } from './forge'
 import { newGame } from './world'
@@ -57,7 +57,7 @@ describe('keeping the old roll', () => {
     // The buttons' gold keys, top to bottom: Temper, Reforge, Keep old.
     const px = forgePixels(reforged, { slot: 'helm' })
     const keys: number[] = []
-    for (let y = BODY_TOP; y < px.length; y += 1) if (px[y]!.slice(47, 54).includes(GOLD_INK) && !px[y - 1]!.slice(47, 54).includes(GOLD_INK)) keys.push(y)
+    for (let y = WINDOW_TOP; y < px.length; y += 1) if (px[y]!.slice(47, 54).includes(GOLD_INK) && !px[y - 1]!.slice(47, 54).includes(GOLD_INK)) keys.push(y)
     expect(keys.length).toBe(3)
     const tap: Gesture = { type: 'release', from: { x: 50.5, y: (keys[2]! + 2) / 2 + 0.25 }, at: { x: 50.5, y: (keys[2]! + 2) / 2 + 0.25 }, button: 'left' }
     expect(forgeGesture(reforged, { slot: 'helm' }, tap).actions).toEqual([{ kind: 'keepOld' }])

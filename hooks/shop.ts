@@ -11,10 +11,11 @@ import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './item
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltSlotRect, cellBox, itemGrid, wareTag } from './pieces'
-import { BODY_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
+import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltSlotRect, cellBox, itemGrid, itemOutline, wareTag } from './pieces'
+import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
+import { INK } from './ui/tokens'
 
 /** The wares in shelf order, three to a row. */
 export const WARES = Object.keys(SHOP_PRICES) as Ware[]
@@ -23,16 +24,14 @@ export const WARES = Object.keys(SHOP_PRICES) as Ware[]
 export type ShopUi = { ware: Ware | null; menu: boolean }
 export const SHOP_UI_IDLE: ShopUi = { ware: null, menu: false }
 
-const KEY_INK = '#ffd34d'
-const CARD_BORDER = '#e8e4dc'
 /** The window's height in pixels and cells: the bag's. */
-export const SHOP_H = BODY_TOP + INV_H
+export const SHOP_H = WINDOW_TOP + INV_H
 const ROWS = SHOP_H / 2
 
 /** A ware's place on the shelf, in window pixels. */
-export const wareRect = (i: number): Rect => ({ x: 1 + (i % 3) * TAG_W, y: BODY_TOP + 2 + Math.floor(i / 3) * (TAG_H + 1), w: TAG_W, h: TAG_H })
-const itemRect = (item: Item): Rect => cellBox(item, BAG_X, BODY_TOP + BAG_Y)
-const beltRect = (i: number): Rect => beltSlotRect(BELT_X, BODY_TOP + BELT_Y, i)
+export const wareRect = (i: number): Rect => ({ x: 1 + (i % 3) * TAG_W, y: WINDOW_TOP + 2 + Math.floor(i / 3) * (TAG_H + 1), w: TAG_W, h: TAG_H })
+const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
+const beltRect = (i: number): Rect => beltSlotRect(BELT_X, WINDOW_TOP + BELT_Y, i)
 
 /** Why a ware cannot be bought now, or undefined when it can. */
 export const whyNot = (g: Game, ware: Ware) =>
@@ -46,26 +45,26 @@ export const shopPixels = (g: Game, ui: ShopUi, boxes: readonly OverlayBox[] = [
   WARES.forEach((ware, i) => {
     const r = wareRect(i)
     const { kind, tier } = wareOf(ware)
-    wareTag(body, consumableIcon(kind, tier), priceOfWare(ware, g), r.x, r.y - BODY_TOP, g.gold >= priceOfWare(ware, g), ui.ware === ware)
+    wareTag(body, consumableIcon(kind, tier), priceOfWare(ware, g), r.x, r.y - WINDOW_TOP, g.gold >= priceOfWare(ware, g), ui.ware === ware)
   })
   // With a ware chosen no bag item is: the game's cursor is drawn only while the bag has the choice.
   itemGrid(body, ui.ware === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
   belt(body, g, BELT_X, BELT_Y)
-  const c = windowPixels({ title: 'MERCHANT', gold: g.gold, labels: [{ text: 'WARES', x: 2 }, { text: 'BAG', x: BAG_X + 1 }] }, body.px)
+  const c = windowPixels({ title: 'MERCHANT', gold: g.gold }, body.px)
   for (const b of boxes) drawBox(c, b)
   return c.px
 }
 
-/** What a box over the window would hide: every ware, bag item and filled belt slot, and the title bar and labels. */
+/** What a box over the window would hide: every ware, bag item and filled belt slot, and the title bar. */
 const shown = (g: Game): Weighted[] => [
   ...WARES.map((_, i) => ({ rect: wareRect(i), weight: 1 })),
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   ...g.belt.flatMap((b, i) => (b === null ? [] : [{ rect: beltRect(i), weight: 1 }])),
-  { rect: { x: 0, y: 0, w: WINDOW_W, h: BODY_TOP }, weight: 1 },
+  { rect: { x: 0, y: 0, w: WINDOW_W, h: WINDOW_TOP }, weight: 1 },
 ]
 
 const entry = (key: string, label: string, why?: string): Run[] =>
-  why === undefined ? [{ text: key, color: KEY_INK, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
+  why === undefined ? [{ text: key, color: INK.gold, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
 
 const wareMenu = (g: Game, ware: Ware): Run[][] => [entry('b', `Buy for ${priceOfWare(ware, g)}`, whyNot(g, ware))]
 const itemMenu = (g: Game, item: Item): Run[][] => [entry('s', `Sell for ${priceOf(item)}`, item.locked === true ? 'locked' : undefined), entry('e', 'Equip', canWear(g, item) ? undefined : classLabel(item))]
@@ -76,7 +75,7 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
   return [
     [{ text: CONSUMABLES[kind][tier].name, bold: true }],
     [{ text: CONSUMABLES[kind][tier].about }],
-    [{ text: 'Price ', dim: true }, { text: String(price), color: g.gold >= price ? KEY_INK : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
+    [{ text: 'Price ', dim: true }, { text: String(price), color: g.gold >= price ? INK.gold : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
   ]
 }
 
@@ -84,7 +83,7 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
 export const shopOverlay = (g: Game, ui: ShopUi): OverlayBox<'card' | 'menu'>[] => {
   if (ui.ware !== null) {
     const near = wareRect(WARES.indexOf(ui.ware))
-    return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), CARD_BORDER), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)
+    return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), RARITY_COLOR.common), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)
   }
   const item = chosenItem(g, ui)
   if (item === undefined) return []
@@ -156,3 +155,6 @@ export const shopGesture = (g: Game, ui: ShopUi, gesture: Gesture): Outcome => {
 
 /** The next ware on the shelf after the chosen one, for the key that steps through them. */
 export const nextWare = (ui: ShopUi): ShopUi => ({ ware: WARES[(ui.ware === null ? 0 : WARES.indexOf(ui.ware) + 1) % WARES.length]!, menu: false })
+
+/** What a click acts on, in window pixels: the wares not chosen, and the bag's items. */
+export const shopHot = (g: Game, ui: ShopUi): Rect[] => [...WARES.flatMap((w, i) => (w === ui.ware ? [] : [wareRect(i)])), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))]

@@ -6,10 +6,9 @@ import type { Action } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { BAG_H, BAG_W, LEGENDARIES, plainItem } from './items'
 import { EMPTY_CODEX, recorded } from './codex'
-import { codexGesture, codexHeight, codexLines, codexLit, codexPixels } from './codexwindow'
-import { CLOSE_BOX } from './window'
-import { MAP_H } from './map'
-import { PX } from './pixelart'
+import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
+import type { CodexUi } from './codexwindow'
+import { CLOSE_BOX, TABS_H, WINDOW_TOP, tabRects } from './window'
 
 const hit: Action = { kind: 'outcome', ok: true, what: 'Edit' }
 /** The hero at `depth` with a one-HP foe beside them, and the codex `codex`. */
@@ -139,8 +138,26 @@ describe('the codex window', () => {
   const shown = (c: Codex): Game => ({ ...plainHero(3), panel: 'codex', codex: c })
   const told: Codex = { uniques: ['rot', 'bones', 'rime'], bigs: ['king'], legendaries: [LEGENDARIES[1]!.name, LEGENDARIES[4]!.name], deepest: 34, level: 22, kills: 1240, bosses: 12, deaths: 9, gold: 18450, retired: 2 }
 
-  test('says each row\'s count and the records, as the approved mock does', async () => {
-    expect(codexLines(shown(told)).map(l => l.text)).toEqual(['UNIQUES 3/5', 'BIG BOSSES 1/5', 'LEGENDARIES 2/7', 'DEEPEST 34', 'KILLS 1240', 'LEVEL 22', 'BOSSES 12', 'DEATHS 9', 'GOLD 18450', 'RETIRED 2'])
+  const said = (g: Game, page: 'foes' | 'finds') => codexOverlay(g, { page })[0]!.lines.map(l => l.map(r => r.text).join(''))
+  const FINDS = { page: 'finds' as const }
+  const FOES = { page: 'foes' as const }
+
+  test('Foes counts the uniques and big bosses slain; Finds the Legendaries found, then the records', async () => {
+    expect(said(shown(told), 'foes')).toEqual(['Uniques slain 3 of 5, big bosses 1 of 5.'])
+    expect(said(shown(told), 'finds')).toEqual([
+      'Legendaries found 2 of 7.',
+      'Deepest 34, level 22, kills 1240, bosses 12.',
+      'Deaths 9, heroes retired 2, gold found 18450.',
+    ])
+  })
+
+  test('a click on a page\'s tab shows that page', async () => {
+    const g = shown(told)
+    const [foes, finds] = tabRects([{ label: 'FOES' }, { label: 'FINDS' }], WINDOW_TOP)
+    const tap = (r: { x: number; y: number }) => codexGesture(g, FOES, { type: 'release', from: { x: r.x + 2.5, y: (r.y + 3) / 2 }, at: { x: r.x + 2.5, y: (r.y + 3) / 2 }, button: 'left' })
+    expect(tap(finds!)).toEqual({ ui: FINDS, actions: [], isCard: false })
+    expect(tap(foes!)).toEqual({ ui: FOES, actions: [], isCard: false })
+    expect(finds!.h).toBe(TABS_H)
   })
 
   test('lights what is slain or found, in the themes\' order and the Legendaries\' own', async () => {
@@ -152,35 +169,35 @@ describe('the codex window', () => {
   })
 
   test('a lit entry is drawn in its colours, one not yet found in the one dark ink', async () => {
-    const none = codexPixels(shown(EMPTY_CODEX))
-    const all = codexPixels(shown({ ...told, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'], bigs: ['king', 'queen', 'hive', 'lich', 'wyrm'], legendaries: LEGENDARIES.map(l => l.name) }))
+    const full: Codex = { ...told, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'], bigs: ['king', 'queen', 'hive', 'lich', 'wyrm'], legendaries: LEGENDARIES.map(l => l.name) }
     const inks = (px: string[][]) => new Set(px.flat()).size
-    expect(inks(all)).toBeGreaterThan(inks(none) + 10)
+    for (const ui of [FOES, FINDS]) expect(inks(codexPixels(shown(full), ui))).toBeGreaterThan(inks(codexPixels(shown(EMPTY_CODEX), ui)) + 10)
   })
 
   test('each row lights on its own: its entries found, the rest of the codex empty, add their colours', async () => {
-    const inks = (c: Codex) => new Set(codexPixels(shown(c)).flat()).size
-    const none = inks(EMPTY_CODEX)
-    expect(inks({ ...EMPTY_CODEX, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'] })).toBeGreaterThan(none + 5)
-    expect(inks({ ...EMPTY_CODEX, bigs: ['king', 'queen', 'hive', 'lich', 'wyrm'] })).toBeGreaterThan(none + 5)
-    expect(inks({ ...EMPTY_CODEX, legendaries: LEGENDARIES.map(l => l.name) })).toBeGreaterThan(none + 5)
+    const inks = (c: Codex, ui: CodexUi = FOES) => new Set(codexPixels(shown(c), ui).flat()).size
+    expect(inks({ ...EMPTY_CODEX, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'] })).toBeGreaterThan(inks(EMPTY_CODEX) + 5)
+    expect(inks({ ...EMPTY_CODEX, bigs: ['king', 'queen', 'hive', 'lich', 'wyrm'] })).toBeGreaterThan(inks(EMPTY_CODEX) + 5)
+    expect(inks({ ...EMPTY_CODEX, legendaries: LEGENDARIES.map(l => l.name) }, FINDS)).toBeGreaterThan(inks(EMPTY_CODEX, FINDS) + 5)
   })
 
   test('a name the Legendaries do not hold is not counted', async () => {
-    expect(codexLines(shown({ ...told, legendaries: ['Sword of Long Ago'] }))[2]!.text).toBe('LEGENDARIES 0/7')
+    expect(said(shown({ ...told, legendaries: ['Sword of Long Ago'] }), 'finds')[0]).toBe('Legendaries found 0 of 7.')
   })
 
-  test('fits over the map, and its close box closes it; a click elsewhere does nothing', async () => {
+  test('each page fits in 40 rows, and its close box closes it; a click elsewhere does nothing', async () => {
     const g = shown(told)
-    expect(codexHeight(g)).toBeLessThanOrEqual(MAP_H * PX)
-    expect(codexPixels(g).length).toBe(codexHeight(g))
-    const at = (p: { x: number; y: number }) => codexGesture(g, { type: 'release', from: p, at: p, button: 'left' })
-    expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual({ actions: [{ kind: 'panel', panel: 'codex' }], isCard: false })
-    expect(at({ x: 20, y: 30 })).toEqual({ actions: [], isCard: false })
+    for (const ui of [FOES, FINDS]) {
+      expect(codexHeight(g, ui)).toBeLessThanOrEqual(80)
+      expect(codexPixels(g, ui).length).toBe(codexHeight(g, ui))
+    }
+    const at = (p: { x: number; y: number }) => codexGesture(g, FOES, { type: 'release', from: p, at: p, button: 'left' })
+    expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual({ ui: FOES, actions: [{ kind: 'panel', panel: 'codex' }], isCard: false })
+    expect(at({ x: 20, y: 30 })).toEqual({ ui: FOES, actions: [], isCard: false })
   })
 
   test('before its first action an older save shows the codex begun from it', async () => {
     const g: Game = { ...plainHero(3), uniquesSlain: [0], panel: 'codex' }
-    expect(codexLines(g)[0]!.text).toBe('UNIQUES 1/5')
+    expect(said(g, 'foes')[0]).toBe('Uniques slain 1 of 5, big bosses 0 of 5.')
   })
 })

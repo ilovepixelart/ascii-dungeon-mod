@@ -5,7 +5,7 @@ import { BAG_UI_IDLE } from './bagui'
 import { COMPACT_H, COMPACT_W, compactGesture, compactOverlay, compactPixels } from './compact'
 import { CELL } from './icons'
 import { SLOTS, plainItem } from './items'
-import { BODY_TOP, closeBoxOf } from './window'
+import { WINDOW_TOP, closeBoxOf } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
 
@@ -16,8 +16,8 @@ const put = (g: Game, base: string, x: number, y: number): Item => {
   return item
 }
 const tap = (cx: number, cy: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x: cx, y: cy }, at: { x: cx, y: cy }, button })
-/** The middle of a bag item, in cells: the bag's grid starts a pixel in, two below the labels. */
-const onItem = (item: Item) => tap(1 + item.x * CELL + 4.5, (BODY_TOP + 2 + item.y * CELL + 4) / 2 + 0.25)
+/** The middle of a bag item, in cells: the bag's grid starts a pixel in, two below the title bar's room. */
+const onItem = (item: Item) => tap(1 + item.x * CELL + 4.5, (WINDOW_TOP + 2 + item.y * CELL + 4) / 2 + 0.25)
 
 describe('the compact inventory', () => {
   test('lists what is worn, a slot to two rows: its name, then the item or a dash', async () => {
@@ -72,7 +72,7 @@ describe('the compact inventory', () => {
     const px = compactPixels(chosen)
     expect(px.length).toBe(COMPACT_H)
     for (const row of px) expect(row.length).toBe(COMPACT_W)
-    const own = { x: 1 + ring.x * CELL, y: BODY_TOP + 2 + ring.y * CELL, w: CELL, h: CELL }
+    const own = { x: 1 + ring.x * CELL, y: WINDOW_TOP + 2 + ring.y * CELL, w: CELL, h: CELL }
     for (const b of compactOverlay(chosen, { ...BAG_UI_IDLE, menu: { id: ring.id, confirm: false } }).filter(b => b.role !== 'worn')) {
       expect(b.x >= 0 && b.x + b.w <= COMPACT_W && (b.y + b.h) * 2 <= COMPACT_H).toBe(true)
       const covers = own.x < b.x + b.w && b.x < own.x + own.w && own.y < (b.y + b.h) * 2 && b.y * 2 < own.y + own.h

@@ -21,12 +21,12 @@ import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
 import { retireButtons } from './retirewindow'
-import { offer } from './talents'
-import { talentCards } from './talentwindow'
+import { TALENTS, offer } from './talents'
+import { takeRect, talentCards } from './talentwindow'
 import { pairOf } from './deep'
 import { deepCards } from './deepwindow'
 import { arrive } from './world'
-import { helpRect } from './settings'
+import { SETTINGS_UI, settingsRect } from './settings'
 import { cardText } from './herocard'
 import { codexCardRect } from './codexwindow'
 import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
@@ -181,7 +181,7 @@ test('a session starts with the sound saved before, not the defaults', async ($,
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'settings' })
-  expect(await ui.find({ type: 'Button', key: 'settings-effects' })).toMatchObject({ props: { label: 'Effects: off' } })
+  expect(await ui.find({ type: 'Button', key: 'settings-effects' })).toMatchObject({ props: { label: 'Sound: off' } })
   expect(await ui.find({ type: 'Button', key: 'settings-music' })).toMatchObject({ props: { label: 'Music: off' } })
   expect(await ui.find({ type: 'Button', key: 'settings-volume' })).toMatchObject({ props: { label: 'Volume: 50%' } })
   await ui.unmount()
@@ -456,6 +456,57 @@ test('on a wide pane a session with a talent owed opens on the cards; a card cli
   await ui.unmount()
 })
 
+test('the pointer over Take lights its outline; moved off it, or out of the window, the window is as it was', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const cells = async () => (await ui.find({ type: 'Raster', key: 'talent' }))?.props.cells
+  const move = (x: number, y: number) => ui.pointer({ type: 'move', x, y, in: 'talent-clicks' } as never)
+  const idle = await cells()
+  const take = takeRect()
+  await move(take.x + 4, Math.floor((take.y + 5) / 2))
+  const lit = await cells()
+  expect(lit).not.toEqual(idle)
+  // Nothing clickable under it: as it was.
+  await move(50, 8)
+  expect(await cells()).toEqual(idle)
+  await move(take.x + 4, Math.floor((take.y + 5) / 2))
+  expect(await cells()).toEqual(lit)
+  await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'talent-clicks' } as never)
+  expect(await cells()).toEqual(idle)
+  await ui.unmount()
+})
+
+test('on a wide pane a talent\'s number key chooses its card, as on the start screen; Take takes the one chosen', async ($, on) => {
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const third = offer({ ...newGame(), level: 10 })[2]!
+  await ui.press({ key: `talent-${third}` })
+  expect((kept.get('save') as Game).talents ?? []).toEqual([])
+  expect(await ui.find({ type: 'Button', key: `talent-${third}`, text: `[${TALENTS[third].name}]` })).toBeDefined()
+  await ui.press({ key: 'talent-take' })
+  expect((kept.get('save') as Game).talents).toEqual([third])
+  await ui.unmount()
+})
+
+test('the pointer over the strip\'s portrait lights it; out of the strip, as it was', async $ => {
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  const cells = async () => (await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells
+  const idle = await cells()
+  await ui.pointer({ type: 'move', x: 5, y: 2, in: 'hud-clicks' } as never)
+  expect(await cells()).not.toEqual(idle)
+  await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'hud-clicks' } as never)
+  expect(await cells()).toEqual(idle)
+  await ui.unmount()
+})
+
 /** A hero at depth 60 with its big boss slain: the fork for tier II waits. */
 const atFork = () => {
   const g = newGame()
@@ -556,10 +607,11 @@ test('a card that cannot be written is said, and the text is still copied', asyn
   await ui.unmount()
 })
 
-test('on a wide pane a click on Card in the codex window saves the card', async ($, on) => {
+test('on a wide pane a click on Card on the codex window\'s Finds saves the card', async ($, on) => {
   const seen = cardWorld(on, { downloads: true, copies: true })
   const ui = await openCodex($, on, WIDE)
-  const r = codexCardRect({ ...newGame(), panel: 'codex' })
+  await ui.press({ key: 'codex-page' })
+  const r = codexCardRect({ page: 'finds' })!
   const at = { x: r.x + 2, y: Math.floor((r.y + 4) / 2) }
   await ui.pointer({ type: 'down', ...at, button: 'left', in: 'codex-clicks' } as never)
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'codex-clicks' } as never)
@@ -594,7 +646,7 @@ test('How it plays opens from settings over it, and closes back to settings', as
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
   expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeDefined()
-  const r = helpRect()
+  const r = settingsRect(newGame(), { effects: true, music: true, volume: 4 }, SETTINGS_UI, 'help')!
   const at = { x: r.x + 2, y: Math.floor((r.y + 4) / 2) }
   await ui.pointer({ type: 'down', ...at, button: 'left', in: 'settings-clicks' } as never)
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'settings-clicks' } as never)
@@ -1958,14 +2010,14 @@ describe('a pane short of the size the game plays best in', () => {
   const sized = (columns: number, rows: number) => ({ ...PANE, props: { ...PANE.props, bodyColumns: columns, scroll: { offset: 0, bodyRows: rows } }, surface: 'terminal' as const })
 
   test('says so on its top row, wide enough but short; narrow, the width note alone', async $ => {
-    const short = await $.ui.mount(sized(110, 50))
-    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 78 rows tall; this one is 110 by 50.' })).toBeDefined()
+    const short = await $.ui.mount(sized(110, 40))
+    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 48 rows tall; this one is 110 by 40.' })).toBeDefined()
     await short.unmount()
-    const narrow = await $.ui.mount(sized(90, 50))
+    const narrow = await $.ui.mount(sized(90, 40))
     expect(await narrow.find({ type: 'Text', text: /^Widen the pane for the full pixel windows/ })).toBeDefined()
     expect(await narrow.find({ type: 'Text', text: /^ASCII Dungeon plays best/ })).toBeUndefined()
     await narrow.unmount()
-    const best = await $.ui.mount(sized(110, 78))
+    const best = await $.ui.mount(sized(110, 48))
     expect(await best.find({ type: 'Text', text: /^ASCII Dungeon plays best|^Widen the pane/ })).toBeUndefined()
     await best.unmount()
   })
@@ -1977,7 +2029,7 @@ describe('a pane short of the size the game plays best in', () => {
       await ui.unmount()
       return n
     }
-    expect((await rowsAt(78)) - (await rowsAt(77))).toBe(2)
+    expect((await rowsAt(48)) - (await rowsAt(47))).toBe(2)
   })
 
   test('a window it cannot show whole says on its top row the rows it needs; a pane that holds it says nothing', async ($, on) => {
@@ -1986,12 +2038,12 @@ describe('a pane short of the size the game plays best in', () => {
     on('ui.open', () => ({ value: { isPlaced: true } }) as never)
     on('session.start', (_$, e) => ({ cwd: e.cwd }))
     await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-    const cut = await $.ui.mount(sized(110, 60))
-    expect((await cut.find({ type: 'Raster', key: 'settings' }))?.props.rows).toBe(71)
-    // Settings is 71 rows, with 5 under it and this line: 77.
-    expect(await cut.find({ type: 'Text', text: 'This window needs 77 rows to show whole; the pane has 60. Make it taller, or scroll down.' })).toBeDefined()
+    const cut = await $.ui.mount(sized(110, 30))
+    expect((await cut.find({ type: 'Raster', key: 'settings' }))?.props.rows).toBe(35)
+    // Settings is 35 rows, with 5 under it and this line: 41.
+    expect(await cut.find({ type: 'Text', text: 'This window needs 41 rows to show whole; the pane has 30. Make it taller, or scroll down.' })).toBeDefined()
     await cut.unmount()
-    const whole = await $.ui.mount(sized(110, 77))
+    const whole = await $.ui.mount(sized(110, 41))
     expect(await whole.find({ type: 'Text', text: /^This window needs/ })).toBeUndefined()
     await whole.unmount()
   })

@@ -1,38 +1,52 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { HELP_ROWS, helpGesture, helpHeight, helpLines, helpPixels } from './helpwindow'
-import { MAP_H } from './map'
-import { PX, missingGlyphs } from './pixelart'
-import { CLOSE_BOX } from './window'
+import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
+import { missingGlyphs } from './pixelart'
+import { CLOSE_BOX, POPOVER_BG } from './window'
 import type { Gesture } from './window'
 
 const tap = (x: number, y: number): Gesture => ({ type: 'release', from: { x: x + 0.5, y: y / 2 + 0.25 }, at: { x: x + 0.5, y: y / 2 + 0.25 }, button: 'left' })
 
 describe('the how it plays window', () => {
-  test('says what the coding does: a row each, what happens and what it comes to', async () => {
+  const text = (line: { text: string }[]) => line.map(r => r.text).join('')
+
+  test('says what the coding does: a rule each, what happens and what it comes to', async () => {
     expect(HELP_ROWS.map(r => [r.when, r.does])).toEqual([
-      ['EVERY TOOL CALL', 'A STEP OR A BLOW'],
-      ['A FAILED CALL', 'LETS THE FOE STRIKE'],
-      ['TESTS THAT PASS', 'A SURE CRITICAL'],
-      ['A COMMIT', 'A SHRINE AND FULL HP'],
-      ['A PUSH OR A PR', 'A CACHE OF LOOT'],
-      ['AN ANSWER FINISHED', 'THE STAIRS DOWN'],
+      ['Every tool call', 'A step or a blow'],
+      ['A failed call', 'Lets the foe strike'],
+      ['Tests that pass', 'A sure critical'],
+      ['A commit', 'A shrine and full HP'],
+      ['A push or a PR', 'A cache of loot'],
+      ['An answer finished', 'The stairs down'],
     ])
-    const texts = helpLines().map(l => l.text)
-    expect(texts[0]).toBe('YOUR CODING PLAYS THE HERO')
-    for (const r of HELP_ROWS) expect([texts.includes(r.when), texts.includes(r.does)]).toEqual([true, true])
+    const lines = helpOverlay()[0]!.lines
+    HELP_ROWS.forEach((r, i) => {
+      expect(lines[3 * i]![0]).toMatchObject({ text: r.when, bold: true })
+      expect(lines[3 * i + 1]![0]).toMatchObject({ text: r.does, dim: true })
+    })
+    expect(text(lines[lines.length - 1]!)).toBe('You pick the gear and the talents, and set the orders.')
   })
 
   test('the work it rewards is in green: tests, commits, pushes and pull requests', async () => {
-    const ink = (text: string) => helpLines().find(l => l.text === text)!.ink
-    expect(['TESTS THAT PASS', 'A COMMIT', 'A PUSH OR A PR'].map(ink)).toEqual(['#3ccf4e', '#3ccf4e', '#3ccf4e'])
-    expect(ink('EVERY TOOL CALL')).not.toBe('#3ccf4e')
+    const color = (when: string) => helpOverlay()[0]!.lines.find(l => l[0]?.text === when)![0]!.color
+    expect(['Tests that pass', 'A commit', 'A push or a PR'].map(color)).toEqual(['#3ccf4e', '#3ccf4e', '#3ccf4e'])
+    expect(color('Every tool call')).toBeUndefined()
   })
 
-  test('fits over the map, every letter one the font has', async () => {
+  test('each rule\'s icon beside its first line, left of the text', async () => {
+    const px = helpPixels()
+    const box = helpOverlay()[0]!
+    HELP_ROWS.forEach((_, i) => {
+      const y = 2 * (box.y + 1 + 3 * i)
+      const inked = [0, 1, 2, 3, 4].some(dy => px[y + dy]!.slice(box.x + 1, box.x + 1 + 8).some(p => p !== POPOVER_BG))
+      expect(inked).toBe(true)
+    })
+  })
+
+  test('fits in 40 rows, every letter one the font has', async () => {
     missingGlyphs.clear()
     const px = helpPixels()
-    expect(helpHeight()).toBeLessThanOrEqual(MAP_H * PX)
+    expect(helpHeight()).toBeLessThanOrEqual(80)
     expect(px.length).toBe(helpHeight())
     expect([...missingGlyphs]).toEqual([])
   })

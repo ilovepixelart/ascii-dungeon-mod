@@ -4,14 +4,16 @@ import { activeTier, nameOf } from './consumables'
 import type { Run } from './game'
 import { CELL, ICONS } from './icons'
 import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
-import { GRID, SLOT, SLOT_BG, art, canvas, canvasCells, fill, frame, put } from './canvas'
-import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid } from './pieces'
-import { BODY_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
+import { GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
+import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid, itemOutline } from './pieces'
+import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
+import type { Rect } from './window'
 import type { Pos } from './map'
 import type { Canvas } from './canvas'
+import { INK, SURFACE } from './ui/tokens'
 
 export { BELT_STEP, CURSOR, GHOST_INK, OFF_CLASS, UPGRADE } from './pieces'
-export { CLOSE_BOX, CLOSE_INK, LABEL_INK, LABEL_Y, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
+export { CLOSE_BOX, CLOSE_INK, LABEL_INK, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
 
 /** One pixel past the bag, so a selected item in its last column keeps its frame. */
 export const INV_W = WINDOW_W
@@ -22,8 +24,8 @@ export const BAG_Y = 2
 export const BELT_Y = 57
 export const INV_H = BELT_Y + SLOT + 1
 export const BELT_X = 2
-/** The panel starts below the window's title bar and labels. */
-export const INV_TOP = BODY_TOP
+/** The panel starts below the window's title bar. */
+export const INV_TOP = WINDOW_TOP
 
 /** Each worn slot's inner rectangle (x, y, w, h), sized to the largest footprint its items have. */
 export const WORN_SLOTS: Readonly<Record<Slot, readonly [number, number, number, number]>> = {
@@ -62,8 +64,8 @@ export const inventoryPixels = (g: Game): string[][] => {
   return c.px
 }
 
-const BLOCKED_TINT = '#4a1c22'
-const FITS_TINT = '#2e2c38'
+const BLOCKED_TINT = SURFACE.blocked
+const FITS_TINT = SURFACE.fits
 
 /** What is being dragged: a bag item or a worn one, the pointer in screen pixels, and where on the item it was grabbed. */
 export type Drag = { source: { kind: 'bag'; id: number } | { kind: 'worn'; slot: Slot }; at: Pos; grab: Pos }
@@ -113,19 +115,15 @@ const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
 export type PopoverFrame = { x: number; y: number; w: number; h: number; border: string }
 
 /**
- * The whole inventory screen: title bar with gold and the close box, the section labels, the panel, any drag, and
+ * The whole inventory screen: title bar with gold and the close box, the panel, any drag, and
  * the popovers' frames over it all.
  */
 export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []): string[][] => {
-  const c = windowPixels({ title: 'INVENTORY', gold: g.gold, labels: [{ text: 'WORN', x: 2 }, { text: 'BAG', x: BAG_X + 1 }] }, inventoryPixels(g))
+  const c = windowPixels({ title: 'INVENTORY', gold: g.gold }, inventoryPixels(g))
   if (drag !== undefined) drawDrag(c, g, drag)
   for (const b of popovers) drawBox(c, b)
   return c.px
 }
-
-/** The screen as Raster cells: INV_W columns by (INV_TOP + INV_H) / 2 rows. */
-export const inventoryScreenCells = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []) =>
-  canvasCells({ w: INV_W, h: INV_TOP + INV_H, px: inventoryScreenPixels(g, drag, popovers) })
 
 const SLOT_NAME: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 
@@ -158,7 +156,7 @@ export const itemCard = (g: Game): Run[][] => {
     lines.push([{ text: `${set.name}, ${setWorn(g, item.set)} of ${set.pieces.length} worn: `, color: SET_COLOR, bold: true }, { text: `2, ${set.twoSaid}; ${set.pieces.length}, ${set.three}`, dim: true }])
   }
   if (item.trigger !== undefined) lines.push([{ text: `${TRIGGERS[item.trigger].name}: `, color: RARITY_COLOR[item.rarity], bold: true }, { text: TRIGGERS[item.trigger].does, dim: true }, ...(isTriggerWornElsewhere(g, item) ? [{ text: '  same trigger as worn: no effect', color: OFF_CLASS }] : [])])
-  lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: '#ffd34d' }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
+  lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: INK.gold }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
   return lines
 }
 
@@ -168,3 +166,10 @@ export const beltLabel = (g: Game, i: number) => {
   const tier = activeTier(slot)
   return slot === null || slot === undefined || tier === undefined ? 'empty' : `${nameOf(slot.kind, tier)} x${slot.tiers[tier - 1]}`
 }
+
+/** The worn slots holding a piece, with their frames, in window pixels for a panel whose top is at `top`: what the hover lights. */
+export const wornOutlines = (g: Game, top: number): Rect[] =>
+  (Object.entries(WORN_SLOTS) as [Slot, readonly [number, number, number, number]][]).filter(([slot]) => g.gear[slot] !== undefined).map(([, [x, y, w, h]]) => ({ x: x - 1, y: top + y - 1, w: w + 2, h: h + 2 }))
+
+/** What a click acts on in the inventory, in window pixels: the bag's items and the worn pieces. */
+export const inventoryHot = (g: Game): Rect[] => [...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(g, INV_TOP)]

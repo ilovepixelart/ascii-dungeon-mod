@@ -9,21 +9,20 @@ import { BAG_H, BAG_W, RARITY_COLOR, fit } from './items'
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, cellBox, itemGrid } from './pieces'
-import { BODY_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
+import { CURSOR, OFF_CLASS, cellBox, itemGrid, itemOutline } from './pieces'
+import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
+import { INK, SURFACE } from './ui/tokens'
 
 /** What the window shows beyond the game: the stored item chosen (a bag item is chosen in the game), and its menu. */
 export type ChestUi = { stored: number | null; menu: boolean }
 export const CHEST_UI_IDLE: ChestUi = { stored: null, menu: false }
 
-const KEY_INK = '#ffd34d'
-const LIST_BORDER = '#6b6258'
 /** The window's height: the bag and a row of room under it. */
-export const CHEST_H = BODY_TOP + BAG_Y + BAG_H * 7 + 1 + 3
+export const CHEST_H = WINDOW_TOP + BAG_Y + BAG_H * 7 + 1 + 3
 const ROWS = CHEST_H / 2
 /** The chest's list, in cells: a row an item, framed. */
-const LIST: Rect = { x: 1, y: BODY_TOP / 2 + 1, w: BAG_X - 3, h: STASH_SIZE + 2 }
+const LIST: Rect = { x: 1, y: WINDOW_TOP / 2 + 1, w: BAG_X - 3, h: STASH_SIZE + 2 }
 
 /** Why a bag item cannot be stored, or a stored one taken out, now; undefined when it can. */
 export const whyNotStore = (g: Game) => (g.stashed.length >= STASH_SIZE ? 'the chest is full' : undefined)
@@ -42,22 +41,22 @@ const listLines = (g: Game, ui: ChestUi): Run[][] =>
   })
 
 const entry = (key: string, label: string, why?: string): Run[] =>
-  why === undefined ? [{ text: key, color: KEY_INK, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
+  why === undefined ? [{ text: key, color: INK.gold, bold: true }, { text: ` ${label}` }] : [{ text: `${key} ${label}`, dim: true }, { text: `  ${why}`, color: OFF_CLASS }]
 
-const itemRect = (item: Item): Rect => cellBox(item, BAG_X, BODY_TOP + BAG_Y)
+const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
 /** A stored item's row, in window pixels. */
 const rowRect = (i: number): Rect => ({ x: LIST.x, y: (LIST.y + 1 + i) * 2, w: LIST.w, h: 2 })
 
-/** What a card over the window would hide: the bag's items, the chest's list, the title bar and labels. */
+/** What a card over the window would hide: the bag's items, the chest's list, the title bar. */
 const shown = (g: Game): Weighted[] => [
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   { rect: { x: LIST.x, y: LIST.y * 2, w: LIST.w, h: LIST.h * 2 }, weight: 1 },
-  { rect: { x: 0, y: 0, w: WINDOW_W, h: BODY_TOP }, weight: 1 },
+  { rect: { x: 0, y: 0, w: WINDOW_W, h: WINDOW_TOP }, weight: 1 },
 ]
 
 /** The boxes over the window: the chest's list, and the chosen item's card with its menu when open. */
 export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
-  const list: OverlayBox = { role: 'list', ...LIST, border: LIST_BORDER, lines: listLines(g, ui) }
+  const list: OverlayBox = { role: 'list', ...LIST, border: SURFACE.frame, lines: listLines(g, ui) }
   const stored = chosenStored(g, ui)
   if (stored !== undefined) {
     const near = rowRect(g.stashed.indexOf(stored))
@@ -70,10 +69,10 @@ export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
 
 /** The window's pixels: title, the chest's count over its list, the bag, and the frames of the boxes over them. */
 export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] = []): string[][] => {
-  const body = canvas(WINDOW_W, CHEST_H - BODY_TOP)
+  const body = canvas(WINDOW_W, CHEST_H - WINDOW_TOP)
   // With a stored item chosen no bag item is: the game's cursor is drawn only while the bag has the choice.
   itemGrid(body, ui.stored === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
-  const c = windowPixels({ title: 'STASH', labels: [{ text: `CHEST ${g.stashed.length}/${STASH_SIZE}`, x: 2 }, { text: 'BAG', x: BAG_X + 1 }] }, body.px)
+  const c = windowPixels({ title: `STASH ${g.stashed.length}/${STASH_SIZE}` }, body.px)
   for (const b of boxes) drawBox(c, b)
   return c.px
 }
@@ -128,3 +127,6 @@ export const nextStored = (g: Game, ui: ChestUi): ChestUi => {
   const at = g.stashed.findIndex(i => i.id === ui.stored)
   return { stored: g.stashed[(at + 1) % g.stashed.length]!.id, menu: false }
 }
+
+/** What a click acts on, in window pixels: the bag's items. */
+export const chestHot = (g: Game): Rect[] => g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))

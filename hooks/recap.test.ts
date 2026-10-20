@@ -6,10 +6,8 @@ import type { Action } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { plainItem } from './items'
 import { RECAP_CALLS, noted } from './recap'
-import { recapGesture, recapHeight, recapLines } from './recapwindow'
+import { recapGesture, recapHeight, recapLines, recapOverlay } from './recapwindow'
 import { CLOSE_BOX, WINDOW_W } from './window'
-import { MAP_H } from './map'
-import { PX, textMask } from './pixelart'
 import { BASES, LEGENDARIES, PREFIXES, SUFFIXES } from './items'
 
 const run = (g: Game, actions: readonly Action[]) => actions.reduce(apply, g)
@@ -17,7 +15,7 @@ const outcome = (ok = true, over: Partial<Extract<Action, { kind: 'outcome' }>> 
 /** A hero with a one-HP goblin worth 10 XP beside them. */
 const facing = (g: Game, over = {}) => ({ ...g, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, xp: 10, opened: true, ...over }) })
 const blank: Recap = { calls: 0, depth: 1, level: 1, kills: 0, champions: 0, gold: 0, deaths: 0, tests: 0, commits: 0, pushes: 0, prs: 0 }
-const texts = (g: Game) => recapLines(g).map(l => l.text)
+const texts = (g: Game) => recapLines(g)
 
 describe('what the recap counts', () => {
   test('a tool call that slays a foe: one call, one kill, the gold it paid, from the depth and level it began on', async () => {
@@ -101,44 +99,39 @@ describe('the recap window', () => {
   const shown = (r: Recap, over: Partial<Game> = {}): Game => ({ ...plainHero(3), depth: 14, level: 18, panel: 'recap', recap: r, ...over })
   const helm = { ...plainItem({ nextId: 800 }, 'steelHelm', 'epic'), name: 'Steel Helm of Fast Feedback' }
 
-  test('says what happened, as the approved mock does', async () => {
+  test('says what happened beside the portrait, and the best find beside its box', async () => {
     expect(texts(shown({ ...told, best: helm }))).toEqual([
-      '34 TOOL CALLS', 'DEPTH 11 TO 14', 'LEVEL 17 TO 18',
-      'KILLS 21', 'GOLD +412', '2 CHAMPIONS', 'DEATHS 0',
-      '4 GREEN TEST RUNS', '2 COMMITS  1 PUSH',
-      'BEST FIND', 'STEEL HELM OF', 'FAST FEEDBACK',
+      '34 tool calls', 'Depth 11 to 14, level 17 to 18.', '21 kills, 2 champions, +412 gold, 0 deaths.', '4 green test runs, 2 commits, 1 push.',
+      'Best find', 'Steel Helm of Fast Feedback',
     ])
   })
 
   test('one of a thing is said as one; a depth and a level that did not change are said once', async () => {
     const one = { ...told, calls: 12, depth: 14, level: 18, kills: 1, champions: 1, tests: 1, commits: 1, pushes: 2, prs: 1 }
-    expect(texts(shown(one))).toEqual(['12 TOOL CALLS', 'DEPTH 14', 'LEVEL 18', 'KILLS 1', 'GOLD +412', '1 CHAMPION', 'DEATHS 0', '1 GREEN TEST RUN', '1 COMMIT  2 PUSHES  1 PR'])
+    expect(texts(shown(one))).toEqual(['12 tool calls', 'Depth 14, level 18.', '1 kill, 1 champion, +412 gold, 0 deaths.', '1 green test run, 1 commit, 2 pushes, 1 PR.'])
   })
 
   test('leaves out work and a find when there were none, and champions when none fell', async () => {
     const quiet = { ...told, champions: 0, tests: 0, commits: 0, pushes: 0, prs: 0 }
-    expect(texts(shown(quiet))).toEqual(['34 TOOL CALLS', 'DEPTH 11 TO 14', 'LEVEL 17 TO 18', 'KILLS 21', 'GOLD +412', 'DEATHS 0'])
+    expect(texts(shown(quiet))).toEqual(['34 tool calls', 'Depth 11 to 14, level 17 to 18.', '21 kills, +412 gold, 0 deaths.'])
     expect(recapHeight(shown(quiet))).toBeLessThan(recapHeight(shown({ ...told, best: helm })))
   })
 
-  test('fits over the map at its fullest, with the longest name a find can have', async () => {
-    const widest = (names: readonly string[]) => [...names].sort((a, b) => textMask(b.toUpperCase())[0]!.length - textMask(a.toUpperCase())[0]!.length)[0]!
-    const affixed = [PREFIXES, BASES, SUFFIXES].map(list => widest(list.map(x => x.name))).join(' ')
-    const longest = widest([affixed, ...LEGENDARIES.map(l => l.name)])
-    const g = shown({ ...told, prs: 3, best: { ...helm, name: longest } })
-    expect(recapHeight(g)).toBeLessThanOrEqual(MAP_H * PX)
-    const label = recapLines(g).find(m => m.text === 'BEST FIND')!
-    const name = recapLines(g).filter(l => l.y > label.y)
-    expect(name.map(l => l.text).join(' ')).toBe(longest.toUpperCase())
-    expect(Math.max(...name.map(l => textMask(l.text)[0]!.length + l.x))).toBeLessThanOrEqual(WINDOW_W - 3)
+  test('fits in 40 rows at its fullest, the longest name a find can have whole on its line', async () => {
+    const longest = (names: readonly string[]) => [...names].sort((a, b) => b.length - a.length)[0]!
+    const affixed = [PREFIXES, BASES, SUFFIXES].map(list => longest(list.map(x => x.name))).join(' ')
+    const name = longest([affixed, ...LEGENDARIES.map(l => l.name)])
+    const g = shown({ ...told, champions: 3, deaths: 2, prs: 3, best: { ...helm, name } })
+    expect(recapHeight(g)).toBeLessThanOrEqual(80)
+    for (const b of recapOverlay(g)) for (const line of b.lines) expect(line.map(r => r.text).join('').length).toBeLessThanOrEqual(b.w - 4)
   })
 
   test('Play on and the close box close it; a click elsewhere does nothing', async () => {
     const g = shown({ ...told, best: helm })
     const at = (p: { x: number; y: number }) => recapGesture(g, { type: 'release', from: p, at: p, button: 'left' })
     const h = recapHeight(g)
-    expect(at({ x: 6, y: (h - 7) / 2 })).toEqual([{ kind: 'panel', panel: 'recap' }])
+    expect(at({ x: WINDOW_W / 2, y: (h - 7) / 2 })).toEqual([{ kind: 'panel', panel: 'recap' }])
     expect(at({ x: CLOSE_BOX[0] + 1, y: (CLOSE_BOX[1] + 1) / 2 })).toEqual([{ kind: 'panel', panel: 'recap' }])
-    expect(at({ x: 90, y: (h - 7) / 2 })).toEqual([])
+    expect(at({ x: 4, y: (h - 7) / 2 })).toEqual([])
   })
 })

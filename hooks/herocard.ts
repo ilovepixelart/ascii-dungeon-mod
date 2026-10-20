@@ -11,6 +11,7 @@ import { heroArt } from './pixelart'
 import { PORTRAIT, drawItem, portrait } from './pieces'
 import { canvas, fill, frame } from './canvas'
 import { word } from './window'
+import { INK, SURFACE } from './ui/tokens'
 
 export const CARD_W = 200
 const PAD = 6
@@ -19,12 +20,8 @@ const SIDE_X = PAD + PORTRAIT + 6
 const BOX_W = 13
 const BOX_H = 23
 const BOX_STEP = 14
-const BG = '#0f0d14'
-const EDGE = '#3a3644'
-const DIM = '#8a8494'
-const SAY = '#e8e4dc'
-const GOLD = '#ffd34d'
-const RULE = '#2c2834'
+const BG = SURFACE.print
+const EDGE = SURFACE.cardEdge
 /** Talent names a card line holds. */
 const TALENTS_A_LINE = 3
 /** The scale the SVG is drawn at: a card pixel this many across. */
@@ -53,10 +50,10 @@ export const cardHead = (g: Game) => {
   const c = codexOf(g)
   const retired = c.retired ?? 0
   return [
-    { text: `LEVEL ${g.level} ${CLASS_NAME[g.cls].toUpperCase()}`, ink: GOLD },
-    { text: `DEEPEST ${deepest(g)}`, ink: SAY },
-    { text: `KILLS ${c.kills}  DEATHS ${c.deaths}`, ink: DIM },
-    ...(retired > 0 ? [{ text: `${retired} ${retired === 1 ? 'HERO' : 'HEROES'} RETIRED`, ink: DIM }] : []),
+    { text: `LEVEL ${g.level} ${CLASS_NAME[g.cls].toUpperCase()}`, ink: INK.gold },
+    { text: `DEEPEST ${deepest(g)}`, ink: INK.text },
+    { text: `KILLS ${c.kills}  DEATHS ${c.deaths}`, ink: INK.dim },
+    ...(retired > 0 ? [{ text: `${retired} ${retired === 1 ? 'HERO' : 'HEROES'} RETIRED`, ink: INK.dim }] : []),
   ]
 }
 
@@ -77,12 +74,12 @@ export const cardPixels = (g: Game): string[][] => {
     else drawItem(body, g, item, x, y, BOX_W, BOX_H)
   })
   y += BOX_H + 5
-  fill(body, PAD, y, CARD_W - 2 * PAD, 1, RULE)
+  fill(body, PAD, y, CARD_W - 2 * PAD, 1, SURFACE.line)
   y += 4
-  word(body, `UNIQUES ${c.uniques.length} OF ${Object.keys(UNIQUES).length}   BIG BOSSES ${c.bigs.length} OF ${Object.keys(BIG_BOSSES).length}`, PAD, y, SAY)
-  word(body, `LEGENDARIES ${legendariesFound(g)} OF ${LEGENDARIES.length}   GOLD FOUND ${c.gold}`, PAD, y + LINE, SAY)
+  word(body, `UNIQUES ${c.uniques.length} OF ${Object.keys(UNIQUES).length}   BIG BOSSES ${c.bigs.length} OF ${Object.keys(BIG_BOSSES).length}`, PAD, y, INK.text)
+  word(body, `LEGENDARIES ${legendariesFound(g)} OF ${LEGENDARIES.length}   GOLD FOUND ${c.gold}`, PAD, y + LINE, INK.text)
   y += 2 * LINE + 2
-  talents.forEach((t, i) => word(body, t, PAD, y + i * LINE, DIM))
+  talents.forEach((t, i) => word(body, t, PAD, y + i * LINE, INK.dim))
   y += talents.length * LINE + 2
   word(body, 'ASCII DUNGEON', PAD, y, EDGE)
   frame(body, 0, 0, CARD_W, height, EDGE)

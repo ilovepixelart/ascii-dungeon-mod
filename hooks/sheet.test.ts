@@ -3,8 +3,8 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
 import { textMask } from './pixelart'
-import { CODEX_RECT, DEEP_RECT, RETIRE_RECT, SHEET_H, TALENT_RECT, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
-import { CLOSE_BOX, WINDOW_W } from './window'
+import { RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
+import { CLOSE_BOX, WINDOW_W, tabRects } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
 
@@ -27,13 +27,27 @@ describe('the character sheet', () => {
     for (let py = 0; py < SHEET_H; py += 2) expect(sheetGesture(g, tap(5, py))).not.toContainEqual({ kind: 'panel', panel: 'start' })
   })
 
-  test('Codex opens the codex, under the attribute rows and inside the window', async () => {
-    const r = CODEX_RECT
-    expect(sheetGesture(hero(), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'codex' }])
-    expect(r.y).toBeGreaterThan(plusRect(3).y + 11)
-    expect(r.y + r.h).toBeLessThanOrEqual(SHEET_H)
-    const lit = sheetPixels(hero()).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + 8).includes(GOLD_INK))
-    expect(lit).toBe(true)
+  const TABS = tabRects(['HERO', 'TALENT', 'DEEP', 'CODEX'].map(label => ({ label })))
+  const onTab = (i: number) => tap(TABS[i]!.x + 3, TABS[i]!.y + 4)
+
+  test('its tabs open the talents, the deep and the codex; its own tab does nothing', async () => {
+    expect([1, 2, 3].map(i => sheetGesture(hero(), onTab(i)))).toEqual([
+      [{ kind: 'panel', panel: 'talent' }],
+      [{ kind: 'panel', panel: 'deep' }],
+      [{ kind: 'panel', panel: 'codex' }],
+    ])
+    expect(sheetGesture(hero(), onTab(0))).toEqual([])
+  })
+
+  test('the talents\' tab is marked in gold while one is owed; the deep\'s while a fork waits', async () => {
+    // The mark: two gold pixels at the tab's top right, above its label, clear of the next tab.
+    const marked = (g: Game, i: number) => sheetPixels(g)[TABS[i]!.y + 1]![TABS[i]!.x + TABS[i]!.w - 2] === GOLD_INK
+    expect([marked(hero({ level: 10 }), 1), marked(hero({ level: 9 }), 1)]).toEqual([true, false])
+    expect([marked(hero({ bossSlain: 60, deepest: 60 }), 2), marked(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }), 2)]).toEqual([true, false])
+  })
+
+  test('fits in 40 rows', async () => {
+    expect(SHEET_H).toBeLessThanOrEqual(80)
   })
 
   test('Retire opens the retire window once a big boss is slain, lit; before, it is dark and does nothing', async () => {
@@ -43,28 +57,7 @@ describe('the character sheet', () => {
     expect(lit(hero({ bossSlain: 10 }))).toBe(true)
     expect(sheetGesture(hero({ bossSlain: 5 }), tap(r.x + 2, r.y + 4))).toEqual([])
     expect(lit(hero({ bossSlain: 5 }))).toBe(false)
-    expect(r.x).toBeGreaterThan(CODEX_RECT.x + CODEX_RECT.w)
-    expect(r.x + r.w).toBeLessThanOrEqual(WINDOW_W)
-  })
-
-  test('Talent opens the talent window, framed white while one is owed, under Codex and inside the window', async () => {
-    const r = TALENT_RECT
-    expect(sheetGesture(hero(), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'talent' }])
-    const edge = (g: Game) => sheetPixels(g)[r.y]![r.x + 4]
-    expect(edge(hero({ level: 10 }))).toBe('#ffffff')
-    expect(edge(hero({ level: 9 }))).not.toBe('#ffffff')
-    expect(r.y).toBeGreaterThan(CODEX_RECT.y + CODEX_RECT.h)
-    expect(r.y + r.h).toBeLessThanOrEqual(SHEET_H)
-  })
-
-  test('Deep opens the deep window, framed white while a fork waits, beside Talent and inside the window', async () => {
-    const r = DEEP_RECT
-    expect(sheetGesture(hero(), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'deep' }])
-    const edge = (g: Game) => sheetPixels(g)[r.y]![r.x + 4]
-    expect(edge(hero({ bossSlain: 60, deepest: 60 }))).toBe('#ffffff')
-    expect(edge(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }))).not.toBe('#ffffff')
-    expect(edge(hero({ bossSlain: 40, deepest: 40 }))).not.toBe('#ffffff')
-    expect([r.y, r.x > TALENT_RECT.x + TALENT_RECT.w, r.x + r.w <= WINDOW_W]).toEqual([TALENT_RECT.y, true, true])
+    expect([r.y > plusRect(3).y + 11, r.x + r.w <= WINDOW_W, r.y + r.h <= SHEET_H]).toEqual([true, true, true])
   })
 
   test('each + key is the plus alone, centered, no digit beside it', async () => {
@@ -87,14 +80,12 @@ describe('the character sheet', () => {
     expect(key(hero({ points: 0 }))).toBe(false)
   })
 
-  test('says who the hero is, what they have to spend, and what each attribute does beside its row', async () => {
+  test('says who the hero is, how they stand, what Vigor and Insight give, and what they have to spend', async () => {
     const g = hero({ level: 5, points: 3 })
-    const [head, effects] = sheetOverlay(g).map(b => b.lines.map(l => l.map(r => r.text).join('')))
-    expect(head?.[0]).toMatch(/^Level 5 Knight/)
-    expect(head?.[2]).toBe('3 points to spend')
-    expect(sheetOverlay(hero({ points: 1 }))[0]!.lines[2]![0]!.text).toBe('1 point to spend')
-    // A new knight: half its 3 Might, rounded down, and the Short Sword's 2.
-    expect(effects?.filter(l => l !== '')).toEqual(['+3 attack (half Might + gear)', '3% critical hit chance', '+3 max HP per point', '+0% XP from kills'])
+    const head = sheetOverlay(g)[0]!.lines.map(l => l.map(r => r.text).join(''))
+    // A new knight: half its 3 Might, rounded down, and the Short Sword's 2; a 3% crit.
+    expect(head).toEqual([`Level 5 Knight   HP ${g.hp}/${g.maxHp}`, `Attack +3  Defense ${head[1]!.match(/Defense (\d+)/)![1]}  Crit 3%`, 'Vigor +3 max HP a point, Insight +0% XP', '3 points to spend'])
+    expect(sheetOverlay(hero({ points: 1 }))[0]!.lines[3]![0]!.text).toBe('1 point to spend')
   })
 
   test('is WINDOW_W wide and SHEET_H tall, a whole number of cells', async () => {

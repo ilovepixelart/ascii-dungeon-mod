@@ -5,7 +5,7 @@ import { STASH_SIZE } from './game'
 import { BAG_X, BAG_Y } from './inventory'
 import { CELL } from './icons'
 import { plainItem } from './items'
-import { BODY_TOP, CLOSE_BOX } from './window'
+import { WINDOW_TOP, CLOSE_BOX } from './window'
 import type { Gesture } from './window'
 import { CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
 import { CURSOR } from './pieces'
@@ -15,9 +15,9 @@ import { newGame } from './world'
 const hero = (): Game => ({ ...newGame(1, 'knight'), bag: [], stashed: [] })
 const item = (g: Game, base: string, rarity: Rarity, over: Partial<Item> = {}): Item => ({ ...plainItem(g, base, rarity), x: 0, y: 0, ...over })
 const click = (x: number, y: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x, y }, at: { x, y }, button })
-/** A click on the chest's row i: the list starts a cell below the labels, its rows a cell under its frame. */
-const onRow = (i: number, button: 'left' | 'right' = 'left') => click(5.5, BODY_TOP / 2 + 2 + i + 0.5, button)
-const onBag = (it: Item) => click(BAG_X + it.x * CELL + 3.5, (BODY_TOP + BAG_Y + it.y * CELL + 3) / 2 + 0.25)
+/** A click on the chest's row i: the list starts a cell below the window's top, its rows a cell under its frame. */
+const onRow = (i: number, button: 'left' | 'right' = 'left') => click(5.5, WINDOW_TOP / 2 + 2 + i + 0.5, button)
+const onBag = (it: Item) => click(BAG_X + it.x * CELL + 3.5, (WINDOW_TOP + BAG_Y + it.y * CELL + 3) / 2 + 0.25)
 const lines = (g: Game, ui: ChestUi, role: string) => chestOverlay(g, ui).find(b => b.role === role)?.lines.map(l => l.map(r => r.text).join(''))
 const onEntry = (g: Game, ui: ChestUi) => {
   const m = chestOverlay(g, ui).find(b => b.role === 'menu')!
@@ -110,7 +110,7 @@ describe('the bag beside it', () => {
     g.bag = [ring]
     g.cursor = 7
     g.stashed = [item(g, 'ring', 'rare', { id: 501 })]
-    const frameAt = (ui: ChestUi) => chestPixels(g, ui)[BODY_TOP + BAG_Y + ring.y * CELL - 1]?.[BAG_X + ring.x * CELL + 3]
+    const frameAt = (ui: ChestUi) => chestPixels(g, ui)[WINDOW_TOP + BAG_Y + ring.y * CELL - 1]?.[BAG_X + ring.x * CELL + 3]
     expect(frameAt(CHEST_UI_IDLE)).toBe(CURSOR)
     expect(frameAt({ stored: 501, menu: false })).not.toBe(CURSOR)
   })

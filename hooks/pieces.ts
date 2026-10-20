@@ -9,20 +9,21 @@ import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, digits, fill, frame, put } from 
 import type { Canvas } from './canvas'
 import { PAL, PX, textMask } from './pixelart'
 import type { OverlayBox, Rect } from './window'
+import { INK, SURFACE } from './ui/tokens'
 
-export const GHOST_INK = '#2a2732'
-export const OFF_CLASS = '#ff4a4a'
-export const UPGRADE = '#3ccf4e'
-export const CURSOR = '#ffffff'
+export const GHOST_INK = INK.ghost
+export const OFF_CLASS = INK.wrong
+export const UPGRADE = INK.good
+export const CURSOR = INK.focus
 /** A locked item's mark in its bottom-right corner: a small padlock. */
-export const LOCK_INK = '#e8e4dc'
+export const LOCK_INK = INK.text
 const LOCK_MARK: readonly string[] = ['.w.', 'w.w', 'www', 'www']
 export const BELT_STEP = BELT_SLOT_W + 1
-export const GOLD_INK = '#ffd34d'
-const COIN_RIM = '#c9971f'
+export const GOLD_INK = INK.gold
+const COIN_RIM = INK.coinRim
 /** A price that cannot be paid: the coin and its number in grey. */
-export const UNPAID_INK = '#8a8494'
-const UNPAID_RIM = '#4a4652'
+export const UNPAID_INK = INK.dim
+const UNPAID_RIM = INK.unpaidRim
 
 export const mix = (a: string, b: string, t: number) =>
   `#${[1, 3, 5].map(i => Math.round(Number.parseInt(a.slice(i, i + 2), 16) * (1 - t) + Number.parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')}`
@@ -33,7 +34,7 @@ export const tierBox = (c: Canvas, x: number, y: number, w: number, h: number, t
   fill(c, x, y, w, h, tier === 'common' ? SLOT_BG : mix(SLOT_BG, color, 0.18))
   if (tier === 'common') return
   frame(c, x - 1, y - 1, w + 2, h + 2, color)
-  const bright = mix(color, '#ffffff', 0.6)
+  const bright = mix(color, INK.white, 0.6)
   if (tier === 'rare' || tier === 'legendary') for (const [cx, cy] of [[x - 1, y - 1], [x + w, y - 1], [x - 1, y + h], [x + w, y + h]] as const) put(c, cx, cy, bright)
   if (tier === 'epic' || tier === 'legendary') frame(c, x, y, w, h, mix(color, SLOT_BG, 0.35))
 }
@@ -73,6 +74,12 @@ export const gridLines = (c: Canvas, x: number, y: number, cols: number, rows: n
 export const cellBox = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect =>
   ({ x: x + item.x * CELL + 1, y: y + item.y * CELL + 1, w: item.w * CELL - 1, h: item.h * CELL - 1 })
 
+/** An item lying in a grid at x, y as the hover lights it: its box and the frame round it. */
+export const itemOutline = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect => {
+  const b = cellBox(item, x, y)
+  return { x: b.x - 1, y: b.y - 1, w: b.w + 2, h: b.h + 2 }
+}
+
 /** An item grid at x, y with its items laid in it. */
 export const itemGrid = (c: Canvas, g: Game, items: readonly Item[], x: number, y: number, cols: number, rows: number) => {
   gridLines(c, x, y, cols, rows)
@@ -85,7 +92,7 @@ export const itemGrid = (c: Canvas, g: Game, items: readonly Item[], x: number, 
 /** A belt slot's place when the belt starts at x0, y: as drawn, BELT_SLOT_W by SLOT. */
 export const beltSlotRect = (x0: number, y: number, i: number): Rect => ({ x: x0 + i * BELT_STEP, y, w: BELT_SLOT_W, h: SLOT })
 
-export const TIER_INK = '#ffd34d'
+export const TIER_INK = INK.gold
 
 /** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`), how many of that tier it holds (at most two digits), and under it a pip a tier above the first. */
 export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number, y: number) => {
@@ -136,8 +143,8 @@ export const wareTag = (c: Canvas, icon: readonly string[], cost: number, x: num
 /** A flat bar's height: one text row, so the text on it covers it exactly. */
 /** A flat bar's height: its mark's, two text rows, its number on the middle two pixel rows. */
 export const FLAT_BAR_H = 4
-const INK_LIGHT = '#e8e4dc'
-const INK_DARK = '#1a1820'
+const INK_LIGHT = INK.text
+const INK_DARK = INK.onBright
 
 /** The text color that reads on a color: dark on a bright one, light on a dark one. */
 export const inkOn = (color: string) => {
@@ -180,11 +187,10 @@ export const bar = (c: Canvas, x: number, y: number, w: number, h: number, share
 /** A button's height, and the inks of its states: ready, off (it cannot act now), armed (white, pressing it acts). */
 export const BUTTON_H = 11
 export type ButtonState = 'ready' | 'off' | 'armed'
-const BUTTON_BG = { ready: '#1f1c27', off: '#141219', armed: '#1f1c27' } as const
-const BUTTON_EDGE = { ready: '#4a4456', off: '#24212c', armed: CURSOR } as const
-const BUTTON_LIT = '#2c2836'
-const OFF_INK = '#5a5664'
-const LABEL_INK = '#e8e4dc'
+const BUTTON_BG = { ready: SURFACE.raised, off: SURFACE.sunken, armed: SURFACE.raised } as const
+const BUTTON_EDGE = { ready: SURFACE.buttonEdge, off: SURFACE.tab, armed: CURSOR } as const
+const BUTTON_LIT = SURFACE.buttonLit
+const OFF_INK = INK.off
 
 /** A button's width: its key, its label and, when it costs, a price; three pixels of room between and round them. */
 /** The gap between a button's key and its label; none when either is empty, so a key alone sits centered. */
@@ -200,26 +206,27 @@ export const button = (c: Canvas, key: string, label: string, x: number, y: numb
   if (state !== 'off') fill(c, x + 1, y + 1, w - 2, 1, BUTTON_LIT)
   word(c, key, x + 3, y + 3, state === 'off' ? OFF_INK : GOLD_INK)
   const lx = x + 3 + textW(key) + keyGap(key, label)
-  word(c, label, lx, y + 3, state === 'off' ? OFF_INK : LABEL_INK)
+  word(c, label, lx, y + 3, state === 'off' ? OFF_INK : INK.text)
   if (cost !== undefined) price(c, cost, lx + textW(label) + 3, y + 3, canPay && state !== 'off')
   return w
 }
 
 /** A portrait's size: an 8 by 8 sprite at three times its size, inside a two pixel frame. */
 export const PORTRAIT = PX * 3 + 4
-const PORTRAIT_BG = '#1c2230'
-const PORTRAIT_FLOOR = '#232a3a'
-const PORTRAIT_EDGE = '#6b6258'
+const PORTRAIT_BG = SURFACE.backdrop
+const PORTRAIT_FLOOR = SURFACE.floor
+const PORTRAIT_EDGE = SURFACE.frame
 
-/** A portrait at x, y: the sprite as many times its size as fits (an 8 by 8 three times), centred on a lit backdrop with a floor, in a double frame. */
-export const portrait = (c: Canvas, rows: readonly string[], x: number, y: number) => {
-  fill(c, x, y, PORTRAIT, PORTRAIT, PORTRAIT_BG)
-  fill(c, x + 2, y + PORTRAIT - 8, PORTRAIT - 4, 6, PORTRAIT_FLOOR)
-  frame(c, x, y, PORTRAIT, PORTRAIT, PORTRAIT_EDGE)
-  frame(c, x + 1, y + 1, PORTRAIT - 2, PORTRAIT - 2, GRID)
-  const scale = Math.floor((PORTRAIT - 4) / rows.length)
-  const inset = 2 + Math.floor((PORTRAIT - 4 - rows.length * scale) / 2)
+/** A portrait `size` pixels square at x, y: the sprite as many times its size as fits (an 8 by 8 three times in
+ * PORTRAIT), centred on a lit backdrop with a floor, in a double frame. */
+export const portrait = (c: Canvas, rows: readonly string[], x: number, y: number, size = PORTRAIT) => {
+  fill(c, x, y, size, size, PORTRAIT_BG)
+  fill(c, x + 2, y + size - 8, size - 4, 6, PORTRAIT_FLOOR)
+  frame(c, x, y, size, size, PORTRAIT_EDGE)
+  frame(c, x + 1, y + 1, size - 2, size - 2, GRID)
+  const scale = Math.floor((size - 4) / rows.length)
+  const inset = 2 + Math.floor((size - 4 - rows.length * scale) / 2)
   rows.forEach((row, dy) => [...row].forEach((k, dx) => {
-    if (k !== '.') fill(c, x + inset + dx * scale, y + inset + dy * scale, scale, scale, PAL[k] ?? '#ff00ff')
+    if (k !== '.') fill(c, x + inset + dx * scale, y + inset + dy * scale, scale, scale, PAL[k] ?? INK.missing)
   }))
 }

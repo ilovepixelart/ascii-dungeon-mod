@@ -1220,7 +1220,7 @@ export const FONT: Readonly<Record<string, readonly string[]>> = {
   L: ['#..', '#..', '#..', '#..', '###'],
   V: ['#.#', '#.#', '#.#', '#.#', '.#.'],
   U: ['#.#', '#.#', '#.#', '#.#', '###'],
-  // Capitals for the inventory's pixel labels.
+  // Capitals for the windows' titles, tabs and button keys.
   A: ['.#.', '#.#', '###', '#.#', '#.#'],
   B: ['##.', '#.#', '##.', '#.#', '##.'],
   C: ['.##', '#..', '#..', '#..', '.##'],

@@ -2,10 +2,10 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Rarity } from '../types'
 import { CURSOR, UNPAID_INK, GOLD_INK } from './pieces'
-import { junkValue, plainItem } from './items'
+import { RARITY_COLOR, junkValue, plainItem } from './items'
 import { BAG_X, BAG_Y, BELT_Y } from './inventory'
 import { CELL } from './icons'
-import { BODY_TOP, CLOSE_BOX, WINDOW_W } from './window'
+import { WINDOW_TOP, CLOSE_BOX, WINDOW_W } from './window'
 import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopOverlay, shopPixels, wareRect, whyNot } from './shop'
 import type { ShopUi } from './shop'
 import type { Gesture } from './window'
@@ -20,7 +20,7 @@ const put = (g: Game, base: string, rarity: Rarity, x: number, y: number, over: 
 /** A click in the click layer's cells on window pixel (px, py). */
 const tap = (px: number, py: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button })
 const onWare = (i: number, button: 'left' | 'right' = 'left') => tap(wareRect(i).x + 7, wareRect(i).y + 4, button)
-const onItem = (item: Item, button: 'left' | 'right' = 'left') => tap(BAG_X + item.x * CELL + 3, BODY_TOP + BAG_Y + item.y * CELL + 3, button)
+const onItem = (item: Item, button: 'left' | 'right' = 'left') => tap(BAG_X + item.x * CELL + 3, WINDOW_TOP + BAG_Y + item.y * CELL + 3, button)
 const text = (g: Game, ui: ShopUi, role: 'card' | 'menu') => shopOverlay(g, ui).find(b => b.role === role)?.lines.map(l => l.map(r => r.text).join(''))
 /** A click on a menu's row, in cells. */
 const onRow = (g: Game, ui: ShopUi, row: number): Gesture => {
@@ -73,7 +73,7 @@ describe('wares', () => {
   test('a click anywhere but the menu closes it and buys nothing', async () => {
     const g = knight(100)
     const open: ShopUi = { ware: 'health1', menu: true }
-    const out = shopGesture(g, open, tap(WINDOW_W - 3, BODY_TOP + 40))
+    const out = shopGesture(g, open, tap(WINDOW_W - 3, WINDOW_TOP + 40))
     expect(out).toEqual({ ui: { ware: 'health1', menu: false }, actions: [] })
   })
 
@@ -110,7 +110,7 @@ describe('the bag in the shop', () => {
   test('empty space lets go of what is chosen; the close box closes the shop', async () => {
     const g = knight(0)
     g.cursor = put(g, 'ring', 'common', 0, 0).id
-    expect(shopGesture(g, { ware: null, menu: false }, tap(WINDOW_W - 3, BODY_TOP + 50))).toEqual({ ui: SHOP_UI_IDLE, actions: [{ kind: 'deselect' }] })
+    expect(shopGesture(g, { ware: null, menu: false }, tap(WINDOW_W - 3, WINDOW_TOP + 50))).toEqual({ ui: SHOP_UI_IDLE, actions: [{ kind: 'deselect' }] })
     const [x, y] = CLOSE_BOX
     expect(shopGesture(g, { ware: 'health1', menu: false }, tap(x + 2, y + 2)).actions).toEqual([{ kind: 'panel', panel: 'shop' }])
   })
@@ -151,7 +151,7 @@ describe('the window', () => {
     g.belt = [{ kind: 'health', tiers: [1, 0, 0] }, { kind: 'regen', tiers: [1, 0, 0] }, { kind: 'fury', tiers: [1, 0, 0] }, { kind: 'ward', tiers: [1, 0, 0] }, { kind: 'smoke', tiers: [1, 0, 0] }]
     for (const item of g.bag) {
       g.cursor = item.id
-      const own = { x: BAG_X + item.x * CELL + 1, y: BODY_TOP + BAG_Y + item.y * CELL + 1, w: CELL - 1, h: CELL - 1 }
+      const own = { x: BAG_X + item.x * CELL + 1, y: WINDOW_TOP + BAG_Y + item.y * CELL + 1, w: CELL - 1, h: CELL - 1 }
       for (const b of shopOverlay(g, { ware: null, menu: true })) expect(inside(own, b)).toBe(false)
     }
   })
@@ -174,7 +174,7 @@ describe('the window', () => {
     const g = knight(0)
     const ring = put(g, 'ring', 'common', 0, 0)
     g.cursor = ring.id
-    const frameAt = (ui: ShopUi) => shopPixels(g, ui)[BODY_TOP + BAG_Y + ring.y * CELL - 1]?.[BAG_X + ring.x * CELL + 3]
+    const frameAt = (ui: ShopUi) => shopPixels(g, ui)[WINDOW_TOP + BAG_Y + ring.y * CELL - 1]?.[BAG_X + ring.x * CELL + 3]
     expect(frameAt(SHOP_UI_IDLE)).toBe(CURSOR)
     expect(frameAt({ ware: 'health1', menu: false })).not.toBe(CURSOR)
   })
@@ -195,6 +195,12 @@ test('the shelf holds its wares in three rows of three, clear of the belt below 
   for (let i = 0; i < WARES.length; i += 1) {
     const r = wareRect(i)
     expect(r.x + r.w).toBeLessThanOrEqual(BAG_X)
-    expect(r.y + r.h).toBeLessThan(BODY_TOP + BELT_Y)
+    expect(r.y + r.h).toBeLessThan(WINDOW_TOP + BELT_Y)
   }
+})
+
+test('a ware\'s card is framed as a Common item\'s, its menu in white, as every card and menu is', async () => {
+  const g = { ...newGame(4), where: 'town' as const, gold: 300 }
+  const ui = { ware: WARES[0]!, menu: true }
+  expect(shopOverlay(g, ui).map(b => [b.role, b.border])).toEqual([['card', RARITY_COLOR.common], ['menu', CURSOR]])
 })

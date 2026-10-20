@@ -14,6 +14,8 @@ again from its new start, gains kept. Nothing else needs doing.
 - An answer finished walks the hero to the stairs on screen, picking up what lies on the way, then down, where the
   hero appeared on the next depth from wherever he stood. Simulated deaths per descent are unchanged (0.097 and
   0.099); the hero gets down a little sooner, so deaths per 1,000 steps go from 1.60 to 1.71.
+- The character sheet's train buttons show a plus alone, where each showed its key, 1 to 4, beside it; the keys still
+  train. A button with a key and no label (those and the deep window's A and B) sits centered.
 - A corridor shows at once when the hero steps into it, along its floor through its next junction, so one click walks
   its length; a chest at a dead end, the next door and the room past it show only once the hero is beside them. A
   room shows whole from its door, and no longer through a gap from a room beside it; from a room the hero no longer

@@ -309,14 +309,16 @@ export const benchRoute = (g: Game, tiles: number): Pos[] => {
  * included; on screen each pickup stays on the floor until the drawn hero reaches its tile, and the foe stays as it
  * was until the walk is over.
  */
-export const walkingGame = (g: Game, start: Pick<Game, 'taken' | 'foe'>, path: readonly Pos[], frame: number): Game => {
+export const walkingGame = (g: Game, start: Pick<Game, 'taken' | 'foe' | 'floor'>, path: readonly Pos[], frame: number): Game => {
   const along = Math.floor(Math.max(0, frame) / FRAMES_PER_TILE)
   if (along >= path.length - 1) return g
   // The same game object for every frame of a tile, so what is drawn from it can be kept for that tile.
   const last = lastWalking
   if (last !== null && last.g === g && last.start === start && last.path === path && last.along === along) return last.drawn
   const ahead = new Set(path.slice(along + 1).map(cellId))
-  const drawn = { ...g, taken: g.taken.filter(id => start.taken.includes(id) || !ahead.has(id)), foe: start.foe }
+  // An item picked up off the floor along the way lies there too until the hero reaches it.
+  const pickedAhead = (start.floor ?? []).filter(f => !(g.floor ?? []).includes(f) && ahead.has(cellId(f)))
+  const drawn = { ...g, taken: g.taken.filter(id => start.taken.includes(id) || !ahead.has(id)), floor: [...(g.floor ?? []), ...pickedAhead], foe: start.foe }
   lastWalking = { g, start, path, along, drawn }
   return drawn
 }
@@ -338,7 +340,7 @@ export const walkState = (start: Game, tiles: readonly Game[], frame: number): G
   return state
 }
 
-let lastWalking: { g: Game; start: Pick<Game, 'taken' | 'foe'>; path: readonly Pos[]; along: number; drawn: Game } | null = null
+let lastWalking: { g: Game; start: Pick<Game, 'taken' | 'foe' | 'floor'>; path: readonly Pos[]; along: number; drawn: Game } | null = null
 
 /** Rock with floor on all four sides: a pillar in a room, drawn as a column rather than a wall. */
 export const isPillar = (level: Level, p: Pos) => !isFloor(level.tiles, p) && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => isFloor(level.tiles, { x: p.x + dx!, y: p.y + dy! }))

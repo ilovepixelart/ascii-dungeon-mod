@@ -17,9 +17,9 @@ export const reveal = (seen: string, cells: readonly Pos[]) => {
 
 export const levelOf = (g: Pick<Game, 'world' | 'depth'>) => generate(g.world, g.depth)
 
-export const arrive = (world: number, depth: number) => {
+export const arrive = (world: number, depth: number): Pick<Game, 'depth' | 'x' | 'y' | 'seen' | 'taken' | 'floor'> => {
   const level = generate(world, depth)
-  return { depth, ...level.start, seen: reveal(FOG, visibleFrom(level, level.start)), taken: [] as number[] }
+  return { depth, ...level.start, seen: reveal(FOG, visibleFrom(level, level.start)), taken: [] as number[], floor: [] }
 }
 
 const BASE_STATS: Record<Attribute, number> = { might: 1, focus: 1, vigor: 1, insight: 0 }

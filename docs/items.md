@@ -158,7 +158,8 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
 
 ## Finding things
 
-- Kills drop equipment with the rarity weights above (the current 40% + 2% per depth chance), scattered onto the tiles around the kill. About 75% of equipment rolls for the hero's class; the rest is sell fodder and the odd surprise.
+- Kills drop equipment with the rarity weights above (35% and 1 more a depth, at most 55%: `itemChance` in `hooks/game.ts`) into the bag. About 75% of equipment rolls for the hero's class; the rest is sell fodder and the odd surprise.
+- With the bag full, a find lies where it fell (`Game.floor`, `leaveOnFloor`): a kill's on the foe's tile, a chest's beside it, drawn as a sack on the pixel map and `*` in its tier's color on the text one. Stepping onto it with room picks it up (`pickUpFloor`); it waits through a trip to town, and going down leaves it behind, said. A prize is never left lying while there is room in the stash in town (`keepPrize`): a trophy, a unique's or a boss's item, the codex's, and work's cache.
 - Good loot is never long in coming: the 12th kill in a row with nothing Rare or better leaves a Rare at least, whatever it would have left (`RARE_KILLS`, counted in `Game.sinceRare`). Counting items instead barely shortened the long waits: those are stretches of few kills (calms, deaths, town), not of bad rolls. In the simulated games the longest wait for one in a game is 91 tool calls or less nine times in ten, where it was 145.
 - A Rare or better from a kill rises as a beam of its tier's color where the foe fell, wider the rarer (Rare 2 px, Epic 4, Legendary 6; `drawBeam` in `hooks/pixels.ts`), for the blow's frames.
 - Bad-luck protection: after 10 items in a row without an Epic or better, each more raises the Epic and Legendary weights by a tenth, up to double at 20; the 30th is an Epic or better. One dropping resets the count.

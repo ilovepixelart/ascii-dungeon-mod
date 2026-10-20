@@ -586,6 +586,17 @@ export const THING_ART: Readonly<Record<string, readonly string[]>> = {
   c: ['........', '.KKKKKK.', 'KDDDDDDK', 'KKKKKKKK', 'KkkkkkkK', 'KWWyyWWK', 'KnNnnNnK', 'KKKKKKKK'],
   h: ['........', '.KKKKKK.', 'KwDDDDwK', 'KKKKKKKK', 'KkkkkkkK', 'KWWwwWWK', 'KwNnnNwK', 'KKKKKKKK'],
   j: ['........', '.KKKKKK.', 'KYDDDDYK', 'KKKKKKKK', 'KkkkkkkK', 'KyyZZyyK', 'KYNnnNYK', 'KKKKKKKK'],
+  // An item left on the floor when the bag was full: a sack tied with gold.
+  '*': [
+    '........',
+    '...KK...',
+    '..KyYK..',
+    '..KnnK..',
+    '.KnDnnK.',
+    'KnDnnnNK',
+    'KnnnnNNK',
+    '.KKKKKK.',
+  ],
   '$': [
     '........',
     '........',

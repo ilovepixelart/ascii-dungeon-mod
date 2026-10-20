@@ -62,9 +62,13 @@ const takenSet = (taken: readonly number[]) => {
   return set
 }
 
-/** The thing lying on a cell, if any: stairs, or gold, a potion, a sprung trap not yet used up. */
+/** An item lying on the floor at a cell, left there when the bag was full. */
+const lyingAt = (g: Game, p: Pos) => g.floor?.find(f => f.x === p.x && f.y === p.y)?.item
+
+/** The thing lying on a cell, if any: stairs, an item left on the floor (`*`), or gold, a potion, a sprung trap not yet used up. */
 const thingAt = (g: Game, level: Level, p: Pos) => {
   if (same(p, level.stairs)) return '>'
+  if (lyingAt(g, p) !== undefined) return '*'
   const thing = floorThing(g.world, g.depth, level, p)
   const isTaken = takenSet(g.taken).has(cellId(p))
   if (thing === '^') return isTaken ? '^' : undefined
@@ -111,7 +115,8 @@ const occupantOf = (g: Game, level: Level, isSeen: boolean, isVisible: boolean, 
   }
   const thing = isSeen ? thingAt(g, level, p) : undefined
   if (thing === undefined) return undefined
-  return isVisible ? { kind: 'thing', glyph: thing, color: THING_INK[thing] ?? INK.gold, bold: true } : { kind: 'thing', glyph: thing, color: MEMORY_FG }
+  const ink = thing === '*' ? RARITY_COLOR[lyingAt(g, p)!.rarity] : (THING_INK[thing] ?? INK.gold)
+  return isVisible ? { kind: 'thing', glyph: thing, color: ink, bold: true } : { kind: 'thing', glyph: thing, color: MEMORY_FG }
 }
 
 export const tileAt = (g: Game, level: Level, visible: ReadonlySet<number>, p: Pos, withGround = true): Tile => {

@@ -18,6 +18,10 @@ release may change behaviour.
   through the portal onto it did not pick it up, and an answer finished in town walked down from that tile without it:
   the cache was lost. The same befell an item lying under the hero when a walk down began. Arriving on a tile and
   starting a walk down now pick up what lies there, room allowing.
+- The smith's window after a reforge was 84 to 92 pixels tall, past the 41 rows every window fits, and cut the line
+  saying what was worn before. The smith's card now shows what smithing changes: stats on one line, a power, trigger
+  or set by name (the bag's card says what each does), and what it was before on two lines; the temper pips sit beside
+  Temper. With Keep old it is at most 40 rows.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

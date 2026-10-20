@@ -3,10 +3,11 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game, Item, Rarity, Slot } from '../types'
 import { CURSOR, GOLD_INK } from './pieces'
 import { WORN_SLOTS } from './inventory'
-import { plainItem } from './items'
+import { makeItem, plainItem, setOf, setPiece } from './items'
 import { WINDOW_TOP, CLOSE_BOX } from './window'
 import type { Gesture } from './window'
-import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
+import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
+import { apply } from './game'
 import { newGame } from './world'
 
 const knight = (gold: number): Game => ({ ...newGame(1, 'knight'), gold })
@@ -107,5 +108,38 @@ describe('the jobs', () => {
     const [x, y] = CLOSE_BOX
     expect(forgeGesture(knight(0), { slot: 'armor' }, tap(x + 2, y + 2))).toEqual({ ui: FORGE_UI_IDLE, actions: [{ kind: 'panel', panel: 'forge' }] })
     expect(forgeGesture(knight(0), FORGE_UI_IDLE, { type: 'drag', from: { x: 5, y: 15 }, at: { x: 9, y: 15 } }).actions).toEqual([])
+  })
+})
+
+describe('the smith after a reforge', () => {
+  /** In town before the smith with `item` worn in its slot, rich, then reforged once: Keep old is offered. */
+  const reforged = (g: Game, item: Item) => {
+    const slot = item.slot
+    const town = { ...apply({ ...g, gold: 10 ** 7 }, { kind: 'portal' }), gear: { [slot]: { ...item, x: 0, y: 0 } }, panel: 'forge' as const }
+    return { g: apply(town, { kind: 'reforge', slot }), slot }
+  }
+
+  test('fits in 41 rows with Keep old shown, every line of its card whole, for any piece the smith reforges', async () => {
+    const tall: string[] = []
+    for (let seed = 1; seed <= 60; seed += 1) {
+      const g = newGame(seed)
+      for (const item of [makeItem({ ...g, depth: 40 }, 'uncommon', 3), makeItem({ ...g, depth: 40 }, 'epic', 3), setPiece(g, setOf(g.cls))]) {
+        const { g: after, slot } = reforged(g, item)
+        const box = forgeOverlay(after, { slot })[0]!
+        const cut = box.lines.map(l => l.map(r => r.text).join('')).filter(t => t.length > box.w - 4)
+        if (forgeHeight(after, { slot }) > 82 || cut.length > 0) tall.push(`${item.name}: ${forgeHeight(after, { slot })} px, cut ${cut.join(' / ')}`)
+      }
+    }
+    expect(tall.slice(0, 3)).toEqual([])
+  })
+
+  test('the card says what was worn before, its name in its tier color, then its stats', async () => {
+    const g = newGame(7)
+    const item = { ...plainItem(g, 'helm', 'epic'), atk: 2, def: 6, hp: 0, crit: 0, xp: 0 }
+    const { g: after, slot } = reforged(g, item)
+    const lines = forgeOverlay(after, { slot })[0]!.lines
+    const at = lines.findIndex(l => l[0]?.text === 'Before: ')
+    expect(lines[at]![1]).toMatchObject({ text: item.name, color: '#a85cf0' })
+    expect(lines[at + 1]!.map(r => r.text).join('').trim()).toBe('+2 atk  +6 def')
   })
 })

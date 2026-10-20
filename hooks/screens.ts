@@ -106,6 +106,10 @@ export const shots = (): Shot[] => {
     out.push(shot(`start-${cls}`, startPixels(g, { cls }), startOverlay(g, { cls })))
     out.push(shot(`strip-${cls}`, hudPixels(g, 111).px))
     out.push(shot(`forge-${cls}`, forgePixels(smith, { slot: null, menu: false } as never), forgeOverlay(smith, { slot: null, menu: false } as never)))
+    // A Rare from the bag worn and just reforged, the old piece to keep: Before and Keep old shown.
+    const piece = g.bag.find(i => i.rarity === 'rare')!
+    const reforged = apply({ ...smith, gold: 10 ** 6, panel: 'forge', gear: { ...smith.gear, [piece.slot]: piece } }, { kind: 'reforge', slot: piece.slot })
+    out.push(shot(`forge-keep-${cls}`, forgePixels(reforged, { slot: piece.slot }), forgeOverlay(reforged, { slot: piece.slot })))
     out.push(shot(`chest-${cls}`, chestPixels(stash, { picked: null } as never), chestOverlay(stash, { picked: null } as never)))
   }
   out.push(shot('shop', shopPixels(town, { ware: null, menu: false }), shopOverlay(town, { ware: null, menu: false })))

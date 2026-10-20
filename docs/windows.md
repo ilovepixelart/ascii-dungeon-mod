@@ -57,7 +57,7 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 ## The smith
 
 - The worn slots on the left, as in the inventory; the piece being worked on framed white just outside its frame, where its tier frame cannot cover it. It is the first worn until another is clicked (`chosenSlot`).
-- On the right its card, ending in what each job costs or why it cannot be done (`whyNotTemper`, `whyNotReforge`), the Temper line with the stat now and after one more (`DEF 4 > 5`); under it a pip a tempering, then the Temper and Reforge buttons, grey when they cannot act.
+- On the right its card, what the smith works on (`workCard`): name, tier, its stats on one line, its power, trigger or set by name alone (the bag's card says what each does), what it was before a reforge (name, then stats), then what each job costs or why it cannot be done (`whyNotTemper`, `whyNotReforge`), the Temper line with the stat now and after one more (`DEF 4 > 5`). Under it Temper with a pip a tempering beside it, Reforge, and after a reforge Keep old, grey when they cannot act. So with Keep old the window still fits 41 rows.
 - The buttons carry no price: a reforge's runs to three digits, too wide for the work side with the key and label. The prices are in the card.
 
 ## The stash

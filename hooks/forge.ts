@@ -4,7 +4,7 @@
 import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { keptChoice, reforgeCost } from './game'
-import { RARITY_COLOR, SLOTS, TEMPER_MAX, describe, temperCost, temperStat } from './items'
+import { POWERS, RARITY_COLOR, SETS, SET_COLOR, SLOTS, TEMPER_MAX, TRIGGERS, describe, setWorn, temperCost, temperStat } from './items'
 import { WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
 import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonW } from './pieces'
@@ -50,13 +50,32 @@ const temperRuns = (g: Game, item: Item): Run[] => {
   return [label!, price!, { text: `  ${stat.toUpperCase()} ${now} > ${now + 1}` }, ...rest]
 }
 
-/** The chosen piece's card: name, tier and stats, then what each job costs or why it cannot be done. */
+/** What a piece carries beyond its stats, by name alone: its power, trigger or set. The bag's card says what each does. */
+const traitLines = (g: Game, item: Item): Run[][] => [
+  ...(item.power === undefined ? [] : [[{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }]]),
+  ...(item.trigger === undefined ? [] : [[{ text: TRIGGERS[item.trigger].name, color: RARITY_COLOR[item.rarity], bold: true }]]),
+  ...(item.set === undefined ? [] : [[{ text: `${SETS[item.set].name}, ${setWorn(g, item.set)} of ${SETS[item.set].pieces.length} worn`, color: SET_COLOR }]]),
+]
+
+/** The piece as it was before its last reforge: its name in its tier's color, its stats under it. */
+const beforeLines = (before: Item): Run[][] => [
+  [{ text: 'Before: ', dim: true }, { text: before.name, color: RARITY_COLOR[before.rarity] }],
+  [{ text: `        ${describe(before)}`, dim: true }],
+]
+
+/**
+ * The chosen piece's card, what the smith works on: name, tier, stats on one line, what it carries by name, what it
+ * was before a reforge, then what each job costs or why it cannot be done.
+ */
 const workCard = (g: Game, item: Item): Run[][] => {
-  const lines = card(g, item, undefined, false)
+  const [name, tier] = card(g, item, undefined, false)
   const from = keptChoice(g)
   return [
-    ...lines.slice(0, -1),
-    ...(from !== undefined && from.item.id === item.id ? [[{ text: 'Before: ', dim: true }, { text: `${from.item.name}, ${describe(from.item)}`, color: RARITY_COLOR[from.item.rarity] }]] : []),
+    name!,
+    tier!,
+    [{ text: describe(item) }],
+    ...traitLines(g, item),
+    ...(from !== undefined && from.item.id === item.id ? beforeLines(from.item) : []),
     temperRuns(g, item),
     cost('Reforge', reforgeCost(g), whyNotReforge(g, item)),
   ]
@@ -65,29 +84,28 @@ const workCard = (g: Game, item: Item): Run[][] => {
 /** Whether the chosen piece's last reforge can be taken back: the old one is there to keep. */
 const canKeepOld = (g: Game, slot: Slot | undefined) => slot !== undefined && keptChoice(g)?.slot === slot
 
-/** Where things go, in window pixels: the card, the temper pips, the two buttons. */
+/** Where things go, in window pixels: the card, the buttons under it, the temper pips beside Temper. */
 const layout = (g: Game, ui: ForgeUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
   const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : RARITY_COLOR[item.rarity], lines }
-  const temperY = (box.y + box.h) * 2 + 3
-  const temperAt: Rect = { x: WORK_X, y: temperY + 8, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
+  const temperAt: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 3, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
   const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w: buttonW('R', 'REFORGE'), h: BUTTON_H }
   const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x: WORK_X, y: reforgeAt.y + BUTTON_H + 2, w: buttonW('K', 'KEEP OLD'), h: BUTTON_H } : undefined
   const end = Math.max(WINDOW_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
-  return { slot, item, box, temperY, temperAt, reforgeAt, keepAt, height: Math.ceil((end + 3) / 2) * 2 }
+  return { slot, item, box, temperAt, reforgeAt, keepAt, height: Math.ceil((end + 3) / 2) * 2 }
 }
 
 export const forgeHeight = (g: Game, ui: ForgeUi) => layout(g, ui).height
 export const forgeOverlay = (g: Game, ui: ForgeUi): OverlayBox[] => [layout(g, ui).box]
 
-/** The temper pips: one a tempering, filled as far as done. */
-const temperPips = (c: ReturnType<typeof canvas>, item: Item, y: number) => {
+/** The temper pips, one a tempering, filled as far as done, from `x`, `y` their top left. */
+const temperPips = (c: ReturnType<typeof canvas>, item: Item, x: number, y: number) => {
   const done = item.temper ?? 0
   for (let i = 0; i < TEMPER_MAX; i += 1) {
-    frame(c, WORK_X + i * 5, y, 4, 4, i < done ? PIP_ON : PIP_OFF)
-    if (i < done) fill(c, WORK_X + i * 5 + 1, y + 1, 2, 2, PIP_ON)
+    frame(c, x + i * 5, y, 4, 4, i < done ? PIP_ON : PIP_OFF)
+    if (i < done) fill(c, x + i * 5 + 1, y + 1, 2, 2, PIP_ON)
   }
 }
 
@@ -104,7 +122,8 @@ export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
     frame(body, x - 2, y - 2, w + 4, h + 4, CURSOR)
   }
   if (l.item !== undefined) {
-    temperPips(body, l.item, l.temperY - WINDOW_TOP)
+    // Beside Temper, on its middle.
+    temperPips(body, l.item, l.temperAt.x + l.temperAt.w + 4, l.temperAt.y - WINDOW_TOP + Math.floor((BUTTON_H - 4) / 2))
     button(body, 'T', 'TEMPER', l.temperAt.x, l.temperAt.y - WINDOW_TOP, stateOf(whyNotTemper(g, l.item)))
     button(body, 'R', 'REFORGE', l.reforgeAt.x, l.reforgeAt.y - WINDOW_TOP, stateOf(whyNotReforge(g, l.item)))
     if (l.keepAt !== undefined) button(body, 'K', 'KEEP OLD', l.keepAt.x, l.keepAt.y - WINDOW_TOP, 'ready')

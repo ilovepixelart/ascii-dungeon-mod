@@ -186,6 +186,7 @@ const withDecal = (tex: Uint32Array, decal: Decal | undefined) => {
 
 export { themeOf } from './map'
 export type { Theme } from './map'
+import { GLOW } from './ui/glow'
 import type { Theme } from './map'
 /** Each theme's weight on red, green and blue: the crypt as drawn, flooded halls cool and green, the fungal deep
  * purple, the frozen caverns icy blue, the forge red-black. */
@@ -1049,12 +1050,12 @@ export const STILL: Ambient = { bob: false, shimmer: false }
 /** A rectangle of a frame's pixels. */
 export type PixelRect = { x: number; y: number; w: number; h: number }
 
-/** The frame with `r` lit for the hover, as the windows light theirs: its outline half way to white, its inside a tenth. */
+/** The frame with `r` lit for the hover in white, as the windows light theirs (`GLOW`). */
 const lightRect = (frame: Uint32Array, width: number, height: number, r: PixelRect) => {
   for (let y = Math.max(0, r.y); y < Math.min(height, r.y + r.h); y += 1) {
     for (let x = Math.max(0, r.x); x < Math.min(width, r.x + r.w); x += 1) {
       const isEdge = x === r.x || x === r.x + r.w - 1 || y === r.y || y === r.y + r.h - 1
-      frame[y * width + x] = blend(frame[y * width + x]!, 0xffffff, isEdge ? 0.5 : 0.1)
+      frame[y * width + x] = blend(frame[y * width + x]!, 0xffffff, isEdge ? GLOW.edge : GLOW.inside)
     }
   }
   return frame

@@ -68,9 +68,6 @@ export const SURFACE = {
   /** The hero card's ground. */
   print: '#0f0d14',
   xpEmpty: '#2a2618',
-  /** A drag's place: where it cannot go, where it fits. */
-  blocked: '#4a1c22',
-  fits: '#2e2c38',
 } as const
 
 /** Pixels between things side by side. */

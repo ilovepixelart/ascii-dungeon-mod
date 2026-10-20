@@ -5,7 +5,7 @@ import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
 import { BAG_H, BAG_W, RARE_KILLS, SETS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
-import { LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
+import { LOG_KEPT, LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
 import { CALM_CALLS } from './balance'
 import { TALENT_EVERY } from './talents'
 import { pairOf, tierStart } from './deep'
@@ -152,7 +152,7 @@ const RULES: Readonly<Record<string, Rule>> = {
   'belt stacks': g => g.belt.map((s, i) => (s !== null && (countOf(s) < 1 || s.tiers.some(n => !Number.isInteger(n) || n < 0 || n > STACK_MAX)) ? `belt slot ${i + 1} holds ${s.tiers.join('/')}` : undefined)).find(Boolean),
   'a chosen tier is held': g => g.belt.map((s, i) => (s !== null && s.chosen !== undefined && (s.tiers[s.chosen - 1] ?? 0) === 0 ? `belt slot ${i + 1} chose tier ${s.chosen}, holding none` : undefined)).find(Boolean),
   'belt kinds in their slots': g => g.belt.map((s, i) => (s !== null && s.kind !== KINDS[i] ? `belt slot ${i + 1} holds ${s.kind}` : undefined)).find(Boolean),
-  'log length': g => (g.log.length <= 5 ? undefined : `log holds ${g.log.length} lines`),
+  'log length': g => (g.log.length <= LOG_KEPT ? undefined : `log holds ${g.log.length} lines`),
 }
 
 /** Every rule the state breaks, as "rule: what broke". */

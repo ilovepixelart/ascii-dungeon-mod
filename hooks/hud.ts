@@ -257,7 +257,7 @@ const beltHit = (px: number, py: number, width: number): HudAction => {
 }
 
 /** What a click on the strip acts on, in its pixels, as `hudHit` reads them: the portrait, the XP line, the gear, the
- * portal while it can open, and each belt slot holding something. */
+ * portal while it can open, each belt slot holding something, and the side line, which opens the log. */
 export const hudHot = (g: Game, width: number) => {
   const w = width - 2 * INSET
   const at = (x: number, y: number, rw: number, rh: number) => ({ x: INSET + x, y: INSET + y, w: rw, h: rh })
@@ -267,6 +267,7 @@ export const hudHot = (g: Game, width: number) => {
     at(settingsSlotX(w), 0, SLOT, SLOT),
     ...(g.foe === null ? [at(portalSlotX(w), 0, SLOT, SLOT)] : []),
     ...g.belt.flatMap((s, i) => (s === null ? [] : [at(beltSlotX(w, i), BELT_BELOW_Y, BELT_SLOT_W, SLOT)])),
+    at(0, SIDE_LINE_Y - 1, w, SIDE_LINE_H + 2),
   ]
 }
 
@@ -308,7 +309,16 @@ export const beltMenuBox = (g: Game, slot: number, width: number): OverlayBox<'b
  * click on a line of it chooses that tier for the slot, using nothing; any other click closes it and does what it does
  * on the strip.
  */
-export const hudGesture = (g: Game, menu: BeltMenu, gesture: Gesture, width: number): { menu: BeltMenu; actions: Action[] } => {
+/** The side line, gold to the effects, as `hudHit` reads clicks: a click on it opens the log. */
+const SIDE_LINE_H = 5
+const isOnSideLine = (width: number, click: { x: number; y: number }) => {
+  const px = Math.floor(click.x) - INSET
+  const py = Math.floor(click.y * 2) - INSET
+  return px >= 0 && px < width - 2 * INSET && py >= SIDE_LINE_Y && py < SIDE_LINE_Y + SIDE_LINE_H
+}
+
+/** A gesture on the strip: the belt menu as it now is, the game actions, and whether the log is asked for (the side line). */
+export const hudGesture = (g: Game, menu: BeltMenu, gesture: Gesture, width: number): { menu: BeltMenu; actions: Action[]; isLog?: true } => {
   if (gesture.type === 'drag') return { menu, actions: [] }
   const box = menu === null ? undefined : beltMenuBox(g, menu, width)
   const at = gesture.at
@@ -316,6 +326,7 @@ export const hudGesture = (g: Game, menu: BeltMenu, gesture: Gesture, width: num
     const tier = heldTiers(g, menu)[Math.floor(at.y) - box.y - 1]
     return tier === undefined ? { menu, actions: [] } : { menu: null, actions: [{ kind: 'choose', slot: menu, tier }] }
   }
+  if (gesture.button === 'left' && isOnSideLine(width, at)) return { menu: null, actions: [], isLog: true }
   const hit = hudHit(width, at)
   if (gesture.button === 'right') return hit?.kind === 'use' && heldTiers(g, hit.slot).length > 0 ? { menu: hit.slot, actions: [] } : { menu: null, actions: [] }
   return { menu: null, actions: hit === undefined ? [] : [hit] }

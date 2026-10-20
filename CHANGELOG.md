@@ -11,6 +11,9 @@ again from its new start, gains kept. Nothing else needs doing.
 
 ### Changed behaviour
 
+- The log keeps its last 30 lines, where it kept 5, so a busy moment (a kill that levels the hero and drops loot)
+  no longer pushes its first lines out. A log window shows them all: from the strip's gold and depth line, from the
+  text dashboard's latest line (`g`), or from the lines under any window. Saves keep up to 30 log lines.
 - The guard in town trades in (`t`): three spare pieces of a tier, Common to Rare, for one of the next tier or
   better. Pieces marked junk go first, then the cheapest; a locked one never. With no room for what it gives, the
   three stay. Over 90 simulated games items thrown away fall from 33 to 21 a game, and the deepest depth rises from

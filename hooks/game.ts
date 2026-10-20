@@ -85,7 +85,8 @@ export type Action =
 
 export type Run = { text: string; color?: string; bg?: string; bold?: boolean; inverse?: boolean; dim?: boolean }
 
-const LOG_LINES = 5
+/** The log lines a game keeps, what the log window shows; the dashboard shows the last few (`LOG_SHOWN`). */
+export const LOG_KEPT = 30
 /** Foes appear this many tiles ahead on the hero's route: inside a typical pane's view of about 3.4 tiles each way at 16 px. */
 const FOE_AHEAD = 3
 const POINTS_PER_LEVEL = 3
@@ -139,8 +140,8 @@ const say = (g: Game, line: string) => {
     g.fresh = Math.max(g.fresh, 1)
     return
   }
-  g.log = [...g.log, line].slice(-LOG_LINES)
-  g.fresh = Math.min(LOG_LINES, g.fresh + 1)
+  g.log = [...g.log, line].slice(-LOG_KEPT)
+  g.fresh = Math.min(LOG_KEPT, g.fresh + 1)
 }
 
 const levelUp = (g: Game) => {

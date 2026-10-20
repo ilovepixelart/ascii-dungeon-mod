@@ -21,7 +21,8 @@ again from its new start, gains kept. Nothing else needs doing.
   and depth unchanged.
 - An item found with the bag full lies where it fell, drawn on the map, and stepping onto it with room picks it up;
   it was lost, though the log said it stayed on the floor. It waits through a trip to town, and going down leaves it
-  behind, said. A prize goes to the stash in town while it has room: a nemesis's trophy, a unique's or a boss's item,
+  behind, said. The pointer over it on the map names it, in its tier's color. A prize goes to the stash in town
+  while it has room: a nemesis's trophy, a unique's or a boss's item,
   the codex's, and a push's or pull request's cache. A full belt says it has no room, where it said the potion
   stayed on the floor. Saves gain the optional `floor`.
 - In the talent window a number key chooses its card, as on the start screen, and Take (`t`) takes it; a number

@@ -1059,3 +1059,9 @@ export const clickToTile = (g: Located, click: { x: number; y: number; columns: 
   const py = origin.y + Math.floor(click.y * 2)
   return { x: Math.floor(px / PX), y: Math.floor(py / PX) }
 }
+
+/** Where a tile's top-left lands on the map, in its cells: `clickToTile` the other way. */
+export const tileToCell = (g: Located, tile: Pos, size: { columns: number; rows: number }, camera?: Pos): Pos => {
+  const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2) : originAt(camera, size.columns, size.rows * 2, worldSize(g))
+  return { x: tile.x * PX - origin.x, y: Math.floor((tile.y * PX - origin.y) / 2) }
+}

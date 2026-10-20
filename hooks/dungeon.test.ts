@@ -20,6 +20,7 @@ import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
 import { wareRect } from './shop'
 import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
+import { RARITY_COLOR, plainItem } from './items'
 import { retireButtons } from './retirewindow'
 import { TALENTS, offer } from './talents'
 import { takeRect, talentCards } from './talentwindow'
@@ -769,6 +770,32 @@ test('a click on the pixel map reaches the game through the click layer', async 
   await ui.pointer({ type: 'down', x: floor.x, y: floor.y, button: 'left', in: 'map-clicks' })
   await clock.advance(1000)
   expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).not.toBe(before)
+  await ui.unmount()
+})
+
+test('the pointer over an item lying on the map names it there, in its tier\'s color; off it, no name', async ($, on) => {
+  const g0 = newGame()
+  const level = levelOf(g0)
+  const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: g0.x + dx!, y: g0.y + dy! })).find(t => level.tiles[t.y]?.[t.x] === '.')!
+  const item = { ...plainItem(g0, 'ring', 'rare'), name: 'Band of the Lost Find' }
+  storeIn(on, new Map<string, unknown>([['save', { ...g0, floor: [{ ...beside, item }] }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const map = await ui.find({ type: 'Raster', key: 'map' })
+  const columns = map?.props.columns as number
+  const rows = map?.props.rows as number
+  const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
+  const over = cells.find(c => same(tileUnder(c), beside))!
+  const label = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: { text: string; color: string } | null }).label ?? null
+  expect(await label()).toBeNull()
+  await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
+  expect(await label()).toMatchObject({ text: 'Band of the Lost Find', color: RARITY_COLOR.rare })
+  await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'map-clicks' } as never)
+  expect(await label()).toBeNull()
   await ui.unmount()
 })
 

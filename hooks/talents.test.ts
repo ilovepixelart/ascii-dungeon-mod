@@ -204,8 +204,8 @@ describe('the talent window', () => {
 
   test('Take takes the chosen card; Later and the close box close, the talent still owed; elsewhere nothing', async () => {
     const [, second] = offer(g)
-    expect(talentGesture(g, ui(1), tap(middle(takeRect(g, ui(1))))).actions).toEqual([{ kind: 'talent', talent: second }])
-    expect(talentGesture(g, ui(1), tap(middle(laterRect(g, ui(1))))).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
+    expect(talentGesture(g, ui(1), tap(middle(takeRect()))).actions).toEqual([{ kind: 'talent', talent: second }])
+    expect(talentGesture(g, ui(1), tap(middle(laterRect()))).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
     expect(talentGesture(g, ui(0), tap({ x: CLOSE_BOX[0] + 1, y: CLOSE_BOX[1] + 1 })).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
     expect(talentGesture(g, ui(0), tap({ x: 50, y: 15 }))).toEqual({ ui: ui(0), actions: [] })
   })
@@ -239,23 +239,15 @@ describe('the talent window', () => {
     expect(talentPixels(g, ui(0))[c.rect.y + 4]![c.rect.x + 3]).toBe(families[familyOf(t)])
   })
 
-  test('the chosen name in a banner, broken onto two lines only when too wide at twice the font\'s size', async () => {
-    // Every pick from 0 to 11 talents taken, each card chosen: the window fits the map, a name too wide on two lines.
+  test('fits in 40 rows, so a short pane shows it whole and its buttons are never scrolled away', async () => {
+    // Every pick from 0 to 11 talents taken, each card chosen.
     for (let taken = 0; taken < ALL.length; taken += 1) {
       const x = { ...g, level: 200, talents: ALL.slice(0, taken) }
       for (let chosen = 0; chosen < offer(x).length; chosen += 1) {
-        expect(talentHeight(x, ui(chosen))).toBeLessThanOrEqual(MAP_H * PX)
+        expect(talentHeight(x, ui(chosen))).toBeLessThanOrEqual(80)
         expect(talentPixels(x, ui(chosen)).length).toBe(talentHeight(x, ui(chosen)))
       }
     }
-    const withName = (t: Talent) => ({ ...g, level: 200, talents: ALL.filter(a => a !== t).slice(0, ALL.length - 3) })
-    const rubber = withName('rubberDucking')
-    const short = withName('opener')
-    const at = (x: Game, t: Talent) => offer(x).indexOf(t)
-    expect(at(rubber, 'rubberDucking')).toBeGreaterThanOrEqual(0)
-    expect(at(short, 'opener')).toBeGreaterThanOrEqual(0)
-    // Two lines take 12 pixels more than one.
-    expect(talentHeight(rubber, ui(at(rubber, 'rubberDucking'))) - talentHeight(short, ui(at(short, 'opener')))).toBe(12)
   })
 
   test('with none owed, the talents taken and the level of the next; with all taken, says so', async () => {

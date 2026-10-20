@@ -1,5 +1,5 @@
 // The talent window: while a talent is owed, the three offered as cards side by side, each its family's ribbon and its
-// icon, the chosen one lifted and named in a banner under the row, its line in the box below; a click chooses a card,
+// icon, the chosen one lifted, its name and line in the box below; a click chooses a card,
 // again (or Take) takes it, Later leaves it owed. With none owed, the talents taken and the level of the next. Pure:
 // the click layer reports whole gestures, this decides the window's next state and the game actions they make.
 import type { Game, Talent } from '../types'
@@ -34,38 +34,34 @@ const FAMILY_OF: Readonly<Record<Talent, keyof typeof FAMILIES>> = {
 }
 export const familyOf = (t: Talent) => FAMILY_OF[t]
 
-const MARGIN = 4
-const GAP = 3
-const CARD_W = Math.floor((WINDOW_W - 2 * MARGIN - 2 * GAP) / 3)
-const CARD_H = 50
-const CARD_Y = 18
-const LIFT = 3
-const ART = 26
-const BANNER_Y = CARD_Y + CARD_H + 8
+const GAP = 6
+const CARD_W = 26
+const CARD_H = 34
+const CARD_Y = 6
+const LIFT = 2
+/** The icon at its own size inside a pixel of backdrop and a frame. */
+const ART = 14
 const SHADOW = '#06050a'
-const HEAD = 'CHOOSE A TALENT'
 
 const textW = (t: string) => textMask(t)[0]?.length ?? 0
 const mix = (a: string, b: string, t: number) => {
   const ch = (h: string, i: number) => Number.parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16)
   return `#${[0, 1, 2].map(i => Math.round(ch(a, i) * (1 - t) + ch(b, i) * t).toString(16).padStart(2, '0')).join('')}`
 }
-/** The banner's lines: the chosen talent's name at twice the font's size, broken at its spaces where too wide. */
-const bannerLines = (name: string) => (textW(name) * 2 <= WINDOW_W - 2 * MARGIN ? [name] : name.split(' '))
 
 const chosenOf = (g: Game, ui: TalentUi) => Math.min(Math.max(0, ui.chosen), Math.max(0, offer(g).length - 1))
 
 /** Where the cards row and its parts go, in window pixels. */
-const rowX = MARGIN + Math.floor((WINDOW_W - 2 * MARGIN - (3 * CARD_W + 2 * GAP)) / 2)
+const rowX = Math.floor((WINDOW_W - (3 * CARD_W + 2 * GAP)) / 2)
 /** A card's place: its column, lifted when chosen; what a click on it covers, lifted or not. */
 export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y: top + CARD_Y - LIFT, w: CARD_W, h: CARD_H + LIFT })
-const buttonsY = (g: Game, ui: TalentUi) => top + BANNER_Y + bannerLines(TALENTS[offer(g)[chosenOf(g, ui)]!].name.toUpperCase()).length * 12 + 2
-export const takeRect = (g: Game, ui: TalentUi): Rect => {
+const BUTTONS_Y = CARD_Y + CARD_H + 5
+export const takeRect = (): Rect => {
   const w = buttonW('T', 'TAKE')
-  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('L', 'LATER')) / 2), y: buttonsY(g, ui), w, h: 11 }
+  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('L', 'LATER')) / 2), y: top + BUTTONS_Y, w, h: 11 }
 }
-export const laterRect = (g: Game, ui: TalentUi): Rect => {
-  const t = takeRect(g, ui)
+export const laterRect = (): Rect => {
+  const t = takeRect()
   return { x: t.x + t.w + 4, y: t.y, w: buttonW('L', 'LATER'), h: 11 }
 }
 /** The box under the buttons, in cells: the chosen talent's line. */
@@ -74,7 +70,7 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
   if (offered.length === 0) return []
   const t = offered[chosenOf(g, ui)]!
   const lines: Run[][] = [[{ text: `${TALENTS[t].name}: `, bold: true }, { text: TALENTS[t].does }]]
-  return [{ role: 'about', x: 2, y: Math.floor((takeRect(g, ui).y + 11 + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: '#6b6258', lines }]
+  return [{ role: 'about', x: 2, y: Math.floor((takeRect().y + 11 + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: '#6b6258', lines }]
 }
 const offerHeight = (g: Game, ui: TalentUi) => {
   const box = talentOverlay(g, ui)[0]!
@@ -104,19 +100,19 @@ const drawPennant = (body: Canvas, f: Family, x: number, ry: number, dim: Tone) 
   word(body, f.label, x + Math.floor((CARD_W - textW(f.label)) / 2), ry + 1, '#14101a')
 }
 
-/** The icon at twice its size, on a lit backdrop with a floor, framed, its top at ay. */
+/** The icon at its own size, on a lit backdrop with a floor, framed, its top at ay. */
 const drawArt = (body: Canvas, t: Talent, x: number, ay: number, dim: Tone) => {
   const ax = x + Math.floor((CARD_W - ART) / 2)
   fill(body, ax, ay, ART, ART, dim('#1c2230'))
-  fill(body, ax + 1, ay + ART - 7, ART - 2, 6, dim('#232a3a'))
+  fill(body, ax + 1, ay + ART - 4, ART - 2, 3, dim('#232a3a'))
   frame(body, ax, ay, ART, ART, dim('#6b6258'))
-  TALENT_ICON[t].forEach((row, iy) => [...row].forEach((k, ix) => k !== '.' && fill(body, ax + 1 + ix * 2, ay + 1 + iy * 2, 2, 2, dim(PAL[k] ?? '#ff00ff'))))
+  TALENT_ICON[t].forEach((row, iy) => [...row].forEach((k, ix) => k !== '.' && put(body, ax + 1 + ix, ay + 1 + iy, dim(PAL[k] ?? '#ff00ff'))))
 }
 
 /** A diamond gem at the card's foot, lit when chosen; and the chosen card's sparkles at its top corners. */
 const drawGem = (body: Canvas, f: Family, x: number, y: number, isOn: boolean, dim: Tone) => {
   const gx = x + Math.floor(CARD_W / 2)
-  const gy = y + CARD_H - 7
+  const gy = y + CARD_H - 4
   for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]] as const) put(body, gx + dx, gy + dy, isOn ? f.ink : f.dark)
   put(body, gx, gy, isOn ? CURSOR : dim(f.ink))
   if (!isOn) return
@@ -135,39 +131,20 @@ const drawCard = (body: Canvas, t: Talent, i: number, isOn: boolean) => {
   const y = CARD_Y - (isOn ? LIFT : 0)
   drawFace(body, f, x, y, isOn, dim)
   drawPennant(body, f, x, y + 4, dim)
-  drawArt(body, t, x, y + 14, dim)
+  drawArt(body, t, x, y + 13, dim)
   drawGem(body, f, x, y, isOn, dim)
 }
 
-/** The name at twice the font's size in gold over a dark shadow, centered, at y. */
-const bigWord = (body: Canvas, name: string, y: number) => {
-  const mask = textMask(name)
-  const x0 = Math.floor((WINDOW_W - (mask[0]?.length ?? 0) * 2) / 2)
-  for (const [d, ink] of [[1, '#5a3a10'], [0, GOLD_INK]] as const) {
-    mask.forEach((row, yy) => [...row].forEach((ch, xx) => ch === '#' && fill(body, x0 + xx * 2 + d, y + yy * 2 + d, 2, 2, ink)))
-  }
-}
-
-/** The offer as cards: the head, the row, a rule with its flourishes, the chosen talent's name, Take and Later, the box. */
+/** The offer as cards: the row, Take and Later, the box. */
 const offerPixels = (g: Game, ui: TalentUi): string[][] => {
   const offered = offer(g)
   const chosen = chosenOf(g, ui)
   const height = offerHeight(g, ui)
   const body = canvas(WINDOW_W, height - top)
-  word(body, HEAD, Math.floor((WINDOW_W - textW(HEAD)) / 2), 5, GOLD_INK)
   offered.forEach((t, i) => drawCard(body, t, i, i === chosen))
-  const ruleY = BANNER_Y - 3
-  fill(body, MARGIN + 6, ruleY, WINDOW_W - 2 * MARGIN - 12, 1, '#4a4456')
-  for (const ex of [MARGIN + 3, WINDOW_W - MARGIN - 4]) {
-    put(body, ex, ruleY, GOLD_INK)
-    put(body, ex + (ex < WINDOW_W / 2 ? 1 : -1), ruleY, '#8a6a1a')
-    put(body, ex, ruleY - 1, '#8a6a1a')
-    put(body, ex, ruleY + 1, '#8a6a1a')
-  }
-  bannerLines(TALENTS[offered[chosen]!].name.toUpperCase()).forEach((line, li) => bigWord(body, line, BANNER_Y + li * 12))
-  button(body, 'T', 'TAKE', takeRect(g, ui).x, takeRect(g, ui).y - top, 'armed')
-  button(body, 'L', 'LATER', laterRect(g, ui).x, laterRect(g, ui).y - top, 'ready')
-  const c = windowPixels({ ...CHROME, title: `LEVEL ${TALENT_EVERY * ((g.talents?.length ?? 0) + 1)}` }, body.px)
+  button(body, 'T', 'TAKE', takeRect().x, takeRect().y - top, 'armed')
+  button(body, 'L', 'LATER', laterRect().x, laterRect().y - top, 'ready')
+  const c = windowPixels({ ...CHROME, title: `TALENT  LEVEL ${TALENT_EVERY * ((g.talents?.length ?? 0) + 1)}` }, body.px)
   for (const b of talentOverlay(g, ui)) drawBox(c, b)
   return c.px
 }
@@ -266,6 +243,6 @@ export const talentGesture = (g: Game, ui: TalentUi, gesture: Gesture): Outcome 
   const chosen = chosenOf(g, ui)
   const card = offered.findIndex((_, i) => inside(cardRect(i)))
   if (card >= 0) return card === chosen ? { ui, actions: [{ kind: 'talent', talent: offered[card]! }] } : { ui: { chosen: card }, actions: [] }
-  if (inside(takeRect(g, ui))) return { ui, actions: [{ kind: 'talent', talent: offered[chosen]! }] }
-  return inside(laterRect(g, ui)) || isInside(at, ...CLOSE_BOX) ? close : none
+  if (inside(takeRect())) return { ui, actions: [{ kind: 'talent', talent: offered[chosen]! }] }
+  return inside(laterRect()) || isInside(at, ...CLOSE_BOX) ? close : none
 }

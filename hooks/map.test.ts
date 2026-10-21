@@ -305,6 +305,18 @@ describe('sight down corridors', () => {
 })
 
 describe('the themed room', () => {
+  test('on a big boss depth it is never the arena, nor any room holding the start or the stairs', async () => {
+    const holds = (r: { x: number; y: number; w: number; h: number }, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
+    // 218:20, 310:50 and 1208:30 grow their arena over a room listed before it; the rest a spread of worlds.
+    const levels = [[218, 20], [310, 50], [1208, 30], ...Array.from({ length: 400 }, (_, i) => [1 + i * 7, 10 * (1 + (i % 10))])] as const
+    const wrong = levels.flatMap(([world, depth]) => {
+      const level = generate(world, depth)
+      const room = themedRoomOf(world, depth, level)?.room
+      return room !== undefined && (holds(room, level.start) || holds(room, level.stairs)) ? [`${world}:${depth}`] : []
+    })
+    expect(wrong).toEqual([])
+  })
+
   test('most levels have one, never the start room or the stairs room, a shrine, a library or a vault', async () => {
     let found = 0
     const kinds = new Set<string>()

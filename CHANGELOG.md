@@ -75,6 +75,9 @@ release may change behaviour.
   so.
 - A save the mod could not read (not a game, or a bag, log or gear of the wrong kind) made every action fail, for
   good: the game never moved and the save was never replaced. Such a save now gives way to a new game.
+- On about one big boss depth in a thousand the arena, grown over a room listed before it, became the themed room, its
+  furnishings drawn only in part: a library without its lectern, a shrine with one brazier and no altar. A room
+  holding the start or the stairs is never themed now; on those levels another room is, the map itself unchanged.
 
 ## [0.4.0] - 2026-10-20
 

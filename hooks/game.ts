@@ -1479,7 +1479,7 @@ const mystic = (g: Game) => {
   }
 }
 
-/** The villager's sealed pack: its price, by the deepest depth reached, about two and a half times what it fetches. */
+/** The villager's sealed pack: its price, by the deepest depth reached; from about what its item fetches on depth 1 to three times that by depth 60. */
 export const gambleCost = (g: Pick<Game, 'deepest'>) => 50 + 12 * g.deepest
 
 /** Buys the villager's sealed pack: an item of Uncommon or better, rolled as a drop is, into the bag; with no room for

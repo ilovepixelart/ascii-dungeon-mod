@@ -141,12 +141,33 @@ const normalizeOnce = (game: Game): Game => {
   return g
 }
 
+/** A save written by a newer version of the mod than this one: opened here it would be read wrong, and saved, stamped older. */
+export const isFromLater = (saved: unknown) =>
+  typeof saved === 'object' && saved !== null && typeof (saved as Game).version === 'number' && (saved as Game).version > SAVE_VERSION
+
 /**
- * What a session opens on, when the game is not yet set this session (`version` 0): the saved game, or with none, a
- * first game, on the start screen. Undefined leaves the game as it is.
+ * Whether a stored save can be opened: an object, its bag and log lists and its gear a set wherever it has them (the
+ * oldest saves lack some), that `normalize` brings up to date.
  */
-export const openingGame = (current: Game, version: number, saved: Game | undefined): Game | undefined =>
-  version !== 0 ? undefined : (saved ?? { ...current, panel: 'start' })
+export const isReadable = (saved: unknown): saved is Game => {
+  if (typeof saved !== 'object' || saved === null || Array.isArray(saved) || isFromLater(saved)) return false
+  const s = saved as Record<string, unknown>
+  const isListOrNone = (key: string) => s[key] === undefined || Array.isArray(s[key])
+  if (!isListOrNone('bag') || !isListOrNone('log') || !(s.gear === undefined || (typeof s.gear === 'object' && s.gear !== null))) return false
+  try {
+    normalize(saved as Game)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * What a session opens on, when the game is not yet set this session (`version` 0): the saved game, or with none, or
+ * none it can read, a first game, on the start screen. Undefined leaves the game as it is.
+ */
+export const openingGame = (current: Game, version: number, saved: unknown): Game | undefined =>
+  version !== 0 ? undefined : isReadable(saved) ? saved : { ...current, panel: 'start' }
 
 /** A quest as the log says it, the prompt's words quoted: `A new quest: "..."`, a repeat counted after. */
 const QUOTED_QUEST = /^A new quest: ".*"( \(x\d+\))?$/

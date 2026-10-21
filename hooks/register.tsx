@@ -44,7 +44,7 @@ import type { ChestUi } from './chest'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
-import { openingGame, savable } from './save'
+import { isFromLater, openingGame, savable } from './save'
 import { SHEET_H, sheetGesture, sheetHot, sheetOverlay, sheetPixels } from './sheet'
 import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compactPixels } from './compact'
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
@@ -441,8 +441,12 @@ const followWalk = ($: EngineInterface, before: Game, next: Game, isWalkShown: b
 /** The saves under way, one after another, so a later game never lands before an earlier one. */
 let saving: Promise<unknown> = Promise.resolve()
 
+/** Whether the store holds a save from a newer version of the mod: it is left as it is, the game played unsaved. */
+let isSaveHeld = false
+
 /** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. */
 const save = ($: EngineInterface, g: Game) => {
+  if (isSaveHeld) return
   saving = saving.then(() => $.store.set(SAVE, savable(g))).catch(() => undefined)
 }
 
@@ -1088,7 +1092,9 @@ const beginSession = async ($: EngineInterface) => {
   lastActive = await nowOr($, lastActive)
   startAmbient($)
   const { version } = await $.state.get(GAME_REF)
-  const saved = (await $.store.get(SAVE)) as Game | undefined
+  const saved: unknown = await $.store.get(SAVE)
+  isSaveHeld = isFromLater(saved)
+  if (isSaveHeld) $.ui.toast('This save is from a newer version of the dungeon: it is kept as it is, and play goes on unsaved until the mod is updated.')
   const opening = openingGame(await read($, game), version, saved)
   if (opening !== undefined) await update($, game, () => opening)
   await act($, { kind: 'greet' })
@@ -2099,7 +2105,7 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.reason === 'answer' && !isPaused) {
       await act($, { kind: 'descend' })
-      await $.store.set(SAVE, savable(await read($, game)))
+      if (!isSaveHeld) await $.store.set(SAVE, savable(await read($, game)))
     }
 
     return next(e)

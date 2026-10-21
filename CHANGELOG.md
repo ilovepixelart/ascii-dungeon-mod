@@ -70,6 +70,11 @@ release may change behaviour.
 - A commit's shrine, a push's cache and a pull request's hoard, once a depth, paid twice on a depth reached again: a
   push on depth 7, one on depth 6 after a death, and another back on depth 7 gave three caches. Every depth paid is
   kept now; a save from before keeps the depth it last paid on (save version 12).
+- A save from a newer version of the mod (an older one installed after it) was opened and written back stamped older,
+  so the next upgrade ran its migration again. It is now left as it is: the session plays a new game unsaved, and says
+  so.
+- A save the mod could not read (not a game, or a bag, log or gear of the wrong kind) made every action fail, for
+  good: the game never moved and the save was never replaced. Such a save now gives way to a new game.
 
 ## [0.4.0] - 2026-10-20
 

@@ -1235,9 +1235,9 @@ const settingsKeys = (p: Pane, isWindow = false) => {
 const helpKey = ({ Button, redraw }: Pane, hotkey?: string) => (
   <Button key="help-open" label="How it plays" hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
 )
-/** The log's latest line under the map, a button that opens the whole log (g). */
-const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined) => (
-  <Button key="log-line" hotkey="g" plain onPress={() => { isLogOpen = true; redraw() }}>
+/** The log's latest line under the map, a button that opens the whole log (g, unless a window open answers to it). */
+const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined, taken: ReadonlySet<string>) => (
+  <Button key="log-line" hotkey={taken.has('g') ? undefined : 'g'} plain onPress={() => { isLogOpen = true; redraw() }}>
     <Text dimColor={entry?.dim} wrap="truncate-end">{`> ${entry?.text ?? ''}`}</Text>
   </Button>
 )
@@ -1971,30 +1971,45 @@ const stripView = (p: Pane, l: Layout) => {
   )
 }
 
-/** The text dashboard's keys: the windows, the hero's moves, the view, a new game, settings. */
-const dashKeys = ({ g, Box, Text, Button, press }: Pane) => (
-  <Box columnGap={2} flexWrap="wrap">
-    <Button key="bag" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'bag' })}>
-      <Text bold>Inventory</Text>
-    </Button>
-    <Button key="sheet" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })}>
-      Character{g.points > 0 ? <Text color={INK.easy}> ({g.points})</Text> : ''}
-    </Button>
-    <Text dimColor>|</Text>
-    <Button key="attack" label="attack" hotkey="a" plain onPress={press({ kind: 'attack' })} />
-    <Button key="potion" label="potion" hotkey="p" plain onPress={press({ kind: 'potion' })} />
-    <Button key="walk" label="explore" hotkey="w" plain onPress={press({ kind: 'walk' })} />
-    <Button key="stairs" label="descend" hotkey="d" plain onPress={press({ kind: 'stairs' })} />
-    <Button key="portal" label={g.where === 'town' ? 'leave town' : 'portal'} hotkey="t" plain onPress={press({ kind: 'portal' })} />
-    <Button key="west" label="left" hotkey="h" plain onPress={press({ kind: 'move', dx: -1, dy: 0 })} />
-    <Button key="south" label="down" hotkey="j" plain onPress={press({ kind: 'move', dx: 0, dy: 1 })} />
-    <Button key="north" label="up" hotkey="k" plain onPress={press({ kind: 'move', dx: 0, dy: -1 })} />
-    <Button key="east" label="right" hotkey="l" plain onPress={press({ kind: 'move', dx: 1, dy: 0 })} />
-    <Button key="zoom" label={VIEW_LABEL[g.zoom]} hotkey="z" plain onPress={press({ kind: 'zoom' })} />
-    <Button key="restart" label="new game" hotkey="r" plain onPress={press({ kind: 'panel', panel: 'start' })} />
-    <Button key="settings" label="settings" plain onPress={press({ kind: 'panel', panel: 'settings' })} />
-  </Box>
-)
+/** The hotkeys the buttons in a drawing answer to. */
+const hotkeysIn = (n: RenderChildren): string[] => {
+  if (Array.isArray(n)) return n.flatMap(hotkeysIn)
+  if (typeof n !== 'object' || n === null) return []
+  const el = n as { type?: string; props?: { hotkey?: unknown }; children?: RenderChildren }
+  const own = el.type === 'Button' && typeof el.props?.hotkey === 'string' ? [el.props.hotkey] : []
+  return [...own, ...hotkeysIn(el.children)]
+}
+
+/**
+ * The text dashboard's keys: the windows, the hero's moves, the view, a new game, settings. A key a window open under
+ * them answers to is its alone (`taken`): the dashboard's button keeps its place, to be clicked.
+ */
+const dashKeys = ({ g, Box, Text, Button, press }: Pane, taken: ReadonlySet<string>) => {
+  const free = (key: string) => (taken.has(key) ? undefined : key)
+  return (
+    <Box columnGap={2} flexWrap="wrap">
+      <Button key="bag" hotkey={free('i')} plain onPress={press({ kind: 'panel', panel: 'bag' })}>
+        <Text bold>Inventory</Text>
+      </Button>
+      <Button key="sheet" hotkey={free('c')} plain onPress={press({ kind: 'panel', panel: 'sheet' })}>
+        Character{g.points > 0 ? <Text color={INK.easy}> ({g.points})</Text> : ''}
+      </Button>
+      <Text dimColor>|</Text>
+      <Button key="attack" label="attack" hotkey={free('a')} plain onPress={press({ kind: 'attack' })} />
+      <Button key="potion" label="potion" hotkey={free('p')} plain onPress={press({ kind: 'potion' })} />
+      <Button key="walk" label="explore" hotkey={free('w')} plain onPress={press({ kind: 'walk' })} />
+      <Button key="stairs" label="descend" hotkey={free('d')} plain onPress={press({ kind: 'stairs' })} />
+      <Button key="portal" label={g.where === 'town' ? 'leave town' : 'portal'} hotkey={free('t')} plain onPress={press({ kind: 'portal' })} />
+      <Button key="west" label="left" hotkey={free('h')} plain onPress={press({ kind: 'move', dx: -1, dy: 0 })} />
+      <Button key="south" label="down" hotkey={free('j')} plain onPress={press({ kind: 'move', dx: 0, dy: 1 })} />
+      <Button key="north" label="up" hotkey={free('k')} plain onPress={press({ kind: 'move', dx: 0, dy: -1 })} />
+      <Button key="east" label="right" hotkey={free('l')} plain onPress={press({ kind: 'move', dx: 1, dy: 0 })} />
+      <Button key="zoom" label={VIEW_LABEL[g.zoom]} hotkey={free('z')} plain onPress={press({ kind: 'zoom' })} />
+      <Button key="restart" label="new game" hotkey={free('r')} plain onPress={press({ kind: 'panel', panel: 'start' })} />
+      <Button key="settings" label="settings" plain onPress={press({ kind: 'panel', panel: 'settings' })} />
+    </Box>
+  )
+}
 
 /** The windows the dashboard draws inline under the map, in their order: each when it is open and not drawn whole-pane. */
 const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
@@ -2022,6 +2037,8 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
 const dashboard = (p: Pane, l: Layout) => {
   const { e, g, Box, Text } = p
   const isWindowed = e.surface === 'terminal' && e.viewport?.isFullscreen === false && l.isPixelView
+  const windows = INLINE.map(w => w.is(p, l) && w.draw(p, l))
+  const taken = new Set(hotkeysIn(windows))
   return (
     <Box flexDirection="column" position="relative">
       {l.topNote !== undefined && <Text dimColor wrap="truncate-end">{l.topNote}</Text>}
@@ -2032,10 +2049,10 @@ const dashboard = (p: Pane, l: Layout) => {
         </Text>
       )}
       {stripView(p, l)}
-      {!l.hasHud && dashKeys(p)}
+      {!l.hasHud && dashKeys(p, taken)}
       {!l.hasHud && g.panel !== 'sheet' && textBelt(p)}
-      {INLINE.map(w => w.is(p, l) && w.draw(p, l))}
-      {!l.hasHud && logRuns(l.told).map((entry, i, all) => (i === all.length - 1 ? logLine(p, entry) : (
+      {windows}
+      {!l.hasHud && logRuns(l.told).map((entry, i, all) => (i === all.length - 1 ? logLine(p, entry, taken) : (
         <Text dimColor={entry.dim} wrap="truncate-end">
           {'> '}
           {entry.text}

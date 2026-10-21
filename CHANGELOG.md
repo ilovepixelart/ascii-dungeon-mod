@@ -78,6 +78,9 @@ release may change behaviour.
 - On about one big boss depth in a thousand the arena, grown over a room listed before it, became the themed room, its
   furnishings drawn only in part: a library without its lectern, a shrine with one brazier and no altar. A room
   holding the start or the stairs is never themed now; on those levels another room is, the map itself unchanged.
+- On the text dashboard one key did two things while a window was open under it: `j` moved down and marked junk, `g`
+  opened the log and locked, and in town `a` was attack and Claim, `p` potion and Pet. A window's own key wins now;
+  the dashboard's button stays, to be clicked.
 
 ## [0.4.0] - 2026-10-20
 

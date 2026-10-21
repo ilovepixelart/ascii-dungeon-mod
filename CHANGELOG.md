@@ -49,6 +49,9 @@ release may change behaviour.
 - A corridor passing a room's cut corner (a cross, an L or a ragged room), rock between, showed the whole room from
   there, its foes and items included: 4.5% of levels have such a spot. A corridor cell now opens onto a room only
   beside that room's own floor.
+- A prompt's first 48 characters, quoted in the log as a quest, were written to the save on disk, a pasted token
+  included; the save now says "A new quest." there, the quote kept for the session. A slash command's line and a
+  prompt the engine adds unseen are no quest.
 
 ## [0.4.0] - 2026-10-20
 

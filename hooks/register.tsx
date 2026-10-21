@@ -44,7 +44,7 @@ import type { ChestUi } from './chest'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
-import { openingGame } from './save'
+import { openingGame, savable } from './save'
 import { SHEET_H, sheetGesture, sheetHot, sheetOverlay, sheetPixels } from './sheet'
 import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compactPixels } from './compact'
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
@@ -443,7 +443,7 @@ let saving: Promise<unknown> = Promise.resolve()
 
 /** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. */
 const save = ($: EngineInterface, g: Game) => {
-  saving = saving.then(() => $.store.set(SAVE, g)).catch(() => undefined)
+  saving = saving.then(() => $.store.set(SAVE, savable(g))).catch(() => undefined)
 }
 
 const commit = async ($: EngineInterface, action: Action, byHand: boolean, isWalkShown: boolean, shown?: Game) => {
@@ -2069,7 +2069,8 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'dungeon-frames' }, async () => ({ text: framesReport(ticker.stats(), repaints.summary(), redraws.summary(), keptMaps.summary(), builtMaps.summary()) }))
 
   on('prompt.submit', async ($, e, next) => {
-    await act($, { kind: 'quest', text: e.text })
+    // A slash command's line and a prompt the person does not see as typed are no quest of theirs.
+    if (e.command === undefined && e.isMeta !== true) await act($, { kind: 'quest', text: e.text })
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -2087,7 +2088,7 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.reason === 'answer' && !isPaused) {
       await act($, { kind: 'descend' })
-      await $.store.set(SAVE, await read($, game))
+      await $.store.set(SAVE, savable(await read($, game)))
     }
 
     return next(e)

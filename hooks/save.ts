@@ -142,3 +142,10 @@ const normalizeOnce = (game: Game): Game => {
  */
 export const openingGame = (current: Game, version: number, saved: Game | undefined): Game | undefined =>
   version !== 0 ? undefined : (saved ?? { ...current, panel: 'start' })
+
+/** A quest as the log says it, the prompt's words quoted: `A new quest: "..."`, a repeat counted after. */
+const QUOTED_QUEST = /^A new quest: ".*"( \(x\d+\))?$/
+
+/** The game as it is written to disk: a prompt's words, quoted in the log as a quest, stay in the session alone. */
+export const savable = (g: Game): Game =>
+  g.log.some(l => QUOTED_QUEST.test(l)) ? { ...g, log: g.log.map(l => l.replace(QUOTED_QUEST, 'A new quest.$1')) } : g

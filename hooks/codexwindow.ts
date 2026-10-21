@@ -13,7 +13,7 @@ import { BG, art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, tabGround, textTabRects, textTabsBox, windowPixels } from './window'
+import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'CODEX' }
@@ -76,7 +76,7 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
         [{ text: `Deaths ${c.deaths}, heroes retired ${c.retired ?? 0}, gold found ${c.gold}.`, dim: true }],
       ]
   const under = ui.page === 'foes' ? ROW2_Y + FOE_BOX : CARD_RECT.y + BUTTON_H
-  return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, textTabsBox(PAGES, pageIndex(ui), top, BG)]
+  return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG)]
 }
 
 /** The window's height in pixels, title bar and all. */

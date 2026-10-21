@@ -49,7 +49,7 @@ describe('the settings window', () => {
     // In terminal text from column 2 under the title bar: GAME on columns 2 to 7, ORDERS on 9 to 16.
     expect(settingsGesture(hero(), ON, GAME, tap(12, WINDOW_TOP + 4)).ui).toEqual(ORDERS)
     expect(settingsGesture(hero(), ON, ORDERS, tap(4, WINDOW_TOP + 4)).ui).toEqual(GAME)
-    expect(settingsOverlay(ORDERS)[0]!.lines[0]!.map(r => r.text).join('')).toBe(' GAME   ORDERS ')
+    expect(settingsOverlay(ORDERS).map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['GAME', 'ORDERS'])
   })
 
   test('each order button says the order as it stands', async () => {

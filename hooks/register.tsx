@@ -32,7 +32,7 @@ import { BAG_UI_IDLE, bagGesture, bagOverlay, inventoryHot } from './bagui'
 import type { BagUi, Gesture } from './bagui'
 import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverlay, shopPixels, whyNot } from './shop'
 import type { ShopUi } from './shop'
-import { chromeBoxes, closeBoxOf, pixel } from './window'
+import { chromeBoxes, closeBoxOf, onPixels, pixel } from './window'
 import type { OverlayBox, Rect } from './window'
 import { hoveredRect, lightUp } from './ui/kit'
 import { heroTabsHot } from './herotabs'
@@ -1293,7 +1293,7 @@ const fitLine = (p: Pane, rows: number, under: number) => {
 const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = [], hasClose = true) => {
   const { Box, Text, Raster, Client } = p
   const px = litWindow(key, drawn, hot, INV_W, hasClose)
-  const text = [...chromeBoxes(drawn), ...boxes]
+  const text = onPixels([...chromeBoxes(drawn), ...boxes], litIn(key))
   return (
     <Box flexDirection="column">
       {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : HINT_ROWS))}
@@ -1338,7 +1338,7 @@ const pixelBag = (p: Pane, l: Layout) => {
           {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', drawn, inventoryHot(g, bagUi), INV_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: [...chromeBoxes(drawn), ...popovers] }} width={INV_W} height={rows} />
+              <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: onPixels([...chromeBoxes(drawn), ...popovers], litIn('bag')) }} width={INV_W} height={rows} />
             </Box>
           )}
         </Box>
@@ -1385,7 +1385,7 @@ const pixelShop = (p: Pane) => {
           {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', drawn, shopHot(g, shopUi), INV_W, !shopUi.menu) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: [...chromeBoxes(drawn), ...boxes] }} width={INV_W} height={rows} />
+              <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: onPixels([...chromeBoxes(drawn), ...boxes], litIn('shop')) }} width={INV_W} height={rows} />
             </Box>
           )}
         </Box>
@@ -1444,7 +1444,7 @@ const compactBag = (p: Pane) => {
           {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', drawn, compactHot(g, bagUi), COMPACT_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes: [...chromeBoxes(drawn), ...boxes] }} width={COMPACT_W} height={COMPACT_H / 2} />
+              <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes: onPixels([...chromeBoxes(drawn), ...boxes], litIn('cbag')) }} width={COMPACT_W} height={COMPACT_H / 2} />
             </Box>
           )}
         </Box>
@@ -1585,7 +1585,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
           {Raster !== undefined && <Raster key="talk" columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px: litWindow('talk', drawn, talkHot(g, who)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="talk-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes: [...chromeBoxes(drawn), ...boxes] }} width={INV_W} height={height / 2} />
+              <Client key="talk-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes: onPixels([...chromeBoxes(drawn), ...boxes], litIn('talk')) }} width={INV_W} height={height / 2} />
             </Box>
           )}
         </Box>
@@ -1976,7 +1976,7 @@ const stripView = (p: Pane, l: Layout) => {
         <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={stripCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
         {Client !== undefined && (
           <Box position="absolute" top={0} left={0}>
-            <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes) }} width={e.props.bodyColumns} height={l.hudRows} />
+            <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: onPixels(hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes)) }} width={e.props.bodyColumns} height={l.hudRows} />
           </Box>
         )}
       </Box>

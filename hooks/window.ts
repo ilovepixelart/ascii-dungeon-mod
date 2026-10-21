@@ -5,7 +5,8 @@ import { GRID, art, canvas, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
 import { textMask } from './pixelart'
 import type { Pos } from './map'
-import { coin } from './pieces'
+import { coin, mix } from './pieces'
+import { GLOW } from './ui/glow'
 import { INK, SURFACE } from './ui/tokens'
 
 /** Every window is this many pixels (and columns) wide: one pane width shows them all, or none. */
@@ -71,17 +72,16 @@ export const tabGround = (c: Canvas, items: readonly Tab[], chosen: number, y = 
   })
 }
 
-/** A row of tabs' labels at y as a text box over them, on `ground`: the chosen one bright on its tab's, the others
- * dim. One row, the third of the row's five, as the frame of a box takes the row above. */
-export const textTabsBox = (items: readonly Tab[], chosen: number, y = 0, ground: string = HEAD_BG): OverlayBox<'tabs'> => {
-  const rects = textTabRects(items, y)
-  const last = rects.at(-1)!
-  const lines: Run[][] = [items.flatMap((t, i) => [
-    ...(i === 0 ? [] : [{ text: ' ', bg: ground }]),
-    i === chosen ? { text: ` ${t.label} `, color: TITLE_INK, bg: TAB_BG, bold: true } : { text: ` ${t.label} `, color: LABEL_INK, bg: ground },
-  ])]
-  return { role: 'tabs', x: rects[0]!.x - 1, y: y / 2 + 1, w: last.x + last.w - rects[0]!.x + 2, h: 3, border: ground, bg: ground, pad: 0, lines }
-}
+/** A row of tabs' labels at y as text boxes, a box a label over its letters alone (the tab's edge columns stay
+ * pixels, whole under a hover's outline), on `ground`: the chosen one bright on its tab's, the others dim. One row, the
+ * third of the tab's five, as the frame of a box takes the row above. */
+export const textTabBoxes = (items: readonly Tab[], chosen: number, y = 0, ground: string = HEAD_BG): OverlayBox<'tabs'>[] =>
+  textTabRects(items, y).map((r, i) => {
+    const isOn = i === chosen
+    const bg = isOn ? TAB_BG : ground
+    const label = items[i]!.label
+    return { role: 'tabs', x: r.x, y: y / 2 + 1, w: label.length + 2, h: 3, border: bg, bg, pad: 0, lines: [[{ text: label, color: isOn ? TITLE_INK : LABEL_INK, bold: isOn }]] }
+  })
 
 /** Gold as the title bar writes it: in full, thousands set apart by commas. */
 export const goldText = (gold: number) => String(gold).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -96,12 +96,12 @@ const goldX = (chrome: Chrome, width: number) => {
 /** The text a window's title bar holds, as boxes over it, on the bar's ground: its title, or its tabs' labels (role
  * `title` either way); and its gold (`gold`), after the coin `windowPixels` draws. */
 const chromeText = (chrome: Chrome, width: number): OverlayBox[] => {
-  const head: OverlayBox = chrome.tabs !== undefined
-    ? { ...textTabsBox(chrome.tabs.items, chrome.tabs.chosen), role: 'title' }
-    : { role: 'title', x: TITLE_X - 1, y: 1, w: chrome.title.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text: chrome.title, color: TITLE_INK, bold: true }]] }
-  if (chrome.gold === undefined) return [head]
+  const head: OverlayBox[] = chrome.tabs !== undefined
+    ? textTabBoxes(chrome.tabs.items, chrome.tabs.chosen).map(b => ({ ...b, role: 'title' }))
+    : [{ role: 'title', x: TITLE_X - 1, y: 1, w: chrome.title.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text: chrome.title, color: TITLE_INK, bold: true }]] }]
+  if (chrome.gold === undefined) return head
   const text = goldText(chrome.gold)
-  return [head, { role: 'gold', x: goldX(chrome, width) + 5, y: 1, w: text.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text, color: GOLD_INK, bold: true }]] }]
+  return [...head, { role: 'gold', x: goldX(chrome, width) + 5, y: 1, w: text.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text, color: GOLD_INK, bold: true }]] }]
 }
 
 /** Each window's title-bar text, by the pixels `windowPixels` drew it on: the pane and the previews write it over
@@ -110,6 +110,25 @@ const chromes = new WeakMap<readonly (readonly string[])[], OverlayBox[]>()
 
 /** The title-bar text of the window drawn on `px`; none for pixels `windowPixels` did not draw. */
 export const chromeBoxes = (px: readonly (readonly string[])[]): OverlayBox[] => chromes.get(px) ?? []
+
+/**
+ * A color as the terminal's Raster paints it: each channel at 4 bits, the nearest multiple of 17 (the engine rounds
+ * every raster color so; text it paints as given). Text written over pixels takes this ground, or it shows as a band.
+ */
+export const painted = (hex: string) =>
+  `#${[1, 3, 5].map(i => (Math.round(Number.parseInt(hex.slice(i, i + 2), 16) / 17) * 17).toString(16).padStart(2, '0')).join('')}`
+
+/**
+ * Text boxes as the click layer writes them over pixels: every ground the color the pixels under it are painted (a box
+ * with none, a text box's fill); a box whose text lies inside `lit`, the place the hover lights, on that place's lit
+ * ground, as the glow lights the pixels round it.
+ */
+export const onPixels = (boxes: readonly OverlayBox[], lit?: Rect): OverlayBox[] =>
+  boxes.map(b => {
+    const isLit = lit !== undefined && b.x + 1 >= lit.x && b.x + b.w - 1 <= lit.x + lit.w && (b.y + 1) * 2 >= lit.y && (b.y + b.h - 1) * 2 <= lit.y + lit.h
+    const ground = (hex: string) => painted(isLit ? mix(hex, INK.focus, GLOW.inside) : hex)
+    return { ...b, bg: ground(b.bg ?? POPOVER_BG), lines: b.lines.map(l => l.map(r => (r.bg === undefined ? r : { ...r, bg: ground(r.bg) }))) }
+  })
 
 /** Words in the pixel font, their top-left at x, y. */
 export const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>

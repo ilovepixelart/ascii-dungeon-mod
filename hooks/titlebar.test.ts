@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { CLOSE_BOX, TITLE_INK, WINDOW_W, chromeBoxes, windowPixels } from './window'
+import { CLOSE_BOX, TITLE_INK, WINDOW_W, chromeBoxes, onPixels, painted, windowPixels } from './window'
+import { inventoryScreenPixels } from './inventory'
+import { newGame } from './world'
 import { HEAD_H } from './window'
 import { canvas } from './canvas'
 import { shots } from './screens'
@@ -37,5 +39,18 @@ describe('the title bar in terminal text', () => {
 
   test('pixels not drawn as a window have no title-bar text', async () => {
     expect(chromeBoxes(canvas(WINDOW_W, 10).px)).toEqual([])
+  })
+
+  test('a color as the Raster paints it, each channel the nearest multiple of 17', async () => {
+    // The title bar's and a tab's grounds, as a screenshot of the pane measured them (#111121 and #222232, give or take one).
+    expect([painted('#15131b'), painted('#24212c'), painted('#000000'), painted('#ffffff'), painted('#0e0d13')]).toEqual(['#111122', '#222233', '#000000', '#ffffff', '#111111'])
+  })
+
+  test('text over pixels is on the ground the pixels are painted; a hovered tab\'s label on the glow\'s inside, as measured', async () => {
+    const tabs = onPixels(chromeBoxes(inventoryScreenPixels(newGame(1, 'knight'))).filter(b => b.role === 'title'), { x: 2, y: 0, w: 6, h: 10 })
+    // HERO hovered: the glow's inside a screenshot measured, #333333; BAG, the tab shown; the rest, the bar.
+    expect(tabs.map(b => b.bg)).toEqual(['#333333', '#222233', '#111122', '#111122', '#111122'])
+    // A box with no ground of its own takes a text box's fill, as painted.
+    expect(onPixels([{ role: 'card', x: 40, y: 10, w: 10, h: 3, border: '#ffffff', lines: [[{ text: 'x' }]] }])[0]!.bg).toBe('#111111')
   })
 })

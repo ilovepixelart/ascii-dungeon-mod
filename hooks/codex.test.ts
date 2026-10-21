@@ -170,8 +170,8 @@ describe('the codex window', () => {
     expect(tap(15, WINDOW_TOP + TABS_H - 1)).toEqual({ ui: FINDS, actions: [], isCard: false })
     expect(tap(2, WINDOW_TOP + 4)).toEqual({ ui: FOES, actions: [], isCard: false })
     expect(tap(16, WINDOW_TOP + 4).ui).toEqual(FOES)
-    const pages = codexOverlay(g, FOES).find(b => b.role === 'tabs')!
-    expect(pages.lines[0]!.map(r => r.text).join('')).toBe(' FOES   FINDS ')
+    const pages = codexOverlay(g, FOES).filter(b => b.role === 'tabs')
+    expect(pages.map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['FOES', 'FINDS'])
   })
 
   test('lights what is slain or found, in the themes\' order and the Legendaries\' own', async () => {

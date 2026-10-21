@@ -20,16 +20,18 @@ const COLUMNS = { HERO: [2, 7], BAG: [9, 13], TALENT: [15, 22], DEEP: [24, 29], 
 const onTab = (label: keyof typeof COLUMNS) => tap(COLUMNS[label][0] + 1, 4)
 
 describe('the hero\'s tabs', () => {
-  test('read HERO, BAG, TALENT, DEEP and CODEX in terminal text, the one shown bright, the row clear of the gold and the close box', async () => {
-    const box = chromeBoxes(inventoryScreenPixels(hero()))[0]!
-    const line = box.lines[0]!
-    expect(line.map(r => r.text).join('')).toBe(' HERO   BAG   TALENT   DEEP   CODEX ')
-    expect(line.filter(r => r.bold === true).map(r => r.text)).toEqual([' BAG '])
-    // Its text from column 2 on the bar's middle row (pixels 4 and 5), as the click layer writes a box's.
-    expect([box.x + 1, box.y + 1, box.x + box.w - 1]).toEqual([2, 2, 38])
+  test('read HERO, BAG, TALENT, DEEP and CODEX in terminal text, the one shown bright, each over its letters alone, clear of the gold and the close box', async () => {
+    const tabs = chromeBoxes(inventoryScreenPixels(hero())).filter(b => b.role === 'title')
+    const text = (b: (typeof tabs)[number]) => b.lines[0]!.map(r => r.text).join('')
+    expect(tabs.map(text)).toEqual(['HERO', 'BAG', 'TALENT', 'DEEP', 'CODEX'])
+    expect(tabs.filter(b => b.lines[0]![0]!.bold === true).map(text)).toEqual(['BAG'])
+    // Each label's letters, as the click layer writes a box's, on the bar's middle row: a tab's first and last columns
+    // are left to the pixels.
+    expect(tabs.map(b => [b.x + 1, b.x + b.w - 2, b.y + 1])).toEqual(Object.values(COLUMNS).map(([from, to]) => [from + 1, to - 1, 2]))
     // The bag's gold starts 41 pixels from the right edge; the close box after it.
-    expect(box.x + box.w - 1).toBeLessThan(WINDOW_W - 41)
-    expect(box.x + box.w - 1).toBeLessThan(CLOSE_BOX[0])
+    const end = tabs.at(-1)!.x + tabs.at(-1)!.w - 1
+    expect(end).toBeLessThan(WINDOW_W - 41)
+    expect(end).toBeLessThan(CLOSE_BOX[0])
   })
 
   test('in the bag, a click on another tab opens its window; on BAG itself, nothing', async () => {

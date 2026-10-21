@@ -21,7 +21,7 @@ Colors keep one meaning each: white is "this one, and where it goes"; red is "ca
 ## Selecting and comparing
 
 - The selected item gets a white frame outside its tier frame. The worn slot it goes to is framed white too, or red when this hero cannot wear it.
-- Two popovers open, each on its own item: the selected item beside itself, and what is worn in that slot under the slot, titled Equipped. They never overlap; `bagOverlay` tries beside, below, then above the item.
+- Two popovers open, each on its own item: the selected item beside itself, and what is worn in that slot under the slot, titled Equipped. They never overlap, and keep off the title bar (the hero's tabs, the gold) wherever there is room; `bagOverlay` tries beside, below, then above the item.
 - A popover lists the name and tier, the slot (with the class in red when off-class), one stat a line with its change against what is worn (`+7 def  +7 ^`; a stat only the worn item has shows as a loss, `HP  -4 v`), the Legendary power, and the price.
 
 ## The mouse

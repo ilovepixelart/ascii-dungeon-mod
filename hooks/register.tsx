@@ -1336,7 +1336,7 @@ const pixelBag = (p: Pane, l: Layout) => {
           {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi), INV_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: [...popovers, heroTabsBox(g, 'bag')] }} width={INV_W} height={rows} />
+              <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: [heroTabsBox(g, 'bag'), ...popovers] }} width={INV_W} height={rows} />
             </Box>
           )}
         </Box>
@@ -1456,7 +1456,7 @@ const compactBag = (p: Pane) => {
 
 const sheetWindow = (p: Pane) => {
   const { g, Button, press } = p
-  return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), [...sheetOverlay(g), heroTabsBox(g, 'sheet')], [
+  return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), [heroTabsBox(g, 'sheet'), ...sheetOverlay(g)], [
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
     <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     retireKey(p, 'r'),
@@ -1610,9 +1610,9 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), [], settingsKeys(p, true), undefined, settingsHot(p.g, soundSettings, settingsUi)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
-  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), [...talentOverlay(p.g, talentUi), heroTabsBox(p.g, 'talent')], talentKeys(p, true), undefined, [...talentHot(p.g, talentUi), ...heroTabsHot(p.g, 'talent')]) },
-  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [...deepOverlay(p.g), heroTabsBox(p.g, 'deep')], deepKeys(p, true), undefined, [...deepHot(p.g), ...heroTabsHot(p.g, 'deep')]) },
-  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g, codexUi), codexPixels(p.g, codexUi), [...codexOverlay(p.g, codexUi), heroTabsBox(p.g, 'codex')], [pageKey(p), cardKey(p, 'k'), codexClose(p, 'c')], undefined, [...codexHot(codexUi), ...heroTabsHot(p.g, 'codex')]) },
+  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), [heroTabsBox(p.g, 'talent'), ...talentOverlay(p.g, talentUi)], talentKeys(p, true), undefined, [...talentHot(p.g, talentUi), ...heroTabsHot(p.g, 'talent')]) },
+  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [heroTabsBox(p.g, 'deep'), ...deepOverlay(p.g)], deepKeys(p, true), undefined, [...deepHot(p.g), ...heroTabsHot(p.g, 'deep')]) },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g, codexUi), codexPixels(p.g, codexUi), [heroTabsBox(p.g, 'codex'), ...codexOverlay(p.g, codexUi)], [pageKey(p), cardKey(p, 'k'), codexClose(p, 'c')], undefined, [...codexHot(codexUi), ...heroTabsHot(p.g, 'codex')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },

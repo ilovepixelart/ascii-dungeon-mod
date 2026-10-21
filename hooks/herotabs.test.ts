@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { BAG_UI_IDLE, bagGesture, inventoryHot } from './bagui'
+import { BAG_UI_IDLE, bagGesture, bagOverlay, inventoryHot } from './bagui'
 import { heroTabsBox } from './herotabs'
 import { inventoryScreenPixels } from './inventory'
 import { plainItem } from './items'
+import { BASES } from './items/catalog'
 import { sheetGesture } from './sheet'
 import { codexGesture } from './codexwindow'
 import { CLOSE_BOX, WINDOW_W } from './window'
@@ -61,5 +62,17 @@ describe('the hero\'s tabs', () => {
     expect(tops).toEqual([COLUMNS.HERO, COLUMNS.TALENT, COLUMNS.DEEP, COLUMNS.CODEX])
     const item = { ...plainItem(g, 'steelHelm', 'common'), x: 0, y: 0 }
     expect(inventoryHot({ ...g, bag: [item], cursor: item.id }, { menu: { id: item.id, confirm: false }, drag: null })).toEqual([])
+  })
+
+  test('in the bag, no card or menu over an item at the bag\'s top left covers the tabs', async () => {
+    // The tabs' row in cells: rows 0 to 4, columns 2 to 37.
+    const onTabs = (b: { x: number; y: number; w: number; h: number }) => b.y < 5 && b.x < 38 && b.x + b.w > 2
+    const covering = BASES.flatMap(base => {
+      const g = hero()
+      const item = { ...plainItem(g, base.key, 'epic'), x: 0, y: 0 }
+      const bag = { ...g, bag: [item], cursor: item.id }
+      return [...bagOverlay(bag, BAG_UI_IDLE), ...bagOverlay(bag, { menu: { id: item.id, confirm: false }, drag: null })].filter(onTabs).map(b => `${base.key} ${b.role}`)
+    })
+    expect(covering).toEqual([])
   })
 })

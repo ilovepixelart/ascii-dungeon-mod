@@ -81,6 +81,8 @@ release may change behaviour.
 - On the text dashboard one key did two things while a window was open under it: `j` moved down and marked junk, `g`
   opened the log and locked, and in town `a` was attack and Claim, `p` potion and Pet. A window's own key wins now;
   the dashboard's button stays, to be clicked.
+- In town the barrel and crate beside the shop walled in three tiles of the lane above them: a click there said "You
+  can't get there." They stand at the top of the lane now.
 
 ## [0.4.0] - 2026-10-20
 

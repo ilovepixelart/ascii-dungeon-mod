@@ -167,7 +167,7 @@ const die = (g: Game, killer: string) => {
   const first = Math.floor((g.depth - 1) / THEME_DEPTHS) * THEME_DEPTHS + 1
   const wake = g.waypoint !== undefined && g.waypoint >= first && g.waypoint <= g.depth ? g.waypoint : first
   say(g, `You were slain by ${killer} on depth ${g.depth}. You wake on depth ${wake}.`)
-  remember(g)
+  if (foe !== undefined) remember(g, foe)
   // Waking on the same depth, what lies on its floor still lies there; on another, it is lost, said.
   const lying = g.floor ?? []
   if (wake !== depth && lying.length > 0) say(g, `${lying.length === 1 ? 'The item' : `The ${lying.length} items`} left on the floor of depth ${depth} ${lying.length === 1 ? 'is' : 'are'} lost.`)
@@ -553,9 +553,7 @@ const nemesisFoe = (g: Game, n: Nemesis): Foe => {
  * A death by a champion makes it the hero's nemesis, or makes the nemesis that won again stronger; it goes deeper to
  * wait. A boss is never a champion, so a boss's win makes none.
  */
-const remember = (g: Game) => {
-  const slayer = g.foe
-  if (slayer === null) return
+const remember = (g: Game, slayer: Foe) => {
   const waits = g.depth + NEMESIS_AHEAD + roll(g, 4)
   if (slayer.nemesis === true && g.nemesis !== null) {
     g.nemesis = { ...g.nemesis, wins: g.nemesis.wins + 1, depth: waits }

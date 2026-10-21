@@ -57,6 +57,8 @@ release may change behaviour.
 - Closing the pane mid-walk left the walk's click waiting: the next tool call jumped the hero to its end with no walk
   played, and a click or blow waiting on the walk went off at the end of a later walk, on another depth too. Closing
   the pane now ends the walk where the hero is drawn and drops what waited on it.
+- A hero killed by a trap made the champion up elsewhere on the depth their nemesis, or gave the nemesis up a win and
+  a fifth more strength. Only the foe that struck the killing blow is remembered now.
 
 ## [0.4.0] - 2026-10-20
 

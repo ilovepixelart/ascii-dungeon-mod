@@ -61,6 +61,8 @@ release may change behaviour.
   a fifth more strength. Only the foe that struck the killing blow is remembered now.
 - With an item's menu open in the bag, the compact bag, the merchant or the stash, the hover still lit the items, the
   belt and the close box, where a click only closes the menu. Nothing is lit there now.
+- With a belt slot's menu open on the strip, the hover lit the portrait or the XP line under it, where a click lands
+  on the menu. What the menu covers is left unlit.
 
 ## [0.4.0] - 2026-10-20
 

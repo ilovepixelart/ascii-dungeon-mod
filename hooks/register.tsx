@@ -141,7 +141,7 @@ const onHover = ($: EngineInterface, element: string, at: Pos | null) => {
 /** The strip as Raster cells, what the pointer is over lit. */
 const stripCells = (g: Game, width: number, boxes: readonly OverlayBox[]) => {
   const c = hudPixels(g, width, boxes)
-  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width), width, false) })
+  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width, boxes), width, false) })
 }
 
 /** A window's clickable places with its close box (the strip has none); and its pixels with the one under the pointer lit. */

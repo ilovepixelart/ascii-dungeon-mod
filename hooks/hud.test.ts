@@ -361,6 +361,21 @@ describe('a belt slot\'s menu', () => {
     expect(hudGesture(potions, 0, click(onSlot(4)), width)).toEqual({ menu: null, actions: [{ kind: 'use', slot: 4 }] })
   })
 
+  test('with it open, nothing under it is lit: a click there lands on the menu', async () => {
+    for (const w of [80, 111, 200]) {
+      for (const slot of [0, 4]) {
+        const box = beltMenuBox(potions, slot, w)!
+        const under = hudHot(potions, w, [box]).filter(r => {
+          const c = at(r.x + Math.floor(r.w / 2), (r.y + Math.floor(r.h / 2)) / 2)
+          return c.x >= box.x && c.x < box.x + box.w && c.y >= box.y && c.y < box.y + box.h
+        })
+        expect(under).toEqual([])
+      }
+    }
+    // With no menu open, the portrait is lit as ever.
+    expect(hudHot(potions, width, []).length).toBe(hudHot(potions, width).length)
+  })
+
   test('stands on its slot: just above the belt, its left edge on the slot\'s, inside the strip', async () => {
     const beltTop = Math.floor((INSET + BELT_BELOW_Y) / 2)
     for (const w of [80, 111, 200]) {

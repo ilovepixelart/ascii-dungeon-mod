@@ -664,8 +664,13 @@ const resume = async ($: EngineInterface) => {
 /** Whether closing the pane `closed` leaves the game unseen: its pane, with none of its panes still open. */
 export const isLeftUnseen = (closed: string, open: readonly { id: string }[]) => closed === PANE && !open.some(p => p.id === PANE)
 
-const pause = () => {
+const pause = async ($: EngineInterface) => {
   isPaused = true
+  // A walk under way ends as a new action would end it: cut where the hero is drawn, or carried out; nothing it held
+  // back (a click that waited for it, its blows) is left to go off once the pane is drawn again.
+  await interrupt($, false).catch(() => undefined)
+  queued = null
+  hitsAfterWalk = null
   music?.stop()
   music = null
   for (const p of players) p.stop()
@@ -2114,7 +2119,7 @@ export const register: Register = (on, options) => {
   on('ui.close', async ($, e, next) => {
     const closed = await next(e)
     // Reopened by /dungeon, the old pane closes after the new one is up: the game plays on.
-    if (isLeftUnseen(e.id, await $.ui.panes().catch(() => []))) pause()
+    if (isLeftUnseen(e.id, await $.ui.panes().catch(() => []))) await pause($)
     return closed
   })
 

@@ -54,6 +54,9 @@ release may change behaviour.
   prompt the engine adds unseen are no quest.
 - A blow landing while a window covered the map (the bag open, the pane resized) stopped the idle motion until the
   next blow, and a fall then never opened the death window. A blow whose map the host refuses now ends there.
+- Closing the pane mid-walk left the walk's click waiting: the next tool call jumped the hero to its end with no walk
+  played, and a click or blow waiting on the walk went off at the end of a later walk, on another depth too. Closing
+  the pane now ends the walk where the hero is drawn and drops what waited on it.
 
 ## [0.4.0] - 2026-10-20
 

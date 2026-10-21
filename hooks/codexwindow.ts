@@ -99,7 +99,8 @@ const drawFoes = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
   uniques.forEach(([theme, one], i) => {
     const x = PAD + i * FOE_STEP
     box(body, x, ROW1_Y - top, FOE_BOX, FOE_BOX, lit.uniques[i]!)
-    scaled(body, foeArtOf({ glyph: one.glyph, unique: one.key }, theme), x + 2, ROW1_Y - top + 2, 2, lit.uniques[i] ? undefined : SHADE)
+    // At its size on the map, half a big boss's each way: centred, its feet on the big bosses' floor.
+    scaled(body, foeArtOf({ glyph: one.glyph, unique: one.key }, theme), x + 5, ROW1_Y - top + 9, 1, lit.uniques[i] ? undefined : SHADE)
   })
   bigs.forEach(([, one], i) => {
     const x = PAD + i * FOE_STEP

@@ -9,6 +9,7 @@ import { EMPTY_CODEX, recorded } from './codex'
 import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
 import type { CodexUi } from './codexwindow'
 import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
+import { UNIQUE_ART } from './pixelart'
 
 const hit: Action = { kind: 'outcome', ok: true, what: 'Edit' }
 /** The hero at `depth` with a one-HP foe beside them, and the codex `codex`. */
@@ -186,6 +187,23 @@ describe('the codex window', () => {
     const full: Codex = { ...told, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'], bigs: ['king', 'queen', 'hive', 'lich', 'wyrm'], legendaries: LEGENDARIES.map(l => l.name) }
     const inks = (px: string[][]) => new Set(px.flat()).size
     for (const ui of [FOES, FINDS]) expect(inks(codexPixels(shown(full), ui))).toBeGreaterThan(inks(codexPixels(shown(EMPTY_CODEX), ui)) + 10)
+  })
+
+  test('a unique is drawn at its size on the map, a dot a pixel, standing on its box\'s floor', async () => {
+    // The uniques' boxes: 19 pixels square, one every 20 from x 3, the first row under the page tabs; a big boss's feet
+    // are on the box's row 16, a pixel over its frame.
+    const top = WINDOW_TOP + TABS_H + 2
+    const lit = codexPixels(shown({ ...EMPTY_CODEX, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'] }), FOES)
+    const dark = codexPixels(shown(EMPTY_CODEX), FOES)
+    for (const [i, key] of (['bones', 'mire', 'rot', 'rime', 'ember'] as const).entries()) {
+      const left = 3 + i * 20
+      const drawn: [number, number][] = []
+      for (let y = top + 1; y < top + 18; y++) for (let x = left + 1; x < left + 18; x++) if (lit[y]![x] !== dark[y]![x]) drawn.push([x, y])
+      const dots = UNIQUE_ART[key].join('').replace(/\./g, '').length
+      const ys = drawn.map(([, y]) => y)
+      expect([drawn.length, Math.max(...ys)]).toEqual([dots, top + 16])
+      expect(Math.max(...drawn.map(([x]) => x)) - Math.min(...drawn.map(([x]) => x))).toBeLessThan(8)
+    }
   })
 
   test('each row lights on its own: its entries found, the rest of the codex empty, add their colours', async () => {

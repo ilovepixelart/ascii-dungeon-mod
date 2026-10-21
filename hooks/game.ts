@@ -605,7 +605,7 @@ const CHAMPION_ODDS = 10
 /**
  * A foe made a champion: its modifier first in its name, double XP, half again its HP and a quarter more attack, and
  * one strength on top: tough has 60% more HP again, savage hits half again as hard, shielded turns the first blow
- * aside, vampiric heals by what it deals.
+ * aside, vampiric heals by what it deals, up to half of what it took since its last blow.
  */
 export const championOf = (foe: Foe, mod: ChampionMod): Foe => {
   const hp = Math.round(foe.hp * 1.5)
@@ -915,6 +915,14 @@ const steal = (g: Game, by: string) => {
   if (took > 0) say(g, `${capitalized(by)} snatches ${took} gold!`)
 }
 
+/** A vampiric champion after its blow: healed by what it dealt, at most half of what it took since its last blow (its
+ * whole loss on its first), so a blow bigger than the hero's never stalls the fight; never past its full HP. */
+const drink = (foe: Foe, dmg: number): Foe => {
+  const taken = (foe.hpAtBlow ?? foe.maxHp) - foe.hp
+  const hp = Math.min(foe.maxHp, foe.hp + Math.min(dmg, Math.max(0, Math.floor(taken / 2))))
+  return { ...foe, hp, hpAtBlow: hp }
+}
+
 const counter = (g: Game, what: string) => {
   // Who strikes, as a sentence names them: the foe, or with none an imp of the tool.
   const by = g.foe === null ? `the ${what} imp` : theFoe(g.foe)
@@ -929,7 +937,7 @@ const counter = (g: Game, what: string) => {
   say(g, `${capitalized(by)} strikes you for ${dmg}${HALVED_SAID[halved]}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
-  if (g.foe?.champion === 'vampiric') g.foe = { ...g.foe, hp: Math.min(g.foe.maxHp, g.foe.hp + dmg) }
+  if (g.foe?.champion === 'vampiric') g.foe = drink(g.foe, dmg)
   hurt(g, dmg, by)
   landed(g, dmg)
 }

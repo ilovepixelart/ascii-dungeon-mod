@@ -946,6 +946,31 @@ describe('champions', () => {
     expect(full.foe!.hp).toBe(hurtFoe.maxHp)
   })
 
+  test('a vampiric champion heals by at most half of what it took since it last struck', async () => {
+    const g = plainHero()
+    // 4 short of its 45 HP, striking for more than 2: it heals 2.
+    const foe = { ...championOf(foeAhead(g, 1, { maxHp: 30, atk: 5, opened: true }), 'vampiric'), hp: 41 }
+    const after = apply({ ...g, foe }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect([g.hp - after.hp > 2, after.foe!.hp]).toEqual([true, 43])
+    // Struck again with nothing taken since: no heal.
+    expect(apply(after, { kind: 'outcome', ok: false, what: 'Bash' }).foe!.hp).toBe(43)
+  })
+
+  test('a vampiric champion striking far harder than the hero hits still loses HP every round, and falls', async () => {
+    // Its blow most of the hero's HP, the hero topped up after each as a potion would: the fight a nemesis drew out.
+    let g: Game = { ...plainHero(), maxHp: 400, hp: 400, foe: championOf(foeAhead(plainHero(), 1, { hp: 60, maxHp: 60, atk: 300, opened: true }), 'vampiric') }
+    let last = g.foe!.hp
+    for (let round = 0; round < 200 && g.foe !== null; round += 1) {
+      // The hero's blow and its answer.
+      g = { ...apply(g, { kind: 'outcome', ok: true, what: 'Edit' }), hp: 400 }
+      if (g.foe !== null) {
+        expect(g.foe.hp).toBeLessThan(last)
+        last = g.foe.hp
+      }
+    }
+    expect(g.foe).toBeNull()
+  })
+
   test('a champion slain always leaves an item of Uncommon or better, the best of two rolls', async () => {
     const rank = ['common', 'uncommon', 'rare', 'epic', 'legendary']
     for (let seed = 1; seed <= 40; seed += 1) {

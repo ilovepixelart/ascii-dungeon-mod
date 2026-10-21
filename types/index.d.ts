@@ -19,6 +19,8 @@ export type Foe = {
   braced?: true
   /** One of its blows has landed this fight: Bulwark halves only the first. */
   landed?: true
+  /** Its HP as it last struck: a vampiric champion heals by at most half of what it has taken since. */
+  hpAtBlow?: number
   /** Its turns so far this fight, for the traits that come round every few. */
   turn?: number
   /** A once-a-fight trait spent: the kobold's brew. */

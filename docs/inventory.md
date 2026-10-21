@@ -10,7 +10,7 @@ Opened by clicking the portrait (`i` on the text dashboard). On a terminal at le
 
 ## The screen
 
-- A pixel title bar: INVENTORY, the gold, and a close box.
+- A pixel title bar: the hero's tabs (Bag chosen, see `windows.md`), the gold, and a close box.
 - Worn slots on the left, each sized to the largest footprint its items have, so the same icon art serves the bag and the slot. An empty slot shows a faint outline of what goes there.
 - The bag grid on the right (`BAG_W` x `BAG_H` in `hooks/items/bag.ts`), 7 px cells. An item covers its whole footprint; the frame around it shows its tier (see `items.md`).
 - The belt along the bottom, a slot a kind, as the dashboard draws it (`beltSlot` in `hooks/pieces.ts`).
@@ -21,7 +21,7 @@ Colors keep one meaning each: white is "this one, and where it goes"; red is "ca
 ## Selecting and comparing
 
 - The selected item gets a white frame outside its tier frame. The worn slot it goes to is framed white too, or red when this hero cannot wear it.
-- Two popovers open, each on its own item: the selected item beside itself, and what is worn in that slot under the slot, titled Equipped. They never overlap; `bagOverlay` tries beside, below, then above the item.
+- Two popovers open, each on its own item: the selected item beside itself, and what is worn in that slot under the slot, titled Equipped. They never overlap, and keep off the title bar (the hero's tabs, the gold) wherever there is room; `bagOverlay` tries beside, below, then above the item.
 - A popover lists the name and tier, the slot (with the class in red when off-class), one stat a line with its change against what is worn (`+7 def  +7 ^`; a stat only the worn item has shows as a loss, `HP  -4 v`), the Legendary power, and the price.
 
 ## The mouse
@@ -33,6 +33,7 @@ Colors keep one meaning each: white is "this one, and where it goes"; red is "ca
 | click worn gear | takes it off into the bag |
 | click a belt slot | uses it |
 | click the close box | closes the inventory |
+| click another of the hero's tabs | opens that window in the bag's place |
 | click a popover | nothing: it covers what is under it |
 | click anywhere with the menu open | closes the menu, and does nothing else |
 | drag a bag item onto free cells | moves it there |

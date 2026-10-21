@@ -7,6 +7,7 @@ import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fit, fitsAt, 
 import { GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
 import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, beltSlotRect, cellBox, centered, drawItem, itemArt, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
+import { heroChrome } from './herotabs'
 import type { Rect } from './window'
 import type { Pos } from './map'
 import type { Canvas } from './canvas'
@@ -113,11 +114,11 @@ const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
 export type PopoverFrame = { x: number; y: number; w: number; h: number; border: string }
 
 /**
- * The whole inventory screen: title bar with gold and the close box, the panel, any drag, and
+ * The whole inventory screen: title bar with the hero's tabs, gold and the close box, the panel, any drag, and
  * the popovers' frames over it all.
  */
 export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []): string[][] => {
-  const c = windowPixels({ title: 'INVENTORY', gold: g.gold }, inventoryPixels(g))
+  const c = windowPixels({ ...heroChrome(g, 'bag'), gold: g.gold }, inventoryPixels(g))
   if (drag !== undefined) drawDrag(c, g, drag)
   for (const b of popovers) drawBox(c, b)
   return c.px

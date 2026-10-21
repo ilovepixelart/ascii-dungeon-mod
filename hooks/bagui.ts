@@ -6,10 +6,11 @@ import { CELL } from './icons'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, beltHot, dropTarget, removable, wornOutlines } from './inventory'
 import type { Drag } from './inventory'
 import { POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
+import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
 import { beltSlotRect, itemOutline } from './pieces'
-import { CLICK_SLOP, boxShape, coverage as coverageOf, isInside, pixel, place, uncovered } from './window'
+import { CLICK_SLOP, WINDOW_TOP, WINDOW_W, boxShape, coverage as coverageOf, isInside, pixel, place, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -92,10 +93,11 @@ const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
 const KEEP = 100000
 
 /**
- * What a box would hide: each pixel of a bag item, worn piece or filled belt slot counts 1, the two items being
- * compared KEEP. The result is the weight under a box.
+ * What a box would hide: each pixel of the title bar (the hero's tabs, the gold), a bag item, worn piece or filled belt
+ * slot counts 1, the two items being compared KEEP. The result is the weight under a box.
  */
 export const coverage = (g: Game, keep: readonly Rect[]) => coverageOf(ROWS, [
+  { rect: { x: 0, y: 0, w: WINDOW_W, h: WINDOW_TOP }, weight: 1 },
   ...g.bag.map(i => ({ rect: { x: BAG_X + i.x * CELL, y: INV_TOP + BAG_Y + i.y * CELL, w: i.w * CELL, h: i.h * CELL }, weight: 1 })),
   ...(Object.keys(WORN_SLOTS) as Slot[]).filter(slot => g.gear[slot] !== undefined).map(slot => {
     const [x, y, w, h] = WORN_SLOTS[slot]
@@ -184,6 +186,8 @@ const click = (g: Game, ui: BagUi, at: Pos, button: string): { ui: BagUi; action
   if (ui.menu !== null) return menuClick(g, ui, at)
   // A click on a popover lands on the box, not on what it covers.
   if (bagOverlay(g, ui).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
+  const tab = heroTabAt(g, 'bag', pixel(at))
+  if (tab !== undefined) return { ui, actions: tab }
   const h = hit(g, pixel(at))
   if (h?.kind === 'bag') {
     const menu = { id: h.item.id, confirm: false }
@@ -209,8 +213,9 @@ export const bagGesture = (g: Game, ui: BagUi, gesture: Gesture): { ui: BagUi; a
 }
 
 /**
- * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt.
+ * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt,
+ * the hero's other tabs.
  * With a menu open, nothing: a click anywhere but on the menu only closes it.
  */
 export const inventoryHot = (g: Game, ui: BagUi): Rect[] =>
-  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)], bagOverlay(g, ui))
+  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y), ...heroTabsHot(g, 'bag')], bagOverlay(g, ui))

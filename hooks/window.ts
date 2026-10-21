@@ -41,8 +41,8 @@ export const POPOVER_BG = SURFACE.popover
 export type Rect = { x: number; y: number; w: number; h: number }
 /** A tab in a window's title bar: its label, and a gold mark beside it while what it opens waits on the player. */
 export type Tab = { label: string; isMarked?: boolean }
-/** What a window shows around its body: its title (or, with tabs, the tabs in its place, `chosen` the one shown), and
- * the gold when it matters there. */
+/** What a window shows around its body: its title (or, with tabs, the tabs in its place, `chosen` the one shown, their
+ * labels in terminal text from `titleTabsBox`), and the gold when it matters there. */
 export type Chrome = { title: string; gold?: number; tabs?: { items: readonly Tab[]; chosen: number } }
 
 export const isInside = (p: Pos, x: number, y: number, w: number, h: number) => p.x >= x && p.x < x + w && p.y >= y && p.y < y + h
@@ -78,6 +78,41 @@ export const tabRow = (c: Canvas, items: readonly Tab[], chosen: number, y = 0) 
   })
 }
 
+/** The title bar's tabs, labelled in terminal text (a column a letter, where the pixel font takes four): each tab's
+ * place in window pixels, its label with a column of room each side, a column between tabs. */
+export const titleTabRects = (tabs: readonly Tab[]): Rect[] => {
+  let x = TITLE_X - 1
+  return tabs.map(t => {
+    const r = { x, y: 0, w: t.label.length + 2, h: TABS_H }
+    x += r.w + 1
+    return r
+  })
+}
+
+/** The title bar's tabs in pixels: the chosen one's lighter ground and gold rule, a marked one's gold dot at its top
+ * right; their labels are `titleTabsBox`'s. */
+const titleTabGround = (c: Canvas, items: readonly Tab[], chosen: number) => {
+  titleTabRects(items).forEach((r, i) => {
+    if (i === chosen) {
+      fill(c, r.x, r.y, r.w, r.h, TAB_BG)
+      fill(c, r.x, r.y + r.h - 1, r.w, 1, GOLD_INK)
+    }
+    if (items[i]!.isMarked === true) fill(c, r.x + r.w - 2, r.y + 1, 2, 2, GOLD_INK)
+  })
+}
+
+/** The title bar's tab labels as a text box over it, on the bar's ground: the chosen one bright on its tab's, the others
+ * dim. One row, the third of the bar's five, as the frame of a box takes the row above. */
+export const titleTabsBox = (items: readonly Tab[], chosen: number): OverlayBox<'tabs'> => {
+  const rects = titleTabRects(items)
+  const last = rects.at(-1)!
+  const lines: Run[][] = [items.flatMap((t, i) => [
+    ...(i === 0 ? [] : [{ text: ' ', bg: HEAD_BG }]),
+    i === chosen ? { text: ` ${t.label} `, color: TITLE_INK, bg: TAB_BG, bold: true } : { text: ` ${t.label} `, color: LABEL_INK, bg: HEAD_BG },
+  ])]
+  return { role: 'tabs', x: rects[0]!.x - 1, y: 1, w: last.x + last.w - rects[0]!.x + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines }
+}
+
 /** Words in the pixel font, their top-left at x, y. */
 export const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>
   textMask(text).forEach((row, dy) => [...row].forEach((k, dx) => k === '#' && put(c, x + dx, y + dy, ink)))
@@ -94,7 +129,7 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   fill(c, 0, 0, width, HEAD_H - 1, HEAD_BG)
   fill(c, 0, HEAD_H - 1, width, 1, GRID)
   if (chrome.tabs === undefined) word(c, chrome.title, TITLE_X, TITLE_Y, TITLE_INK)
-  else tabRow(c, chrome.tabs.items, chrome.tabs.chosen)
+  else titleTabGround(c, chrome.tabs.items, chrome.tabs.chosen)
   if (chrome.gold !== undefined) {
     coin(c, GOLD_X, TITLE_Y)
     const text = goldText(chrome.gold)

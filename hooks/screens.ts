@@ -23,6 +23,7 @@ import { TALENTS } from './talents'
 import { talentOverlay, talentPixels } from './talentwindow'
 import { pairOf } from './deep'
 import { deepOverlay, deepPixels } from './deepwindow'
+import { heroTabsBox } from './herotabs'
 import { helpOverlay, helpPixels } from './helpwindow'
 import { logOverlay, logPixels } from './logwindow'
 import { recapOverlay, recapPixels } from './recapwindow'
@@ -65,26 +66,26 @@ const heroShots = (g: Game): Shot[] => {
   const out: Shot[] = [
     shot('help', helpPixels(), helpOverlay()),
     shot('log', logPixels(logged), logOverlay(logged)),
-    ...(['foes', 'finds'] as const).map(page => shot(`codex-${page}`, codexPixels(codexed, { page }), codexOverlay(codexed, { page }))),
+    ...(['foes', 'finds'] as const).map(page => shot(`codex-${page}`, codexPixels(codexed, { page }), [heroTabsBox(codexed, 'codex'), ...codexOverlay(codexed, { page })])),
     shot('retire', retirePixels(retiring, { slot: 'weapon' }), retireOverlay(retiring, { slot: 'weapon' })),
   ]
   const all = Object.keys(TALENTS) as Talent[]
   for (let i = 0; i < all.length; i += 3) {
     const offered = { ...g, level: 200, talents: all.filter((_, j) => j < i || j >= i + 3) }
-    out.push(shot(`talent-${i / 3}`, talentPixels(offered), talentOverlay(offered, { chosen: 0 })))
+    out.push(shot(`talent-${i / 3}`, talentPixels(offered), [heroTabsBox(offered, 'talent'), ...talentOverlay(offered, { chosen: 0 })]))
   }
   // Every talent taken: the list at its longest.
   const allTaken = { ...g, level: 200, talents: all }
-  out.push(shot('talent-taken', talentPixels(allTaken), talentOverlay(allTaken, { chosen: 0 })))
+  out.push(shot('talent-taken', talentPixels(allTaken), [heroTabsBox(allTaken, 'talent'), ...talentOverlay(allTaken, { chosen: 0 })]))
   const pairs = new Map<string, Game>()
   for (let world = 1; pairs.size < 9 && world < 500; world += 1) {
     const at = { ...g, world, ...arrive(world, 60), deepest: 60, bossSlain: 60 }
     pairs.set(pairOf(world, 2).join('-'), at)
   }
-  for (const [pair, at] of pairs) out.push(shot(`deep-${pair}`, deepPixels(at), deepOverlay(at)))
+  for (const [pair, at] of pairs) out.push(shot(`deep-${pair}`, deepPixels(at), [heroTabsBox(at, 'deep'), ...deepOverlay(at)]))
   // Inside a tier, no fork waiting: the head and the tiers alone.
   const inTier = { ...g, ...arrive(g.world, 97), deepest: 97, bossSlain: 90 }
-  out.push(shot('deep-tiers', deepPixels(inTier), deepOverlay(inTier)))
+  out.push(shot('deep-tiers', deepPixels(inTier), [heroTabsBox(inTier, 'deep'), ...deepOverlay(inTier)]))
   const recapped = { ...g, depth: 9, level: 12, panel: 'recap' as const, recap: { calls: 42, depth: 3, level: 5, kills: 17, champions: 2, gold: 340, deaths: 1, tests: 6, commits: 2, pushes: 1, prs: 1, best: g.bag[0]! } }
   out.push(shot('recap', recapPixels(recapped), recapOverlay(recapped)))
   return out
@@ -95,14 +96,14 @@ export const shots = (): Shot[] => {
   const town = { ...apply(newGame(4), { kind: 'portal' }), gold: 300 }
   for (const cls of CLASSES) for (const rarity of RARITIES) {
     const g = kitted(cls, rarity)
-    out.push(shot(`inventory-${cls}-${rarity}`, inventoryScreenPixels(g), bagOverlay(g, BAG_UI_IDLE)))
+    out.push(shot(`inventory-${cls}-${rarity}`, inventoryScreenPixels(g), [heroTabsBox(g, 'bag'), ...bagOverlay(g, BAG_UI_IDLE)]))
     out.push(shot(`compact-${cls}-${rarity}`, compactPixels(g), compactOverlay(g, BAG_UI_IDLE)))
   }
   for (const cls of CLASSES) {
     const g = kitted(cls, 'rare')
     const smith = { ...town, ...g, where: 'town' as const }
     const stash = { ...smith, stashed: g.bag.slice(0, 4) }
-    out.push(shot(`sheet-${cls}`, sheetPixels(g), sheetOverlay(g)))
+    out.push(shot(`sheet-${cls}`, sheetPixels(g), [heroTabsBox(g, 'sheet'), ...sheetOverlay(g)]))
     out.push(shot(`start-${cls}`, startPixels(g, { cls }), startOverlay(g, { cls })))
     out.push(shot(`strip-${cls}`, hudPixels(g, 111).px))
     out.push(shot(`forge-${cls}`, forgePixels(smith, { slot: null, menu: false } as never), forgeOverlay(smith, { slot: null, menu: false } as never)))

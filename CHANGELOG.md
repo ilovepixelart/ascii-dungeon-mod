@@ -59,6 +59,8 @@ release may change behaviour.
   the pane now ends the walk where the hero is drawn and drops what waited on it.
 - A hero killed by a trap made the champion up elsewhere on the depth their nemesis, or gave the nemesis up a win and
   a fifth more strength. Only the foe that struck the killing blow is remembered now.
+- With an item's menu open in the bag, the compact bag, the merchant or the stash, the hover still lit the items, the
+  belt and the close box, where a click only closes the menu. Nothing is lit there now.
 
 ## [0.4.0] - 2026-10-20
 

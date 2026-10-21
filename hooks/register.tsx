@@ -1276,9 +1276,9 @@ const fitLine = (p: Pane, rows: number, under: number) => {
   return note === undefined ? undefined : <p.Text dimColor wrap="truncate-end">{note}</p.Text>
 }
 
-const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = []) => {
+const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = [], hasClose = true) => {
   const { Box, Text, Raster, Client } = p
-  const px = litWindow(key, drawn, hot)
+  const px = litWindow(key, drawn, hot, INV_W, hasClose)
   return (
     <Box flexDirection="column">
       {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : HINT_ROWS))}
@@ -1319,7 +1319,7 @@ const pixelBag = (p: Pane, l: Layout) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi)) })} />}
+          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi), INV_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: popovers }} width={INV_W} height={rows} />
@@ -1365,7 +1365,7 @@ const pixelShop = (p: Pane) => {
       {fitLine(p, rows, UNDER_WINDOW + HINT_ROWS)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi)) })} />}
+          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi), INV_W, !shopUi.menu) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes }} width={INV_W} height={rows} />
@@ -1423,7 +1423,7 @@ const compactBag = (p: Pane) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W) })} />}
+          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes }} width={COMPACT_W} height={COMPACT_H / 2} />
@@ -1549,7 +1549,7 @@ const stashWindow = (p: Pane) => {
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi))
+  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi), !chestUi.menu)
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */

@@ -208,6 +208,9 @@ export const bagGesture = (g: Game, ui: BagUi, gesture: Gesture): { ui: BagUi; a
   return click(g, { ...ui, drag: null }, gesture.at, gesture.button)
 }
 
-/** What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt. */
+/**
+ * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt.
+ * With a menu open, nothing: a click anywhere but on the menu only closes it.
+ */
 export const inventoryHot = (g: Game, ui: BagUi): Rect[] =>
-  uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)], bagOverlay(g, ui))
+  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)], bagOverlay(g, ui))

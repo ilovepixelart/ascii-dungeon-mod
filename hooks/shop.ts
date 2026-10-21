@@ -156,6 +156,9 @@ export const shopGesture = (g: Game, ui: ShopUi, gesture: Gesture): Outcome => {
 /** The next ware on the shelf after the chosen one, for the key that steps through them. */
 export const nextWare = (ui: ShopUi): ShopUi => ({ ware: WARES[(ui.ware === null ? 0 : WARES.indexOf(ui.ware) + 1) % WARES.length]!, menu: false })
 
-/** What a click acts on, in window pixels: the wares (a click chooses one, a second opens its menu), the bag's items, the belt. */
+/**
+ * What a click acts on, in window pixels: the wares (a click chooses one, a second opens its menu), the bag's items,
+ * the belt. With a menu open, nothing: a click anywhere but on the menu only closes it.
+ */
 export const shopHot = (g: Game, ui: ShopUi): Rect[] =>
-  uncovered([...WARES.map((_, i) => wareRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)), ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y)], shopOverlay(g, ui))
+  ui.menu ? [] : uncovered([...WARES.map((_, i) => wareRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)), ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y)], shopOverlay(g, ui))

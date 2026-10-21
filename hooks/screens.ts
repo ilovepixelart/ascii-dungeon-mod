@@ -103,7 +103,7 @@ export const shots = (): Shot[] => {
   for (const cls of CLASSES) {
     const g = kitted(cls, 'rare')
     const smith = { ...town, ...g, where: 'town' as const }
-    const stash = { ...smith, stashed: g.bag.slice(0, 4) }
+    const stash = { ...smith, stashed: [g.bag.slice(0, 4)] }
     out.push(shot(`sheet-${cls}`, sheetPixels(g), sheetOverlay(g)))
     out.push(shot(`start-${cls}`, startPixels(g, { cls }), startOverlay(g, { cls })))
     out.push(shot(`strip-${cls}`, hudPixels(g, 111).px))

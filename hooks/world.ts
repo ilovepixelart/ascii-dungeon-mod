@@ -5,7 +5,7 @@ import { kitFor } from './items'
 import { MAP_H, MAP_W, cellId, generate, visibleFrom } from './map'
 import type { Pos } from './map'
 
-export const SAVE_VERSION = 12
+export const SAVE_VERSION = 13
 
 export const FOG = '0'.repeat(MAP_W * MAP_H)
 
@@ -60,7 +60,7 @@ export const newGame = (seed = 1, cls: HeroClass = 'knight'): Game => {
     sinceRare: 0,
     reforges: 0,
     bossSlain: 0,
-    stashed: [],
+    stashed: [[]],
     quest: null,
     questsDone: 0,
     fortune: null,

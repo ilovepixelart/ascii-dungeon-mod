@@ -5,7 +5,8 @@ import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
 import { BAG_H, BAG_W, RARE_KILLS, SETS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
-import { LOG_KEPT, LOOP_KILLS, STASH_SIZE, isBossDepth } from './game'
+import { LOG_KEPT, LOOP_KILLS, isBossDepth } from './game'
+import { STASH_SIZE, TAB_PRICES, specialTabOf, stashedItems } from './stash'
 import { CALM_CALLS } from './balance'
 import { TALENT_EVERY } from './talents'
 import { pairOf, tierStart } from './deep'
@@ -56,7 +57,7 @@ const RULES: Readonly<Record<string, Rule>> = {
   },
   'a reforge to take back only in town': g => (g.reforgedFrom !== null && g.where !== 'town' ? `the ${g.reforgedFrom.item.name}'s reforge still open in the dungeon` : undefined),
   'nothing both locked and junk': g => {
-    const both = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!]))].find(i => i.locked === true && i.junk === true)
+    const both = [...g.bag, ...stashedItems(g), ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!]))].find(i => i.locked === true && i.junk === true)
     return both === undefined ? undefined : `the ${both.name} is locked and junk`
   },
   'uniques slain in bands reached': g => {
@@ -87,12 +88,12 @@ const RULES: Readonly<Record<string, Rule>> = {
     return c.deepest >= g.deepest && c.level >= g.level && c.deaths >= g.deaths ? undefined : `codex deepest ${c.deepest}, level ${c.level}, deaths ${c.deaths}; the hero's ${g.deepest}, ${g.level}, ${g.deaths}`
   },
   'triggers only on Rares and Epics, each a known one': g => {
-    const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
+    const all = [...g.bag, ...stashedItems(g), ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
     const wrong = all.find(i => i.trigger !== undefined && (!(i.rarity === 'rare' || i.rarity === 'epic') || TRIGGERS[i.trigger] === undefined))
     return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} carries ${wrong.trigger}`
   },
   'set pieces Epic, untriggered, each of its set by base and name': g => {
-    const all = [...g.bag, ...g.stashed, ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
+    const all = [...g.bag, ...stashedItems(g), ...SLOTS.flatMap(s => (g.gear[s] === undefined ? [] : [g.gear[s]!])), ...(g.heirloom === undefined ? [] : [g.heirloom])]
     const wrong = all.find(i => i.set !== undefined && (i.rarity !== 'epic' || i.trigger !== undefined || !SETS[i.set]?.pieces.some(p => p.base === i.base && p.name === i.name)))
     return wrong === undefined ? undefined : `the ${wrong.rarity} ${wrong.name} (${wrong.base}) of set ${wrong.set}${wrong.trigger === undefined ? '' : ` with ${wrong.trigger}`}`
   },
@@ -141,9 +142,20 @@ const RULES: Readonly<Record<string, Rule>> = {
     }
     return undefined
   },
-  'stash within its size': g => (g.stashed.length <= STASH_SIZE ? undefined : `${g.stashed.length} items in a stash of ${STASH_SIZE}`),
+  'stash within its size': g => {
+    if (g.stashed.length < 1 || g.stashed.length > TAB_PRICES.length) return `${g.stashed.length} plain tabs`
+    const over = g.stashed.findIndex(t => t.length > STASH_SIZE)
+    return over < 0 ? undefined : `${g.stashed[over]!.length} items on tab ${over + 1} of ${STASH_SIZE}`
+  },
+  'a place each on the stash\'s sets\' and Legendaries\' tabs': g => {
+    const sets = g.stashSets ?? []
+    const legends = g.stashLegends ?? []
+    if (sets.some(i => specialTabOf(i) !== 'sets') || legends.some(i => specialTabOf(i) !== 'legends')) return 'an item on a tab not its own'
+    const places = [...sets.map(i => `${i.set}:${i.base}`), ...legends.map(i => i.power)]
+    return new Set(places).size === places.length ? undefined : 'two items in one place'
+  },
   'unique item ids': g => {
-    const ids = [...g.bag, ...g.stashed, ...Object.values(g.gear)].flatMap(i => (i === undefined ? [] : [i.id]))
+    const ids = [...g.bag, ...stashedItems(g), ...Object.values(g.gear)].flatMap(i => (i === undefined ? [] : [i.id]))
     return new Set(ids).size === ids.length ? undefined : `item ids repeat: ${ids.join(',')}`
   },
   'gear in its slot': g => (Object.entries(g.gear).map(([slot, i]) => (i !== undefined && i.slot !== slot ? `${i.name} (${i.slot}) worn as ${slot}` : undefined)).find(Boolean)),

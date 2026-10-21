@@ -69,7 +69,7 @@ describe('the hover lights what a click acts on', () => {
 
   test('the stash: each stored item\'s row is lit, and a click on it chooses it', async () => {
     const stored = [plainItem({ nextId: 6001 }, 'ring'), plainItem({ nextId: 6002 }, 'amulet')]
-    const g = inTown({ stashed: stored, bag: [] })
+    const g = inTown({ stashed: [stored], bag: [] })
     const list = chestOverlay(g, CHEST_UI_IDLE)[0]!
     stored.forEach((item, i) => {
       const p = { x: list.x + 3, y: (list.y + 1 + i) * 2 + 1 }
@@ -116,7 +116,7 @@ describe('the hover with a card open', () => {
   const crowded = (): Game => {
     const tall = (id: number) => ({ ...plainItem({ nextId: id }, 'amulet', 'epic'), trigger: 'thorns' as const, atk: 1, def: 1, hp: 1, crit: 1, xp: 1 })
     const bag = Array.from({ length: BAG_W * BAG_H }, (_, i) => ({ ...plainItem({ nextId: 9100 + i }, 'ring'), w: 1, h: 1, x: Math.floor(i / BAG_H), y: i % BAG_H }))
-    return inTown({ bag, stashed: [tall(6101), tall(6102)] })
+    return inTown({ bag, stashed: [[tall(6101), tall(6102)]] })
   }
   /** Each lit centre a click on which changes nothing: under a card, where the click lands on the card. */
   const dead = <U>(hot: readonly Rect[], gesture: (p: { x: number; y: number }) => { ui: U; actions: readonly unknown[] }, ui: U) =>
@@ -137,7 +137,7 @@ describe('the hover with a card open', () => {
       const shopUi = { ware: null, menu: false }
       found.push(...dead(shopHot(chosen, shopUi), p => shopGesture(chosen, shopUi, tap(p.x, p.y)), shopUi).map(p => `shop ${item.id} ${p.x},${p.y}`))
     }
-    for (const stored of g.stashed) {
+    for (const stored of g.stashed[0]!) {
       const ui = { stored: stored.id, menu: false }
       found.push(...dead(chestHot(g, ui), p => chestGesture(g, ui, tap(p.x, p.y)), ui).map(p => `stash ${stored.id} ${p.x},${p.y}`))
     }
@@ -151,7 +151,7 @@ describe('the hover with a card open', () => {
     const idle = (out: { actions: readonly unknown[] }) => out.actions.length === 0
     const bagUi = { menu: { id: item.id, confirm: false }, drag: null }
     const shopUi = { ware: null, menu: true }
-    const stashUi = { stored: g.stashed[0]!.id, menu: true }
+    const stashUi = { stored: g.stashed[0]![0]!.id, menu: true }
     const found = [
       ...inventoryHot(chosen, bagUi).map(centre).filter(p => idle(bagGesture(chosen, bagUi, tap(p.x, p.y)))).map(p => `bag ${p.x},${p.y}`),
       ...compactHot(chosen, bagUi).map(centre).filter(p => idle(compactGesture(chosen, bagUi, tap(p.x, p.y)))).map(p => `compact ${p.x},${p.y}`),

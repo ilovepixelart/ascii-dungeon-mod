@@ -2,11 +2,12 @@
 // `codexwindow.ts` draws it, and game.ts begins it from an older save and pays for a set made whole. Pure.
 import type { Codex, Game, Item } from '../types'
 import { slain } from './recap'
+import { stashedItems } from './stash'
 
 /** A codex with nothing in it yet, for a hero who has done nothing. */
 export const EMPTY_CODEX: Codex = { uniques: [], bigs: [], legendaries: [], deepest: 1, level: 1, kills: 0, bosses: 0, deaths: 0, gold: 0 }
 
-const owned = (g: Game): Item[] => [...g.bag, ...g.stashed, ...Object.values(g.gear).filter((i): i is Item => i !== undefined)]
+const owned = (g: Game): Item[] => [...g.bag, ...stashedItems(g), ...Object.values(g.gear).filter((i): i is Item => i !== undefined)]
 const added = <T>(list: readonly T[], x: T | undefined) => (x === undefined || list.includes(x) ? list : [...list, x])
 
 /** The Legendaries the hero owns, by name, each once. */

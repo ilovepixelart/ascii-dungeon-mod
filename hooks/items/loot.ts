@@ -5,6 +5,7 @@ import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, RARE_TRIGGER_SHARE, SETS, ST
 import type { Base } from './catalog'
 import { NO_STATS, STAT_KEYS, plus } from './stats'
 import type { Stats } from './stats'
+import { stashedItems } from '../stash'
 
 /** A new item of `key` at `rarity` with no affixes: what a starting kit and a migration hand out. */
 export const plainItem = (g: Pick<Game, 'nextId'>, key: string, rarity: Rarity = 'common'): Item => {
@@ -159,7 +160,7 @@ const legendaryOf = (g: Game): Item => {
  * pieces, one the hero has nowhere (bag, stash or worn) comes first; which, by the depth and the world.
  */
 export const setPiece = (g: Game, set: ClassSet): Item => {
-  const owned = [...g.bag, ...g.stashed, ...Object.values(g.gear)].filter(i => i?.set === set).map(i => i!.base)
+  const owned = [...g.bag, ...stashedItems(g), ...Object.values(g.gear)].filter(i => i?.set === set).map(i => i!.base)
   const missing = SETS[set].pieces.filter(p => !owned.includes(p.base))
   const from = missing.length > 0 ? missing : SETS[set].pieces
   const piece = from[hash(g.depth, g.world, 37) % from.length]!

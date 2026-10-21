@@ -166,8 +166,13 @@ export type Game = {
   reforges: number
   /** The deepest boss depth whose guardian is slain; 0 before the first. */
   bossSlain: number
-  /** Items kept in the town stash, at most STASH_SIZE; their bag places mean nothing there. */
-  stashed: Item[]
+  /** The town stash's plain tabs, kept from hero to hero: one list a tab bought, the first the town's from the start,
+   * each at most STASH_SIZE items (`hooks/stash.ts`); their bag places mean nothing there. */
+  stashed: Item[][]
+  /** The stash's tab for the class sets' pieces, a place each; absent until bought. */
+  stashSets?: Item[]
+  /** The stash's tab for the Legendaries, a place each; absent until bought. */
+  stashLegends?: Item[]
   /** The elder's quest in hand; null before one is taken and after it is paid. */
   quest: Quest | null
   /** Quests the elder has paid for. */

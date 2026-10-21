@@ -5,7 +5,7 @@ import { kitFor } from './items'
 import { MAP_H, MAP_W, cellId, generate, visibleFrom } from './map'
 import type { Pos } from './map'
 
-export const SAVE_VERSION = 11
+export const SAVE_VERSION = 12
 
 export const FOG = '0'.repeat(MAP_W * MAP_H)
 

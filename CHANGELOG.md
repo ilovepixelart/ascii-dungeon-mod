@@ -67,6 +67,9 @@ release may change behaviour.
   potion found after it, and no toast came (a mage never had one). The champion's name now reaches the toast directly.
 - Selling an item in the dungeon and buying it back counted the sale's gold in the codex's gold found every time: a
   hundred rounds made 600 gold of nothing. A sale is no gold found.
+- A commit's shrine, a push's cache and a pull request's hoard, once a depth, paid twice on a depth reached again: a
+  push on depth 7, one on depth 6 after a death, and another back on depth 7 gave three caches. Every depth paid is
+  kept now; a save from before keeps the depth it last paid on (save version 12).
 
 ## [0.4.0] - 2026-10-20
 

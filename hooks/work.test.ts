@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Rarity, Work } from '../types'
-import { apply } from './game'
+import { apply, normalize } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { runsTests, workOf } from './work'
 
@@ -143,6 +143,20 @@ describe('a push and a pull request', () => {
     expect(found(pushed, 'push')).toEqual([])
     expect(found(pushed, 'pr').length).toBe(1)
     expect(found({ ...pushed, depth: 8, deepest: 8 }, 'push').length).toBe(1)
+  })
+
+  test('a depth rewarded once is never rewarded again, a shallower one rewarded between', async () => {
+    const seven = done(hurtOn(7), 'push')
+    const six = done({ ...seven, depth: 6 }, 'push')
+    expect(six.log.at(-1)).not.toBe(seven.log.at(-1))
+    expect(found({ ...six, depth: 7 }, 'push')).toEqual([])
+    expect(found({ ...six, depth: 6 }, 'push')).toEqual([])
+  })
+
+  test('a save from before version 12 keeps the depth its rewards were last given on', async () => {
+    const old = { ...hurtOn(7), version: 11, boons: { push: 7, commit: 3 } } as unknown as Game
+    expect(normalize(old).boons).toEqual({ push: [7], commit: [3] })
+    expect(found(normalize(old), 'push')).toEqual([])
   })
 
   test('say what opened', async () => {

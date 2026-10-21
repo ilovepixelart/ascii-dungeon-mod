@@ -1141,8 +1141,8 @@ const REWARDS: Readonly<Record<Exclude<Work, 'tests'>, (g: Game) => void>> = {
 
 /** Work's reward, once a depth for each kind: tests are their blow alone. */
 const reward = (g: Game, work: Work | undefined) => {
-  if (work === undefined || work === 'tests' || g.boons?.[work] === g.depth) return
-  g.boons = { ...g.boons, [work]: g.depth }
+  if (work === undefined || work === 'tests' || g.boons?.[work]?.includes(g.depth) === true) return
+  g.boons = { ...g.boons, [work]: [...(g.boons?.[work] ?? []), g.depth] }
   REWARDS[work](g)
 }
 

@@ -738,11 +738,17 @@ const kindOf = (world: number, depth: number): RoomKind => {
 export const themedRoomOf = (world: number, depth: number, level: Level): { room: Room; kind: RoomKind } | undefined => {
   const known = themedOf.get(level)
   if (known !== undefined) return known ?? undefined
-  // A rounded room loses only its corners, which no kind's furnishings stand on. A room holding the start or the stairs
-  // is never themed, the arena among them, though it grew over a room listed before it that `roomAt` finds first.
+  // A rounded room loses only its corners, which no kind's furnishings stand on.
+  const candidates = level.rooms.filter(r => r.w >= 5 && (r.shape === undefined || r.shape === 'rounded') && r !== roomAt(level, level.start) && r !== roomAt(level, level.stairs))
+  const pick = hash(world * 13 + depth * 7, 1, 2)
+  const chosen = candidates[pick % candidates.length]
+  // A room holding the start or the stairs is never themed: an arena grown over a room listed before it holds the
+  // stairs, though `roomAt` finds that room first. Only such a choice is made again, so every other level keeps its own.
   const holds = (r: Room, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
-  const candidates = level.rooms.filter(r => r.w >= 5 && (r.shape === undefined || r.shape === 'rounded') && !holds(r, level.start) && !holds(r, level.stairs))
-  const themed = candidates.length === 0 ? null : { room: candidates[hash(world * 13 + depth * 7, 1, 2) % candidates.length]!, kind: kindOf(world, depth) }
+  const isClear = (r: Room) => !holds(r, level.start) && !holds(r, level.stairs)
+  const clear = candidates.filter(isClear)
+  const room = chosen !== undefined && isClear(chosen) ? chosen : clear[pick % Math.max(1, clear.length)]
+  const themed = room === undefined ? null : { room, kind: kindOf(world, depth) }
   themedOf.set(level, themed)
   return themed ?? undefined
 }

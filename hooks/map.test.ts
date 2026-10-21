@@ -305,6 +305,14 @@ describe('sight down corridors', () => {
 })
 
 describe('the themed room', () => {
+  test('a level whose themed room held neither the start nor the stairs keeps it where it was', async () => {
+    // As 0.4.0 chose them: a save's used furnishings (`taken`) stand in these rooms.
+    for (const [world, depth, x, y] of [[17, 30, 16, 2], [20, 60, 33, 2], [24, 40, 39, 13]] as const) {
+      const room = themedRoomOf(world, depth, generate(world, depth))?.room
+      expect({ world, depth, x: room?.x, y: room?.y }).toEqual({ world, depth, x, y })
+    }
+  })
+
   test('on a big boss depth it is never the arena, nor any room holding the start or the stairs', async () => {
     const holds = (r: { x: number; y: number; w: number; h: number }, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
     // 218:20, 310:50 and 1208:30 grow their arena over a room listed before it; the rest a spread of worlds.

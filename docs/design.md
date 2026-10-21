@@ -25,9 +25,12 @@ names below point at it.
 
 ## Text
 
-- Words and numbers a person reads are terminal text, in text boxes over the pixels (`boxShape`, `barLabel`): the
-  terminal's own font, readable at any size. Titles, tabs and buttons are terminal text too; the pixel font (3 by 5,
-  `FONT`) is left to labels on art and the counts on slots.
+- Every word and number in the pane is terminal text, in text boxes over the pixels: sentences in framed boxes
+  (`boxShape`), numbers on bars (`barLabel`), buttons' words on their faces (`buttonBox`), labels on art (`artLabel`:
+  prices, counts, names, ribbons). Each sits on a whole cell, on the ground the pixels under it are painted. The pixel
+  font (3 by 5, `FONT`) is left to the map's floating combat numbers and the saved hero card; `scripts/check-font.mjs`
+  fails on any other use.
+- Labels of the chrome (titles, tabs, buttons, ribbons) are upper case; sentences are sentence case.
 - A number on a bar is centred on it, on its middle two rows, each character on the bar's color under it, in the ink
   that reads there (`inkOn`). So a 4 px bar starts on an odd pixel row.
 - The pixel font has every character the game asks of it; a missing one is a failing test (`missingGlyphs`).
@@ -46,6 +49,9 @@ names below point at it.
 - One width (`WINDOW_W`), one title bar, a 9 by 9 close box with its X centred, a pixel of room all round.
 - A window's parts, top to bottom: title; picture and words; what the window shows (a bar, a stat, wares); its
   actions as buttons with their key in gold. A part a window lacks leaves no hole.
+- A choice is a button (`BUTTON_H`, 6 px): its key in gold, its label, framed white when armed or chosen, grey and
+  sunken when it cannot act. A choice wider than its words (the deep's marks) is the same face, wider
+  (`buttonFace`).
 - Popovers (cards, menus, the belt's tiers) stand on what they are about, never over it.
 
 ## Sprites

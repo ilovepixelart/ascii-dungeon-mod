@@ -10,6 +10,8 @@ import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopOverlay, shopPi
 import type { ShopUi } from './shop'
 import type { Gesture } from './window'
 import { newGame } from './world'
+/** The window's cards and menus, the labels on its art left out. */
+const cards = (...args: Parameters<typeof shopOverlay>) => shopOverlay(...args).filter(b => b.role !== 'label')
 
 const knight = (gold: number): Game => ({ ...newGame(1, 'knight'), gold, bag: [] })
 const put = (g: Game, base: string, rarity: Rarity, x: number, y: number, over: Partial<Item> = {}): Item => {
@@ -21,10 +23,10 @@ const put = (g: Game, base: string, rarity: Rarity, x: number, y: number, over: 
 const tap = (px: number, py: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button })
 const onWare = (i: number, button: 'left' | 'right' = 'left') => tap(wareRect(i).x + 7, wareRect(i).y + 4, button)
 const onItem = (item: Item, button: 'left' | 'right' = 'left') => tap(BAG_X + item.x * CELL + 3, WINDOW_TOP + BAG_Y + item.y * CELL + 3, button)
-const text = (g: Game, ui: ShopUi, role: 'card' | 'menu') => shopOverlay(g, ui).find(b => b.role === role)?.lines.map(l => l.map(r => r.text).join(''))
+const text = (g: Game, ui: ShopUi, role: 'card' | 'menu') => cards(g, ui).find(b => b.role === role)?.lines.map(l => l.map(r => r.text).join(''))
 /** A click on a menu's row, in cells. */
 const onRow = (g: Game, ui: ShopUi, row: number): Gesture => {
-  const m = shopOverlay(g, ui).find(b => b.role === 'menu')!
+  const m = cards(g, ui).find(b => b.role === 'menu')!
   const at = { x: m.x + 2.5, y: m.y + 1 + row + 0.5 }
   return { type: 'release', from: at, at, button: 'left' }
 }
@@ -134,7 +136,7 @@ describe('the window', () => {
     put(g, 'axe', 'epic', 0, 0)
     put(g, 'ring', 'rare', 4, 0)
     for (const ware of WARES) {
-      const boxes = shopOverlay(g, { ware, menu: true })
+      const boxes = cards(g, { ware, menu: true })
       expect(boxes.length).toBe(2)
       for (const b of boxes) {
         expect(b.x >= 0 && b.y >= 0 && b.x + b.w <= WINDOW_W && (b.y + b.h) * 2 <= SHOP_H).toBe(true)
@@ -152,7 +154,7 @@ describe('the window', () => {
     for (const item of g.bag) {
       g.cursor = item.id
       const own = { x: BAG_X + item.x * CELL + 1, y: WINDOW_TOP + BAG_Y + item.y * CELL + 1, w: CELL - 1, h: CELL - 1 }
-      for (const b of shopOverlay(g, { ware: null, menu: true })) expect(inside(own, b)).toBe(false)
+      for (const b of cards(g, { ware: null, menu: true })) expect(inside(own, b)).toBe(false)
     }
   })
 
@@ -202,5 +204,5 @@ test('the shelf holds its wares in three rows of three, clear of the belt below 
 test('a ware\'s card is framed as a Common item\'s, its menu in white, as every card and menu is', async () => {
   const g = { ...newGame(4), where: 'town' as const, gold: 300 }
   const ui = { ware: WARES[0]!, menu: true }
-  expect(shopOverlay(g, ui).map(b => [b.role, b.border])).toEqual([['card', RARITY_COLOR.common], ['menu', CURSOR]])
+  expect(cards(g, ui).map(b => [b.role, b.border])).toEqual([['card', RARITY_COLOR.common], ['menu', CURSOR]])
 })

@@ -25,6 +25,7 @@ const TYPES = '.claude-plugin/types/claude-code/index.d.ts'
 const gates = [
   ['release check', 'node', ['scripts/check-release.mjs', ...(tag === undefined ? [] : ['--tag', tag])]],
   ['colors', 'node', ['scripts/check-colors.mjs']],
+  ['font', 'node', ['scripts/check-font.mjs']],
   ['validate', 'claude', ['plugin', 'validate', '--strict', '.']],
   ['test', 'claude', ['plugin', 'test', '.']],
   ['python tools: ruff', 'uvx', ['ruff', 'check', 'tools']],

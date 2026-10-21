@@ -8,6 +8,8 @@ import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, INV_H, INV_TOP, INV
 import { plainItem } from './items'
 import { newGame } from './world'
 import { apply } from './game'
+/** The window's cards and menus, the labels on its art left out. */
+const cards = (...args: Parameters<typeof bagOverlay>) => bagOverlay(...args).filter(b => b.role !== 'label')
 
 const knight = (): Game => newGame(1, 'knight')
 const put = (g: Game, base: string, rarity: Rarity, x: number, y: number, over: Partial<Item> = {}): Item => {
@@ -24,7 +26,7 @@ const dragTo = (g: Game, from: { x: number; y: number }, to: { x: number; y: num
   bagGesture(g, BAG_UI_IDLE, { type: 'release', from: cell(from.x, from.y), at: cell(to.x, to.y), button: 'left' })
 const cellAt = (x: number, y: number) => ({ x: BAG_X + x * CELL + 3, y: INV_TOP + BAG_Y + y * CELL + 3 })
 const menuLine = (g: Game, ui: BagUi, entry: number) => {
-  const menu = bagOverlay(g, ui).find(b => b.role === 'menu')!
+  const menu = cards(g, ui).find(b => b.role === 'menu')!
   return { x: menu.x + 2, y: (menu.y + 1 + entry) * 2 }
 }
 
@@ -69,7 +71,7 @@ describe('clicks', () => {
     for (const p of [cellAt(5, 4), { x: BAG_X, y: INV_TOP + BAG_Y + 3 }]) expect(click(sel, BAG_UI_IDLE, p).actions).toEqual([{ kind: 'deselect' }])
     const after = apply(sel, { kind: 'deselect' })
     expect(after.cursor).toBeNull()
-    expect(bagOverlay(after, BAG_UI_IDLE)).toEqual([])
+    expect(cards(after, BAG_UI_IDLE)).toEqual([])
   })
 
   test('an empty bag cell, a grid line or the margin does nothing', async () => {
@@ -89,7 +91,7 @@ describe('the menu', () => {
 
   test('offers Equip, then Destroy, then Lock', async () => {
     const { g, ui } = opened()
-    const menu = bagOverlay(g, ui).find(b => b.role === 'menu')!
+    const menu = cards(g, ui).find(b => b.role === 'menu')!
     expect(menu.lines.map(l => l.map(r => r.text).join(''))).toEqual(['e Equip', 'd Destroy', 'g Lock'])
   })
 
@@ -105,7 +107,7 @@ describe('the menu', () => {
     const first = click(g, ui, menuLine(g, ui, 1))
     expect(first.actions).toEqual([])
     expect(first.ui.menu?.confirm).toBe(true)
-    expect(bagOverlay(g, first.ui).find(b => b.role === 'menu')!.lines[1]!.map(r => r.text).join('')).toBe('d Destroy? click again')
+    expect(cards(g, first.ui).find(b => b.role === 'menu')!.lines[1]!.map(r => r.text).join('')).toBe('d Destroy? click again')
     const second = click(g, first.ui, menuLine(g, first.ui, 1))
     expect(second.actions).toEqual([{ kind: 'destroy' }])
     expect(second.ui.menu).toBeNull()
@@ -117,7 +119,7 @@ describe('the menu', () => {
     expect(r.actions).toEqual([{ kind: 'lock' }])
     expect(r.ui.menu).toBeNull()
     const locked = { ...g, bag: g.bag.map(i => ({ ...i, locked: true as const })) }
-    expect(bagOverlay(locked, ui).find(b => b.role === 'menu')!.lines.map(l => l.map(x => x.text).join(''))).toEqual(['e Equip', 'd Destroy  locked', 'g Unlock'])
+    expect(cards(locked, ui).find(b => b.role === 'menu')!.lines.map(l => l.map(x => x.text).join(''))).toEqual(['e Equip', 'd Destroy  locked', 'g Unlock'])
     const tried = click(locked, ui, menuLine(locked, ui, 1))
     expect(tried.actions).toEqual([])
     expect(tried.ui.menu?.confirm).toBe(false)
@@ -137,7 +139,7 @@ describe('the menu', () => {
     const wand = put(g, 'wand', 'common', 6, 0)
     const sel = { ...g, cursor: wand.id }
     const ui = click(sel, BAG_UI_IDLE, middle(wand)).ui
-    const menu = bagOverlay(sel, ui).find(b => b.role === 'menu')!
+    const menu = cards(sel, ui).find(b => b.role === 'menu')!
     expect(menu.lines[0]!.map(r => r.text).join('')).toBe('e Equip  Mage only')
     expect(menu.lines[0]![0]!.dim).toBe(true)
     expect(click(sel, ui, menuLine(sel, ui, 0)).actions).toEqual([])
@@ -148,7 +150,7 @@ describe('popovers', () => {
   test('a selected item with gear worn in its slot shows both: the item and, titled Equipped, what it would replace', async () => {
     const g = knight()
     const chain = put(g, 'chain', 'rare', 2, 0, { def: 7 })
-    const boxes = bagOverlay({ ...g, cursor: chain.id }, BAG_UI_IDLE)
+    const boxes = cards({ ...g, cursor: chain.id }, BAG_UI_IDLE)
     expect(boxes.map(b => b.role)).toEqual(['worn', 'item'])
     expect(boxes[0]!.lines[0]!.map(r => r.text).join('')).toBe('Equipped')
     expect(boxes[0]!.lines[1]!.map(r => r.text).join('')).toBe(g.gear.armor!.name)
@@ -159,7 +161,7 @@ describe('popovers', () => {
     const g = knight()
     const worn = g.gear.armor!
     const chain = put(g, 'chain', 'rare', 2, 0, { def: worn.def + 3, hp: 0 })
-    const lines = bagOverlay({ ...g, cursor: chain.id }, BAG_UI_IDLE).find(b => b.role === 'item')!.lines.map(l => l.map(r => r.text).join(''))
+    const lines = cards({ ...g, cursor: chain.id }, BAG_UI_IDLE).find(b => b.role === 'item')!.lines.map(l => l.map(r => r.text).join(''))
     const gain = lines.find(l => l.startsWith(`+${worn.def + 3} def`))
     expect(gain).toMatch(/^\+\d+ def +\+3 \^$/)
     expect(worn.hp).toBeGreaterThan(0)
@@ -185,7 +187,7 @@ describe('popovers', () => {
         const item = put(g, base, rarity, x, y, over)
         // A worn legendary with a long name and a power makes the widest Equipped box.
         if (longWorn) g.gear = { ...g.gear, [item.slot]: { ...plainItem(g, base, 'legendary'), name: 'Everlasting Relic of the Thousand Green Builds', power: 'loopHeal' } }
-        const boxes = bagOverlay({ ...g, cursor: item.id }, BAG_UI_IDLE)
+        const boxes = cards({ ...g, cursor: item.id }, BAG_UI_IDLE)
         for (const b of boxes) expect(b.x >= 0 && b.x + b.w <= INV_W && b.y >= 0 && b.y + b.h <= (INV_TOP + INV_H) / 2 ? 'inside' : `${base} at ${x},${y}: ${b.role} at ${b.x}+${b.w}, ${b.y}+${b.h}`).toBe('inside')
         const [a, b] = boxes
         const apart = a === undefined || b === undefined || !(a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h)
@@ -213,7 +215,7 @@ describe('popovers', () => {
   test('in a crowded bag the selected item and what it is compared with are never covered', async () => {
     const g = crowded()
     for (const item of g.bag) {
-      const boxes = bagOverlay({ ...g, cursor: item.id }, BAG_UI_IDLE)
+      const boxes = cards({ ...g, cursor: item.id }, BAG_UI_IDLE)
       const [wx, wy, ww, wh] = WORN_SLOTS[item.slot]
       for (const b of boxes) {
         expect(covered(bagRect(item), b) === 0 ? 'clear' : `${item.x},${item.y}: the ${b.role} box covers the item`).toBe('clear')
@@ -228,7 +230,7 @@ describe('popovers', () => {
     put(g, 'amulet', 'uncommon', 7, 1)
     put(g, 'amulet', 'uncommon', 6, 2)
     g.gear = { ...g.gear, ring: { ...plainItem(g, 'ring', 'epic'), name: 'Band of Many Long Names' } }
-    const boxes = bagOverlay({ ...g, cursor: ring.id }, BAG_UI_IDLE)
+    const boxes = cards({ ...g, cursor: ring.id }, BAG_UI_IDLE)
     expect(boxes.length).toBe(2)
     for (const b of boxes) {
       for (const i of g.bag) expect(covered(bagRect(i), b)).toBe(0)
@@ -256,7 +258,7 @@ describe('popovers', () => {
     const chain = put(g, 'chain', 'rare', 2, 0)
     for (let x = 4; x < 8; x += 1) for (let y = 0; y < 6; y += 1) put(g, 'ring', 'common', x, y)
     const sel = { ...g, cursor: chain.id }
-    const pop = bagOverlay(sel, BAG_UI_IDLE).find(b => b.role === 'item')!
+    const pop = cards(sel, BAG_UI_IDLE).find(b => b.role === 'item')!
     const ringUnder = (q: { x: number; y: number }) => g.bag.find(i => i.base === 'ring' && i.x === Math.floor((q.x - BAG_X) / CELL) && i.y === Math.floor((q.y + 1 - INV_TOP - BAG_Y) / CELL))
     // A cell of the popover, over a ring where the box had to cover one.
     const inside = Array.from({ length: (pop.w - 2) * (pop.h - 2) }, (_, k) => ({ x: pop.x + 1 + (k % (pop.w - 2)), y: (pop.y + 1 + Math.floor(k / (pop.w - 2))) * 2 }))
@@ -269,9 +271,9 @@ describe('popovers', () => {
   test('nothing selected, or an item being dragged: no popovers', async () => {
     const g = knight()
     const helm = put(g, 'steelHelm', 'common', 4, 0)
-    expect(bagOverlay(g, BAG_UI_IDLE)).toEqual([])
+    expect(cards(g, BAG_UI_IDLE)).toEqual([])
     const dragging: BagUi = { menu: null, drag: { source: { kind: 'bag', id: helm.id }, at: cellAt(1, 1), grab: { x: 3, y: 3 } } }
-    expect(bagOverlay({ ...g, cursor: helm.id }, dragging)).toEqual([])
+    expect(cards({ ...g, cursor: helm.id }, dragging)).toEqual([])
   })
 })
 

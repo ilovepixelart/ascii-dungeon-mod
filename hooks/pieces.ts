@@ -5,9 +5,9 @@ import { CELL, ICONS, consumableIcon } from './icons'
 import { activeTier } from './consumables'
 import type { BeltSlot } from '../types'
 import { RARITY_COLOR, canWear, isUpgrade } from './items'
-import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, digits, fill, frame, put } from './canvas'
+import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
-import { PAL, PX, textMask } from './pixelart'
+import { PAL, PX } from './pixelart'
 import type { OverlayBox, Rect } from './window'
 import type { Run } from './game'
 import { INK, SURFACE } from './ui/tokens'
@@ -95,7 +95,8 @@ export const beltSlotRect = (x0: number, y: number, i: number): Rect => ({ x: x0
 
 export const TIER_INK = INK.gold
 
-/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`), how many of that tier it holds (at most two digits), and under it a pip a tier above the first. */
+/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`) and under it a pip a tier
+ * above the first. How many of that tier it holds is `beltCounts`'s. */
 export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number, y: number) => {
   frame(c, x, y, BELT_SLOT_W, SLOT, GRID)
   fill(c, x + 1, y + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
@@ -103,11 +104,33 @@ export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number
   if (slot === null || slot === undefined || tier === undefined) return
   art(c, consumableIcon(slot.kind, tier), x + 1, y + 1)
   for (let p = 1; p < tier; p += 1) put(c, x + BELT_SLOT_W - 2 - 2 * (p - 1), y + PX, TIER_INK)
-  digits(c, String(slot.tiers[tier - 1]), x + BELT_SLOT_W - 2, y + SLOT / 2 + 2)
 }
 
 /** The belt at x, y: a slot a kind, as `beltSlot` draws it. */
 export const belt = (c: Canvas, g: Game, x0: number, y: number) => g.belt.forEach((slot, i) => beltSlot(c, slot, x0 + i * BELT_STEP, y))
+
+/**
+ * Terminal text over pixels at x, y (window pixels, y even: one cell row), each character a cell, on `ground`, the
+ * color the pixels under it are: a box over its letters alone.
+ */
+export const artLabel = (text: string, x: number, y: number, ink: string, ground: string, bold = true): OverlayBox<'label'> =>
+  ({ role: 'label', x: x - 1, y: y / 2 - 1, w: text.length + 2, h: 3, border: ground, bg: ground, pad: 0, lines: [[{ text, color: ink, bold }]] })
+
+/** How many of the tier each belt slot uses next, for a belt whose slot i is at slotX(i), y in window pixels: against
+ * the slot's right edge, on the first whole cell from its middle. `beltCountsAt` for the bag's belt, BELT_STEP apart. */
+export const beltCounts = (g: Game, slotX: (i: number) => number, y: number): OverlayBox<'label'>[] =>
+  g.belt.flatMap((slot, i) => {
+    const tier = activeTier(slot)
+    if (slot === null || slot === undefined || tier === undefined) return []
+    const text = String(slot.tiers[tier - 1])
+    return [artLabel(text, slotX(i) + BELT_SLOT_W - 1 - text.length, onCell(y + 3), INK.white, SLOT_BG)]
+  })
+export const beltCountsAt = (g: Game, x0: number, y: number) => beltCounts(g, i => x0 + i * BELT_STEP, y)
+
+/** Two boxes, in cells, that share a cell. */
+export const overlaps = (a: OverlayBox, b: OverlayBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+/** The labels no box of `over` covers: a card or a menu over a label hides it. */
+export const clearOf = <L extends OverlayBox>(labels: readonly L[], over: readonly OverlayBox[]): L[] => labels.filter(l => !over.some(b => overlaps(l, b)))
 
 /** A small coin, four pixels square, its top-left at x, y; grey when what it prices cannot be paid. */
 export const coin = (c: Canvas, x: number, y: number, canPay = true) => {
@@ -115,30 +138,33 @@ export const coin = (c: Canvas, x: number, y: number, canPay = true) => {
   fill(c, x + 1, y + 1, 2, 2, canPay ? GOLD_INK : UNPAID_INK)
 }
 
-const textW = (text: string) => textMask(text)[0]?.length ?? 0
-const word = (c: Canvas, text: string, x: number, y: number, ink: string) =>
-  textMask(text).forEach((row, dy) => [...row].forEach((k, dx) => k === '#' && put(c, x + dx, y + dy, ink)))
-
-/** A price's width: the coin, a pixel and more of room, the number. */
-export const priceW = (n: number) => 6 + textW(String(n))
-
-/** A price at x, y (the top of its number): a coin, then the number; grey when it cannot be paid. */
-export const price = (c: Canvas, n: number, x: number, y: number, canPay: boolean) => {
-  coin(c, x, y + 1, canPay)
-  word(c, String(n), x + 6, y, canPay ? GOLD_INK : UNPAID_INK)
-}
-
 /** A ware on a shelf: TAG_W wide, TAG_H tall; its icon in a slot, the price under it. */
 export const TAG_W = 15
 export const TAG_H = SLOT + 7
 
-/** A ware at x, y: the icon centered in its slot, framed white when chosen; the price centered under it. */
+/** Where a ware's price goes under its slot, for its tag at x, y: the coin, a cell, the number as text, centred, on the
+ * first whole cell two pixels under the slot. */
+const tagPrice = (cost: number, x: number, y: number) => {
+  const text = String(cost)
+  const left = x + Math.floor((TAG_W - (5 + text.length)) / 2)
+  return { text, coinX: left, textX: left + 5, row: onCell(y + SLOT + 2) }
+}
+
+/** A ware at x, y: the icon centered in its slot, framed white when chosen; under it the price's coin, grey when it
+ * cannot be paid. Its number is `warePrice`'s. */
 export const wareTag = (c: Canvas, icon: readonly string[], cost: number, x: number, y: number, canPay: boolean, chosen: boolean) => {
   const sx = x + Math.floor((TAG_W - SLOT) / 2)
   fill(c, sx + 1, y + 1, SLOT - 2, SLOT - 2, SLOT_BG)
   frame(c, sx, y, SLOT, SLOT, chosen ? CURSOR : GRID)
   art(c, icon, sx + 1, y + 1)
-  price(c, cost, x + Math.floor((TAG_W - priceW(cost)) / 2), y + SLOT + 2, canPay)
+  const at = tagPrice(cost, x, y)
+  coin(c, at.coinX, at.row - 1, canPay)
+}
+
+/** A ware's price as text beside its coin, for its tag at x, y in window pixels: gold, or grey when it cannot be paid. */
+export const warePrice = (cost: number, x: number, y: number, canPay: boolean) => {
+  const at = tagPrice(cost, x, y)
+  return artLabel(at.text, at.textX, at.row, canPay ? GOLD_INK : UNPAID_INK, BG)
 }
 
 /** A flat bar's height: one text row, so the text on it covers it exactly. */
@@ -203,13 +229,20 @@ const costText = (cost: number) => `${cost} gold`
 /** A button's width in cells: its key, its label and, when it costs, its price; a cell of room each side in its frame. */
 export const buttonW = (key: string, label: string, cost?: number) => 4 + key.length + keyGap(key, label) + label.length + (cost === undefined ? 0 : 1 + costText(cost).length)
 
-/** A button's frame and face at x, y; its words are `buttonBox`'s. Returns its width. */
-export const button = (c: Canvas, key: string, label: string, x: number, y: number, state: ButtonState, cost?: number) => {
-  const w = buttonW(key, label, cost)
+/** A button's face, `w` wide at x, y, in its state's inks: for a button wider than its words. */
+export const buttonFace = (c: Canvas, x: number, y: number, w: number, state: ButtonState) => {
   fill(c, x, y, w, BUTTON_H, BUTTON_BG[state])
   frame(c, x, y, w, BUTTON_H, BUTTON_EDGE[state])
   // A lit top edge, so it reads as raised.
   if (state !== 'off') fill(c, x + 1, y + 1, w - 2, 1, BUTTON_LIT)
+}
+/** The face a button's words are written on, in its state. */
+export const buttonGround = (state: ButtonState) => BUTTON_BG[state]
+
+/** A button's frame and face at x, y; its words are `buttonBox`'s. Returns its width. */
+export const button = (c: Canvas, key: string, label: string, x: number, y: number, state: ButtonState, cost?: number) => {
+  const w = buttonW(key, label, cost)
+  buttonFace(c, x, y, w, state)
   return w
 }
 

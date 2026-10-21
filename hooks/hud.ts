@@ -4,15 +4,15 @@ import type { Game } from '../types'
 import { xpToLevel } from './balance'
 import { depthMod } from './game'
 import type { DepthMod } from './game'
-import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, digits, fill, frame, put } from './canvas'
+import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
-import { CURSOR, barLabel, beltSlot, flatBar } from './pieces'
+import { CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar } from './pieces'
 import { TIERS, activeTier, nameOf } from './consumables'
 import type { Tier } from './consumables'
 import type { Action } from './game'
 import { boxShape, drawBox, uncovered } from './window'
 import type { Gesture, OverlayBox } from './window'
-import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
+import { PAL, PX, TOWN_THING_ART, heroArt } from './pixelart'
 
 export const PORTRAIT = SLOT
 /** The top row beside the portrait: two lines of 5 px text a pixel apart, the bars centered on them. */
@@ -76,10 +76,6 @@ export const MARK_INK: Readonly<Record<string, string>> = {
 const FORTUNE_INITIAL: Readonly<Record<NonNullable<Game['fortune']>['kind'], string>> = { luck: 'L', riches: 'R', insight: 'I' }
 export const mark = (c: Canvas, rows: readonly string[], x: number, y: number) =>
   rows.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, x + dx, y + dy, MARK_INK[k] ?? '#ff00ff')))
-export const textW = (text: string) => textMask(text)[0]?.length ?? 0
-/** Plain pixel text, no outline, its top-left corner at x, y. */
-const label = (c: Canvas, text: string, x: number, y: number, ink: string) =>
-  textMask(text).forEach((row, dy) => [...row].forEach((k, dx) => k === '#' && put(c, x + dx, y + dy, ink)))
 
 /** The belt's five slots, sharing their frame lines. */
 export const BELT_W = 5 * SLOT_STEP + 1
@@ -133,38 +129,46 @@ const bars = (c: Canvas, g: Game, width: number) => {
 
 const EFFECTS = ['fury', 'ward', 'regen'] as const
 
-/** Gold and depth from the left; the running effects from the right, each left out once it would reach the depth. */
-const sideLine = (c: Canvas, g: Game) => {
-  const gold = String(g.gold)
-  mark(c, MARK.coin, 0, SIDE_LINE_Y)
-  label(c, gold, 7, SIDE_LINE_Y, GOLD_INK)
-  const x = 7 + textW(gold) + 5
-  const depth = g.where === 'town' ? 'TOWN' : String(g.depth)
-  mark(c, MARK.stairs, x, SIDE_LINE_Y)
-  label(c, depth, x + 7, SIDE_LINE_Y, NUM_INK)
+/** The side line's text row, in the strip's content pixels: the whole cell on its marks' middle rows. */
+const SIDE_TEXT_Y = SIDE_LINE_Y + 1
+/** A mark's width, and the cell between a mark and its number. */
+const MARK_W = 5
+const MARK_GAP = 1
+
+/** The side line, left to right in the content's pixels `w` wide: each mark, and each number as text a cell a
+ * character. Gold and depth from the left; the running effects from the right, each left out once it would reach the
+ * depth. */
+const sideLineParts = (g: Game, w: number) => {
+  const marks: { rows: readonly string[]; x: number }[] = []
+  const words: { text: string; x: number; ink: string }[] = []
+  const markThen = (rows: readonly string[], x: number, text: string, ink: string) => {
+    marks.push({ rows, x })
+    words.push({ text, x: x + MARK_W + MARK_GAP, ink })
+    return x + MARK_W + MARK_GAP + text.length
+  }
+  const goldEnd = markThen(MARK.coin, 0, String(g.gold), GOLD_INK)
+  let depthEnd = markThen(MARK.stairs, goldEnd + 3, g.where === 'town' ? 'TOWN' : String(g.depth), NUM_INK)
   // The depth's twist, if it has one, right after its number.
   const mod = g.where === 'dungeon' ? depthMod(g.world, g.depth) : undefined
-  if (mod !== undefined) mark(c, MARK[mod], x + 7 + textW(depth) + 2, SIDE_LINE_Y)
-  const depthEnd = x + 7 + textW(depth) + (mod === undefined ? 0 : 7)
-  let right = c.w
-  if (g.fortune !== null) {
-    const n = FORTUNE_INITIAL[g.fortune.kind]
-    const left = right - (6 + textW(n))
-    if (left >= depthEnd + 4) {
-      mark(c, MARK.fortune, left, SIDE_LINE_Y)
-      label(c, n, left + 6, SIDE_LINE_Y, NUM_INK)
-      right = left - 4
-    }
+  if (mod !== undefined) {
+    marks.push({ rows: MARK[mod], x: depthEnd + 2 })
+    depthEnd += 2 + MARK_W
   }
-  for (const key of EFFECTS) {
-    if (g.effects[key] <= 0) continue
-    const n = String(g.effects[key])
-    const left = right - (6 + textW(n))
-    if (left < depthEnd + 4) break
-    mark(c, MARK[key], left, SIDE_LINE_Y)
-    label(c, n, left + 6, SIDE_LINE_Y, NUM_INK)
-    right = left - 4
+  let right = w
+  const fromRight = (rows: readonly string[], text: string) => {
+    const left = right - (MARK_W + MARK_GAP + text.length)
+    if (left < depthEnd + 3) return false
+    markThen(rows, left, text, NUM_INK)
+    right = left - 3
+    return true
   }
+  if (g.fortune !== null) fromRight(MARK.fortune, FORTUNE_INITIAL[g.fortune.kind])
+  for (const key of EFFECTS) if (g.effects[key] > 0 && !fromRight(MARK[key], String(g.effects[key]))) break
+  return { marks, words }
+}
+
+const sideLine = (c: Canvas, g: Game) => {
+  for (const m of sideLineParts(g, c.w).marks) mark(c, m.rows, m.x, SIDE_LINE_Y)
 }
 
 /** The strip, `width` pixels wide and as tall as `contentLayout` says. */
@@ -272,12 +276,9 @@ export const hudHot = (g: Game, width: number, boxes: readonly OverlayBox[] = []
   ], boxes.filter(b => b.role === 'belt'))
 }
 
-/** Two boxes, in cells, that share a cell. */
-const overlaps = (a: OverlayBox, b: OverlayBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
-
 /** The strip's text boxes: its numbers, less any a box over it (the belt's menu) covers, then those boxes on top. */
 export const hudBoxes = (g: Game, width: number, over: readonly OverlayBox[]): OverlayBox[] => [
-  ...hudLabels(g, width).filter(l => !over.some(b => overlaps(l, b))),
+  ...clearOf(hudLabels(g, width), over),
   ...over,
 ]
 
@@ -344,5 +345,7 @@ export const hudLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
   return [
     barLabel(INSET + BAR_X, INSET + HP_Y, barW, share, hpTones(share)[1], HP_EMPTY, `${Math.max(0, g.hp)}/${g.maxHp}`),
     barLabel(INSET + BAR_X, INSET + XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY, level),
+    ...beltCounts(g, i => INSET + beltSlotX(width, i), INSET + BELT_BELOW_Y),
+    ...sideLineParts(g, width - 2 * INSET).words.map(w => artLabel(w.text, INSET + w.x, INSET + SIDE_TEXT_Y, w.ink, BG)),
   ]
 }

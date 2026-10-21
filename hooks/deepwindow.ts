@@ -7,9 +7,10 @@ import type { Action, Run } from './game'
 import { DEEP_FROM, MARKS, TIER_DEPTHS, forkTier, markOf, pairOf, roman, tierOf, tierStart } from './deep'
 import { canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
-import { flatCard } from './ui/kit'
+import { BUTTON_H, buttonFace, buttonGround } from './pieces'
+import type { ButtonState } from './pieces'
 import { INK, SPACE, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'THE DEEP' }
@@ -19,11 +20,9 @@ const EASY = INK.easy
 const HARD = INK.hard
 /** The tiers the window lists, the deepest reached last. */
 const SHOWN = 3
-/** The fork's two cards side by side: the letter key in gold, the mark's name beside it. */
+/** The fork's two choices side by side, each a button: the letter key in gold, the mark's name beside it in its ink. */
 const CARD_W = Math.floor((WINDOW_W - 2 * PAD - SPACE.gap) / 2)
-const CARD_H = 13
-const KEY_X = 5
-const NAME_X = 12
+const CARD_H = BUTTON_H
 /** The letter keys of the two cards, the easier first. */
 export const CARD_KEYS = ['A', 'B'] as const
 
@@ -34,7 +33,7 @@ const inkOf = (mark: Mark) => (MARKS[mark].hard === true ? HARD : EASY)
 /** Where everything goes, in window pixels: the fork's cards, then the box's top, in cells. */
 const layout = (g: Game) => {
   const fork = forkTier(g)
-  const cardsY = top + 3
+  const cardsY = top + 2
   const cards: Card[] = fork === undefined ? [] : pairOf(g.world, fork).map((mark, i) => ({
     mark,
     rect: { x: PAD + i * (CARD_W + SPACE.gap), y: cardsY, w: CARD_W, h: CARD_H },
@@ -61,11 +60,13 @@ const tierLine = (g: Game, tier: number): Run[] => {
   return [{ text: '> ', color: INK.gold, bold: true }, { text }, { text: MARKS[mark].name, color: inkOf(mark) }]
 }
 
-/** The lines the window's cards say in pixels, where (window pixels) and in what ink. */
-const cardLines = (cards: Card[]) => cards.flatMap((c, i) => [
-  { text: CARD_KEYS[i]!, x: c.rect.x + KEY_X, y: c.rect.y + 4, ink: INK.gold },
-  { text: MARKS[c.mark].name.toUpperCase(), x: c.rect.x + NAME_X, y: c.rect.y + 4, ink: inkOf(c.mark) },
-])
+const cardState = (c: Card): ButtonState => (c.isChosen ? 'armed' : 'ready')
+
+/** A choice's words on its face: its key in gold, its mark's name in the mark's ink. */
+const cardBox = (c: Card, i: number): OverlayBox<'button'> => {
+  const ground = buttonGround(cardState(c))
+  return { role: 'button', x: c.rect.x, y: c.rect.y / 2, w: c.rect.w, h: 3, border: ground, bg: ground, pad: 1, lines: [[{ text: CARD_KEYS[i]!, color: INK.gold, bold: true }, { text: ` ${MARKS[c.mark].name.toUpperCase()}`, color: inkOf(c.mark), bold: true }]] }
+}
 
 /** The note under the cards: how the fork is chosen, or with none waiting where the next opens. */
 const noteOf = (g: Game, fork: number | undefined) => {
@@ -73,7 +74,8 @@ const noteOf = (g: Game, fork: number | undefined) => {
   return `Choose tier ${roman(fork)}: ${g.marks?.[fork] === undefined ? 'none chosen means A' : 'a click changes it'}.`
 }
 
-/** The box, in cells: the head, the last tiers reached, what each card's mark does, then the note. */
+/** The box, in cells: the head, the last tiers reached, what each card's mark does, then the note. Then the choices'
+ * words. */
 export const deepOverlay = (g: Game): OverlayBox[] => {
   const l = layout(g)
   const reached = tierOf(g.deepest)
@@ -84,7 +86,7 @@ export const deepOverlay = (g: Game): OverlayBox[] => {
     ...l.cards.map((c, i) => [{ text: `${CARD_KEYS[i]} ` }, { text: `${MARKS[c.mark].name}: `, bold: true, color: inkOf(c.mark) }, { text: MARKS[c.mark].does }]),
     [{ text: noteOf(g, l.fork), dim: true }],
   ]
-  return [{ role: 'about', x: 2, y: l.boxY, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
+  return [{ role: 'about', x: 2, y: l.boxY, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...l.cards.map(cardBox)]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -100,10 +102,9 @@ export const deepCards = (g: Game): Card[] => layout(g).cards
 export const deepPixels = (g: Game): string[][] => {
   const l = layout(g)
   const body = canvas(WINDOW_W, deepHeight(g) - top)
-  for (const c of l.cards) flatCard(body, { ...c.rect, y: c.rect.y - top }, c.isChosen)
-  for (const line of cardLines(l.cards)) word(body, line.text, line.x, line.y - top, line.ink)
+  for (const c of l.cards) buttonFace(body, c.rect.x, c.rect.y - top, c.rect.w, cardState(c))
   const c = windowPixels(heroChrome(g, 'deep'), body.px)
-  for (const b of deepOverlay(g)) drawBox(c, b)
+  for (const b of deepOverlay(g)) if (b.role === 'about') drawBox(c, b)
   return c.px
 }
 

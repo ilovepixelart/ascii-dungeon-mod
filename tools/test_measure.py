@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from measure import frame_report, stamps  # noqa: E402
+from measure import frame_report, stamps
 
 
 def stamped(n):
@@ -15,7 +15,11 @@ def stamped(n):
 
 class Stamps(unittest.TestCase):
     def test_reads_every_stamp_in_order_with_its_time(self):
-        raw = [(0.0, stamped(1)), (0.033, stamped(2) + stamped(3)), (0.1, b"\\x1b[48;2;254;0m no stamp")]
+        raw = [
+            (0.0, stamped(1)),
+            (0.033, stamped(2) + stamped(3)),
+            (0.1, b"\\x1b[48;2;254;0m no stamp"),
+        ]
         self.assertEqual(stamps(raw), [(0.0, 1), (0.033, 2), (0.033, 3)])
 
     def test_unwraps_the_count_past_16_and_sees_a_skip(self):
@@ -27,7 +31,14 @@ class Stamps(unittest.TestCase):
         self.assertEqual([n for _, n in stamps(raw)], [1, 2, 2, 1, 3])
 
     def test_reports_skipped_repeated_and_out_of_order_frames(self):
-        arrivals = [(0.000, 1), (0.033, 2), (0.066, 4), (0.099, 4), (0.132, 3), (0.165, 6)]
+        arrivals = [
+            (0.000, 1),
+            (0.033, 2),
+            (0.066, 4),
+            (0.099, 4),
+            (0.132, 3),
+            (0.165, 6),
+        ]
         r = frame_report(arrivals)
         self.assertEqual(r["skipped"], [5])
         self.assertEqual(r["repeated"], [4])

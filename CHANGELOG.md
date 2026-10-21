@@ -46,6 +46,47 @@ release may change behaviour.
   sheet's green, where they were a gold of their own.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
+- A corridor passing a room's cut corner (a cross, an L or a ragged room), rock between, showed the whole room from
+  there, its foes and items included: 4.5% of levels have such a spot. A corridor cell now opens onto a room only
+  beside that room's own floor.
+- A prompt's first 48 characters, quoted in the log as a quest, were written to the save on disk, a pasted token
+  included; the save now says "A new quest." there, the quote kept for the session. Only what a person types, at the
+  prompt or through Remote Control, is a quest: not a slash command's line, a prompt the engine adds unseen, a task's
+  notification, a scheduled prompt, another session's message or the SDK host's turn.
+- A blow landing while a window covered the map (the bag open, the pane resized) stopped the idle motion until the
+  next blow, and a fall then never opened the death window. A blow whose map the host refuses now ends there.
+- Closing the pane mid-walk left the walk's click waiting: the next tool call jumped the hero to its end with no walk
+  played, and a click or blow waiting on the walk went off at the end of a later walk, on another depth too. Closing
+  the pane now ends the walk where the hero is drawn and drops what waited on it.
+- A hero killed by a trap made the champion up elsewhere on the depth their nemesis, or gave the nemesis up a win and
+  a fifth more strength. Only the foe that struck the killing blow is remembered now.
+- With an item's menu open in the bag, the compact bag, the merchant or the stash, the hover still lit the items, the
+  belt and the close box, where a click only closes the menu. Nothing is lit there now.
+- With a belt slot's menu open on the strip, the hover lit the portrait or the XP line under it, where a click lands
+  on the menu. What the menu covers is left unlit.
+- A champion's prize was toasted only when the kill's line was the last said: a mage's siphon, a quest's count or a
+  potion found after it, and no toast came (a mage never had one). The champion's name now reaches the toast directly.
+- Selling an item in the dungeon and buying it back counted the sale's gold in the codex's gold found every time: a
+  hundred rounds made 600 gold of nothing. A sale is no gold found.
+- A commit's shrine, a push's cache and a pull request's hoard, once a depth, paid twice on a depth reached again: a
+  push on depth 7, one on depth 6 after a death, and another back on depth 7 gave three caches. Every depth paid is
+  kept now; a save from before keeps the depth it last paid on (save version 12).
+- A save from a newer version of the mod (an older one installed after it) was opened and written back stamped older,
+  so the next upgrade ran its migration again. It is now left as it is: the session plays a new game unsaved, and says
+  so.
+- A save the mod could not read (not a game, or a bag, log or gear of the wrong kind) made every action fail, for
+  good: the game never moved and the save was never replaced. Such a save is now kept aside, under `save-unreadable` in the plugin's store, and gives way to a new game.
+- On about one big boss depth in a thousand the arena, grown over a room listed before it, became the themed room, its
+  furnishings drawn only in part: a library without its lectern, a shrine with one brazier and no altar. A room
+  holding the start or the stairs is never themed now; on those levels another room is, the map itself unchanged.
+- On the text dashboard one key did two things while a window was open under it: `j` moved down and marked junk, `g`
+  opened the log and locked, and in town `a` was attack and Claim, `p` potion and Pet. A window's own key wins now;
+  the dashboard's button stays, to be clicked.
+- In town the barrel and crate beside the shop walled in three tiles of the lane above them: a click there said "You
+  can't get there." They stand at the top of the lane now.
+- With several items left on one tile, the map's hover named only the first, and the text map's `*` took its color:
+  what lay under it went unseen until stepped on. The hover now says how many and names them all, in the rarest one's
+  color, as the `*` is drawn.
 
 ## [0.4.0] - 2026-10-20
 

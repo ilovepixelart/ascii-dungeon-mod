@@ -154,6 +154,8 @@ const wornRow = (i: number): Rect => ({ x: LIST.x + 1, y: (LIST.y + 1 + 2 * i) *
 
 /** What a click acts on, in window pixels: the bag's items, the worn rows whose piece can come off, the belt. */
 export const compactHot = (g: Game, ui: BagUi): Rect[] => {
+  // With a menu open a click anywhere but on the menu only closes it.
+  if (ui.menu !== null) return []
   const off = removable(g)
   const hot = [
     ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)),

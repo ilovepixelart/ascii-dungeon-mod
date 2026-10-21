@@ -66,6 +66,15 @@ describe('what the codex records', () => {
     expect(recorded(EMPTY_CODEX, g, { ...g, deepest: 7, level: 4 })).toMatchObject({ deepest: 7, level: 4 })
   })
 
+  test('a sale in the dungeon is no gold found: selling and buying back a hundred times leaves the record as it was', async () => {
+    let g: Game = { ...plainHero(2), gold: 0, cursor: plainHero(2).gear.weapon!.id }
+    g = apply(g, { kind: 'unequip', slot: 'weapon' })
+    const before = g.codex?.gold
+    for (let i = 0; i < 100; i += 1) g = apply(apply({ ...g, cursor: g.bag[0]!.id }, { kind: 'sell' }), { kind: 'buyBack' })
+    expect(g.bag.length).toBe(1)
+    expect(g.codex?.gold).toBe(before)
+  })
+
   test('gold found in the dungeon is counted; gold lost is not taken back, and gold made in town is not found', async () => {
     const g = plainHero(3)
     expect(recorded(EMPTY_CODEX, { ...g, gold: 10 }, { ...g, gold: 35 }).gold).toBe(25)

@@ -44,7 +44,7 @@ import type { ChestUi } from './chest'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
-import { openingGame } from './save'
+import { isFromLater, isReadable, openingGame, savable } from './save'
 import { SHEET_H, sheetGesture, sheetHot, sheetOverlay, sheetPixels } from './sheet'
 import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compactPixels } from './compact'
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
@@ -52,7 +52,7 @@ import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { levelOf } from './world'
-import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
+import { ATTRIBUTES, bagRows, foeRuns, logRuns, lyingLabel, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
 import { INK } from './ui/tokens'
 import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, mapLabelAt, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
@@ -71,6 +71,8 @@ const PANE = 'dungeon'
 /** Docked, the pane asks to be wide enough for the pixel inventory window and the dashboard with its belt beside the bars. */
 const OPEN = { id: PANE, title: 'Dungeon', columns: 112 }
 const SAVE = 'save'
+/** Where a save that could not be read is kept, once a new game takes its place. */
+const UNREADABLE = 'save-unreadable'
 /** The sound as set in settings, kept across sessions and reloads. */
 const SOUND = 'sound'
 /** How long the bench walk is: long enough for the camera to scroll and the torch to move many times. */
@@ -141,7 +143,7 @@ const onHover = ($: EngineInterface, element: string, at: Pos | null) => {
 /** The strip as Raster cells, what the pointer is over lit. */
 const stripCells = (g: Game, width: number, boxes: readonly OverlayBox[]) => {
   const c = hudPixels(g, width, boxes)
-  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width), width, false) })
+  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width, boxes), width, false) })
 }
 
 /** A window's clickable places with its close box (the strip has none); and its pixels with the one under the pointer lit. */
@@ -441,9 +443,13 @@ const followWalk = ($: EngineInterface, before: Game, next: Game, isWalkShown: b
 /** The saves under way, one after another, so a later game never lands before an earlier one. */
 let saving: Promise<unknown> = Promise.resolve()
 
+/** Whether the store holds a save from a newer version of the mod: it is left as it is, the game played unsaved. */
+let isSaveHeld = false
+
 /** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. */
 const save = ($: EngineInterface, g: Game) => {
-  saving = saving.then(() => $.store.set(SAVE, g)).catch(() => undefined)
+  if (isSaveHeld) return
+  saving = saving.then(() => $.store.set(SAVE, savable(g))).catch(() => undefined)
 }
 
 const commit = async ($: EngineInterface, action: Action, byHand: boolean, isWalkShown: boolean, shown?: Game) => {
@@ -487,7 +493,13 @@ const playHits = ($: EngineInterface, g: Game, hits: readonly Hit[]) => {
     }
     const view = cameraFor(g, tileCenter(g), mapSize.columns, mapSize.rows)
     const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame), mapSize)
-    return painted.deny === undefined
+    if (painted.deny === undefined) return true
+    // A map the host will not take (a window over it, the pane resized) ends the blow: the idle motion and the death
+    // window wait on it no longer.
+    isHitPlaying = false
+    isFalling = false
+    $.ui.invalidate('ui.render')
+    return false
   }, () => $.clock.every(FRAME_MS, () => void $.clock.now().then(ticker.tick)))
 }
 
@@ -658,8 +670,13 @@ const resume = async ($: EngineInterface) => {
 /** Whether closing the pane `closed` leaves the game unseen: its pane, with none of its panes still open. */
 export const isLeftUnseen = (closed: string, open: readonly { id: string }[]) => closed === PANE && !open.some(p => p.id === PANE)
 
-const pause = () => {
+const pause = async ($: EngineInterface) => {
   isPaused = true
+  // A walk under way ends as a new action would end it: cut where the hero is drawn, or carried out; nothing it held
+  // back (a click that waited for it, its blows) is left to go off once the pane is drawn again.
+  await interrupt($, false).catch(() => undefined)
+  queued = null
+  hitsAfterWalk = null
   music?.stop()
   music = null
   for (const p of players) p.stop()
@@ -840,9 +857,10 @@ const mapHoverOf = (g: Game): { lit?: PixelRect; label: MapLabel | null } => {
   const view = camera?.place === placeOf(g) ? camera.at : undefined
   const tile = clickToTile(g, mapPointer, view)
   const lit = isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined
-  const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
-  if (lying === undefined) return { lit, label: null }
-  return { lit, label: { ...mapLabelAt(tileToCell(g, tile, size, view), lying.item.name, size), color: RARITY_COLOR[lying.item.rarity] } }
+  const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? (g.floor ?? []).filter(f => f.x === tile.x && f.y === tile.y).map(f => f.item) : []
+  if (lying.length === 0) return { lit, label: null }
+  const { text, color } = lyingLabel(lying)
+  return { lit, label: { ...mapLabelAt(tileToCell(g, tile, size, view), text, size), color } }
 }
 
 /** The pointer over the map (or off it): where it rests kept, the map drawn again when what the hover shows changes. */
@@ -1077,7 +1095,14 @@ const beginSession = async ($: EngineInterface) => {
   lastActive = await nowOr($, lastActive)
   startAmbient($)
   const { version } = await $.state.get(GAME_REF)
-  const saved = (await $.store.get(SAVE)) as Game | undefined
+  const saved: unknown = await $.store.get(SAVE)
+  isSaveHeld = isFromLater(saved)
+  if (isSaveHeld) $.ui.toast('This save is from a newer version of the dungeon: it is kept as it is, and play goes on unsaved until the mod is updated.')
+  // A save that cannot be read is kept aside before a new game is saved over it.
+  else if (version === 0 && saved !== undefined && !isReadable(saved)) {
+    await $.store.set(UNREADABLE, saved)
+    $.ui.toast(`The saved game could not be read: it is kept aside, under "${UNREADABLE}" in the plugin's store, and a new game begins.`)
+  }
   const opening = openingGame(await read($, game), version, saved)
   if (opening !== undefined) await update($, game, () => opening)
   await act($, { kind: 'greet' })
@@ -1218,9 +1243,9 @@ const settingsKeys = (p: Pane, isWindow = false) => {
 const helpKey = ({ Button, redraw }: Pane, hotkey?: string) => (
   <Button key="help-open" label="How it plays" hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
 )
-/** The log's latest line under the map, a button that opens the whole log (g). */
-const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined) => (
-  <Button key="log-line" hotkey="g" plain onPress={() => { isLogOpen = true; redraw() }}>
+/** The log's latest line under the map, a button that opens the whole log (g, unless a window open answers to it). */
+const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined, taken: ReadonlySet<string>) => (
+  <Button key="log-line" hotkey={taken.has('g') ? undefined : 'g'} plain onPress={() => { isLogOpen = true; redraw() }}>
     <Text dimColor={entry?.dim} wrap="truncate-end">{`> ${entry?.text ?? ''}`}</Text>
   </Button>
 )
@@ -1265,9 +1290,9 @@ const fitLine = (p: Pane, rows: number, under: number) => {
   return note === undefined ? undefined : <p.Text dimColor wrap="truncate-end">{note}</p.Text>
 }
 
-const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = []) => {
+const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = [], hasClose = true) => {
   const { Box, Text, Raster, Client } = p
-  const px = litWindow(key, drawn, hot)
+  const px = litWindow(key, drawn, hot, INV_W, hasClose)
   return (
     <Box flexDirection="column">
       {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : HINT_ROWS))}
@@ -1308,7 +1333,7 @@ const pixelBag = (p: Pane, l: Layout) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi)) })} />}
+          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi), INV_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: popovers }} width={INV_W} height={rows} />
@@ -1354,7 +1379,7 @@ const pixelShop = (p: Pane) => {
       {fitLine(p, rows, UNDER_WINDOW + HINT_ROWS)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi)) })} />}
+          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi), INV_W, !shopUi.menu) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes }} width={INV_W} height={rows} />
@@ -1412,7 +1437,7 @@ const compactBag = (p: Pane) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W) })} />}
+          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes }} width={COMPACT_W} height={COMPACT_H / 2} />
@@ -1538,7 +1563,7 @@ const stashWindow = (p: Pane) => {
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi))
+  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi), !chestUi.menu)
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */
@@ -1954,30 +1979,45 @@ const stripView = (p: Pane, l: Layout) => {
   )
 }
 
-/** The text dashboard's keys: the windows, the hero's moves, the view, a new game, settings. */
-const dashKeys = ({ g, Box, Text, Button, press }: Pane) => (
-  <Box columnGap={2} flexWrap="wrap">
-    <Button key="bag" hotkey="i" plain onPress={press({ kind: 'panel', panel: 'bag' })}>
-      <Text bold>Inventory</Text>
-    </Button>
-    <Button key="sheet" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })}>
-      Character{g.points > 0 ? <Text color={INK.easy}> ({g.points})</Text> : ''}
-    </Button>
-    <Text dimColor>|</Text>
-    <Button key="attack" label="attack" hotkey="a" plain onPress={press({ kind: 'attack' })} />
-    <Button key="potion" label="potion" hotkey="p" plain onPress={press({ kind: 'potion' })} />
-    <Button key="walk" label="explore" hotkey="w" plain onPress={press({ kind: 'walk' })} />
-    <Button key="stairs" label="descend" hotkey="d" plain onPress={press({ kind: 'stairs' })} />
-    <Button key="portal" label={g.where === 'town' ? 'leave town' : 'portal'} hotkey="t" plain onPress={press({ kind: 'portal' })} />
-    <Button key="west" label="left" hotkey="h" plain onPress={press({ kind: 'move', dx: -1, dy: 0 })} />
-    <Button key="south" label="down" hotkey="j" plain onPress={press({ kind: 'move', dx: 0, dy: 1 })} />
-    <Button key="north" label="up" hotkey="k" plain onPress={press({ kind: 'move', dx: 0, dy: -1 })} />
-    <Button key="east" label="right" hotkey="l" plain onPress={press({ kind: 'move', dx: 1, dy: 0 })} />
-    <Button key="zoom" label={VIEW_LABEL[g.zoom]} hotkey="z" plain onPress={press({ kind: 'zoom' })} />
-    <Button key="restart" label="new game" hotkey="r" plain onPress={press({ kind: 'panel', panel: 'start' })} />
-    <Button key="settings" label="settings" plain onPress={press({ kind: 'panel', panel: 'settings' })} />
-  </Box>
-)
+/** The hotkeys the buttons in a drawing answer to. */
+const hotkeysIn = (n: RenderChildren): string[] => {
+  if (Array.isArray(n)) return n.flatMap(hotkeysIn)
+  if (typeof n !== 'object' || n === null) return []
+  const el = n as { type?: string; props?: { hotkey?: unknown }; children?: RenderChildren }
+  const own = el.type === 'Button' && typeof el.props?.hotkey === 'string' ? [el.props.hotkey] : []
+  return [...own, ...hotkeysIn(el.children)]
+}
+
+/**
+ * The text dashboard's keys: the windows, the hero's moves, the view, a new game, settings. A key a window open under
+ * them answers to is its alone (`taken`): the dashboard's button keeps its place, to be clicked.
+ */
+const dashKeys = ({ g, Box, Text, Button, press }: Pane, taken: ReadonlySet<string>) => {
+  const free = (key: string) => (taken.has(key) ? undefined : key)
+  return (
+    <Box columnGap={2} flexWrap="wrap">
+      <Button key="bag" hotkey={free('i')} plain onPress={press({ kind: 'panel', panel: 'bag' })}>
+        <Text bold>Inventory</Text>
+      </Button>
+      <Button key="sheet" hotkey={free('c')} plain onPress={press({ kind: 'panel', panel: 'sheet' })}>
+        Character{g.points > 0 ? <Text color={INK.easy}> ({g.points})</Text> : ''}
+      </Button>
+      <Text dimColor>|</Text>
+      <Button key="attack" label="attack" hotkey={free('a')} plain onPress={press({ kind: 'attack' })} />
+      <Button key="potion" label="potion" hotkey={free('p')} plain onPress={press({ kind: 'potion' })} />
+      <Button key="walk" label="explore" hotkey={free('w')} plain onPress={press({ kind: 'walk' })} />
+      <Button key="stairs" label="descend" hotkey={free('d')} plain onPress={press({ kind: 'stairs' })} />
+      <Button key="portal" label={g.where === 'town' ? 'leave town' : 'portal'} hotkey={free('t')} plain onPress={press({ kind: 'portal' })} />
+      <Button key="west" label="left" hotkey={free('h')} plain onPress={press({ kind: 'move', dx: -1, dy: 0 })} />
+      <Button key="south" label="down" hotkey={free('j')} plain onPress={press({ kind: 'move', dx: 0, dy: 1 })} />
+      <Button key="north" label="up" hotkey={free('k')} plain onPress={press({ kind: 'move', dx: 0, dy: -1 })} />
+      <Button key="east" label="right" hotkey={free('l')} plain onPress={press({ kind: 'move', dx: 1, dy: 0 })} />
+      <Button key="zoom" label={VIEW_LABEL[g.zoom]} hotkey={free('z')} plain onPress={press({ kind: 'zoom' })} />
+      <Button key="restart" label="new game" hotkey={free('r')} plain onPress={press({ kind: 'panel', panel: 'start' })} />
+      <Button key="settings" label="settings" plain onPress={press({ kind: 'panel', panel: 'settings' })} />
+    </Box>
+  )
+}
 
 /** The windows the dashboard draws inline under the map, in their order: each when it is open and not drawn whole-pane. */
 const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
@@ -2005,6 +2045,8 @@ const INLINE: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l:
 const dashboard = (p: Pane, l: Layout) => {
   const { e, g, Box, Text } = p
   const isWindowed = e.surface === 'terminal' && e.viewport?.isFullscreen === false && l.isPixelView
+  const windows = INLINE.map(w => w.is(p, l) && w.draw(p, l))
+  const taken = new Set(hotkeysIn(windows))
   return (
     <Box flexDirection="column" position="relative">
       {l.topNote !== undefined && <Text dimColor wrap="truncate-end">{l.topNote}</Text>}
@@ -2015,10 +2057,10 @@ const dashboard = (p: Pane, l: Layout) => {
         </Text>
       )}
       {stripView(p, l)}
-      {!l.hasHud && dashKeys(p)}
+      {!l.hasHud && dashKeys(p, taken)}
       {!l.hasHud && g.panel !== 'sheet' && textBelt(p)}
-      {INLINE.map(w => w.is(p, l) && w.draw(p, l))}
-      {!l.hasHud && logRuns(l.told).map((entry, i, all) => (i === all.length - 1 ? logLine(p, entry) : (
+      {windows}
+      {!l.hasHud && logRuns(l.told).map((entry, i, all) => (i === all.length - 1 ? logLine(p, entry, taken) : (
         <Text dimColor={entry.dim} wrap="truncate-end">
           {'> '}
           {entry.text}
@@ -2069,7 +2111,11 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'dungeon-frames' }, async () => ({ text: framesReport(ticker.stats(), repaints.summary(), redraws.summary(), keptMaps.summary(), builtMaps.summary()) }))
 
   on('prompt.submit', async ($, e, next) => {
-    await act($, { kind: 'quest', text: e.text })
+    // A quest is what the person typed, at the prompt or through Remote Control: not a slash command's line, a prompt
+    // they do not see as typed, nor what reaches the session from elsewhere (a notification, a schedule, the SDK host,
+    // another session, a channel).
+    const isTyped = e.origin.kind === 'composer' || e.origin.kind === 'bridge'
+    if (isTyped && e.command === undefined && e.isMeta !== true) await act($, { kind: 'quest', text: e.text })
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -2087,7 +2133,7 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.reason === 'answer' && !isPaused) {
       await act($, { kind: 'descend' })
-      await $.store.set(SAVE, await read($, game))
+      if (!isSaveHeld) await $.store.set(SAVE, savable(await read($, game)))
     }
 
     return next(e)
@@ -2107,7 +2153,7 @@ export const register: Register = (on, options) => {
   on('ui.close', async ($, e, next) => {
     const closed = await next(e)
     // Reopened by /dungeon, the old pane closes after the new one is up: the game plays on.
-    if (isLeftUnseen(e.id, await $.ui.panes().catch(() => []))) pause()
+    if (isLeftUnseen(e.id, await $.ui.panes().catch(() => []))) await pause($)
     return closed
   })
 

@@ -22,6 +22,9 @@ jobs:
         with:
           node-version: 22
 
+      # uvx runs ruff over the Python tools, one of the gates.
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+
       - name: Install Claude Code
         run: |
           curl -fsSL https://claude.ai/install.sh | bash

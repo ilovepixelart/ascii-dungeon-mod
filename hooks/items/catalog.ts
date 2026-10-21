@@ -12,6 +12,9 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   legendary: '#ff8a1f',
 }
 
+/** The tiers, least first. */
+export const RARITY_RANK: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
+
 export const RARITY_NAME: Record<Rarity, string> = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' }
 
 export const CLASS_NAME: Record<HeroClass, string> = { knight: 'Knight', mage: 'Mage', rogue: 'Rogue' }

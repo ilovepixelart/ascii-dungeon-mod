@@ -84,8 +84,9 @@ export const TOWN_DECOR: readonly TownDecor[] = [
   { art: 'furnace', x: 9, y: 4, size: 1, blocks: false },
   { art: 'chimney', x: 10, y: 1, size: 1, blocks: false },
   { art: 'anvil', x: 9, y: 5, size: 1, blocks: true },
-  { art: 'barrel', x: 1, y: 4, size: 1, blocks: true },
-  { art: 'crate', x: 1, y: 5, size: 1, blocks: true },
+  // At the top of the lane beside the shop, its dead end: lower down they would wall in the ground above them.
+  { art: 'barrel', x: 1, y: 1, size: 1, blocks: true },
+  { art: 'crate', x: 1, y: 2, size: 1, blocks: true },
   { art: 'lamp', x: 6, y: 7, size: 1, blocks: true },
   { art: 'lamp', x: 13, y: 7, size: 1, blocks: true },
 ]

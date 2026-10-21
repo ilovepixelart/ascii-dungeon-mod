@@ -10,6 +10,7 @@ import {
 import type { Gesture } from './window'
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
 import { MAP_W } from './map'
+import { INK } from './ui/tokens'
 import { CONSUMABLE_ICONS } from './icons'
 import { TIER_INK } from './pieces'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
@@ -361,6 +362,21 @@ describe('a belt slot\'s menu', () => {
     expect(hudGesture(potions, 0, click(onSlot(4)), width)).toEqual({ menu: null, actions: [{ kind: 'use', slot: 4 }] })
   })
 
+  test('with it open, nothing under it is lit: a click there lands on the menu', async () => {
+    for (const w of [80, 111, 200]) {
+      for (const slot of [0, 4]) {
+        const box = beltMenuBox(potions, slot, w)!
+        const under = hudHot(potions, w, [box]).filter(r => {
+          const c = at(r.x + Math.floor(r.w / 2), (r.y + Math.floor(r.h / 2)) / 2)
+          return c.x >= box.x && c.x < box.x + box.w && c.y >= box.y && c.y < box.y + box.h
+        })
+        expect(under).toEqual([])
+      }
+    }
+    // With no menu open, the portrait is lit as ever.
+    expect(hudHot(potions, width, []).length).toBe(hudHot(potions, width).length)
+  })
+
   test('stands on its slot: just above the belt, its left edge on the slot\'s, inside the strip', async () => {
     const beltTop = Math.floor((INSET + BELT_BELOW_Y) / 2)
     for (const w of [80, 111, 200]) {
@@ -529,4 +545,9 @@ test('the side line lights over just the rows a click on it opens the log from',
   expect([line.y, line.h]).toEqual([INSET + SIDE_LINE_Y, 5])
   const tap = (py: number) => hudGesture(g, null, { type: 'release', from: { x: 10, y: py / 2 }, at: { x: 10, y: py / 2 }, button: 'left' }, width)
   expect([tap(line.y).isLog, tap(line.y + line.h - 1).isLog, tap(line.y - 1).isLog, tap(line.y + line.h).isLog]).toEqual([true, true, undefined, undefined])
+})
+
+test('the strip\'s text inks are the interface\'s: its numbers, its level line and its gold', async () => {
+  // The strip is pixel art outside the colors gate; these three are copies of tokens, held to them here.
+  expect([NUM_INK, LEVEL_INK, GOLD_INK]).toEqual([INK.text, INK.dim, INK.gold])
 })

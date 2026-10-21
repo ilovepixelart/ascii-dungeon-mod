@@ -309,7 +309,8 @@ def main():
             return
         rec.quiet_for(1.5, 10)
         report = re.search(
-            r"\d+ ticks, .*?Whole-pane redraws: .*? ms\.(?: Drawing the map: .*? max .*? ms\.)?", rec.text(mark)
+            r"\d+ ticks, .*?Whole-pane redraws: .*? ms\.(?: Drawing the map: .*? max .*? ms\.)?",
+            rec.text(mark),
         )
         if args.screen:
             with open(args.screen, "w") as f:

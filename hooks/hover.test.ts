@@ -143,4 +143,21 @@ describe('the hover with a card open', () => {
     }
     expect(found.slice(0, 6)).toEqual([])
   })
+
+  test('with a menu open, nothing is lit that a click only closes the menu on', async () => {
+    const g = crowded()
+    const item = g.bag[0]!
+    const chosen = { ...g, cursor: item.id }
+    const idle = (out: { actions: readonly unknown[] }) => out.actions.length === 0
+    const bagUi = { menu: { id: item.id, confirm: false }, drag: null }
+    const shopUi = { ware: null, menu: true }
+    const stashUi = { stored: g.stashed[0]!.id, menu: true }
+    const found = [
+      ...inventoryHot(chosen, bagUi).map(centre).filter(p => idle(bagGesture(chosen, bagUi, tap(p.x, p.y)))).map(p => `bag ${p.x},${p.y}`),
+      ...compactHot(chosen, bagUi).map(centre).filter(p => idle(compactGesture(chosen, bagUi, tap(p.x, p.y)))).map(p => `compact ${p.x},${p.y}`),
+      ...shopHot(chosen, shopUi).map(centre).filter(p => idle(shopGesture(chosen, shopUi, tap(p.x, p.y)))).map(p => `shop ${p.x},${p.y}`),
+      ...chestHot(g, stashUi).map(centre).filter(p => idle(chestGesture(g, stashUi, tap(p.x, p.y)))).map(p => `stash ${p.x},${p.y}`),
+    ]
+    expect(found.slice(0, 6)).toEqual([])
+  })
 })

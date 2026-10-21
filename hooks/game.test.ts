@@ -675,6 +675,20 @@ describe('the town', () => {
     for (const spot of Object.keys(TOWN_SPOTS) as (keyof typeof TOWN_SPOTS)[]) expect(pathBeside(TOWN_ARRIVAL, TOWN_SPOTS[spot]) !== null ? spot : `${spot} cut off`).toBe(spot)
     expect(isTownWalkable(TOWN_ARRIVAL)).toBe(true)
   })
+
+  test('every tile that can be walked on can be walked to from where the hero arrives: no ground walled in', async () => {
+    const reached = new Set([`${TOWN_ARRIVAL.x},${TOWN_ARRIVAL.y}`])
+    const todo = [TOWN_ARRIVAL]
+    for (let p = todo.pop(); p !== undefined; p = todo.pop()) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const n = { x: p.x + dx, y: p.y + dy }
+        if (!reached.has(`${n.x},${n.y}`) && isTownWalkable(n)) reached.add(`${n.x},${n.y}`) && todo.push(n)
+      }
+    }
+    const cut: string[] = []
+    for (let y = 0; y < TOWN_H; y += 1) for (let x = 0; x < TOWN_W; x += 1) if (isTownWalkable({ x, y }) && !reached.has(`${x},${y}`)) cut.push(`${x},${y}`)
+    expect(cut).toEqual([])
+  })
 })
 
 test('a version 3 save, from before the town, loads in the dungeon with no portal open', async () => {
@@ -968,6 +982,19 @@ describe('drops worth announcing', () => {
     expect(after.toast).toMatch(new RegExp(`^(Champion slain: ${foe.name} left ${item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.|Epic! .+|Legendary! .+)$`))
     const levels = apply({ ...g, foe: { ...foe, xp: 500 } }, { kind: 'outcome', ok: true, what: 'Edit' })
     expect(levels.toast).toMatch(/^Level up!/)
+  })
+
+  test('a champion slain is toasted with what it left whatever is said after the kill: a siphon, a potion found', async () => {
+    const missed: string[] = []
+    for (const cls of ['knight', 'mage', 'rogue'] as const) for (let seed = 1; seed <= 60; seed += 1) {
+      const g = { ...plainHero(seed), cls, bag: [] }
+      const foe = { ...championOf(foeAhead(g, 1, { hp: 1, maxHp: 1 }), 'savage'), xp: 1 }
+      const after = apply({ ...g, foe }, { kind: 'outcome', ok: true, what: 'Edit' })
+      const item = after.bag.at(-1)
+      if (item === undefined || item.rarity === 'epic' || item.rarity === 'legendary' || after.level !== g.level) continue
+      if (after.toast !== `Champion slain: ${foe.name} left ${item.name}.`) missed.push(`${cls} ${seed}: ${after.toast}`)
+    }
+    expect(missed.slice(0, 4)).toEqual([])
   })
 })
 

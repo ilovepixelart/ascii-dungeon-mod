@@ -10,7 +10,7 @@ import { CURSOR, barLabel, beltSlot, flatBar } from './pieces'
 import { TIERS, activeTier, nameOf } from './consumables'
 import type { Tier } from './consumables'
 import type { Action } from './game'
-import { boxShape, drawBox } from './window'
+import { boxShape, drawBox, uncovered } from './window'
 import type { Gesture, OverlayBox } from './window'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
 
@@ -257,18 +257,19 @@ const beltHit = (px: number, py: number, width: number): HudAction => {
 }
 
 /** What a click on the strip acts on, in its pixels, as `hudHit` reads them: the portrait, the XP line, the gear, the
- * portal while it can open, each belt slot holding something, and the side line, which opens the log. */
-export const hudHot = (g: Game, width: number) => {
+ * portal while it can open, each belt slot holding something, and the side line, which opens the log. What lies
+ * under an open belt menu (among `boxes`) is not lit: a click there lands on the menu. */
+export const hudHot = (g: Game, width: number, boxes: readonly OverlayBox[] = []) => {
   const w = width - 2 * INSET
   const at = (x: number, y: number, rw: number, rh: number) => ({ x: INSET + x, y: INSET + y, w: rw, h: rh })
-  return [
+  return uncovered([
     at(0, 0, PORTRAIT, PORTRAIT),
     at(HEART_X, LINE2_Y, settingsSlotX(w) - HEART_X, HP_H),
     at(settingsSlotX(w), 0, SLOT, SLOT),
     ...(g.foe === null ? [at(portalSlotX(w), 0, SLOT, SLOT)] : []),
     ...g.belt.flatMap((s, i) => (s === null ? [] : [at(beltSlotX(w, i), BELT_BELOW_Y, BELT_SLOT_W, SLOT)])),
     at(0, SIDE_LINE_Y, w, SIDE_LINE_H),
-  ]
+  ], boxes.filter(b => b.role === 'belt'))
 }
 
 /** Two boxes, in cells, that share a cell. */

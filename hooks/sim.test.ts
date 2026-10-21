@@ -8,7 +8,7 @@ import { beltAid, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate
 import { MARKS, tierOf } from './deep'
 import { bfs, isFloor, roomAt, visibleFrom } from './map'
 import { TOWN_SPOTS, pathBeside } from './town'
-import { arrive, levelOf, reveal } from './world'
+import { FOG, arrive, levelOf, reveal } from './world'
 
 describe('what the map draws against what the strip and log tell', () => {
   test('a walk over gold and a potion: on every tile the map and the strip agree', async () => {
@@ -158,4 +158,31 @@ test('the sight check takes an arena and the rooms it grew over as one space: st
     }
   }
   expect(checked).toBeGreaterThan(0)
+})
+
+describe('the sight check catches what sight must not show', () => {
+  // World 147926526 depth 15: the corridor on row 3 passes the cut top right corner of a cross room at 10,4, rock
+  // between; a chest stands at 48,3, far off. The hero walks from 20,3 to 18,3.
+  const world = 147926526
+  const depth = 15
+  const level = levelOf({ world, depth })
+  const before = { ...plainHero(1), world, depth, where: 'dungeon' as const, x: 20, y: 3, walked: [], taken: [], seen: reveal(FOG, visibleFrom(level, { x: 20, y: 3 })) }
+  const walk = { ...before, x: 18, y: 3, walked: [{ x: 19, y: 3 }, { x: 18, y: 3 }] }
+  const honest = { ...walk, seen: reveal(before.seen, visibleFrom(level, { x: 18, y: 3 })) }
+  const box = (r: { x: number; y: number; w: number; h: number }) => Array.from({ length: r.w * r.h }, (_, i) => ({ x: r.x + (i % r.w), y: r.y + Math.floor(i / r.w) }))
+
+  test('the walk as sight has it breaks nothing', async () => {
+    expect(sightBreaks(before, honest)).toEqual([])
+  })
+
+  test('a room shown from beside its cut corner, rock between, is a break', async () => {
+    const cross = level.rooms.find(r => r.x === 10 && r.y === 4)!
+    expect(sightBreaks(before, { ...honest, seen: reveal(honest.seen, box(cross)) }).length).toBeGreaterThan(0)
+  })
+
+  test('a far chest shown while the hero stands in a room is a break', async () => {
+    const inRoom = { ...before, x: 14, y: 6, seen: reveal(FOG, visibleFrom(level, { x: 14, y: 6 })) }
+    expect(roomAt(level, { x: 14, y: 6 })?.x).toBe(10)
+    expect(sightBreaks(inRoom, { ...inRoom, seen: reveal(inRoom.seen, [{ x: 48, y: 3 }]) })).toEqual([{ x: 48, y: 3 }])
+  })
 })

@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, RARITY_RANK, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, corridorAhead, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -167,7 +167,7 @@ const die = (g: Game, killer: string) => {
   const first = Math.floor((g.depth - 1) / THEME_DEPTHS) * THEME_DEPTHS + 1
   const wake = g.waypoint !== undefined && g.waypoint >= first && g.waypoint <= g.depth ? g.waypoint : first
   say(g, `You were slain by ${killer} on depth ${g.depth}. You wake on depth ${wake}.`)
-  remember(g)
+  if (foe !== undefined) remember(g, foe)
   // Waking on the same depth, what lies on its floor still lies there; on another, it is lost, said.
   const lying = g.floor ?? []
   if (wake !== depth && lying.length > 0) say(g, `${lying.length === 1 ? 'The item' : `The ${lying.length} items`} left on the floor of depth ${depth} ${lying.length === 1 ? 'is' : 'are'} lost.`)
@@ -553,9 +553,7 @@ const nemesisFoe = (g: Game, n: Nemesis): Foe => {
  * A death by a champion makes it the hero's nemesis, or makes the nemesis that won again stronger; it goes deeper to
  * wait. A boss is never a champion, so a boss's win makes none.
  */
-const remember = (g: Game) => {
-  const slayer = g.foe
-  if (slayer === null) return
+const remember = (g: Game, slayer: Foe) => {
   const waits = g.depth + NEMESIS_AHEAD + roll(g, 4)
   if (slayer.nemesis === true && g.nemesis !== null) {
     g.nemesis = { ...g.nemesis, wins: g.nemesis.wins + 1, depth: waits }
@@ -630,12 +628,9 @@ const announce = (g: Game, item: Item, champion?: string) => {
   else if (champion !== undefined) g.toast = `Champion slain: ${champion} left ${item.name}.`
 }
 
-const RARITY_RANK: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
-
 /** The percent chance a kill leaves an item: 35 and 1 a depth, at most 55. */
 export const itemChance = (depth: number) => Math.min(55, 35 + depth)
 
-/** What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Rare or better. */
 /** An item that will not fit in the bag, left where it fell (`at`), to be picked up once there is room. */
 const leaveOnFloor = (g: Game, item: Item, at: Pos) => {
   g.floor = [...(g.floor ?? []), { x: at.x, y: at.y, item }]
@@ -695,7 +690,12 @@ const dropConsumable = (g: Game, isBarren: boolean) => {
   say(g, addToBelt(g, drop.kind, drop.tier) ? `Loot: ${name}.` : `Your belt has no room for the ${name}.`)
 }
 
-const loot = (g: Game, at: Pos, isChampion = false) => {
+/**
+ * What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Uncommon or better,
+ * `champion` its name, which the item's toast gives.
+ */
+const loot = (g: Game, at: Pos, champion?: string) => {
+  const isChampion = champion !== undefined
   const isBarren = modHere(g) === 'barren'
   dropConsumable(g, isBarren)
   // Good loot is never long in coming: the RARE_KILLS-th kill without any leaves a Rare at least.
@@ -710,7 +710,7 @@ const loot = (g: Game, at: Pos, isChampion = false) => {
     say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
     return
   }
-  announce(g, item, isChampion ? g.log.at(-1)?.match(/^You slay the (.+)! \+/)?.[1] : undefined)
+  announce(g, item, champion)
   stashOrLeave(g, item, at)
 }
 
@@ -762,7 +762,7 @@ const spoils = (g: Game, foe: Foe) => {
     const item = makeItem(g, 'epic', 2)
     keepPrize(g, item, foe, named => `${foe.name} is no more. It leaves ${named}.`)
     g.toast = `${foe.name} slain!`
-  } else loot(g, foe, foe.champion !== undefined)
+  } else loot(g, foe, foe.champion !== undefined ? foe.name : undefined)
 }
 
 /** The foe slain: paid, the class's and the quest's part, its spoils, and a level if it came. */
@@ -1139,8 +1139,8 @@ const REWARDS: Readonly<Record<Exclude<Work, 'tests'>, (g: Game) => void>> = {
 
 /** Work's reward, once a depth for each kind: tests are their blow alone. */
 const reward = (g: Game, work: Work | undefined) => {
-  if (work === undefined || work === 'tests' || g.boons?.[work] === g.depth) return
-  g.boons = { ...g.boons, [work]: g.depth }
+  if (work === undefined || work === 'tests' || g.boons?.[work]?.includes(g.depth) === true) return
+  g.boons = { ...g.boons, [work]: [...(g.boons?.[work] ?? []), g.depth] }
   REWARDS[work](g)
 }
 
@@ -1477,7 +1477,7 @@ const mystic = (g: Game) => {
   }
 }
 
-/** The villager's sealed pack: its price, by the deepest depth reached, about two and a half times what it fetches. */
+/** The villager's sealed pack: its price, by the deepest depth reached; from about what its item fetches on depth 1 to three times that by depth 60. */
 export const gambleCost = (g: Pick<Game, 'deepest'>) => 50 + 12 * g.deepest
 
 /** Buys the villager's sealed pack: an item of Uncommon or better, rolled as a drop is, into the bag; with no room for

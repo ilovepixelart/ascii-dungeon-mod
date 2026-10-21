@@ -4,6 +4,7 @@ import type { Game, Nemesis } from '../types'
 import { NEMESIS_GROWTH, apply, levelOf, nemesisTitle } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { NEMESIS_MARK, frameOf, hexToInt } from './pixels'
+import { floorThing, isFloor } from './map'
 import { arrive } from './world'
 
 const WORLD = 4
@@ -30,6 +31,34 @@ describe('a nemesis is made', () => {
     expect(slainBy(7, {}).nemesis).toBeNull()
     expect(slainBy(10, { boss: true, champion: undefined, name: 'orc overlord' }).nemesis).toBeNull()
     expect(slainBy(7, { champion: 'tough' }, at(7, { nemesis: grak })).nemesis).toEqual(grak)
+  })
+
+  /** The hero at 1 HP beside a trap on `depth`, `foe` up at the stairs, stepping onto it. */
+  const ontoTrap = (depth: number, g: Game, foe: object) => {
+    const level = levelOf({ world: WORLD, depth })
+    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const
+    for (let y = 0; y < level.tiles.length; y += 1) for (let x = 0; x < level.tiles[0]!.length; x += 1) {
+      if (floorThing(WORLD, depth, level, { x, y }) !== '^') continue
+      const side = sides.find(([dx, dy]) => isFloor(level.tiles, { x: x + dx, y: y + dy }) && floorThing(WORLD, depth, level, { x: x + dx, y: y + dy }) === ' ')
+      if (side === undefined) continue
+      const hero = { ...g, x: x + side[0], y: y + side[1], hp: 1, taken: [], belt: [null, null, null, null, null], foe: { glyph: 'o', name: 'Savage orc of ls', hp: 30, maxHp: 30, atk: 5, xp: 10, ...level.stairs, ...foe } }
+      return apply(hero as Game, { kind: 'move', dx: -side[0], dy: -side[1] })
+    }
+    throw new Error(`no trap on depth ${depth}`)
+  }
+
+  test('not by a trap, a champion up elsewhere on the depth; nor does a trap win a nemesis up a fight', async () => {
+    for (let depth = 2; depth <= 8; depth += 1) {
+      const dead = ontoTrap(depth, at(depth), { champion: 'savage' })
+      if (dead.deaths === 0) continue
+      expect(dead.toast).toBe(`Slain by a trap on depth ${depth}.`)
+      expect(dead.nemesis).toBeNull()
+      expect(dead.log.some(l => l.includes('will remember you'))).toBe(false)
+      const again = ontoTrap(depth, at(depth, { nemesis: grak }), { champion: 'savage', nemesis: true })
+      expect(again.nemesis).toEqual(grak)
+      return
+    }
+    throw new Error('no trap death on depths 2 to 8')
   })
 })
 

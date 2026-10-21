@@ -266,9 +266,65 @@ describe('sight down corridors', () => {
       }
     }
   })
+
+  /** A room's own floor: its box less its shape's cut, floor on the map. */
+  const ownFloor = (level: ReturnType<typeof generate>, r: ReturnType<typeof generate>['rooms'][number]) => {
+    const cut = new Set(shapeCut(r).map(c => `${c.x},${c.y}`))
+    const cells: Pos[] = []
+    for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (isFloor(level.tiles, { x, y }) && !cut.has(`${x},${y}`)) cells.push({ x, y })
+    return cells
+  }
+  const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const
+
+  test('a corridor beside a shape\'s cut corner, rock between, shows nothing of the room; its door shows it whole', async () => {
+    // World 147926526 depth 15: a cross room at 10,4, 9 by 6; the corridor on row 3 passes its cut top right corner.
+    const level = generate(147926526, 15)
+    const cross = level.rooms.find(r => r.x === 10 && r.y === 4)!
+    const floor = ownFloor(level, cross)
+    const seenFrom = (p: Pos) => new Set(visibleFrom(level, p).map(c => `${c.x},${c.y}`))
+    const past = seenFrom({ x: 18, y: 3 })
+    expect(floor.filter(c => past.has(`${c.x},${c.y}`))).toEqual([])
+    const door = floor.flatMap(c => STEPS.map(([dx, dy]) => ({ x: c.x + dx, y: c.y + dy }))).find(p => isFloor(level.tiles, p) && roomAt(level, p) === undefined)!
+    const fromDoor = seenFrom(door)
+    expect(floor.every(c => fromDoor.has(`${c.x},${c.y}`))).toBe(true)
+  })
+
+  test('from a corridor, a room\'s floor out of arm\'s reach shows only from a cell beside some room\'s own floor', async () => {
+    for (let i = 0; i < 300; i += 1) {
+      const world = 1 + ((i * 2654435761) >>> 0) % 4_000_000_000
+      const level = generate(world, 1 + (i % 19))
+      const owned = new Set(level.rooms.flatMap(r => ownFloor(level, r)).map(c => `${c.x},${c.y}`))
+      for (let y = 0; y < MAP_H; y += 1) for (let x = 0; x < MAP_W; x += 1) {
+        if (!isFloor(level.tiles, { x, y }) || roomAt(level, { x, y }) !== undefined) continue
+        const isDoor = STEPS.some(([dx, dy]) => owned.has(`${x + dx},${y + dy}`))
+        const far = visibleFrom(level, { x, y }).some(c => owned.has(`${c.x},${c.y}`) && Math.max(Math.abs(c.x - x), Math.abs(c.y - y)) > 1)
+        if (far && !isDoor) expect(`${world}:${1 + (i % 19)} ${x},${y}`).toBe('shows a room through rock')
+      }
+    }
+  })
 })
 
 describe('the themed room', () => {
+  test('a level whose themed room held neither the start nor the stairs keeps it where it was', async () => {
+    // As 0.4.0 chose them: a save's used furnishings (`taken`) stand in these rooms.
+    for (const [world, depth, x, y] of [[17, 30, 16, 2], [20, 60, 33, 2], [24, 40, 39, 13]] as const) {
+      const room = themedRoomOf(world, depth, generate(world, depth))?.room
+      expect({ world, depth, x: room?.x, y: room?.y }).toEqual({ world, depth, x, y })
+    }
+  })
+
+  test('on a big boss depth it is never the arena, nor any room holding the start or the stairs', async () => {
+    const holds = (r: { x: number; y: number; w: number; h: number }, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
+    // 218:20, 310:50 and 1208:30 grow their arena over a room listed before it; the rest a spread of worlds.
+    const levels = [[218, 20], [310, 50], [1208, 30], ...Array.from({ length: 400 }, (_, i) => [1 + i * 7, 10 * (1 + (i % 10))])] as const
+    const wrong = levels.flatMap(([world, depth]) => {
+      const level = generate(world, depth)
+      const room = themedRoomOf(world, depth, level)?.room
+      return room !== undefined && (holds(room, level.start) || holds(room, level.stairs)) ? [`${world}:${depth}`] : []
+    })
+    expect(wrong).toEqual([])
+  })
+
   test('most levels have one, never the start room or the stairs room, a shrine, a library or a vault', async () => {
     let found = 0
     const kinds = new Set<string>()

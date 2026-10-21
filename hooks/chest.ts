@@ -130,6 +130,9 @@ export const nextStored = (g: Game, ui: ChestUi): ChestUi => {
   return { stored: g.stashed[(at + 1) % g.stashed.length]!.id, menu: false }
 }
 
-/** What a click acts on, in window pixels: the stored items' rows, and the bag's items. */
+/**
+ * What a click acts on, in window pixels: the stored items' rows, and the bag's items. With a menu open, nothing: a
+ * click anywhere but on the menu only closes it.
+ */
 export const chestHot = (g: Game, ui: ChestUi): Rect[] =>
-  uncovered([...g.stashed.map((_, i) => rowRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))], chestOverlay(g, ui).filter(b => b.role !== 'list'))
+  ui.menu ? [] : uncovered([...g.stashed.map((_, i) => rowRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))], chestOverlay(g, ui).filter(b => b.role !== 'list'))

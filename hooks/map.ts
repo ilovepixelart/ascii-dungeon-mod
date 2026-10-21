@@ -539,8 +539,12 @@ const corridorSight = (level: Level, space: readonly Room[], c: Pos, out: Pos): 
 
 const STEPS4: readonly Pos[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]
 const isCorridor = (level: Level, p: Pos) => isFloor(level.tiles, p) && roomAt(level, p) === undefined
-/** The rooms a cell is beside, by its four sides: the rooms a corridor cell is the door of. */
-const roomsBeside = (level: Level, p: Pos) => [...new Set(STEPS4.flatMap(d => roomAt(level, { x: p.x + d.x, y: p.y + d.y }) ?? []))]
+/**
+ * The rooms a cell is beside, by its four sides: the rooms a corridor cell is the door of. Only a room's own floor
+ * counts: a corner its shape gave back to rock is no door.
+ */
+const roomsBeside = (level: Level, p: Pos) =>
+  [...new Set(STEPS4.flatMap(d => level.rooms.filter(r => isOwnFloor(level, r, { x: p.x + d.x, y: p.y + d.y }))))]
 const touchesRoom = (level: Level, p: Pos) => roomsBeside(level, p).length > 0
 /** A dead end, where a chest stands. */
 const isDeadEnd = (level: Level, p: Pos) => chestAt(1, 1, level, p) !== undefined
@@ -736,7 +740,15 @@ export const themedRoomOf = (world: number, depth: number, level: Level): { room
   if (known !== undefined) return known ?? undefined
   // A rounded room loses only its corners, which no kind's furnishings stand on.
   const candidates = level.rooms.filter(r => r.w >= 5 && (r.shape === undefined || r.shape === 'rounded') && r !== roomAt(level, level.start) && r !== roomAt(level, level.stairs))
-  const themed = candidates.length === 0 ? null : { room: candidates[hash(world * 13 + depth * 7, 1, 2) % candidates.length]!, kind: kindOf(world, depth) }
+  const pick = hash(world * 13 + depth * 7, 1, 2)
+  const chosen = candidates[pick % candidates.length]
+  // A room holding the start or the stairs is never themed: an arena grown over a room listed before it holds the
+  // stairs, though `roomAt` finds that room first. Only such a choice is made again, so every other level keeps its own.
+  const holds = (r: Room, p: Pos) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
+  const isClear = (r: Room) => !holds(r, level.start) && !holds(r, level.stairs)
+  const clear = candidates.filter(isClear)
+  const room = chosen !== undefined && isClear(chosen) ? chosen : clear[pick % Math.max(1, clear.length)]
+  const themed = room === undefined ? null : { room, kind: kindOf(world, depth) }
   themedOf.set(level, themed)
   return themed ?? undefined
 }

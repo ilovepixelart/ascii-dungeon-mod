@@ -531,21 +531,24 @@ const NEMESIS_NAMES: readonly string[] = ['Grak', 'Vex', 'Murk', 'Skarn', 'Thess
 const NEMESIS_TITLE: Readonly<Record<ChampionMod, string>> = { tough: 'Unbroken', savage: 'Butcher', shielded: 'Warden', vampiric: 'Bloodthirsty' }
 /** A nemesis waits this many depths below where it won, and a d4 more. */
 const NEMESIS_AHEAD = 3
-/** Each win makes a nemesis this much stronger again, in HP and attack. */
+/** Each win makes a nemesis this much stronger again, in HP and attack, up to NEMESIS_GROWN_WINS of them: with no
+ * ceiling a nemesis ahead of the hero grows with every win and can never be caught. */
 export const NEMESIS_GROWTH = 0.2
+export const NEMESIS_GROWN_WINS = 3
 
 /** A nemesis by its title: "Grak the Butcher". */
 export const nemesisTitle = (n: Pick<Nemesis, 'given' | 'mod'>) => `${n.given} the ${NEMESIS_TITLE[n.mod]}`
 
 const kindOf = (glyph: string) => BESTIARY.find(k => k.glyph === glyph)?.name ?? 'horror'
 
-/** The nemesis that comes for the hero here: its kind at this depth at its strongest, a champion, stronger for each win. */
+/** The nemesis that comes for the hero here: its kind at this depth at its strongest, a champion, stronger for each of
+ * its first wins. */
 const nemesisFoe = (g: Game, n: Nemesis): Foe => {
   const tier = Math.max(0, BESTIARY.findIndex(k => k.glyph === n.glyph))
   const hp = foeHp(g.depth, tier, 4)
   const base: Foe = { glyph: n.glyph, name: `${n.kind} ${n.given}`, hp, maxHp: hp, atk: foeAtk(g.depth, tier, 2), xp: foeXp(g.depth, tier) * 2, ...foeSpot(g) }
   const champion = championOf(base, n.mod)
-  const grow = 1 + NEMESIS_GROWTH * n.wins
+  const grow = 1 + NEMESIS_GROWTH * Math.min(n.wins, NEMESIS_GROWN_WINS)
   return { ...champion, name: base.name, hp: Math.round(champion.hp * grow), maxHp: Math.round(champion.maxHp * grow), atk: Math.round(champion.atk * grow), nemesis: true }
 }
 
@@ -605,7 +608,7 @@ const CHAMPION_ODDS = 10
 /**
  * A foe made a champion: its modifier first in its name, double XP, half again its HP and a quarter more attack, and
  * one strength on top: tough has 60% more HP again, savage hits half again as hard, shielded turns the first blow
- * aside, vampiric heals by what it deals.
+ * aside, vampiric heals by what it deals, up to half of what it took since its last blow.
  */
 export const championOf = (foe: Foe, mod: ChampionMod): Foe => {
   const hp = Math.round(foe.hp * 1.5)
@@ -915,6 +918,14 @@ const steal = (g: Game, by: string) => {
   if (took > 0) say(g, `${capitalized(by)} snatches ${took} gold!`)
 }
 
+/** A vampiric champion after its blow: healed by what it dealt, at most half of what it took since its last blow (its
+ * whole loss on its first), so a blow bigger than the hero's never stalls the fight; never past its full HP. */
+const drink = (foe: Foe, dmg: number): Foe => {
+  const taken = (foe.hpAtBlow ?? foe.maxHp) - foe.hp
+  const hp = Math.min(foe.maxHp, foe.hp + Math.min(dmg, Math.max(0, Math.floor(taken / 2))))
+  return { ...foe, hp, hpAtBlow: hp }
+}
+
 const counter = (g: Game, what: string) => {
   // Who strikes, as a sentence names them: the foe, or with none an imp of the tool.
   const by = g.foe === null ? `the ${what} imp` : theFoe(g.foe)
@@ -929,7 +940,7 @@ const counter = (g: Game, what: string) => {
   say(g, `${capitalized(by)} strikes you for ${dmg}${HALVED_SAID[halved]}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
-  if (g.foe?.champion === 'vampiric') g.foe = { ...g.foe, hp: Math.min(g.foe.maxHp, g.foe.hp + dmg) }
+  if (g.foe?.champion === 'vampiric') g.foe = drink(g.foe, dmg)
   hurt(g, dmg, by)
   landed(g, dmg)
 }

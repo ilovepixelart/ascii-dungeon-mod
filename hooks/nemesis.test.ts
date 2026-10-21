@@ -86,6 +86,13 @@ describe('a nemesis comes back', () => {
     expect(Math.abs(two.atk / one.atk - ratio)).toBeLessThan(0.06)
   })
 
+  test('grown by its first three wins alone: one that has won eighteen times is as strong as one that won three', async () => {
+    const met = (wins: number) => apply(at(9, { nemesis: { ...grak, wins } }), { kind: 'summon', name: 'ls' }).foe!
+    const [three, eighteen, two] = [met(3), met(18), met(2)]
+    expect([eighteen.maxHp, eighteen.atk]).toEqual([three.maxHp, three.atk])
+    expect(three.maxHp).toBeGreaterThan(two.maxHp)
+  })
+
   test('winning again, it grows by a win and goes deeper still', async () => {
     const g = at(9, { nemesis: grak })
     const met = apply(g, { kind: 'summon', name: 'ls' })

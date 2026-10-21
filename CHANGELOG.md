@@ -14,6 +14,12 @@ release may change behaviour.
 
 ### Fixed
 
+- A vampiric champion healed by all it dealt, so one hitting harder than the hero healed more each round than it lost,
+  while the hero's potions kept the hero up: the fight never ended. It now heals by at most half of what it took since
+  its last blow.
+- A nemesis grew a fifth stronger with every win, without end. One that kept winning went deeper and grew again each
+  time, until no hero could beat it (18 wins: four and a half times a champion's HP and attack). It now grows by its
+  first three wins alone.
 - A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the
   task, so the hero had to step off the stairs and back.
 - On a big boss depth the arena often grows over a room beside the stairs, or right up against one with no wall

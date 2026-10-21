@@ -39,7 +39,7 @@ The 12th kill without a Rare or better leaves one (see `items.md`, Finding thing
 
 ## The nemesis
 
-A champion that slays the hero becomes their nemesis (`remember` in `hooks/game.ts`): named ("Grak the Butcher", the title from its modifier), it waits 4 to 7 depths below where it won (`Game.nemesis`). On that depth or deeper the next foe is it, announced and toasted, a champion of its kind at the depth's strongest, a fifth stronger in HP and attack for each win (`NEMESIS_GROWTH`), with red pips and a red crown on the map. Winning again it gains a win and goes deeper still; slain, it leaves a trophy of Epic or better and is gone. One at a time: another champion's win makes none while one waits. Met about once in 210 tool calls; the death rate is where it was without it.
+A champion that slays the hero becomes their nemesis (`remember` in `hooks/game.ts`): named ("Grak the Butcher", the title from its modifier), it waits 4 to 7 depths below where it won (`Game.nemesis`). On that depth or deeper the next foe is it, announced and toasted, a champion of its kind at the depth's strongest, a fifth stronger in HP and attack for each of its first three wins (`NEMESIS_GROWTH`, `NEMESIS_GROWN_WINS`; uncapped, one that kept winning outgrew the hero for good), with red pips and a red crown on the map. Winning again it gains a win and goes deeper still; slain, it leaves a trophy of Epic or better and is gone. One at a time: another champion's win makes none while one waits. Met about once in 210 tool calls; the death rate is where it was without it.
 
 ## Work
 

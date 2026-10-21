@@ -22,6 +22,11 @@ const HEAD_BG = SURFACE.titleBar
 const GOLD_INK = INK.gold
 /** The gold this far left of the window's right edge. */
 const GOLD_FROM_RIGHT = 41
+
+/** The title bar's gold as written: in full to six digits, the room it has before the close box; past that in
+ * thousands (K), then millions (M): at most six characters up to 99,999,999,999, far past what a hero gathers. */
+export const goldText = (gold: number) =>
+  gold < 1_000_000 ? String(gold) : gold < 100_000_000 ? `${Math.floor(gold / 1000)}K` : `${Math.floor(gold / 1_000_000)}M`
 /** The close box (x, y, w, h) at the title bar's right end of a window `width` wide: 7 px square, two pixels from the
  * edge, centred in the bar; its X 3 px across with a pixel of room round it. */
 export const closeBoxOf = (width: number) => [width - 9, 2, 7, 7] as const
@@ -92,7 +97,8 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   else tabRow(c, chrome.tabs.items, chrome.tabs.chosen)
   if (chrome.gold !== undefined) {
     coin(c, GOLD_X, TITLE_Y)
-    digits(c, String(chrome.gold), GOLD_X + 5 + String(chrome.gold).length * 4, TITLE_Y + 4, GOLD_INK)
+    const text = goldText(chrome.gold)
+    digits(c, text, GOLD_X + 5 + text.length * 4, TITLE_Y + 4, GOLD_INK)
   }
   const [cx, cy, cw, ch] = closeBoxOf(width)
   fill(c, cx, cy, cw, ch, CLOSE_BG)
@@ -167,6 +173,13 @@ export const CLICK_SLOP = 2
 /** A point in cells as the window pixel under it. */
 export const pixel = (p: Pos): Pos => ({ x: Math.floor(p.x), y: Math.floor(p.y * 2) })
 
+/**
+ * The clickable places whose middle no box over them covers: a click on a card or a menu lands on it, not on what it
+ * covers, so what lies under one is not lit. `boxes` are the ones that take a click.
+ */
+export const uncovered = (hot: readonly Rect[], boxes: readonly OverlayBox[]): Rect[] =>
+  hot.filter(r => !boxes.some(b => isInside({ x: r.x + Math.floor(r.w / 2) + 0.5, y: (r.y + Math.floor(r.h / 2)) / 2 }, b.x, b.y, b.w, b.h)))
+
 /** Covering what a card is about costs this much against one pixel of anything else: it is never worth it. */
 export const KEEP = 100000
 
@@ -174,11 +187,11 @@ export const KEEP = 100000
  * A card near what it is about, never on it, where it hides the least of what the window shows (`shown`); its menu,
  * when open, under it the same way. `rows` is the window's height in cells.
  */
-export const cardWithMenu = <Role extends string>(rows: number, shown: readonly Weighted[], near: Rect, card: OverlayBox<Role>, menu?: OverlayBox<Role>, width = WINDOW_W): OverlayBox<Role>[] => {
+export const cardWithMenu = <Role extends string>(rows: number, shown: readonly Weighted[], near: Rect, card: OverlayBox<Role>, menu?: OverlayBox<Role>, width = WINDOW_W, others: readonly OverlayBox[] = []): OverlayBox<Role>[] => {
   const cost = coverage(rows, [...shown, { rect: near, weight: KEEP }], width)
-  const at = place(cost, rows, [], near, card.w, card.h, width)
+  const at = place(cost, rows, others, near, card.w, card.h, width)
   const placed = { ...card, x: at.x, y: at.y }
   if (menu === undefined) return [placed]
-  const under = place(cost, rows, [placed], { x: placed.x, y: (placed.y + placed.h) * 2, w: placed.w, h: 2 }, menu.w, menu.h, width)
+  const under = place(cost, rows, [...others, placed], { x: placed.x, y: (placed.y + placed.h) * 2, w: placed.w, h: 2 }, menu.w, menu.h, width)
   return [placed, { ...menu, x: under.x, y: under.y }]
 }

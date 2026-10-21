@@ -1089,3 +1089,15 @@ export const tileToCell = (g: Located, tile: Pos, size: { columns: number; rows:
   const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2) : originAt(camera, size.columns, size.rows * 2, worldSize(g))
   return { x: tile.x * PX - origin.x, y: Math.floor((tile.y * PX - origin.y) / 2) }
 }
+
+/**
+ * Where a floor item's label goes on a map `size` cells, its tile's top-left at `at`: the row over the tile (under it
+ * on the top row), held inside the map; the text cut to fit with an ellipsis, a label being four cells wider than its
+ * text (a cell of room and a frame each side).
+ */
+export const mapLabelAt = (at: Pos, name: string, size: { columns: number; rows: number }): { x: number; y: number; text: string } => {
+  const room = Math.max(1, size.columns - 4)
+  const text = name.length <= room ? name : `${name.slice(0, room - 1)}…`
+  const y = at.y > 0 ? at.y - 1 : at.y + PX / 2
+  return { x: Math.max(0, Math.min(at.x, size.columns - text.length - 4)), y: Math.min(y, size.rows - 1), text }
+}

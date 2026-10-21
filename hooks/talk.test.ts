@@ -107,9 +107,11 @@ describe('the button', () => {
 
   test('the elder\'s claims, lit only when the quest is done; there is none without a quest', async () => {
     const q = { kind: 'slay' as const, depth: 4, need: 8, have: 3 }
-    expect(talkAction(hero({ quest: q }), 'elder')).toMatchObject({ action: { kind: 'claim' }, state: 'off' })
-    expect(talkAction(hero({ quest: { ...q, have: 8 } }), 'elder')?.state).toBe('armed')
-    expect(talkAction(hero({ quest: null }), 'elder')).toBeUndefined()
+    // In town, where the elder's window opens: Claim pays from there alone.
+    const inTown = (over: Partial<Game>) => hero({ where: 'town', ...over })
+    expect(talkAction(inTown({ quest: q }), 'elder')).toMatchObject({ action: { kind: 'claim' }, state: 'off' })
+    expect(talkAction(inTown({ quest: { ...q, have: 8 } }), 'elder')?.state).toBe('armed')
+    expect(talkAction(inTown({ quest: null }), 'elder')).toBeUndefined()
   })
 
   test('the dog\'s pets it; the villager\'s sells a sealed pack; the guard\'s trades in; the healer has none', async () => {

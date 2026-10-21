@@ -26,6 +26,24 @@ release may change behaviour.
   earlier ones out and the top row could start part way through a line; a word longer than a row was cut. It now shows
   the newest lines whole, as many as its 30 rows hold, under a row saying how many earlier ones do not fit, and wraps a
   long word.
+- The compact inventory (a pane 80 to 104 columns wide) cut a worn piece's name at 16 characters, which most rolled
+  names pass ("Refactored Leath"). A name too long for a row now takes both of its slot's rows, and one too long for
+  both shows as its base's name ("Leather Boots"), in its tier's color.
+- The hover now lights everything a click acts on, and nothing a click there cannot do: a belt slot holding something
+  in the bag, the compact bag and the merchant; a stored item's row in the stash; a worn row in the compact bag; the
+  merchant's chosen ware, which a second click opens. A worn piece the full bag has no room for, the deep's mark
+  already chosen, and the elder's Claim, the villager's Gamble and the guard's Trade in when the bag has no room for
+  what they give are dark: a press would change nothing, and so is what lies under an open item card, where a click
+  lands on the card. A talent card acts exactly where it is lit.
+- The stash's item card could lie over its list by a row, a tall card chosen on the list's last rows with a full bag;
+  it now keeps clear of the list. A stored name too long for its row (over 38 characters) shows as its base's name,
+  where it was cut.
+- The name of an item lying on the map ran past the map's right edge on a map narrower than the name, and below the
+  map on a map four rows tall. It is held inside the map, cut to fit with an ellipsis.
+- Gold of 1,000,000 or more ran under the close box in a window's title bar. Past six digits it is written in
+  thousands (1234K), past 99,999,999 in millions (2000M).
+- The text dashboard names its colors by role: the points to spend on the Character button are drawn in the
+  sheet's green, where they were a gold of their own.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
 

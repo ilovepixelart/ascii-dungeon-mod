@@ -27,8 +27,8 @@ import type { SettingsUi } from './settings'
 import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import { logGesture, logHeight, logOverlay, logPixels } from './logwindow'
 import type { SoundSettings } from './settings'
-import { INV_H, INV_TOP, INV_W, beltLabel, inventoryHot, inventoryScreenPixels, itemCard } from './inventory'
-import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
+import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenPixels, itemCard } from './inventory'
+import { BAG_UI_IDLE, bagGesture, bagOverlay, inventoryHot } from './bagui'
 import type { BagUi, Gesture } from './bagui'
 import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverlay, shopPixels, whyNot } from './shop'
 import type { ShopUi } from './shop'
@@ -54,7 +54,8 @@ import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
-import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { INK } from './ui/tokens'
+import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, mapLabelAt, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit, PixelRect } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
 import { workOf } from './work'
@@ -841,9 +842,7 @@ const mapHoverOf = (g: Game): { lit?: PixelRect; label: MapLabel | null } => {
   const lit = isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined
   const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
   if (lying === undefined) return { lit, label: null }
-  const at = tileToCell(g, tile, size, view)
-  const width = lying.item.name.length + 2
-  return { lit, label: { x: Math.max(0, Math.min(at.x, size.columns - width - 2)), y: at.y > 0 ? at.y - 1 : at.y + PX / 2, text: lying.item.name, color: RARITY_COLOR[lying.item.rarity] } }
+  return { lit, label: { ...mapLabelAt(tileToCell(g, tile, size, view), lying.item.name, size), color: RARITY_COLOR[lying.item.rarity] } }
 }
 
 /** The pointer over the map (or off it): where it rests kept, the map drawn again when what the hover shows changes. */
@@ -1249,7 +1248,7 @@ const textHelp = (p: Pane) => {
   return (
     <Box flexDirection="column">
       <Text bold>How it plays: your coding plays the hero</Text>
-      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? '#3ccf4e' : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
+      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? INK.good : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
       <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text>
       <Box columnGap={2}>{helpClose(p)}</Box>
     </Box>
@@ -1309,7 +1308,7 @@ const pixelBag = (p: Pane, l: Layout) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g)) })} />}
+          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: popovers }} width={INV_W} height={rows} />
@@ -1413,7 +1412,7 @@ const compactBag = (p: Pane) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g), COMPACT_W) })} />}
+          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
               <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes }} width={COMPACT_W} height={COMPACT_H / 2} />
@@ -1539,7 +1538,7 @@ const stashWindow = (p: Pane) => {
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g))
+  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi))
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */
@@ -1661,7 +1660,7 @@ const textShop = ({ g, Box, Text, Button, press }: Pane) => (
   <Box flexDirection="column">
     <Text>
       <Text bold>The merchant</Text>
-      <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
+      <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
     </Text>
     {WARES.map(ware => (
       <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware, g)} gold`} plain dimColor={g.gold < priceOfWare(ware, g)} onPress={press({ kind: 'buy', ware })} />
@@ -1681,7 +1680,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
       <Text>
         <Text bold>The smith</Text>
         <Text dimColor>{`  Temper: +1 to the main stat, up to ${TEMPER_MAX} times. Reforge: new affixes, ${reforgeCost(g)} gold`}</Text>
-        <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
+        <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
       </Text>
       {worn.length === 0 && <Text dimColor>You wear nothing for the smith to work on.</Text>}
       {worn.map(({ slot, item }) => {
@@ -1740,7 +1739,7 @@ const textMystic = (p: Pane) => {
     <Box flexDirection="column">
       <Text>
         <Text bold>The mystic</Text>
-        <Text color="#ffd34d">{`  Gold ${g.gold}`}</Text>
+        <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
       </Text>
       <Text>{g.fortune === null ? 'No fortune in force.' : `${FORTUNE_NAME[g.fortune.kind]}, until you change depth.`}</Text>
       {g.fortune === null
@@ -1962,7 +1961,7 @@ const dashKeys = ({ g, Box, Text, Button, press }: Pane) => (
       <Text bold>Inventory</Text>
     </Button>
     <Button key="sheet" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })}>
-      Character{g.points > 0 ? <Text color="#e0b84a"> ({g.points})</Text> : ''}
+      Character{g.points > 0 ? <Text color={INK.easy}> ({g.points})</Text> : ''}
     </Button>
     <Text dimColor>|</Text>
     <Button key="attack" label="attack" hotkey="a" plain onPress={press({ kind: 'attack' })} />

@@ -9,10 +9,10 @@ import type { Ware } from './consumables'
 import { consumableIcon } from './icons'
 import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './items'
 import { canvas } from './canvas'
-import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H } from './inventory'
+import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H, beltHot } from './inventory'
 import { card } from './bagui'
 import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltSlotRect, cellBox, itemGrid, itemOutline, wareTag } from './pieces'
-import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels } from './window'
+import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 import { INK } from './ui/tokens'
@@ -156,5 +156,6 @@ export const shopGesture = (g: Game, ui: ShopUi, gesture: Gesture): Outcome => {
 /** The next ware on the shelf after the chosen one, for the key that steps through them. */
 export const nextWare = (ui: ShopUi): ShopUi => ({ ware: WARES[(ui.ware === null ? 0 : WARES.indexOf(ui.ware) + 1) % WARES.length]!, menu: false })
 
-/** What a click acts on, in window pixels: the wares not chosen, and the bag's items. */
-export const shopHot = (g: Game, ui: ShopUi): Rect[] => [...WARES.flatMap((w, i) => (w === ui.ware ? [] : [wareRect(i)])), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y))]
+/** What a click acts on, in window pixels: the wares (a click chooses one, a second opens its menu), the bag's items, the belt. */
+export const shopHot = (g: Game, ui: ShopUi): Rect[] =>
+  uncovered([...WARES.map((_, i) => wareRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)), ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y)], shopOverlay(g, ui))

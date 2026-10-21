@@ -116,9 +116,9 @@ export const deepGesture = (g: Game, gesture: Gesture): Action[] => {
   const tab = heroTabAt(g, 'deep', at)
   if (tab !== undefined) return tab
   const card = layout(g).cards.find(c => isInside(at, c.rect.x, c.rect.y, c.rect.w, c.rect.h))
-  if (card !== undefined) return [{ kind: 'mark', mark: card.mark }]
+  if (card !== undefined) return card.isChosen ? [] : [{ kind: 'mark', mark: card.mark }]
   return isInside(at, ...CLOSE_BOX) ? [{ kind: 'panel', panel: 'deep' }] : []
 }
 
-/** What a click acts on, in window pixels: the fork's cards. */
-export const deepHot = (g: Game): Rect[] => deepCards(g).map(c => c.rect)
+/** What a click acts on, in window pixels: the fork's card not chosen. */
+export const deepHot = (g: Game): Rect[] => deepCards(g).filter(c => !c.isChosen).map(c => c.rect)

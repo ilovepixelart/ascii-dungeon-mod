@@ -3,7 +3,7 @@
 // and at most one button. Pure: the click layer reports whole gestures, this decides the game actions they make.
 import type { Game, Rarity } from '../types'
 import type { Action, Run } from './game'
-import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, fortuneCost, gambleCost, questReward, tradeInOf } from './game'
+import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, apply, fortuneCost, gambleCost, questReward, tradeInOf } from './game'
 import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
@@ -96,17 +96,29 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
     : [said('The dog rolls over for a belly rub. Old friends now.')],
 }
 
+/**
+ * Whether doing `action` would change the game beyond what is said: the rules are fixed by the game's own roll, so a
+ * press that would be refused (no room for a quest's pay, a pack or a trade-in's gift) is known before it is made.
+ */
+const wouldAct = (g: Game, action: Action) => {
+  // What every action says, resets or brings up to date (its lines, its toast, the walk it made, the codex) is no
+  // change a press makes.
+  const { log: _a, fresh: _b, toast: _c, walked: _d, codex: _e, ...after } = apply(g, action)
+  const { log: _f, fresh: _g, toast: _h, walked: _i, codex: _j, ...before } = g
+  return JSON.stringify(after) !== JSON.stringify(before)
+}
+
 /** The button a window has, if any: its key, label, price, what it does, and whether it can act now. */
 type Act = { key: string; label: string; cost?: number; canPay?: boolean; action: Action; state: ButtonState }
 const ACT: Readonly<Record<Speaker, (g: Game) => Act | undefined>> = {
   healer: () => undefined,
-  elder: g => (g.quest === null ? undefined : { key: 'A', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need ? 'armed' : 'off' }),
+  elder: g => (g.quest === null ? undefined : { key: 'A', label: 'CLAIM', action: { kind: 'claim' }, state: g.quest.have >= g.quest.need && wouldAct(g, { kind: 'claim' }) ? 'armed' : 'off' }),
   mystic: g => ({ key: 'F', label: 'FORTUNE', cost: fortuneCost(g), canPay: g.gold >= fortuneCost(g), action: { kind: 'fortune' }, state: g.fortune === null && g.gold >= fortuneCost(g) ? 'ready' : 'off' }),
   guard: g => {
     const n = tradeInOf(g).length
-    return { key: 'T', label: 'TRADE IN', action: { kind: 'tradeIn' }, state: n === 3 ? 'ready' : 'off' }
+    return { key: 'T', label: 'TRADE IN', action: { kind: 'tradeIn' }, state: n === 3 && wouldAct(g, { kind: 'tradeIn' }) ? 'ready' : 'off' }
   },
-  villager: g => ({ key: 'G', label: 'GAMBLE', cost: gambleCost(g), canPay: g.gold >= gambleCost(g), action: { kind: 'gamble' }, state: g.gold >= gambleCost(g) ? 'ready' : 'off' }),
+  villager: g => ({ key: 'G', label: 'GAMBLE', cost: gambleCost(g), canPay: g.gold >= gambleCost(g), action: { kind: 'gamble' }, state: g.gold >= gambleCost(g) && wouldAct(g, { kind: 'gamble' }) ? 'ready' : 'off' }),
   dog: () => ({ key: 'P', label: 'PET', action: { kind: 'pet' }, state: 'ready' }),
 }
 export const talkAction = (g: Game, who: Speaker) => ACT[who](g)

@@ -3,9 +3,9 @@ import type { Game, Item, Slot } from '../types'
 import { activeTier, nameOf } from './consumables'
 import type { Run } from './game'
 import { CELL, ICONS } from './icons'
-import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
+import { BAG_H, BAG_W, POWERS, SETS, SET_COLOR, TRIGGERS, setWorn, fit, fitsAt, RARITY_COLOR, RARITY_NAME, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, selected } from './items'
 import { GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
-import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, cellBox, centered, drawItem, itemArt, itemGrid, itemOutline } from './pieces'
+import { BELT_STEP, CURSOR, GHOST, GHOST_INK, OFF_CLASS, UPGRADE, belt, beltSlotRect, cellBox, centered, drawItem, itemArt, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, WINDOW_W, drawBox, isInside, windowPixels } from './window'
 import type { Rect } from './window'
 import type { Pos } from './map'
@@ -169,5 +169,8 @@ export const beltLabel = (g: Game, i: number) => {
 export const wornOutlines = (g: Game, top: number): Rect[] =>
   (Object.entries(WORN_SLOTS) as [Slot, readonly [number, number, number, number]][]).filter(([slot]) => g.gear[slot] !== undefined).map(([, [x, y, w, h]]) => ({ x: x - 1, y: top + y - 1, w: w + 2, h: h + 2 }))
 
-/** What a click acts on in the inventory, in window pixels: the bag's items and the worn pieces. */
-export const inventoryHot = (g: Game): Rect[] => [...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(g, INV_TOP)]
+/** What is worn that the bag has room to take off into: a worn piece is clicked off, or dragged, only so far. */
+export const removable = (g: Game): Game => ({ ...g, gear: Object.fromEntries(Object.entries(g.gear).filter(([, i]) => i !== undefined && fit(g.bag, i.w, i.h) !== null)) })
+
+/** The belt slots holding something, in window pixels for a belt whose top left is at `x`, `y`: a click uses one. */
+export const beltHot = (g: Game, x: number, y: number): Rect[] => g.belt.flatMap((s, i) => (s === null ? [] : [beltSlotRect(x, y, i)]))

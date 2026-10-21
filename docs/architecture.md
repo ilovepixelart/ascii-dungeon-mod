@@ -32,7 +32,7 @@ flowchart LR
 - `hooks/world.ts` creates a game (class, kit, stats) and arrives on levels. `hooks/map.ts` generates levels and paths.
 - `hooks/items/` is the item system, one concern per module: `catalog.ts` (data), `loot.ts` (making items), `bag.ts` (the grid), `equipment.ts` (wearing), `trade.ts` (gold), `stats.ts`, `describe.ts`. `hooks/items.ts` re-exports them.
 - `hooks/consumables.ts` is the belt and the effects consumables leave running.
-- `hooks/save.ts` brings any older save up to `SAVE_VERSION`, one migration per version step. A save from a newer version is never opened nor written over (`isFromLater`): the session plays a new game unsaved and says so. One it cannot read (`isReadable`: not an object, a bag, log or gear of the wrong kind, or one that `normalize` throws on) gives way to a new game.
+- `hooks/save.ts` brings any older save up to `SAVE_VERSION`, one migration per version step. A save from a newer version is never opened nor written over (`isFromLater`): the session plays a new game unsaved and says so. One it cannot read (`isReadable`: not an object, a bag, log or gear of the wrong kind, or one that `normalize` throws on) is first kept aside under `save-unreadable` in the store, said, and gives way to a new game.
 - Drawing: `panels.ts` (text views and 1x map), `sprites.ts` (ASCII sprite view), `pixels.ts` (pixel frames and Raster cells), `pixelart.ts` (all pixel art, the single source the workbench renders too), `palette.ts`.
 
 ## Extending

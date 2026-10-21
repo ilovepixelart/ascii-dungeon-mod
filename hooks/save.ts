@@ -94,8 +94,10 @@ export const toVersion7 = (belt: readonly (LegacySlot | BeltSlot | null)[]): (Be
 }
 
 /** Version 12: each work's once-a-depth reward keeps every depth it was given on, where it kept the last alone. */
-const toVersion12 = (boons: Readonly<Record<string, number>>): Game['boons'] =>
-  Object.fromEntries(Object.entries(boons).map(([work, depth]) => [work, [depth]]))
+const toVersion12 = (boons: unknown): Game['boons'] =>
+  typeof boons !== 'object' || boons === null
+    ? undefined
+    : Object.fromEntries(Object.entries(boons).flatMap(([work, depth]) => (typeof depth === 'number' ? [[work, [depth]]] : [])))
 
 /** The save's fields brought to the current shape, each migration it is behind on run, stamped current. */
 const reshaped = (game: Game, version: number): Game => {
@@ -104,7 +106,7 @@ const reshaped = (game: Game, version: number): Game => {
   if (version < 2) g = { ...g, zoom: 3 }
   if (version < 3) g = toVersion3({ ...g, gear: game.gear ?? {}, bag: game.bag ?? [] })
   if (version < 7) g = { ...g, belt: toVersion7(g.belt as (LegacySlot | BeltSlot | null)[]) }
-  if (version < 12 && g.boons !== undefined) g = { ...g, boons: toVersion12(g.boons as Record<string, number>) }
+  if (version < 12) g = { ...g, boons: toVersion12(g.boons as unknown) }
   // Version 4 added the town (`where`, `portal`): the new-game defaults spread above put an older save in the dungeon.
   // A view that no longer exists (4 was briefly a pixel view) opens on the pixel view.
   if (![1, 2, 3].includes(g.zoom)) g = { ...g, zoom: 3 }

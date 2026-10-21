@@ -44,7 +44,7 @@ import type { ChestUi } from './chest'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
-import { isFromLater, openingGame, savable } from './save'
+import { isFromLater, isReadable, openingGame, savable } from './save'
 import { SHEET_H, sheetGesture, sheetHot, sheetOverlay, sheetPixels } from './sheet'
 import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compactPixels } from './compact'
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
@@ -71,6 +71,8 @@ const PANE = 'dungeon'
 /** Docked, the pane asks to be wide enough for the pixel inventory window and the dashboard with its belt beside the bars. */
 const OPEN = { id: PANE, title: 'Dungeon', columns: 112 }
 const SAVE = 'save'
+/** Where a save that could not be read is kept, once a new game takes its place. */
+const UNREADABLE = 'save-unreadable'
 /** The sound as set in settings, kept across sessions and reloads. */
 const SOUND = 'sound'
 /** How long the bench walk is: long enough for the camera to scroll and the torch to move many times. */
@@ -1096,6 +1098,11 @@ const beginSession = async ($: EngineInterface) => {
   const saved: unknown = await $.store.get(SAVE)
   isSaveHeld = isFromLater(saved)
   if (isSaveHeld) $.ui.toast('This save is from a newer version of the dungeon: it is kept as it is, and play goes on unsaved until the mod is updated.')
+  // A save that cannot be read is kept aside before a new game is saved over it.
+  else if (version === 0 && saved !== undefined && !isReadable(saved)) {
+    await $.store.set(UNREADABLE, saved)
+    $.ui.toast(`The saved game could not be read: it is kept aside, under "${UNREADABLE}" in the plugin's store, and a new game begins.`)
+  }
   const opening = openingGame(await read($, game), version, saved)
   if (opening !== undefined) await update($, game, () => opening)
   await act($, { kind: 'greet' })

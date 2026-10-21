@@ -43,8 +43,18 @@ describe('the saved game a session opens', () => {
       await $.tool.call({ tool: 'Bash', command: 'ls' })
       const now = kept.get('save') as Game
       expect(Array.isArray(now.bag) && Array.isArray(now.log) && now.version === SAVE_VERSION).toBe(true)
+      // What could not be read is kept aside, not lost.
+      expect(kept.get('save-unreadable')).toEqual(saved)
     })
   }
+
+  test('a save from before version 12 with no rewards given yet opens as it was', async ($, on) => {
+    const { kept } = hostWith(on, { ...newGame(), version: 11, gold: 55, boons: null })
+    await start($)
+    await $.tool.call({ tool: 'Bash', command: 'ls' })
+    expect((kept.get('save') as Game).gold).toBe(55)
+    expect(kept.get('save-unreadable')).toBeUndefined()
+  })
 
   test('a save of this version opens as it was', async ($, on) => {
     const { kept } = hostWith(on, { ...newGame(), gold: 77 })

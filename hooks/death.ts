@@ -5,7 +5,7 @@ import type { Fallen, Game } from '../types'
 import type { Action, Run } from './game'
 import { themeOf } from './map'
 import { THING_ART, foeArtOf } from './pixelart'
-import { BUTTON_H, PORTRAIT, button, buttonW, portrait } from './pieces'
+import { BUTTON_H, PORTRAIT, button, buttonBox, buttonW, portrait } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas } from './canvas'
@@ -35,9 +35,9 @@ const layout = (g: Game, f: Fallen) => {
   ]
   const tollY = Math.max(top + 2 + PORTRAIT, (whoBox.y + whoBox.h) * 2) + 2
   const tollBox: OverlayBox<'toll'> = { role: 'toll', x: PAD, y: tollY / 2, w: WINDOW_W - 2 * PAD, h: toll.length + 2, border: SURFACE.frame, lines: toll }
-  const wake: Rect = { x: Math.floor((WINDOW_W - buttonW(WAKE.key, WAKE.label)) / 2), y: (tollBox.y + tollBox.h) * 2 + 3, w: buttonW(WAKE.key, WAKE.label), h: BUTTON_H }
-  // Even, so the window ends on a whole cell.
-  const height = Math.ceil((wake.y + BUTTON_H + 3) / 2) * 2
+  const wake: Rect = { x: Math.floor((WINDOW_W - buttonW(WAKE.key, WAKE.label)) / 2), y: (tollBox.y + tollBox.h) * 2 + 2, w: buttonW(WAKE.key, WAKE.label), h: BUTTON_H }
+  // A cell of room under Wake.
+  const height = wake.y + BUTTON_H + 2
   return { top, whoBox, tollBox, wake, height }
 }
 
@@ -48,7 +48,7 @@ export const deathHeight = (g: Game) => (g.fallen === undefined ? 0 : layout(g, 
 export const deathOverlay = (g: Game): OverlayBox[] => {
   if (g.fallen === undefined) return []
   const l = layout(g, g.fallen)
-  return [l.whoBox, l.tollBox]
+  return [l.whoBox, l.tollBox, buttonBox(WAKE.key, WAKE.label, l.wake.x, l.wake.y, 'armed')]
 }
 
 /** The window's pixels: title bar, the killer's portrait, the boxes' frames and the Wake button. */

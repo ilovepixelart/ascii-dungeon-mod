@@ -7,7 +7,7 @@ import { keptChoice, reforgeCost } from './game'
 import { POWERS, RARITY_COLOR, SETS, SET_COLOR, SLOTS, TEMPER_MAX, TRIGGERS, describe, setWorn, temperCost, temperStat } from './items'
 import { WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonW } from './pieces'
+import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, fill, frame } from './canvas'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
@@ -84,21 +84,32 @@ const workCard = (g: Game, item: Item): Run[][] => {
 /** Whether the chosen piece's last reforge can be taken back: the old one is there to keep. */
 const canKeepOld = (g: Game, slot: Slot | undefined) => slot !== undefined && keptChoice(g)?.slot === slot
 
+const stateOf = (why: string | undefined): ButtonState => (why === undefined ? 'ready' : 'off')
+
 /** Where things go, in window pixels: the card, the buttons under it, the temper pips beside Temper. */
 const layout = (g: Game, ui: ForgeUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
   const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : RARITY_COLOR[item.rarity], lines }
-  const temperAt: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 3, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
+  const temperAt: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 2, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
   const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w: buttonW('R', 'REFORGE'), h: BUTTON_H }
   const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x: WORK_X, y: reforgeAt.y + BUTTON_H + 2, w: buttonW('K', 'KEEP OLD'), h: BUTTON_H } : undefined
   const end = Math.max(WINDOW_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
-  return { slot, item, box, temperAt, reforgeAt, keepAt, height: Math.ceil((end + 3) / 2) * 2 }
+  const buttons = item === undefined ? [] : [
+    { key: 'T', label: 'TEMPER', at: temperAt, state: stateOf(whyNotTemper(g, item)) },
+    { key: 'R', label: 'REFORGE', at: reforgeAt, state: stateOf(whyNotReforge(g, item)) },
+    ...(keepAt === undefined ? [] : [{ key: 'K', label: 'KEEP OLD', at: keepAt, state: 'ready' as const }]),
+  ]
+  return { slot, item, box, temperAt, reforgeAt, keepAt, buttons, height: Math.ceil((end + 3) / 2) * 2 }
 }
 
 export const forgeHeight = (g: Game, ui: ForgeUi) => layout(g, ui).height
-export const forgeOverlay = (g: Game, ui: ForgeUi): OverlayBox[] => [layout(g, ui).box]
+/** The work card, then the buttons' words. */
+export const forgeOverlay = (g: Game, ui: ForgeUi): OverlayBox[] => {
+  const l = layout(g, ui)
+  return [l.box, ...l.buttons.map(b => buttonBox(b.key, b.label, b.at.x, b.at.y, b.state))]
+}
 
 /** The temper pips, one a tempering, filled as far as done, from `x`, `y` their top left. */
 const temperPips = (c: ReturnType<typeof canvas>, item: Item, x: number, y: number) => {
@@ -108,8 +119,6 @@ const temperPips = (c: ReturnType<typeof canvas>, item: Item, x: number, y: numb
     if (i < done) fill(c, x + i * 5 + 1, y + 1, 2, 2, PIP_ON)
   }
 }
-
-const stateOf = (why: string | undefined): ButtonState => (why === undefined ? 'ready' : 'off')
 
 /** The window's pixels: title and gold, the worn slots with the chosen one framed white, the work side. */
 export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
@@ -124,9 +133,7 @@ export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
   if (l.item !== undefined) {
     // Beside Temper, on its middle.
     temperPips(body, l.item, l.temperAt.x + l.temperAt.w + 4, l.temperAt.y - WINDOW_TOP + Math.floor((BUTTON_H - 4) / 2))
-    button(body, 'T', 'TEMPER', l.temperAt.x, l.temperAt.y - WINDOW_TOP, stateOf(whyNotTemper(g, l.item)))
-    button(body, 'R', 'REFORGE', l.reforgeAt.x, l.reforgeAt.y - WINDOW_TOP, stateOf(whyNotReforge(g, l.item)))
-    if (l.keepAt !== undefined) button(body, 'K', 'KEEP OLD', l.keepAt.x, l.keepAt.y - WINDOW_TOP, 'ready')
+    for (const b of l.buttons) button(body, b.key, b.label, b.at.x, b.at.y - WINDOW_TOP, b.state)
   }
   const c = windowPixels({ title: 'SMITH', gold: g.gold }, body.px)
   drawBox(c, l.box)

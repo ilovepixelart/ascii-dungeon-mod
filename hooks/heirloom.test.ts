@@ -2,12 +2,11 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Slot } from '../types'
 import { apply, whyNotRetire } from './game'
-import { plainHero } from './fixtures'
+import { buttonsIn, plainHero } from './fixtures'
 import { BASES, LEGENDARIES, PREFIXES, RARITY_COLOR, SLOTS, SUFFIXES, heirloomOf, plainItem } from './items'
 import { retireBoxes, retireButtons, retireGesture, retireHeight, retireOverlay, retirePixels } from './retirewindow'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
-import { GOLD_INK } from './pieces'
 import { textMask } from './pixelart'
 import { EMPTY_CODEX } from './codex'
 
@@ -159,7 +158,7 @@ describe('the retire window', () => {
     const early = { ...g, bossSlain: 5 }
     const b = retireButtons(early, IDLE)
     expect(retireGesture(early, IDLE, tap({ x: b.retire.x + 2, y: b.retire.y + 4 })).actions).toEqual([])
-    const lit = (x: Game) => retirePixels(x, IDLE).slice(b.retire.y, b.retire.y + b.retire.h).some(row => row.slice(b.retire.x, b.retire.x + 8).includes(GOLD_INK))
+    const lit = (x: Game) => buttonsIn(retireOverlay(x, IDLE)).find(k => k.text === 'R RETIRE')!.isLit
     expect(lit(early)).toBe(false)
     expect(lit(g)).toBe(true)
   })

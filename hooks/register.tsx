@@ -1612,7 +1612,7 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: (_, l) => l.isCompactBag, draw: compactBag },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)], undefined, deathHot(p.g)) },
   { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), recapOverlay(p.g), [playOnKey(p, 'p')], undefined, recapHot(p.g)) },
-  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), settingsOverlay(settingsUi), settingsKeys(p, true), undefined, settingsHot(p.g, soundSettings, settingsUi)) },
+  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), settingsOverlay(p.g, soundSettings, settingsUi), settingsKeys(p, true), undefined, settingsHot(p.g, soundSettings, settingsUi)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
   { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true), undefined, [...talentHot(p.g, talentUi), ...heroTabsHot(p.g, 'talent')]) },

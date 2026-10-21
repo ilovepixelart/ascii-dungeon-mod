@@ -2,9 +2,9 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { CARD_W, cardHead, cardPixels, cardText, svgOf } from './herocard'
-import { plainHero } from './fixtures'
+import { buttonsIn, plainHero } from './fixtures'
 import { plainItem } from './items'
-import { CARD_KEY, codexCardRect, codexGesture, codexHeight, codexPixels } from './codexwindow'
+import { CARD_KEY, codexCardRect, codexGesture, codexHeight, codexOverlay, codexPixels } from './codexwindow'
 import { missingGlyphs } from './pixelart'
 import { WINDOW_W } from './window'
 
@@ -103,7 +103,7 @@ describe('Card in the codex', () => {
     expect([r.x + r.w <= WINDOW_W, r.y + r.h <= codexHeight(g, FINDS)]).toEqual([true, true])
     expect(codexHeight(g, FINDS)).toBeLessThanOrEqual(80)
     expect(CARD_KEY).toEqual({ key: 'K', label: 'CARD' })
-    // The button's gold key letter is drawn where the button is.
-    expect(codexPixels(g, FINDS).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + r.w).includes('#ffd34d'))).toBe(true)
+    // Its words, its key lit, are written where the button is.
+    expect(buttonsIn(codexOverlay(g, FINDS))).toEqual([{ text: 'K CARD', isLit: true, x: r.x, y: r.y, w: r.w, h: r.h }])
   })
 })

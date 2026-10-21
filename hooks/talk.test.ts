@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { GOLD_INK } from './pieces'
+import { buttonsIn } from './fixtures'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { SPEAKERS, talkAction, talkGesture, talkHeight, talkOverlay, talkPixels, wrap } from './talk'
@@ -14,10 +14,10 @@ const first = (g: Game, who: Speaker) => words(g, who)[0]
 /** A click on window pixel (px, py), in the click layer's cells. */
 const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
 /** Where a window's button is: the first pixel row, from the left, inked in the button's gold key. */
+/** Where the speaker's button's key is, in window pixels. */
 const buttonAt = (g: Game, who: Speaker) => {
-  const px = talkPixels(g, who)
-  for (let y = 0; y < px.length; y += 1) for (let x = 35; x < WINDOW_W; x += 1) if (px[y]![x] === GOLD_INK && y > 14) return { x, y }
-  return undefined
+  const b = buttonsIn(talkOverlay(g, who))[0]
+  return b === undefined ? undefined : { x: b.x + 2, y: b.y + 2 }
 }
 
 describe('what each says, from how the hero stands', () => {

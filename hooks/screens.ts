@@ -115,7 +115,7 @@ export const shots = (): Shot[] => {
     out.push(shot(`chest-${cls}`, chestPixels(stash, { picked: null } as never), chestOverlay(stash, { picked: null } as never)))
   }
   out.push(shot('shop', shopPixels(town, { ware: null, menu: false }), shopOverlay(town, { ware: null, menu: false })))
-  for (const page of ['game', 'orders'] as const) out.push(shot(`settings-${page}`, settingsPixels(town, { effects: false, music: false, volume: 4 }, { page }), settingsOverlay({ page })))
+  for (const page of ['game', 'orders'] as const) out.push(shot(`settings-${page}`, settingsPixels(town, { effects: false, music: false, volume: 4 }, { page }), settingsOverlay(town, { effects: false, music: false, volume: 4 }, { page })))
   // The death window for each kind of killer: a big boss, a named foe, a kind, and a trap.
   const foe = { hp: 0, maxHp: 1, atk: 1, xp: 1, x: 0, y: 0 }
   const falls = { king: { glyph: '&', name: 'Bone King', big: 'king' as const }, rot: { glyph: 'k', name: 'the Rotking', unique: 'rot' as const }, troll: { glyph: 'T', name: 'bog troll' }, trap: undefined }

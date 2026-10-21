@@ -2,7 +2,8 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { apply } from './game'
-import { CURSOR, GOLD_INK, buttonW } from './pieces'
+import { CURSOR, buttonW } from './pieces'
+import { buttonsIn } from './fixtures'
 import { openingGame } from './save'
 import { CLASSES, STATS_LINE, cardRect, isFirstGame, isUnderWay, startGesture, startHeight, startOverlay, startPixels } from './start'
 import { plainItem } from './items'
@@ -14,14 +15,10 @@ const onStart = (over: Partial<Game> = {}): Game => ({ ...newGame(3, 'knight'), 
 const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
 const onCard = (i: number) => tap(cardRect(i).x + 5, cardRect(i).y + 5)
 /** The Start and Back buttons' row: the first rows inked in a button key's gold under the cards. */
+/** The buttons' row: its top, and each button's left, in window pixels. */
 const keyColumns = (g: Game) => {
-  const px = startPixels(g, { cls: 'knight' })
-  const y0 = cardRect(0).y + cardRect(0).h + 3
-  for (let y = y0; y < y0 + 11; y += 1) {
-    const xs = px[y]!.flatMap((p, x) => (p === GOLD_INK ? [x] : []))
-    if (xs.length > 0) return { y, xs }
-  }
-  return undefined
+  const buttons = buttonsIn(startOverlay(g, { cls: 'knight' }))
+  return buttons.length === 0 ? undefined : { y: buttons[0]!.y, xs: buttons.map(b => b.x) }
 }
 
 describe('opening a session', () => {
@@ -76,12 +73,12 @@ describe('choosing', () => {
     expect(isUnderWay({ ...first, xp: 3 })).toBe(true)
     expect(isUnderWay({ ...first, deepest: 2 })).toBe(true)
     const [s, h, b] = [buttonW('S', 'START'), buttonW('H', 'HELP'), buttonW('B', 'BACK')]
-    // A first game: Start, 3 pixels, Help, the pair centered; each key's gold begins 3 pixels into its button.
+    // A first game: Start, 3 pixels, Help, the pair centered, 3 pixels under the cards.
     const x0 = Math.floor((WINDOW_W - s - 3 - h) / 2)
     const keys = keyColumns(first)!
-    const px = startPixels(first, { cls: 'knight' })
-    const gold = [...new Set(px.slice(keys.y, keys.y + 6).flatMap(row => row.flatMap((p, x) => (p === GOLD_INK ? [x] : []))))].sort((m, n) => m - n)
-    expect(gold.filter((x, i) => i === 0 || x - gold[i - 1]! > 8)).toEqual([x0 + 3, x0 + s + 3 + 3])
+    expect(buttonsIn(startOverlay(first, { cls: 'knight' })).map(b => b.text)).toEqual(['S START', 'H HELP'])
+    expect(keys.xs).toEqual([x0, x0 + s + 3])
+    expect(keys.y).toBe(cardRect(0).y + cardRect(0).h + 3)
     expect(startGesture(first, { cls: 'mage' }, tap(x0 + 1, keys.y + 2)).actions).toEqual([{ kind: 'restart', cls: 'mage' }])
     // Under way: Start, Help and Back, the three centered.
     const going = { ...first, xp: 3 }

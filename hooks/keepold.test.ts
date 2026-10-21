@@ -2,11 +2,10 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item } from '../types'
 import { apply, keptChoice, reforgeCost } from './game'
-import { GOLD_INK } from './pieces'
+import { buttonsIn } from './fixtures'
 import { plainItem } from './items'
-import { WINDOW_TOP } from './window'
 import type { Gesture } from './window'
-import { forgeGesture, forgeOverlay, forgePixels } from './forge'
+import { forgeGesture, forgeOverlay } from './forge'
 import { newGame } from './world'
 
 /** A knight in town with gold, wearing a Rare helm to reforge. */
@@ -54,12 +53,11 @@ describe('keeping the old roll', () => {
     const lines = forgeOverlay(reforged, { slot: 'helm' })[0]!.lines.map(l => l.map(r => r.text).join(''))
     expect(lines.some(l => l.startsWith(`Before: ${helm.name}`))).toBe(true)
     expect(forgeOverlay(g, { slot: 'helm' })[0]!.lines.some(l => l[0]?.text === 'Before: ')).toBe(false)
-    // The buttons' gold keys, top to bottom: Temper, Reforge, Keep old.
-    const px = forgePixels(reforged, { slot: 'helm' })
-    const keys: number[] = []
-    for (let y = WINDOW_TOP; y < px.length; y += 1) if (px[y]!.slice(47, 54).includes(GOLD_INK) && !px[y - 1]!.slice(47, 54).includes(GOLD_INK)) keys.push(y)
-    expect(keys.length).toBe(3)
-    const tap: Gesture = { type: 'release', from: { x: 50.5, y: (keys[2]! + 2) / 2 + 0.25 }, at: { x: 50.5, y: (keys[2]! + 2) / 2 + 0.25 }, button: 'left' }
+    // The buttons, top to bottom: Temper, Reforge, Keep old.
+    const buttons = buttonsIn(forgeOverlay(reforged, { slot: 'helm' }))
+    expect(buttons.map(b => b.text)).toEqual(['T TEMPER', 'R REFORGE', 'K KEEP OLD'])
+    const keep = buttons[2]!
+    const tap: Gesture = { type: 'release', from: { x: keep.x + 2.5, y: (keep.y + 2) / 2 + 0.25 }, at: { x: keep.x + 2.5, y: (keep.y + 2) / 2 + 0.25 }, button: 'left' }
     expect(forgeGesture(reforged, { slot: 'helm' }, tap).actions).toEqual([{ kind: 'keepOld' }])
   })
 })

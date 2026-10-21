@@ -9,6 +9,7 @@ import { BELT_SLOT_W, GRID, SLOT, SLOT_BG, art, digits, fill, frame, put } from 
 import type { Canvas } from './canvas'
 import { PAL, PX, textMask } from './pixelart'
 import type { OverlayBox, Rect } from './window'
+import type { Run } from './game'
 import { INK, SURFACE } from './ui/tokens'
 
 export const GHOST_INK = INK.ghost
@@ -184,31 +185,45 @@ export const bar = (c: Canvas, x: number, y: number, w: number, h: number, share
   }
 }
 
-/** A button's height, and the inks of its states: ready, off (it cannot act now), armed (white, pressing it acts). */
-export const BUTTON_H = 11
+/** A button's height: its frame, its lit top edge, its label's text row, a row of room and its frame. Placed on an
+ * even row, its label's row is whole cells. Its inks in each state: ready, off (it cannot act now), armed (white,
+ * pressing it acts). */
+export const BUTTON_H = 6
 export type ButtonState = 'ready' | 'off' | 'armed'
+/** The first row at or under y on a whole cell, where a button's top goes. */
+export const onCell = (y: number) => y + (y % 2)
 const BUTTON_BG = { ready: SURFACE.raised, off: SURFACE.sunken, armed: SURFACE.raised } as const
 const BUTTON_EDGE = { ready: SURFACE.buttonEdge, off: SURFACE.tab, armed: CURSOR } as const
 const BUTTON_LIT = SURFACE.buttonLit
 const OFF_INK = INK.off
 
-/** A button's width: its key, its label and, when it costs, a price; three pixels of room between and round them. */
 /** The gap between a button's key and its label; none when either is empty, so a key alone sits centered. */
-const keyGap = (key: string, label: string) => (key === '' || label === '' ? 0 : 3)
-export const buttonW = (key: string, label: string, cost?: number) => 3 + textW(key) + keyGap(key, label) + textW(label) + (cost === undefined ? 0 : 3 + priceW(cost)) + 3
+const keyGap = (key: string, label: string) => (key === '' || label === '' ? 0 : 1)
+const costText = (cost: number) => `${cost} gold`
+/** A button's width in cells: its key, its label and, when it costs, its price; a cell of room each side in its frame. */
+export const buttonW = (key: string, label: string, cost?: number) => 4 + key.length + keyGap(key, label) + label.length + (cost === undefined ? 0 : 1 + costText(cost).length)
 
-/** A pixel button at x, y: its key in gold, its label, its price (grey when it cannot be paid); all grey when off. Returns its width. */
-export const button = (c: Canvas, key: string, label: string, x: number, y: number, state: ButtonState, cost?: number, canPay = true) => {
+/** A button's frame and face at x, y; its words are `buttonBox`'s. Returns its width. */
+export const button = (c: Canvas, key: string, label: string, x: number, y: number, state: ButtonState, cost?: number) => {
   const w = buttonW(key, label, cost)
   fill(c, x, y, w, BUTTON_H, BUTTON_BG[state])
   frame(c, x, y, w, BUTTON_H, BUTTON_EDGE[state])
   // A lit top edge, so it reads as raised.
   if (state !== 'off') fill(c, x + 1, y + 1, w - 2, 1, BUTTON_LIT)
-  word(c, key, x + 3, y + 3, state === 'off' ? OFF_INK : GOLD_INK)
-  const lx = x + 3 + textW(key) + keyGap(key, label)
-  word(c, label, lx, y + 3, state === 'off' ? OFF_INK : INK.text)
-  if (cost !== undefined) price(c, cost, lx + textW(label) + 3, y + 3, canPay && state !== 'off')
   return w
+}
+
+/** A button's words as terminal text on its face, for the button `button` draws at x, y in window pixels: its key in
+ * gold, its label, its price (grey when it cannot be paid); all grey when off. */
+export const buttonBox = (key: string, label: string, x: number, y: number, state: ButtonState, cost?: number, canPay = true): OverlayBox<'button'> => {
+  const isOff = state === 'off'
+  const runs: Run[] = [
+    { text: key, color: isOff ? OFF_INK : GOLD_INK, bold: !isOff },
+    { text: `${' '.repeat(keyGap(key, label))}${label}`, color: isOff ? OFF_INK : INK.text },
+    ...(cost === undefined ? [] : [{ text: ` ${costText(cost)}`, color: canPay && !isOff ? GOLD_INK : UNPAID_INK }]),
+  ]
+  const bg = BUTTON_BG[state]
+  return { role: 'button', x, y: y / 2, w: buttonW(key, label, cost), h: 3, border: bg, bg, pad: 1, lines: [runs] }
 }
 
 /** A portrait's size: an 8 by 8 sprite at three times its size, inside a two pixel frame. */

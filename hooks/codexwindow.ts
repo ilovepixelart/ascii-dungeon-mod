@@ -8,7 +8,7 @@ import { BIG_BOSSES, UNIQUES, firstCodex } from './game'
 import { LEGENDARIES } from './items'
 import { ICONS } from './icons'
 import { BOSS_ART, PAL, foeArtOf } from './pixelart'
-import { BUTTON_H, button, buttonW, tierBox } from './pieces'
+import { BUTTON_H, button, buttonBox, buttonW, onCell, tierBox } from './pieces'
 import { BG, art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
@@ -58,14 +58,14 @@ const bigs = Object.entries(BIG_BOSSES)
 
 /** The Card button, under the Legendaries on Finds: it saves the hero card and copies it as text. */
 export const CARD_KEY = { key: 'K', label: 'CARD' }
-const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.key, CARD_KEY.label)) / 2), y: ROW1_Y + LEG_H + 3, w: buttonW(CARD_KEY.key, CARD_KEY.label), h: BUTTON_H }
+const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.key, CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 3), w: buttonW(CARD_KEY.key, CARD_KEY.label), h: BUTTON_H }
 /** The Card button's place, in window pixels, on the page it is on: Finds; none on Foes. */
 export const codexCardRect = (ui: CodexUi = { page: 'finds' }): Rect | undefined => (ui.page === 'finds' ? CARD_RECT : undefined)
 
 const foundLegendaries = (c: Codex) => c.legendaries.filter(n => LEGENDARIES.some(l => l.name === n)).length
 
 /** The box under the page, in cells: on Foes how many of each are slain; on Finds how many Legendaries are found, then
- * the records. Last, the pages' tab labels. */
+ * the records. Then the pages' tab labels, and on Finds the Card button's words. */
 export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
   const c = codexOf(g)
   const lines: Run[][] = ui.page === 'foes'
@@ -76,7 +76,8 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
         [{ text: `Deaths ${c.deaths}, heroes retired ${c.retired ?? 0}, gold found ${c.gold}.`, dim: true }],
       ]
   const under = ui.page === 'foes' ? ROW2_Y + FOE_BOX : CARD_RECT.y + BUTTON_H
-  return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG)]
+  const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.key, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []
+  return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -132,7 +133,7 @@ export const codexPixels = (g: Game, ui: CodexUi = CODEX_UI): string[][] => {
   if (ui.page === 'foes') drawFoes(body, lit)
   else drawFinds(body, lit)
   const c = windowPixels(heroChrome(g, 'codex'), body.px)
-  for (const b of codexOverlay(g, ui)) if (b.role !== 'tabs') drawBox(c, b)
+  for (const b of codexOverlay(g, ui)) if (b.role === 'about') drawBox(c, b)
   return c.px
 }
 

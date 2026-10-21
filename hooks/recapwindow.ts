@@ -3,7 +3,7 @@
 import type { Game, Recap } from '../types'
 import type { Action, Run } from './game'
 import { PX, heroArt, textMask } from './pixelart'
-import { BUTTON_H, button, buttonW, drawItem, portrait } from './pieces'
+import { BUTTON_H, button, buttonBox, buttonW, drawItem, onCell, portrait } from './pieces'
 import { RARITY_COLOR } from './items'
 import { INK, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
@@ -68,29 +68,31 @@ const toldLines = (g: Game, r: Recap): Run[][] => [
 
 /** Play on, centered under the find (under the portrait without one). */
 const playRect = (r: Recap): Rect => {
-  const y = r.best === undefined ? FIND_Y : FIND_Y + FIND_BOX + 3
+  const y = onCell(r.best === undefined ? FIND_Y : FIND_Y + FIND_BOX + 3)
   const w = buttonW(PLAY.key, PLAY.label)
   return { x: Math.floor((WINDOW_W - w) / 2), y, w, h: BUTTON_H }
 }
 
-/** The boxes, in cells: what happened beside the portrait; with a find, its name beside its box. */
+/** The boxes, in cells: what happened beside the portrait; with a find, its name beside its box; Play on's words. */
 export const recapOverlay = (g: Game): OverlayBox[] => {
   const r = recapOf(g)
   const told = toldLines(g, r)
+  const play = playRect(r)
   const box = (lines: Run[][], y: number): OverlayBox => ({ role: 'about', x: SIDE_X, y, w: WINDOW_W - SIDE_X - 2, h: lines.length + 2, border: SURFACE.frame, lines })
   return [
     box(told, (top + 2) / 2),
     ...(r.best === undefined ? [] : [box([[{ text: 'Best find', dim: true }], [{ text: r.best.name, bold: true, color: RARITY_COLOR[r.best.rarity] }]], Math.ceil(FIND_Y / 2))]),
+    buttonBox(PLAY.key, PLAY.label, play.x, play.y, 'armed'),
   ]
 }
 
 /** The lines the window says, a line a row of its boxes. */
-export const recapLines = (g: Game): string[] => recapOverlay(g).flatMap(b => b.lines.map(l => l.map(r => r.text).join('')))
+export const recapLines = (g: Game): string[] => recapOverlay(g).filter(b => b.role !== 'button').flatMap(b => b.lines.map(l => l.map(r => r.text).join('')))
 
 /** The window's height in pixels, title bar and all. */
 export const recapHeight = (g: Game) => {
   const play = playRect(recapOf(g))
-  return Math.ceil((play.y + play.h + 3) / 2) * 2
+  return play.y + play.h + 2
 }
 
 /** The window's pixels: title bar, the hero's portrait, the find, Play on, the boxes. */
@@ -102,7 +104,7 @@ export const recapPixels = (g: Game): string[][] => {
   const play = playRect(r)
   button(body, PLAY.key, PLAY.label, play.x, play.y - top, 'armed')
   const c = windowPixels(CHROME, body.px)
-  for (const b of recapOverlay(g)) drawBox(c, b)
+  for (const b of recapOverlay(g)) if (b.role !== 'button') drawBox(c, b)
   return c.px
 }
 

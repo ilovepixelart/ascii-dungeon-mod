@@ -47,7 +47,7 @@ let bx = 4
 for (const state of ['ready', 'off', 'armed'] as const) bx += button(sheet, 'T', 'TAKE', bx, y, state) + 4
 button(sheet, 'B', 'BUY', bx, y, 'ready', 120)
 bx += buttonW('B', 'BUY', 120) + 4
-button(sheet, 'B', 'BUY', bx, y, 'ready', 120, false)
+button(sheet, 'B', 'BUY', bx, y, 'ready', 120)
 y += BUTTON_H + 6
 
 heading('CARDS  FLAT  BEVELED BY FAMILY  RECEDED AND CHOSEN')

@@ -1,4 +1,6 @@
 import type { Foe, Game } from '../types'
+import type { OverlayBox } from './window'
+import { INK } from './ui/tokens'
 import { newGame, routeToStairs } from './game'
 import { plainItem } from './items'
 
@@ -18,3 +20,8 @@ export const plainHero = (seed = 1): Game => {
   const blade = { ...plainItem({ nextId: 900 }, 'sword'), atk: 1 }
   return { ...g, gear: { weapon: blade }, stats: { might: 1, focus: 1, vigor: 1, insight: 0 }, maxHp: 20, hp: 20 }
 }
+
+/** The buttons among a window's text boxes, in their order: each one's words, whether its key is lit (gold), and its
+ * place in window pixels. */
+export const buttonsIn = (boxes: readonly OverlayBox[]) =>
+  boxes.filter(b => b.role === 'button').map(b => ({ text: b.lines[0]!.map(r => r.text).join(''), isLit: b.lines[0]![0]!.color === INK.gold, x: b.x, y: b.y * 2, w: b.w, h: 2 * b.h }))

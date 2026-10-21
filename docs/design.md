@@ -26,8 +26,8 @@ names below point at it.
 ## Text
 
 - Words and numbers a person reads are terminal text, in text boxes over the pixels (`boxShape`, `barLabel`): the
-  terminal's own font, readable at any size. The pixel font (3 by 5, `FONT`) is for titles, labels, button keys and
-  the counts on slots.
+  terminal's own font, readable at any size. Titles, tabs and buttons are terminal text too; the pixel font (3 by 5,
+  `FONT`) is left to labels on art and the counts on slots.
 - A number on a bar is centred on it, on its middle two rows, each character on the bar's color under it, in the ink
   that reads there (`inkOn`). So a 4 px bar starts on an odd pixel row.
 - The pixel font has every character the game asks of it; a missing one is a failing test (`missingGlyphs`).

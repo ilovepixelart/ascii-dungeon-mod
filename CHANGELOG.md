@@ -46,6 +46,9 @@ release may change behaviour.
   sheet's green, where they were a gold of their own.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
   of the drop luck. A refusal now leaves the game as it was.
+- A corridor passing a room's cut corner (a cross, an L or a ragged room), rock between, showed the whole room from
+  there, its foes and items included: 4.5% of levels have such a spot. A corridor cell now opens onto a room only
+  beside that room's own floor.
 
 ## [0.4.0] - 2026-10-20
 

@@ -266,6 +266,42 @@ describe('sight down corridors', () => {
       }
     }
   })
+
+  /** A room's own floor: its box less its shape's cut, floor on the map. */
+  const ownFloor = (level: ReturnType<typeof generate>, r: ReturnType<typeof generate>['rooms'][number]) => {
+    const cut = new Set(shapeCut(r).map(c => `${c.x},${c.y}`))
+    const cells: Pos[] = []
+    for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (isFloor(level.tiles, { x, y }) && !cut.has(`${x},${y}`)) cells.push({ x, y })
+    return cells
+  }
+  const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const
+
+  test('a corridor beside a shape\'s cut corner, rock between, shows nothing of the room; its door shows it whole', async () => {
+    // World 147926526 depth 15: a cross room at 10,4, 9 by 6; the corridor on row 3 passes its cut top right corner.
+    const level = generate(147926526, 15)
+    const cross = level.rooms.find(r => r.x === 10 && r.y === 4)!
+    const floor = ownFloor(level, cross)
+    const seenFrom = (p: Pos) => new Set(visibleFrom(level, p).map(c => `${c.x},${c.y}`))
+    const past = seenFrom({ x: 18, y: 3 })
+    expect(floor.filter(c => past.has(`${c.x},${c.y}`))).toEqual([])
+    const door = floor.flatMap(c => STEPS.map(([dx, dy]) => ({ x: c.x + dx, y: c.y + dy }))).find(p => isFloor(level.tiles, p) && roomAt(level, p) === undefined)!
+    const fromDoor = seenFrom(door)
+    expect(floor.every(c => fromDoor.has(`${c.x},${c.y}`))).toBe(true)
+  })
+
+  test('from a corridor, a room\'s floor out of arm\'s reach shows only from a cell beside some room\'s own floor', async () => {
+    for (let i = 0; i < 300; i += 1) {
+      const world = 1 + ((i * 2654435761) >>> 0) % 4_000_000_000
+      const level = generate(world, 1 + (i % 19))
+      const owned = new Set(level.rooms.flatMap(r => ownFloor(level, r)).map(c => `${c.x},${c.y}`))
+      for (let y = 0; y < MAP_H; y += 1) for (let x = 0; x < MAP_W; x += 1) {
+        if (!isFloor(level.tiles, { x, y }) || roomAt(level, { x, y }) !== undefined) continue
+        const isDoor = STEPS.some(([dx, dy]) => owned.has(`${x + dx},${y + dy}`))
+        const far = visibleFrom(level, { x, y }).some(c => owned.has(`${c.x},${c.y}`) && Math.max(Math.abs(c.x - x), Math.abs(c.y - y)) > 1)
+        if (far && !isDoor) expect(`${world}:${1 + (i % 19)} ${x},${y}`).toBe('shows a room through rock')
+      }
+    }
+  })
 })
 
 describe('the themed room', () => {

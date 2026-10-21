@@ -539,8 +539,12 @@ const corridorSight = (level: Level, space: readonly Room[], c: Pos, out: Pos): 
 
 const STEPS4: readonly Pos[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]
 const isCorridor = (level: Level, p: Pos) => isFloor(level.tiles, p) && roomAt(level, p) === undefined
-/** The rooms a cell is beside, by its four sides: the rooms a corridor cell is the door of. */
-const roomsBeside = (level: Level, p: Pos) => [...new Set(STEPS4.flatMap(d => roomAt(level, { x: p.x + d.x, y: p.y + d.y }) ?? []))]
+/**
+ * The rooms a cell is beside, by its four sides: the rooms a corridor cell is the door of. Only a room's own floor
+ * counts: a corner its shape gave back to rock is no door.
+ */
+const roomsBeside = (level: Level, p: Pos) =>
+  [...new Set(STEPS4.flatMap(d => level.rooms.filter(r => isOwnFloor(level, r, { x: p.x + d.x, y: p.y + d.y }))))]
 const touchesRoom = (level: Level, p: Pos) => roomsBeside(level, p).length > 0
 /** A dead end, where a chest stands. */
 const isDeadEnd = (level: Level, p: Pos) => chestAt(1, 1, level, p) !== undefined

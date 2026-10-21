@@ -373,13 +373,17 @@ export const drawnVsTold = (before: Game, next: Game) => {
   return off
 }
 
-/** A room's own floor: in its box, not cut back by its shape, floor on the map. */
+/** A room's own floor: in its box, not cut back by its shape, floor on the map. Kept by room, as levels are. */
 const ownFloor = (level: Level, r: Room) => {
+  const known = ownFloors.get(r)
+  if (known !== undefined) return known
   const cut = new Set(shapeCut(r).map(cellId))
   const cells = new Set<number>()
   for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (isFloor(level.tiles, { x, y }) && !cut.has(cellId({ x, y }))) cells.add(cellId({ x, y }))
+  ownFloors.set(r, cells)
   return cells
 }
+const ownFloors = new WeakMap<Room, ReadonlySet<number>>()
 
 /** Whether a cell of room `b`'s own floor is, or lies beside, one of room `a`'s own: no wall between the two. */
 const isOpenBetween = (level: Level, a: Room, b: Room) => {
@@ -389,7 +393,7 @@ const isOpenBetween = (level: Level, a: Room, b: Room) => {
 
 /**
  * Cells an action showed against the rules of sight: a room's floor with the hero never in it, on its door or in sight
- * range of it; a closed chest the hero never came in sight range of, where no room's view down a corridor reaches it.
+ * range of it; a closed chest the hero never came in sight range of: sight down a corridor stops short of one.
  * A new level, a Passage Bomb and a death show what they show.
  */
 export const sightBreaks = (before: Game, next: Game): Pos[] => {
@@ -405,7 +409,9 @@ export const sightBreaks = (before: Game, next: Game): Pos[] => {
   const path = [{ x: before.x, y: before.y }, ...next.walked]
   const reach = sightOf(next)
   const near = (c: Pos) => path.some(q => Math.max(Math.abs(q.x - c.x), Math.abs(q.y - c.y)) <= reach)
-  const beside = (q: Pos) => [[1, 0], [-1, 0], [0, 1], [0, -1]].flatMap(([dx, dy]) => roomAt(level, { x: q.x + dx!, y: q.y + dy! }) ?? [])
+  // A door is a cell beside a room's own floor: a corner its shape gave back to rock is none.
+  const owns = level.rooms.map(r => ({ r, floor: ownFloor(level, r) }))
+  const beside = (q: Pos) => owns.filter(o => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => o.floor.has(cellId({ x: q.x + dx!, y: q.y + dy! })))).map(o => o.r)
   // A room open to one stood in, or to one of those (a big boss's arena and the rooms it grew over or against), is the
   // same space.
   const stood = path.flatMap(q => roomAt(level, q) ?? beside(q))
@@ -415,7 +421,7 @@ export const sightBreaks = (before: Game, next: Game): Pos[] => {
     const room = roomAt(level, c)
     if (room !== undefined) return !roomsStoodIn.has(room) && !near(c)
     const isChest = chestAt(next.world, next.depth, level, c) !== undefined && !next.taken.includes(cellId(c))
-    return isChest && !near(c) && roomsStoodIn.size === 0
+    return isChest && !near(c)
   })
 }
 

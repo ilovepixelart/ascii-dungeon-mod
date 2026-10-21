@@ -633,7 +633,6 @@ const RARITY_RANK: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'l
 /** The percent chance a kill leaves an item: 35 and 1 a depth, at most 55. */
 export const itemChance = (depth: number) => Math.min(55, 35 + depth)
 
-/** What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Rare or better. */
 /** An item that will not fit in the bag, left where it fell (`at`), to be picked up once there is room. */
 const leaveOnFloor = (g: Game, item: Item, at: Pos) => {
   g.floor = [...(g.floor ?? []), { x: at.x, y: at.y, item }]
@@ -693,7 +692,10 @@ const dropConsumable = (g: Game, isBarren: boolean) => {
   say(g, addToBelt(g, drop.kind, drop.tier) ? `Loot: ${name}.` : `Your belt has no room for the ${name}.`)
 }
 
-/** A kill's loot; `champion` the slain champion's name, which its item's toast gives. */
+/**
+ * What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Uncommon or better,
+ * `champion` its name, which the item's toast gives.
+ */
 const loot = (g: Game, at: Pos, champion?: string) => {
   const isChampion = champion !== undefined
   const isBarren = modHere(g) === 'barren'

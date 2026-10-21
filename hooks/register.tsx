@@ -487,7 +487,13 @@ const playHits = ($: EngineInterface, g: Game, hits: readonly Hit[]) => {
     }
     const view = cameraFor(g, tileCenter(g), mapSize.columns, mapSize.rows)
     const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame), mapSize)
-    return painted.deny === undefined
+    if (painted.deny === undefined) return true
+    // A map the host will not take (a window over it, the pane resized) ends the blow: the idle motion and the death
+    // window wait on it no longer.
+    isHitPlaying = false
+    isFalling = false
+    $.ui.invalidate('ui.render')
+    return false
   }, () => $.clock.every(FRAME_MS, () => void $.clock.now().then(ticker.tick)))
 }
 

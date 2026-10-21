@@ -52,6 +52,8 @@ release may change behaviour.
 - A prompt's first 48 characters, quoted in the log as a quest, were written to the save on disk, a pasted token
   included; the save now says "A new quest." there, the quote kept for the session. A slash command's line and a
   prompt the engine adds unseen are no quest.
+- A blow landing while a window covered the map (the bag open, the pane resized) stopped the idle motion until the
+  next blow, and a fall then never opened the death window. A blow whose map the host refuses now ends there.
 
 ## [0.4.0] - 2026-10-20
 

@@ -2,13 +2,12 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { BAG_UI_IDLE, bagGesture, bagOverlay, inventoryHot } from './bagui'
-import { heroTabsBox } from './herotabs'
 import { inventoryScreenPixels } from './inventory'
 import { plainItem } from './items'
 import { BASES } from './items/catalog'
 import { sheetGesture } from './sheet'
 import { codexGesture } from './codexwindow'
-import { CLOSE_BOX, WINDOW_W } from './window'
+import { CLOSE_BOX, WINDOW_W, chromeBoxes } from './window'
 import type { Gesture } from './window'
 import { SURFACE } from './ui/tokens'
 import { newGame } from './world'
@@ -22,7 +21,7 @@ const onTab = (label: keyof typeof COLUMNS) => tap(COLUMNS[label][0] + 1, 4)
 
 describe('the hero\'s tabs', () => {
   test('read HERO, BAG, TALENT, DEEP and CODEX in terminal text, the one shown bright, the row clear of the gold and the close box', async () => {
-    const box = heroTabsBox(hero(), 'bag')
+    const box = chromeBoxes(inventoryScreenPixels(hero()))[0]!
     const line = box.lines[0]!
     expect(line.map(r => r.text).join('')).toBe(' HERO   BAG   TALENT   DEEP   CODEX ')
     expect(line.filter(r => r.bold === true).map(r => r.text)).toEqual([' BAG '])

@@ -1464,7 +1464,7 @@ test('in the merchant\'s window a clicked ware shows its card, a second click it
     await ui.pointer({ type: 'down', ...ware, button: 'left', in: 'shop-clicks' })
     await ui.pointer({ type: 'up', ...ware, button: 'left', in: 'shop-clicks' })
   }
-  const boxes = async () => ((await ui.find({ type: 'Client', key: 'shop-clicks' }))?.props.props as { boxes: { lines: { text: string }[][] }[] }).boxes.map(b => b.lines.map(l => l.map(x => x.text).join('')))
+  const boxes = () => boxTexts(ui, 'shop-clicks')
   await tap()
   expect((await boxes())[0]?.[0]).toBe('Health Potion')
   expect((await boxes()).length).toBe(1)
@@ -1478,8 +1478,10 @@ test('in the merchant\'s window a clicked ware shows its card, a second click it
 })
 
 /** The text of a pixel window's boxes, by the window's click layer: each box a list of its lines. */
+/** A window's own text boxes in its click layer, the title bar's (its title, tabs and gold) left out. */
+const ownBoxes = <B extends { role?: string }>(boxes: readonly B[]) => boxes.filter(b => b.role !== 'title' && b.role !== 'gold')
 const boxTexts = async (ui: PaneUi, key: string) =>
-  ((await ui.find({ type: 'Client', key }))?.props.props as { boxes: { lines: { text: string }[][] }[] }).boxes.map(b => b.lines.map(l => l.map(r => r.text).join('')))
+  ownBoxes(((await ui.find({ type: 'Client', key }))?.props.props as { boxes: { role?: string; lines: { text: string }[][] }[] }).boxes).map(b => b.lines.map(l => l.map(r => r.text).join('')))
 
 test('on a wide pane the smith opens a pixel window on the first piece worn, its prices or why not, and its keys work', async ($, on) => {
   const said = toasts(on)
@@ -1602,7 +1604,7 @@ test('on a wide pane every townsperson opens a pixel window of their words with 
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
   const town = apply(newGame(), { kind: 'portal' })
-  const words = async () => ((await ui.find({ type: 'Client', key: 'talk-clicks' }))?.props.props as { boxes: { lines: { text: string }[][] }[] } | undefined)?.boxes[0]?.lines.map(l => l.map(r => r.text).join('')) ?? []
+  const words = async () => ((await ui.find({ type: 'Client', key: 'talk-clicks' })) === undefined ? [] : ((await boxTexts(ui, 'talk-clicks'))[0] ?? []))
   // The first words of each, for a new hero on their first visit.
   const first = { healer: /^"Not a scratch on you/, elder: /^"Slay|^"Reach/, mystic: /^"Come back when your purse is heavier/, guard: /^"/, villager: /^"Your stash by the square/, dog: /^The dog wags its tail/ } as const
   for (const who of Object.keys(first) as (keyof typeof first)[]) {

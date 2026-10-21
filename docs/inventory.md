@@ -10,7 +10,7 @@ Opened by clicking the portrait (`i` on the text dashboard). On a terminal at le
 
 ## The screen
 
-- A pixel title bar: the hero's tabs (Bag chosen, see `windows.md`), the gold, and a close box.
+- The title bar: the hero's tabs (Bag chosen) and the gold in terminal text (see `windows.md`), and a close box.
 - Worn slots on the left, each sized to the largest footprint its items have, so the same icon art serves the bag and the slot. An empty slot shows a faint outline of what goes there.
 - The bag grid on the right (`BAG_W` x `BAG_H` in `hooks/items/bag.ts`), 7 px cells. An item covers its whole footprint; the frame around it shows its tier (see `items.md`).
 - The belt along the bottom, a slot a kind, as the dashboard draws it (`beltSlot` in `hooks/pieces.ts`).

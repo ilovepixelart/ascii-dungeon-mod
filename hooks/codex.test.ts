@@ -8,7 +8,7 @@ import { BAG_H, BAG_W, LEGENDARIES, plainItem } from './items'
 import { EMPTY_CODEX, recorded } from './codex'
 import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
 import type { CodexUi } from './codexwindow'
-import { CLOSE_BOX, TABS_H, WINDOW_TOP, tabRects } from './window'
+import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
 
 const hit: Action = { kind: 'outcome', ok: true, what: 'Edit' }
 /** The hero at `depth` with a one-HP foe beside them, and the codex `codex`. */
@@ -164,11 +164,14 @@ describe('the codex window', () => {
 
   test('a click on a page\'s tab shows that page', async () => {
     const g = shown(told)
-    const [foes, finds] = tabRects([{ label: 'FOES' }, { label: 'FINDS' }], WINDOW_TOP)
-    const tap = (r: { x: number; y: number }) => codexGesture(g, FOES, { type: 'release', from: { x: r.x + 2.5, y: (r.y + 3) / 2 }, at: { x: r.x + 2.5, y: (r.y + 3) / 2 }, button: 'left' })
-    expect(tap(finds!)).toEqual({ ui: FINDS, actions: [], isCard: false })
-    expect(tap(foes!)).toEqual({ ui: FOES, actions: [], isCard: false })
-    expect(finds!.h).toBe(TABS_H)
+    // In terminal text from column 2 under the title bar: FOES on columns 2 to 7, FINDS on 9 to 15, the row TABS_H tall.
+    const tap = (x: number, y: number) => codexGesture(g, FOES, { type: 'release', from: { x: x + 0.5, y: y / 2 + 0.25 }, at: { x: x + 0.5, y: y / 2 + 0.25 }, button: 'left' })
+    expect(tap(9, WINDOW_TOP + 4)).toEqual({ ui: FINDS, actions: [], isCard: false })
+    expect(tap(15, WINDOW_TOP + TABS_H - 1)).toEqual({ ui: FINDS, actions: [], isCard: false })
+    expect(tap(2, WINDOW_TOP + 4)).toEqual({ ui: FOES, actions: [], isCard: false })
+    expect(tap(16, WINDOW_TOP + 4).ui).toEqual(FOES)
+    const pages = codexOverlay(g, FOES).find(b => b.role === 'tabs')!
+    expect(pages.lines[0]!.map(r => r.text).join('')).toBe(' FOES   FINDS ')
   })
 
   test('lights what is slain or found, in the themes\' order and the Legendaries\' own', async () => {

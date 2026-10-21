@@ -65,6 +65,8 @@ release may change behaviour.
   on the menu. What the menu covers is left unlit.
 - A champion's prize was toasted only when the kill's line was the last said: a mage's siphon, a quest's count or a
   potion found after it, and no toast came (a mage never had one). The champion's name now reaches the toast directly.
+- Selling an item in the dungeon and buying it back counted the sale's gold in the codex's gold found every time: a
+  hundred rounds made 600 gold of nothing. A sale is no gold found.
 
 ## [0.4.0] - 2026-10-20
 

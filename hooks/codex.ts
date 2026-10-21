@@ -24,6 +24,8 @@ const foundLegendaries = (c: Codex, before: Game, after: Game) => {
 export const recorded = (c: Codex, before: Game, after: Game): Codex => {
   const foe = slain(before, after)
   const inDungeon = before.where === 'dungeon' && after.where === 'dungeon'
+  // A sale is gold paid for what the hero had, not found: bought back, it would count again.
+  const isSale = after.lastSold !== null && after.lastSold !== before.lastSold
   return {
     uniques: [...added(c.uniques, foe?.unique)],
     bigs: [...added(c.bigs, foe?.big)],
@@ -33,6 +35,6 @@ export const recorded = (c: Codex, before: Game, after: Game): Codex => {
     kills: c.kills + (foe === undefined ? 0 : 1),
     bosses: c.bosses + (foe?.boss === true ? 1 : 0),
     deaths: c.deaths + Math.max(0, after.deaths - before.deaths),
-    gold: c.gold + (inDungeon ? Math.max(0, after.gold - before.gold) : 0),
+    gold: c.gold + (inDungeon && !isSale ? Math.max(0, after.gold - before.gold) : 0),
   }
 }

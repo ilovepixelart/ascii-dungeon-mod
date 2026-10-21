@@ -10,6 +10,7 @@ import {
 import type { Gesture } from './window'
 import { BELT_SLOT_W, GRID, SLOT } from './canvas'
 import { MAP_W } from './map'
+import { INK } from './ui/tokens'
 import { CONSUMABLE_ICONS } from './icons'
 import { TIER_INK } from './pieces'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
@@ -544,4 +545,9 @@ test('the side line lights over just the rows a click on it opens the log from',
   expect([line.y, line.h]).toEqual([INSET + SIDE_LINE_Y, 5])
   const tap = (py: number) => hudGesture(g, null, { type: 'release', from: { x: 10, y: py / 2 }, at: { x: 10, y: py / 2 }, button: 'left' }, width)
   expect([tap(line.y).isLog, tap(line.y + line.h - 1).isLog, tap(line.y - 1).isLog, tap(line.y + line.h).isLog]).toEqual([true, true, undefined, undefined])
+})
+
+test('the strip\'s text inks are the interface\'s: its numbers, its level line and its gold', async () => {
+  // The strip is pixel art outside the colors gate; these three are copies of tokens, held to them here.
+  expect([NUM_INK, LEVEL_INK, GOLD_INK]).toEqual([INK.text, INK.dim, INK.gold])
 })

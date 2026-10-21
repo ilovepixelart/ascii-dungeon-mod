@@ -73,7 +73,7 @@ Options in the plugin's config: `sound` (effects) and `music` (the town's tune),
 
 | Command | Does |
 |---|---|
-| `node scripts/gates.mjs --typecheck` | every gate, in its order: release check, colors, strict validate, tests, typecheck (CI runs all but the typecheck, which needs the plugin opened once interactively) |
+| `node scripts/gates.mjs --typecheck` | every gate, in its order: release check, colors, strict validate, tests, ruff and the unit tests over the Python tools, typecheck (CI runs all but the typecheck, which needs the plugin opened once interactively) |
 | `claude plugin test .` | every test |
 | `claude plugin validate .` | what the engine would refuse |
 | `bun tools/simulate.ts <out> --games 100 --steps 1000` | plays games through the rules, every invariant checked each step, and reports balance |

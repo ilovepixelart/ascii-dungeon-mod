@@ -1,6 +1,7 @@
 // Frame bench: builds every frame of a long walk the way the pane does (the camera following, the torch moving) and
 // reports the spread of frame times.
 // Usage: bun tools/bench.ts [columns] [rows] [tiles]
+import type { Game } from '../types'
 import type { Pos } from '../hooks/map'
 import { apply, routeToStairs } from '../hooks/game'
 import { summarize } from '../hooks/frames'
@@ -15,7 +16,7 @@ const TILES = Number(process.argv[4] ?? 24)
 const start = newGame(21, 'knight')
 const path = (routeToStairs(start) ?? []).slice(0, TILES + 1)
 // The rules settle the walk at once; the frames play it out.
-const end = path.slice(1).reduce((g, p) => apply(g, { kind: 'goto', x: p.x, y: p.y }), start)
+const end = path.slice(1).reduce<Game>((g, p) => apply(g, { kind: 'goto', x: p.x, y: p.y }), start)
 let camera: Pos = { x: start.x * PX + PX / 2, y: start.y * PX + PX / 2 }
 const times: number[] = []
 for (let frame = 0; frame <= (path.length - 1) * FRAMES_PER_TILE; frame += 1) {

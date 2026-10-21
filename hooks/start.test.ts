@@ -14,7 +14,6 @@ import { newGame } from './world'
 const onStart = (over: Partial<Game> = {}): Game => ({ ...newGame(3, 'knight'), panel: 'start', ...over })
 const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
 const onCard = (i: number) => tap(cardRect(i).x + 5, cardRect(i).y + 5)
-/** The Start and Back buttons' row: the first rows inked in a button key's gold under the cards. */
 /** The buttons' row: its top, and each button's left, in window pixels. */
 const keyColumns = (g: Game) => {
   const buttons = buttonsIn(startOverlay(g, { cls: 'knight' }))

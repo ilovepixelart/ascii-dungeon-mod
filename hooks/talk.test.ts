@@ -13,7 +13,6 @@ const words = (g: Game, who: Speaker) => talkOverlay(g, who)[0]!.lines.map(l => 
 const first = (g: Game, who: Speaker) => words(g, who)[0]
 /** A click on window pixel (px, py), in the click layer's cells. */
 const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
-/** Where a window's button is: the first pixel row, from the left, inked in the button's gold key. */
 /** Where the speaker's button's key is, in window pixels. */
 const buttonAt = (g: Game, who: Speaker) => {
   const b = buttonsIn(talkOverlay(g, who))[0]

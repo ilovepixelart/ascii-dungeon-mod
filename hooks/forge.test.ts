@@ -19,7 +19,6 @@ const onSlot = (slot: Slot) => {
   return tap(x + Math.floor(w / 2), WINDOW_TOP + y + Math.floor(h / 2))
 }
 const card = (g: Game, slot: Slot | null) => forgeOverlay(g, { slot })[0]!.lines.map(l => l.map(r => r.text).join(''))
-/** The gold key letters on the work side, top to bottom: one a ready button. */
 /** The tops of the buttons whose keys are lit, in window pixels. */
 const readyKeys = (g: Game, slot: Slot | null) => buttonsIn(forgeOverlay(g, { slot })).filter(b => b.isLit).map(b => b.y)
 

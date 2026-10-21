@@ -36,6 +36,16 @@ describe('a prompt as a quest', () => {
     await $.prompt.submit(typed({ text: 'fix the build' }))
     expect(savedLog(kept).filter(l => l.startsWith('A new quest'))).toEqual(['A new quest.'])
   })
+
+  test('only what a person typed is a quest: at the prompt or through Remote Control, not a notification, a schedule, another session or the SDK', async ($, on) => {
+    const kept = storeIn(on)
+    for (const kind of ['task-notification', 'scheduled-trigger', 'peer', 'sdk'] as const) await $.prompt.submit(typed({ text: `from ${kind}`, origin: { kind } }))
+    await $.prompt.submit(typed({ text: 'from a channel', origin: { kind: 'channel', server: 'slack' } }))
+    expect(savedLog(kept).filter(l => l.startsWith('A new quest'))).toEqual([])
+    await $.prompt.submit(typed({ text: 'typed at the prompt' }))
+    await $.prompt.submit(typed({ text: 'typed on a phone', origin: { kind: 'bridge' } }))
+    expect(savedLog(kept).filter(l => l.startsWith('A new quest'))).toEqual(['A new quest.', 'A new quest.'])
+  })
 })
 
 test('the save holds a quest without its words, a repeat counted, every other line as it was', async () => {

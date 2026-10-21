@@ -50,8 +50,9 @@ release may change behaviour.
   there, its foes and items included: 4.5% of levels have such a spot. A corridor cell now opens onto a room only
   beside that room's own floor.
 - A prompt's first 48 characters, quoted in the log as a quest, were written to the save on disk, a pasted token
-  included; the save now says "A new quest." there, the quote kept for the session. A slash command's line and a
-  prompt the engine adds unseen are no quest.
+  included; the save now says "A new quest." there, the quote kept for the session. Only what a person types, at the
+  prompt or through Remote Control, is a quest: not a slash command's line, a prompt the engine adds unseen, a task's
+  notification, a scheduled prompt, another session's message or the SDK host's turn.
 - A blow landing while a window covered the map (the bag open, the pane resized) stopped the idle motion until the
   next blow, and a fall then never opened the death window. A blow whose map the host refuses now ends there.
 - Closing the pane mid-walk left the walk's click waiting: the next tool call jumped the hero to its end with no walk

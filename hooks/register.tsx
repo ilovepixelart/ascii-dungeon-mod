@@ -2104,8 +2104,11 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'dungeon-frames' }, async () => ({ text: framesReport(ticker.stats(), repaints.summary(), redraws.summary(), keptMaps.summary(), builtMaps.summary()) }))
 
   on('prompt.submit', async ($, e, next) => {
-    // A slash command's line and a prompt the person does not see as typed are no quest of theirs.
-    if (e.command === undefined && e.isMeta !== true) await act($, { kind: 'quest', text: e.text })
+    // A quest is what the person typed, at the prompt or through Remote Control: not a slash command's line, a prompt
+    // they do not see as typed, nor what reaches the session from elsewhere (a notification, a schedule, the SDK host,
+    // another session, a channel).
+    const isTyped = e.origin.kind === 'composer' || e.origin.kind === 'bridge'
+    if (isTyped && e.command === undefined && e.isMeta !== true) await act($, { kind: 'quest', text: e.text })
 
     return next(e)
   }).catch(($, e, next) => next(e))

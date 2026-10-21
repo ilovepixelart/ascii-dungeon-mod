@@ -969,6 +969,19 @@ describe('drops worth announcing', () => {
     const levels = apply({ ...g, foe: { ...foe, xp: 500 } }, { kind: 'outcome', ok: true, what: 'Edit' })
     expect(levels.toast).toMatch(/^Level up!/)
   })
+
+  test('a champion slain is toasted with what it left whatever is said after the kill: a siphon, a potion found', async () => {
+    const missed: string[] = []
+    for (const cls of ['knight', 'mage', 'rogue'] as const) for (let seed = 1; seed <= 60; seed += 1) {
+      const g = { ...plainHero(seed), cls, bag: [] }
+      const foe = { ...championOf(foeAhead(g, 1, { hp: 1, maxHp: 1 }), 'savage'), xp: 1 }
+      const after = apply({ ...g, foe }, { kind: 'outcome', ok: true, what: 'Edit' })
+      const item = after.bag.at(-1)
+      if (item === undefined || item.rarity === 'epic' || item.rarity === 'legendary' || after.level !== g.level) continue
+      if (after.toast !== `Champion slain: ${foe.name} left ${item.name}.`) missed.push(`${cls} ${seed}: ${after.toast}`)
+    }
+    expect(missed.slice(0, 4)).toEqual([])
+  })
 })
 
 describe('the merchant', () => {

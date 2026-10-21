@@ -63,6 +63,8 @@ release may change behaviour.
   belt and the close box, where a click only closes the menu. Nothing is lit there now.
 - With a belt slot's menu open on the strip, the hover lit the portrait or the XP line under it, where a click lands
   on the menu. What the menu covers is left unlit.
+- A champion's prize was toasted only when the kill's line was the last said: a mage's siphon, a quest's count or a
+  potion found after it, and no toast came (a mage never had one). The champion's name now reaches the toast directly.
 
 ## [0.4.0] - 2026-10-20
 

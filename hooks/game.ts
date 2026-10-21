@@ -693,7 +693,9 @@ const dropConsumable = (g: Game, isBarren: boolean) => {
   say(g, addToBelt(g, drop.kind, drop.tier) ? `Loot: ${name}.` : `Your belt has no room for the ${name}.`)
 }
 
-const loot = (g: Game, at: Pos, isChampion = false) => {
+/** A kill's loot; `champion` the slain champion's name, which its item's toast gives. */
+const loot = (g: Game, at: Pos, champion?: string) => {
+  const isChampion = champion !== undefined
   const isBarren = modHere(g) === 'barren'
   dropConsumable(g, isBarren)
   // Good loot is never long in coming: the RARE_KILLS-th kill without any leaves a Rare at least.
@@ -708,7 +710,7 @@ const loot = (g: Game, at: Pos, isChampion = false) => {
     say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
     return
   }
-  announce(g, item, isChampion ? g.log.at(-1)?.match(/^You slay the (.+)! \+/)?.[1] : undefined)
+  announce(g, item, champion)
   stashOrLeave(g, item, at)
 }
 
@@ -760,7 +762,7 @@ const spoils = (g: Game, foe: Foe) => {
     const item = makeItem(g, 'epic', 2)
     keepPrize(g, item, foe, named => `${foe.name} is no more. It leaves ${named}.`)
     g.toast = `${foe.name} slain!`
-  } else loot(g, foe, foe.champion !== undefined)
+  } else loot(g, foe, foe.champion !== undefined ? foe.name : undefined)
 }
 
 /** The foe slain: paid, the class's and the quest's part, its spoils, and a level if it came. */

@@ -157,11 +157,10 @@ describe('the inventory screen', () => {
     expect(screen.slice(INV_TOP)).toEqual(inventoryPixels(g))
   })
 
-  test('writes INVENTORY in the title bar in pixel letters, and no labels under it', async () => {
+  test('leaves its title bar\'s tabs to terminal text, no pixel letters there, and no labels under it', async () => {
     const screen = inventoryScreenPixels(knight())
-    const inked = (text: string, x: number, y: number, ink: string) =>
-      textMask(text).every((row, dy) => [...row].every((k, dx) => (k === '#') === (at(screen, x + dx, y + dy) === ink)))
-    expect(inked('INVENTORY', TITLE_X, TITLE_Y, TITLE_INK)).toBe(true)
+    // Left of the gold, which starts 41 pixels from the right edge.
+    expect(screen.slice(0, HEAD_H).flatMap(r => r.slice(0, INV_W - 41)).some(p => p === TITLE_INK || p === LABEL_INK)).toBe(false)
     expect(screen.slice(HEAD_H, INV_TOP).flat().includes(LABEL_INK)).toBe(false)
   })
 

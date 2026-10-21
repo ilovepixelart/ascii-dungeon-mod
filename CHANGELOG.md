@@ -6,6 +6,12 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed behaviour
+
+- The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,
+  so a click moves between them. The tabs' labels are written in terminal text, which fits all five beside the bag's
+  gold.
+
 ### Fixed
 
 - A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the

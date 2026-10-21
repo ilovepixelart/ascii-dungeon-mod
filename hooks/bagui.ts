@@ -6,6 +6,7 @@ import { CELL } from './icons'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, beltHot, dropTarget, removable, wornOutlines } from './inventory'
 import type { Drag } from './inventory'
 import { POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
+import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
 import { beltSlotRect, itemOutline } from './pieces'
@@ -182,6 +183,8 @@ const menuClick = (g: Game, ui: BagUi, at: Pos): { ui: BagUi; actions: Action[] 
 
 const click = (g: Game, ui: BagUi, at: Pos, button: string): { ui: BagUi; actions: Action[] } => {
   if (ui.menu !== null) return menuClick(g, ui, at)
+  const tab = heroTabAt(g, 'bag', pixel(at))
+  if (tab !== undefined) return { ui, actions: tab }
   // A click on a popover lands on the box, not on what it covers.
   if (bagOverlay(g, ui).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
   const h = hit(g, pixel(at))
@@ -209,8 +212,9 @@ export const bagGesture = (g: Game, ui: BagUi, gesture: Gesture): { ui: BagUi; a
 }
 
 /**
- * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt.
+ * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt,
+ * the hero's other tabs.
  * With a menu open, nothing: a click anywhere but on the menu only closes it.
  */
 export const inventoryHot = (g: Game, ui: BagUi): Rect[] =>
-  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)], bagOverlay(g, ui))
+  ui.menu !== null ? [] : [...uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y)], bagOverlay(g, ui)), ...heroTabsHot(g, 'bag')]

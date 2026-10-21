@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
 import { textMask } from './pixelart'
 import { RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
-import { CLOSE_BOX, WINDOW_W, tabRects } from './window'
+import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
 
@@ -27,11 +27,13 @@ describe('the character sheet', () => {
     for (let py = 0; py < SHEET_H; py += 2) expect(sheetGesture(g, tap(5, py))).not.toContainEqual({ kind: 'panel', panel: 'start' })
   })
 
-  const TABS = tabRects(['HERO', 'TALENT', 'DEEP', 'CODEX'].map(label => ({ label })))
-  const onTab = (i: number) => tap(TABS[i]!.x + 3, TABS[i]!.y + 4)
+  /** Each tab's first and last column, worked by hand: from column 2, a label with a column each side, a column between. */
+  const TABS = [[2, 7], [9, 13], [15, 22], [24, 29], [31, 37]] as const
+  const onTab = (i: number) => tap(TABS[i]![0] + 1, 4)
 
-  test('its tabs open the talents, the deep and the codex; its own tab does nothing', async () => {
-    expect([1, 2, 3].map(i => sheetGesture(hero(), onTab(i)))).toEqual([
+  test('its tabs open the bag, the talents, the deep and the codex; its own tab does nothing', async () => {
+    expect([1, 2, 3, 4].map(i => sheetGesture(hero(), onTab(i)))).toEqual([
+      [{ kind: 'panel', panel: 'bag' }],
       [{ kind: 'panel', panel: 'talent' }],
       [{ kind: 'panel', panel: 'deep' }],
       [{ kind: 'panel', panel: 'codex' }],
@@ -41,9 +43,9 @@ describe('the character sheet', () => {
 
   test('the talents\' tab is marked in gold while one is owed; the deep\'s while a fork waits', async () => {
     // The mark: two gold pixels at the tab's top right, above its label, clear of the next tab.
-    const marked = (g: Game, i: number) => sheetPixels(g)[TABS[i]!.y + 1]![TABS[i]!.x + TABS[i]!.w - 2] === GOLD_INK
-    expect([marked(hero({ level: 10 }), 1), marked(hero({ level: 9 }), 1)]).toEqual([true, false])
-    expect([marked(hero({ bossSlain: 60, deepest: 60 }), 2), marked(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }), 2)]).toEqual([true, false])
+    const marked = (g: Game, i: number) => sheetPixels(g)[1]![TABS[i]![1] - 1] === GOLD_INK
+    expect([marked(hero({ level: 10 }), 2), marked(hero({ level: 9 }), 2)]).toEqual([true, false])
+    expect([marked(hero({ bossSlain: 60, deepest: 60 }), 3), marked(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }), 3)]).toEqual([true, false])
   })
 
   test('fits in 40 rows', async () => {

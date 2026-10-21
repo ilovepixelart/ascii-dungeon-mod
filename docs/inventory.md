@@ -10,7 +10,7 @@ Opened by clicking the portrait (`i` on the text dashboard). On a terminal at le
 
 ## The screen
 
-- A pixel title bar: INVENTORY, the gold, and a close box.
+- A pixel title bar: the hero's tabs (Bag chosen, see `windows.md`), the gold, and a close box.
 - Worn slots on the left, each sized to the largest footprint its items have, so the same icon art serves the bag and the slot. An empty slot shows a faint outline of what goes there.
 - The bag grid on the right (`BAG_W` x `BAG_H` in `hooks/items/bag.ts`), 7 px cells. An item covers its whole footprint; the frame around it shows its tier (see `items.md`).
 - The belt along the bottom, a slot a kind, as the dashboard draws it (`beltSlot` in `hooks/pieces.ts`).
@@ -33,6 +33,7 @@ Colors keep one meaning each: white is "this one, and where it goes"; red is "ca
 | click worn gear | takes it off into the bag |
 | click a belt slot | uses it |
 | click the close box | closes the inventory |
+| click another of the hero's tabs | opens that window in the bag's place |
 | click a popover | nothing: it covers what is under it |
 | click anywhere with the menu open | closes the menu, and does nothing else |
 | drag a bag item onto free cells | moves it there |

@@ -40,9 +40,9 @@ describe('the hover lights what a click acts on', () => {
 
   test('the bag: a worn piece is lit while there is room to take it off, not with the bag full', async () => {
     const g = { ...plainHero(3), bag: [] }
-    // Every worn piece's outline, lit with room in the bag: what is lit beside the bag's items and the belt.
+    // Every worn piece's outline, lit with room in the bag: what is lit under the title bar beside the bag's items and the belt.
     const belt = beltHot(g, BELT_X, INV_TOP + BELT_Y)
-    const worn = inventoryHot(g, BAG_UI_IDLE).slice(g.bag.length).filter(r => !belt.some(b => same(b, r)))
+    const worn = inventoryHot(g, BAG_UI_IDLE).slice(g.bag.length).filter(r => r.y >= INV_TOP && !belt.some(b => same(b, r)))
     expect(worn.length).toBe(Object.keys(g.gear).length)
     expect(inventoryHot({ ...g, bag: fullBag() }, BAG_UI_IDLE).filter(r => worn.some(w => same(w, r)))).toEqual([])
   })

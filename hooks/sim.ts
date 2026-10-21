@@ -5,8 +5,8 @@ import { countOf, healingSlot, slotOf } from './consumables'
 import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
-import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same } from './map'
-import type { Level, Pos } from './map'
+import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same, shapeCut } from './map'
+import type { Level, Pos, Room } from './map'
 import { violations } from './invariants'
 import { workOf } from './work'
 import type { GitOperation } from './work'
@@ -373,6 +373,20 @@ export const drawnVsTold = (before: Game, next: Game) => {
   return off
 }
 
+/** A room's own floor: in its box, not cut back by its shape, floor on the map. */
+const ownFloor = (level: Level, r: Room) => {
+  const cut = new Set(shapeCut(r).map(cellId))
+  const cells = new Set<number>()
+  for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (isFloor(level.tiles, { x, y }) && !cut.has(cellId({ x, y }))) cells.add(cellId({ x, y }))
+  return cells
+}
+
+/** Whether a cell of room `b`'s own floor is, or lies beside, one of room `a`'s own: no wall between the two. */
+const isOpenBetween = (level: Level, a: Room, b: Room) => {
+  const inA = ownFloor(level, a)
+  return [...ownFloor(level, b)].some(c => [0, 1, -1, MAP_W, -MAP_W].some(d => inA.has(c + d) && Math.abs(((c + d) % MAP_W) - (c % MAP_W)) <= 1))
+}
+
 /**
  * Cells an action showed against the rules of sight: a room's floor with the hero never in it, on its door or in sight
  * range of it; a closed chest the hero never came in sight range of, where no room's view down a corridor reaches it.
@@ -392,7 +406,11 @@ export const sightBreaks = (before: Game, next: Game): Pos[] => {
   const reach = sightOf(next)
   const near = (c: Pos) => path.some(q => Math.max(Math.abs(q.x - c.x), Math.abs(q.y - c.y)) <= reach)
   const beside = (q: Pos) => [[1, 0], [-1, 0], [0, 1], [0, -1]].flatMap(([dx, dy]) => roomAt(level, { x: q.x + dx!, y: q.y + dy! }) ?? [])
-  const roomsStoodIn = new Set(path.flatMap(q => roomAt(level, q) ?? beside(q)))
+  // A room open to one stood in, or to one of those (a big boss's arena and the rooms it grew over or against), is the
+  // same space.
+  const stood = path.flatMap(q => roomAt(level, q) ?? beside(q))
+  for (let i = 0; i < stood.length; i += 1) for (const r of level.rooms) if (!stood.includes(r) && isOpenBetween(level, stood[i]!, r)) stood.push(r)
+  const roomsStoodIn = new Set(stood)
   return shown.filter(c => {
     const room = roomAt(level, c)
     if (room !== undefined) return !roomsStoodIn.has(room) && !near(c)

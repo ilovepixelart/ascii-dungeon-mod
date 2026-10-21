@@ -4,11 +4,11 @@ import { apply, newGame } from './game'
 import type { Consumable, Game } from '../types'
 import { KINDS } from './consumables'
 import { foeAhead, plainHero } from './fixtures'
-import { beltAid, drawnVsTold, isJump, isUnexplainedClick, simulate } from './sim'
+import { beltAid, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate } from './sim'
 import { MARKS, tierOf } from './deep'
-import { bfs } from './map'
+import { bfs, isFloor, roomAt, visibleFrom } from './map'
 import { TOWN_SPOTS, pathBeside } from './town'
-import { levelOf } from './world'
+import { arrive, levelOf, reveal } from './world'
 
 describe('what the map draws against what the strip and log tell', () => {
   test('a walk over gold and a potion: on every tile the map and the strip agree', async () => {
@@ -140,4 +140,22 @@ test('a click on a foe that comes to nothing is explained by what the blow did; 
   }
   expect(isUnexplainedClick(click([]))).toBe(true)
   expect(isUnexplainedClick(click(['Loot: Health Potion.']))).toBe(true)
+})
+
+test('the sight check takes an arena and the rooms it grew over as one space: stepping in, all of it shows, no break', async () => {
+  const g = plainHero(1)
+  let checked = 0
+  for (const depth of [10, 20, 30, 40, 50, 60]) {
+    const level = levelOf({ world: g.world, depth })
+    for (const room of level.rooms) for (let y = room.y; y < room.y + room.h; y += 1) for (let x = room.x; x < room.x + room.w; x += 1) {
+      // A cell counted in this room though it lies in another too: where an arena meets a room it grew over.
+      const p = { x, y }
+      if (!isFloor(level.tiles, p) || roomAt(level, p) !== room || !level.rooms.some(r => r !== room && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)) continue
+      const before = { ...g, ...arrive(g.world, depth), depth, ...p, walked: [] }
+      const next = { ...before, seen: reveal(before.seen, visibleFrom(level, p)) }
+      expect(sightBreaks(before, next)).toEqual([])
+      checked += 1
+    }
+  }
+  expect(checked).toBeGreaterThan(0)
 })

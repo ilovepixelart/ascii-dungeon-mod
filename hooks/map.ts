@@ -527,11 +527,11 @@ const outwardOf = (c: Pos, box: Box): Pos | null => {
  * rock either side of it; short of a dead end (a chest), of a door into another room and of any room's floor, each of
  * which shows only once the hero is beside it or on it.
  */
-const corridorSight = (level: Level, room: Room, c: Pos, out: Pos): Pos[] => {
+const corridorSight = (level: Level, space: readonly Room[], c: Pos, out: Pos): Pos[] => {
   const cells: Pos[] = []
   for (let k = 1; k <= CORRIDOR_SIGHT; k += 1) {
     const q = { x: c.x + out.x * k, y: c.y + out.y * k }
-    if (!isCorridor(level, q) || isDeadEnd(level, q) || roomsBeside(level, q).some(r => r !== room)) break
+    if (!isCorridor(level, q) || isDeadEnd(level, q) || roomsBeside(level, q).some(r => !space.includes(r))) break
     cells.push(q, ...[{ x: q.x + out.y, y: q.y + out.x }, { x: q.x - out.y, y: q.y - out.x }].filter(s => !isFloor(level.tiles, s)))
   }
   return cells
@@ -545,8 +545,56 @@ const touchesRoom = (level: Level, p: Pos) => roomsBeside(level, p).length > 0
 /** A dead end, where a chest stands. */
 const isDeadEnd = (level: Level, p: Pos) => chestAt(1, 1, level, p) !== undefined
 
-/** A room seen whole with its walls, and straight down each corridor leaving it, from each opening in its wall ring. */
-const roomSight = (level: Level, room: Room): Pos[] => {
+/** Whether `p` is floor of `r`'s own: in its box, not cut back by its shape, and floor on the map. */
+const isOwnFloor = (level: Level, r: Room, p: Pos) =>
+  p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h && isFloor(level.tiles, p) && !cutOf(r).has(cellId(p))
+/** Each room's shape's cut, by cell: fixed by the room alone. */
+const cutOf = (r: Room): ReadonlySet<number> => {
+  let cut = cuts.get(r)
+  if (cut === undefined) {
+    cut = new Set(shapeCut(r).map(cellId))
+    cuts.set(r, cut)
+  }
+  return cut
+}
+const cuts = new WeakMap<Room, ReadonlySet<number>>()
+
+/**
+ * Whether two rooms are open to each other: floor of one's own (its box less what its shape cuts back) is floor of the
+ * other's own, or beside it, no wall between. Floor another room grew over a shape's cut corner opens nothing.
+ */
+const opensInto = (level: Level, a: Room, b: Room) => {
+  if (a.x > b.x + b.w || b.x > a.x + a.w || a.y > b.y + b.h || b.y > a.y + a.h) return false
+  for (let y = b.y; y < b.y + b.h; y += 1) for (let x = b.x; x < b.x + b.w; x += 1) {
+    const c = { x, y }
+    if (isOwnFloor(level, b, c) && [c, ...STEPS4.map(d => ({ x: x + d.x, y: y + d.y }))].some(n => isOwnFloor(level, a, n))) return true
+  }
+  return false
+}
+
+/**
+ * The rooms one space on the map with `room`, itself first: the rooms open to it, and theirs. Rooms are placed two
+ * cells of rock apart; only a big boss's arena, grown over or up against the rooms beside the stairs, opens into another.
+ */
+const spaceOf = (level: Level, room: Room): Room[] => {
+  let known = spacesOf.get(level)
+  if (known === undefined) {
+    known = new Map()
+    spacesOf.set(level, known)
+  }
+  let space = known.get(room)
+  if (space === undefined) {
+    space = [room]
+    for (let i = 0; i < space.length; i += 1) for (const r of level.rooms) if (!space.includes(r) && opensInto(level, space[i]!, r)) space.push(r)
+    known.set(room, space)
+  }
+  return space
+}
+/** Each level's spaces, by room: fixed by the level alone. */
+const spacesOf = new WeakMap<Level, Map<Room, Room[]>>()
+
+/** One room's box with its wall ring, and straight down each corridor leaving it, from each opening in that ring. */
+const boxSight = (level: Level, room: Room, space: readonly Room[]): Pos[] => {
   const box = { x: room.x - 1, y: room.y - 1, w: room.w + 2, h: room.h + 2 }
   const cells: Pos[] = []
   for (let y = box.y; y < box.y + box.h; y += 1) for (let x = box.x; x < box.x + box.w; x += 1) cells.push({ x, y })
@@ -554,10 +602,16 @@ const roomSight = (level: Level, room: Room): Pos[] => {
     const out = outwardOf(c, box)
     return out !== null && isFloor(level.tiles, c) ? [{ c, out }] : []
   })
-  for (const { c, out } of openings) cells.push(...corridorSight(level, room, c, out))
+  for (const { c, out } of openings) cells.push(...corridorSight(level, space, c, out))
+  return cells
+}
+
+/** A room seen whole with its walls, with every room one space with it, and straight down each corridor leaving them. */
+const roomSight = (level: Level, room: Room): Pos[] => {
+  const space = spaceOf(level, room)
   // A dead end right off the room's wall holds its chest back too, until the hero is beside it; a room touching this
   // one is seen only from its own door or floor.
-  return cells.filter(c => !isDeadEnd(level, c) && (roomAt(level, c) ?? room) === room)
+  return space.flatMap(r => boxSight(level, r, space)).filter(c => !isDeadEnd(level, c) && space.includes(roomAt(level, c) ?? room))
 }
 
 /**

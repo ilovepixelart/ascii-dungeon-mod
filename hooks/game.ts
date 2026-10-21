@@ -363,6 +363,7 @@ const step = (g: Game, steps: number) => {
     return
   }
   const deaths = g.deaths
+  startWalk(g)
   for (const p of path.slice(1, steps + 1)) {
     if (g.deaths !== deaths) return
     moveTo(g, p)
@@ -668,16 +669,23 @@ const keepPrize = (g: Game, item: Item, at: Pos, said: (named: string) => string
 }
 
 /** Steps onto items lying on the floor: each picked up while there is room, said; what is left, said that it lies there. */
-const pickUpFloor = (g: Game) => {
+/** What lies on the hero's tile, into the bag as far as it fits; `isQuiet`, nothing said of what stays. */
+const pickUpFloor = (g: Game, isQuiet = false) => {
   for (const lying of (g.floor ?? []).filter(f => f.x === g.x && f.y === g.y)) {
     if (!stash(g, lying.item)) {
-      say(g, `The ${lying.item.name} lies here; your bag is still full.`)
+      if (!isQuiet) say(g, `The ${lying.item.name} lies here; your bag is still full.`)
       continue
     }
     g.floor = (g.floor ?? []).filter(f => f !== lying)
     say(g, `You pick up the ${lying.item.name} (${RARITY_NAME[lying.item.rarity]}).`)
   }
 }
+
+/**
+ * A walk's first move: what lies on the tile it starts from, into the bag as far as it fits, quietly. Every walk does
+ * it (a click, an explore, an answer finished, a trail) and so does the walk the pane plays, so the two agree.
+ */
+const startWalk = (g: Game) => pickUpFloor(g, true)
 
 /** What a kill drops besides gear (`killConsumable`), onto the belt; none on a barren depth. */
 const dropConsumable = (g: Game, isBarren: boolean) => {
@@ -970,6 +978,8 @@ const descend = (g: Game) => {
     return
   }
   const fork = forkTier(g)
+  // What lies underfoot goes down too, room allowing: the tile a walk down starts from is never stepped onto.
+  pickUpFloor(g, true)
   const behind = g.floor?.length ?? 0
   if (behind > 0) say(g, `You leave ${behind === 1 ? 'an item' : `${behind} items`} on the floor behind you.`)
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
@@ -1160,6 +1170,7 @@ const wayTo = (g: Game, level: Level, target: Pos, isFoe: boolean) => {
 /** Walks the way, stopped by a foe that stands on it or steps up beside the hero, or by a fall: whether it went on to its end. */
 const walkWay = (g: Game, path: readonly Pos[], isFoe: boolean) => {
   const deaths = g.deaths
+  if (path.length > 1) startWalk(g)
   for (const p of path.slice(1, isFoe ? -1 : undefined)) {
     if (g.foe !== null && same(p, g.foe)) {
       say(g, `${TheFoe(g.foe)} blocks your way.`)
@@ -1184,9 +1195,11 @@ const goTo = (g: Game, target: Pos) => {
     say(g, "You can't get there.")
     return
   }
-  // A click on the hero explores: a step toward the stairs.
+  // A click on the hero explores: a step toward the stairs. On the stairs it takes them, as walking onto them does,
+  // so a hero stopped there by a foe goes down once it is gone without stepping off and back.
   if (path.length === 1) {
-    step(g, 1)
+    if (same(g, level.stairs)) descend(g)
+    else step(g, 1)
     return
   }
   if (!walkWay(g, path, isFoe)) return
@@ -1226,6 +1239,7 @@ export const isOnlyAWalk = (g: Game, plan: Game) => {
 /** The hero walks exactly these tiles, taking up what lies on them, as far as he lives. */
 const trail = (g: Game, path: readonly Pos[]) => {
   const deaths = g.deaths
+  if (path.length > 0) startWalk(g)
   for (const p of path) {
     moveTo(g, p)
     if (g.deaths !== deaths) return
@@ -1344,6 +1358,8 @@ const leaveTown = (g: Game) => {
   if (TOWN_PANELS.has(g.panel)) g.panel = 'none'
   Object.assign(g, { where: 'dungeon', ...(g.portal ?? levelOf(g).start), portal: null, mended: 0, lastSold: null, reforgedFrom: null })
   say(g, 'You step back through the portal.')
+  // Back on the tile, as a step onto it: a cache earned in town lies here.
+  pickUpFloor(g)
 }
 
 const walkTown = (g: Game, path: readonly Pos[]) => {
@@ -1420,8 +1436,11 @@ const elder = (g: Game) => {
     say(g, `The elder: "${ASK[g.quest.kind](g.quest)}"`)
   } else if (q.have < q.need) say(g, `The elder: "${STANDING[q.kind](q)}"`)
   else {
+    // A refusal leaves the game as it was: the roll, the item's id and the bad-luck counts too.
+    const before = { ...g }
     const item = makeItem(g, 'uncommon')
     if (!stash(g, item)) {
+      Object.assign(g, before)
       say(g, 'The elder: "Make room in your bag for your reward."')
       return
     }
@@ -1928,6 +1947,7 @@ export const alongTheWay = (game: Game, plan: Game): Game[] | null => {
   const last = plan.walked.length - 1
   if (last < 0) return null
   const g: Game = { ...normalize(game), log: [...game.log], toast: null, fresh: 0, walked: [] }
+  if (g.where === 'dungeon') startWalk(g)
   const tiles: Game[] = []
   for (const p of plan.walked.slice(0, last)) {
     if (g.where === 'town') Object.assign(g, { x: p.x, y: p.y, walked: [...g.walked, { x: p.x, y: p.y }] })

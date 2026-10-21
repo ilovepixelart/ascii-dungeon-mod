@@ -6,6 +6,29 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Fixed
+
+- A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the
+  task, so the hero had to step off the stairs and back.
+- On a big boss depth the arena often grows over a room beside the stairs, or right up against one with no wall
+  between. Standing in the smaller room, the hero saw only it, the rest of the arena dark and drawn without its walls, a
+  foe beside the hero included; standing in the arena, the smaller room stayed dark, and a click on its floor said
+  "You can't get there." Each now shows the other whole. The levels are as they were.
+- A cache earned in town with the bag and the stash full waits by the portal on the depth below, but stepping back
+  through the portal onto it did not pick it up, and an answer finished in town walked down from that tile without it:
+  the cache was lost. The same befell an item lying under the hero when a walk began. Arriving on a tile and starting
+  any walk (a click, an explore, an answer finished) now pick up what lies there, room allowing.
+- The smith's window after a reforge was 84 to 92 pixels tall, past the 41 rows every window fits, and cut the line
+  saying what was worn before. The smith's card now shows what smithing changes: stats on one line, a power, trigger
+  or set by name (the bag's card says what each does), and what it was before on two lines; the temper pips sit beside
+  Temper. With Keep old it is at most 40 rows.
+- The log window kept the newest 30 rows rather than lines, so long lines (a trade-in's run past 120 characters) pushed
+  earlier ones out and the top row could start part way through a line; a word longer than a row was cut. It now shows
+  the newest lines whole, as many as its 30 rows hold, under a row saying how many earlier ones do not fit, and wraps a
+  long word.
+- A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll
+  of the drop luck. A refusal now leaves the game as it was.
+
 ## [0.4.0] - 2026-10-20
 
 Saves from 0.3.0 load as they are: one standing on a depth that now has a rounded, alcoved or island room (save

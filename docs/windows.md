@@ -57,7 +57,7 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 ## The smith
 
 - The worn slots on the left, as in the inventory; the piece being worked on framed white just outside its frame, where its tier frame cannot cover it. It is the first worn until another is clicked (`chosenSlot`).
-- On the right its card, ending in what each job costs or why it cannot be done (`whyNotTemper`, `whyNotReforge`), the Temper line with the stat now and after one more (`DEF 4 > 5`); under it a pip a tempering, then the Temper and Reforge buttons, grey when they cannot act.
+- On the right its card, what the smith works on (`workCard`): name, tier, its stats on one line, its power, trigger or set by name alone (the bag's card says what each does), what it was before a reforge (name, then stats), then what each job costs or why it cannot be done (`whyNotTemper`, `whyNotReforge`), the Temper line with the stat now and after one more (`DEF 4 > 5`). Under it Temper with a pip a tempering beside it, Reforge, and after a reforge Keep old, grey when they cannot act. So with Keep old the window still fits 41 rows.
 - The buttons carry no price: a reforge's runs to three digits, too wide for the work side with the key and label. The prices are in the card.
 
 ## The stash
@@ -84,7 +84,7 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 
 ## The log
 
-- The game keeps its last 30 log lines (`LOG_KEPT` in `hooks/game.ts`); the text dashboard shows the last 5 (`LOG_SHOWN`), a window's tail the last 2. The log window (`hooks/logwindow.ts`) shows all 30, oldest first, the latest action's at full strength. It is the pane's own state (`isLogOpen`), as How it plays is: it opens over whatever is open and closes back to it. With the strip it opens from the strip's gold and depth line (`hudGesture`'s `isLog`), as text from the log's latest line (`g`), and from any window's tail by a click.
+- The game keeps its last 30 log lines (`LOG_KEPT` in `hooks/game.ts`); the text dashboard shows the last 5 (`LOG_SHOWN`), a window's tail the last 2. The log window (`hooks/logwindow.ts`) shows them oldest first, the latest action's at full strength, each broken at its spaces into rows of `LOG_ROW` (a word longer than a row wraps). Its box holds 30 rows: when the lines take more, it shows the newest whole, never one begun part way, under a row saying how many earlier ones do not fit. It is the pane's own state (`isLogOpen`), as How it plays is: it opens over whatever is open and closes back to it. With the strip it opens from the strip's gold and depth line (`hudGesture`'s `isLog`), as text from the log's latest line (`g`), and from any window's tail by a click.
 
 ## How it plays
 

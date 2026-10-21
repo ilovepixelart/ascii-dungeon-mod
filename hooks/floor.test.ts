@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Foe, Game, Item } from '../types'
-import { STASH_SIZE, apply, levelOf } from './game'
+import { STASH_SIZE, alongTheWay, apply, isOnlyAWalk, levelOf } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { BAG_H, BAG_W, RARITY_COLOR, plainItem } from './items'
-import { cellId, isFloor } from './map'
+import { bfs, cellId, isFloor } from './map'
 import { tileAt } from './panels'
 import { arrive } from './world'
 
@@ -91,6 +91,27 @@ describe('the floor, at its edges', () => {
     expect(after.log.some(l => l.endsWith('it waits by the portal in the dungeon.'))).toBe(true)
   })
 
+  test('that cache, room made, is picked up stepping back through the portal, and by an answer finished in town', async () => {
+    const down = { ...plainHero(5), ...arrive(5, 4), depth: 4, deepest: 4 }
+    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring')) }
+    const earned = { ...apply(inTown, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' }), bag: [] }
+    const cache = earned.floor![0]!.item
+    const back = apply(earned, { kind: 'portal' })
+    expect([back.floor, back.bag.map(i => i.id)]).toEqual([[], [cache.id]])
+    const finished = apply(earned, { kind: 'descend' })
+    expect([finished.depth, finished.bag.map(i => i.id)]).toEqual([5, [cache.id]])
+    expect(finished.log).not.toContain('You leave an item on the floor behind you.')
+  })
+
+  test('an item lying under the hero, room made, goes down with an answer finished; with no room it is left, said', async () => {
+    const g = { ...plainHero(3), ...arrive(3, 3), depth: 3, deepest: 3 }
+    const lying = { x: g.x, y: g.y, item: plainItem({ nextId: 7201 }, 'ring') }
+    const finished = apply({ ...g, floor: [lying] }, { kind: 'descend' })
+    expect([finished.depth, finished.bag.map(i => i.id)]).toEqual([4, [lying.item.id]])
+    const full = apply({ ...g, floor: [lying], bag: fullBag() }, { kind: 'descend' })
+    expect([full.depth, full.log.includes('You leave an item on the floor behind you.')]).toEqual([4, true])
+  })
+
   test('a step onto a tile with two items lying on it picks up both, room allowing', async () => {
     const g = facing()
     const next = g.foe!
@@ -108,5 +129,34 @@ describe('the floor, at its edges', () => {
     const other = slayer({ ...base, ...arrive(3, 4), deepest: 4, floor: lying })
     expect([other.depth, other.floor]).toEqual([1, []])
     expect(other.log).toContain('The item left on the floor of depth 4 is lost.')
+  })
+})
+
+describe('a walk begun on a tile with something lying on it', () => {
+  // A bag with one free cell: room for one ring. Ring A lies under the hero, ring B on the way to the stairs.
+  const oneFree = (): Item[] => Array.from({ length: BAG_W }, (_, i) => ({ ...plainItem({ nextId: 3000 + i }, 'chain'), w: 1, h: i === BAG_W - 1 ? BAG_H - 1 : BAG_H, x: i, y: 0 }))
+  const ring = (id: number) => ({ ...plainItem({ nextId: id }, 'ring'), w: 1, h: 1 })
+  const set = () => {
+    const base = { ...plainHero(3), ...arrive(3, 3), depth: 3, deepest: 3 }
+    const path = bfs(levelOf(base).tiles, base, levelOf(base).stairs)!
+    const mid = path[Math.floor(path.length / 2)]!
+    return { g: { ...base, bag: oneFree(), floor: [{ x: base.x, y: base.y, item: ring(7001) }, { x: mid.x, y: mid.y, item: ring(7002) }] }, mid }
+  }
+
+  test('an answer finished picks up what lies underfoot first, and the walk the pane plays agrees on every tile', async () => {
+    const { g } = set()
+    const plan = apply(g, { kind: 'descend' })
+    expect([plan.bag.some(i => i.id === 7001), plan.bag.some(i => i.id === 7002)]).toEqual([true, false])
+    const tiles = alongTheWay(g, plan)!
+    expect(tiles.filter(t => t.bag.some(i => i.id === 7002))).toEqual([])
+    expect(tiles.every(t => t.bag.some(i => i.id === 7001))).toBe(true)
+  })
+
+  test('a click away picks up what lies underfoot too, and is still only a walk', async () => {
+    const { g, mid } = set()
+    const plan = apply({ ...g, seen: '1'.repeat(g.seen.length) }, { kind: 'goto', ...mid })
+    expect([plan.bag.some(i => i.id === 7001), (plan.floor ?? []).map(f => f.item.id)]).toEqual([true, [7002]])
+    expect(isOnlyAWalk({ ...g, seen: '1'.repeat(g.seen.length) }, plan)).toBe(true)
+    expect(alongTheWay({ ...g, seen: '1'.repeat(g.seen.length) }, plan)!.every(t => t.bag.some(i => i.id === 7001))).toBe(true)
   })
 })

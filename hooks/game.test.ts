@@ -483,6 +483,14 @@ describe('going downstairs yourself', () => {
     expect(apply(near, { kind: 'goto', x: stairs.x, y: stairs.y }).depth).toBe(2)
   })
 
+  test('stopped on the stairs by a foe, a click on them once it is gone goes down; while it lives, it guards them', async () => {
+    const g = { ...newGame(4), seen: '1'.repeat(64 * 18) }
+    const { stairs } = levelOf(g)
+    const guarded = apply({ ...g, ...stairs, foe: foeAhead(g, 1, { hp: 9, maxHp: 9 }) }, { kind: 'goto', ...stairs })
+    expect([guarded.depth, guarded.log.at(-1)]).toEqual([1, `The ${guarded.foe!.name} guards the stairs.`])
+    expect(apply({ ...guarded, foe: null }, { kind: 'goto', ...stairs }).depth).toBe(2)
+  })
+
   test('a living foe still guards the stairs', async () => {
     const g = newGame(4)
     const on = { ...g, ...levelOf(g).stairs }
@@ -1590,6 +1598,17 @@ describe('the townsfolk windows', () => {
     // 15 a depth of the quest and 30: 6 deep pays 120.
     expect([paid.quest, paid.gold, paid.questsDone, paid.bag.length]).toEqual([null, 120, 1, 1])
     expect(apply({ ...newGame(4), quest: done }, { kind: 'claim' }).log.at(-1)).toBe('The elder is in town.')
+  })
+
+  test('a claim refused for want of room leaves the game as it was, pressed again and again: no roll, no id spent', async () => {
+    const done = { kind: 'slay' as const, depth: 6, need: 8, have: 8 }
+    const g = inTown({ quest: done, gold: 0, dryKills: 20, sinceRare: 5 })
+    const full = { ...g, bag: [{ ...plainItem(g, 'ring', 'common'), w: BAG_W, h: BAG_H, x: 0, y: 0 }] }
+    let x = full
+    for (let i = 0; i < 40; i += 1) x = apply(x, { kind: 'claim' })
+    const { log: _a, fresh: _b, ...after } = x
+    const { log: _c, fresh: _d, ...before } = full
+    expect(after).toEqual(before)
   })
 
   test('leaving town closes any of their windows', async () => {

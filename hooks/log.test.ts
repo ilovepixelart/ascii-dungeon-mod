@@ -45,3 +45,30 @@ test('a line longer than a row of the log window breaks at its spaces onto the n
   const busy = { ...logged(0), log: Array.from({ length: 30 }, () => long), fresh: 1 }
   expect(logHeight(busy)).toBeLessThanOrEqual(82)
 })
+
+test('too long to show whole, the log window shows the newest lines whole and says how many earlier ones do not fit', async () => {
+  // Each line 113 characters, two rows: with the note's row, 14 lines fill 29 of the box's 30 rows.
+  const line = (i: number) => `Line ${String(i).padStart(2, '0')}: ${'abcdefghi '.repeat(10)}abc`.slice(0, 113)
+  const g = { ...logged(0), log: Array.from({ length: 30 }, (_, i) => line(i + 1)), fresh: 1 }
+  const rows = logOverlay(g)[0]!.lines.map(l => l.map(r => r.text).join(''))
+  expect(rows[0]).toBe('16 earlier lines do not fit here.')
+  expect(rows.slice(1).filter(r => r.startsWith('Line ')).map(r => r.slice(0, 7))).toEqual(Array.from({ length: 14 }, (_, i) => `Line ${17 + i}`))
+  expect(rows.length).toBeLessThanOrEqual(LOG_KEPT)
+  expect(logHeight(g)).toBeLessThanOrEqual(82)
+})
+
+test('a word longer than a row of the log window wraps onto the next, every character kept', async () => {
+  const word = 'x'.repeat(300)
+  const rows = logOverlay({ ...logged(0), log: [word], fresh: 1 })[0]!.lines.map(l => l[0]!.text)
+  expect(rows.map(r => r.length)).toEqual([97, 97, 97, 9])
+  expect(rows.join('')).toBe(word)
+})
+
+test('the log window\'s note counts in words that agree, and says nothing when no earlier line is left out', async () => {
+  const rows = (log: string[]) => logOverlay({ ...logged(0), log, fresh: 1 })[0]!.lines.map(l => l.map(r => r.text).join(''))
+  // One earlier line of 29 rows' worth, one newest of 2: the newest whole, one left out.
+  const word = (n: number) => Array.from({ length: n }, () => 'abcdefghi').join(' ')
+  expect(rows([word(9 * 29), word(19)])[0]).toBe('1 earlier line does not fit here.')
+  // One line alone too long for the box: no earlier line to count.
+  expect(rows([word(9 * 40)])[0]!.startsWith('abcdefghi')).toBe(true)
+})

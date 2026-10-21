@@ -9,7 +9,7 @@ Three shops face a cobbled square across its north side: the merchant (red roof,
 ## The portal
 
 - `t` (or the portal button) opens it from the dungeon whenever no foe lives on the level, and sets the hero down beside the town's portal. The tile it was opened on is kept in `portal`.
-- `t` again, or clicking the town's portal, leads back to that tile. A click walks the hero up to the portal first, the walk drawn in town, and only its end steps through (`isPortalWalk` in `register.tsx`).
+- `t` again, or clicking the town's portal, leads back to that tile. A click walks the hero up to the portal first, the walk drawn in town, and only its end steps through (`isWalkThrough` in `register.tsx`).
 - A finished task (the turn ending) still takes the hero down: from town straight to the next depth, the portal closed.
 
 ## In town

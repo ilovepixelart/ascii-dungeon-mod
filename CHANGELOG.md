@@ -83,6 +83,9 @@ release may change behaviour.
   the dashboard's button stays, to be clicked.
 - In town the barrel and crate beside the shop walled in three tiles of the lane above them: a click there said "You
   can't get there." They stand at the top of the lane now.
+- With several items left on one tile, the map's hover named only the first, and the text map's `*` took its color:
+  what lay under it went unseen until stepped on. The hover now says how many and names them all, in the rarest one's
+  color, as the `*` is drawn.
 
 ## [0.4.0] - 2026-10-20
 

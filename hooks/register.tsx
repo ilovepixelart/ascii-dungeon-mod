@@ -52,7 +52,7 @@ import type { Speaker } from './talk'
 import { CLASS_NAME, LEGENDARIES, RARITY_COLOR, SLOTS, TEMPER_MAX, junkValue, temperCost, whyNotBuyBack } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { levelOf } from './world'
-import { ATTRIBUTES, bagRows, foeRuns, logRuns, mapRows, statusRuns } from './panels'
+import { ATTRIBUTES, bagRows, foeRuns, logRuns, lyingLabel, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
 import { INK } from './ui/tokens'
 import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, mapLabelAt, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
@@ -855,9 +855,10 @@ const mapHoverOf = (g: Game): { lit?: PixelRect; label: MapLabel | null } => {
   const view = camera?.place === placeOf(g) ? camera.at : undefined
   const tile = clickToTile(g, mapPointer, view)
   const lit = isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined
-  const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? g.floor?.find(f => f.x === tile.x && f.y === tile.y) : undefined
-  if (lying === undefined) return { lit, label: null }
-  return { lit, label: { ...mapLabelAt(tileToCell(g, tile, size, view), lying.item.name, size), color: RARITY_COLOR[lying.item.rarity] } }
+  const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? (g.floor ?? []).filter(f => f.x === tile.x && f.y === tile.y).map(f => f.item) : []
+  if (lying.length === 0) return { lit, label: null }
+  const { text, color } = lyingLabel(lying)
+  return { lit, label: { ...mapLabelAt(tileToCell(g, tile, size, view), text, size), color } }
 }
 
 /** The pointer over the map (or off it): where it rests kept, the map drawn again when what the hover shows changes. */

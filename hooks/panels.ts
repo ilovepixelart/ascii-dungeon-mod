@@ -1,8 +1,8 @@
-import type { Attribute, Game } from '../types'
+import type { Attribute, Game, Item } from '../types'
 import { countOf, slotOf } from './consumables'
 import { attackBonus, bar, critChance, defense, levelOf, runsOf, sightOf, threat, xpToLevel } from './game'
 import type { Run } from './game'
-import { BAG_H, BAG_W, GLYPH, RARITY_COLOR, itemAt } from './items'
+import { BAG_H, BAG_W, GLYPH, RARITY_COLOR, RARITY_RANK, itemAt } from './items'
 import { MAP_H, MAP_W, OPENED_GLYPH, cellId, floorThing, isFloor, roomAt, same, visibleFrom } from './map'
 import type { Level, Pos } from './map'
 import { TOWN_GROUND, TOWN_H, TOWN_W, townDecorAt, townSpotAt } from './town'
@@ -62,13 +62,23 @@ const takenSet = (taken: readonly number[]) => {
   return set
 }
 
-/** An item lying on the floor at a cell, left there when the bag was full. */
-const lyingAt = (g: Game, p: Pos) => g.floor?.find(f => f.x === p.x && f.y === p.y)?.item
+/**
+ * What a floor item's label says, and in which color: one item, its name in its tier's; several on one tile, how many
+ * and every name, in the rarest one's tier, so nothing lying under another goes unseen.
+ */
+export const lyingLabel = (items: readonly Item[]): { text: string; color: string } => {
+  const rarest = items.reduce((a, b) => (RARITY_RANK.indexOf(b.rarity) > RARITY_RANK.indexOf(a.rarity) ? b : a))
+  const text = items.length === 1 ? rarest.name : `${items.length} items: ${items.map(i => i.name).join(', ')}`
+  return { text, color: RARITY_COLOR[rarest.rarity] }
+}
+
+/** The items lying on the floor at a cell, left there when the bag was full. */
+const lyingAt = (g: Game, p: Pos) => (g.floor ?? []).filter(f => f.x === p.x && f.y === p.y).map(f => f.item)
 
 /** The thing lying on a cell, if any: stairs, an item left on the floor (`*`), or gold, a potion, a sprung trap not yet used up. */
 const thingAt = (g: Game, level: Level, p: Pos) => {
   if (same(p, level.stairs)) return '>'
-  if (lyingAt(g, p) !== undefined) return '*'
+  if (lyingAt(g, p).length > 0) return '*'
   const thing = floorThing(g.world, g.depth, level, p)
   const isTaken = takenSet(g.taken).has(cellId(p))
   if (thing === '^') return isTaken ? '^' : undefined
@@ -115,7 +125,7 @@ const occupantOf = (g: Game, level: Level, isSeen: boolean, isVisible: boolean, 
   }
   const thing = isSeen ? thingAt(g, level, p) : undefined
   if (thing === undefined) return undefined
-  const ink = thing === '*' ? RARITY_COLOR[lyingAt(g, p)!.rarity] : (THING_INK[thing] ?? INK.gold)
+  const ink = thing === '*' ? lyingLabel(lyingAt(g, p)).color : (THING_INK[thing] ?? INK.gold)
   return isVisible ? { kind: 'thing', glyph: thing, color: ink, bold: true } : { kind: 'thing', glyph: thing, color: MEMORY_FG }
 }
 

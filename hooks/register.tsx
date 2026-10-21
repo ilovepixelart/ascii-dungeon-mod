@@ -836,7 +836,7 @@ const current = async ($: EngineInterface) => normalize(await read($, game))
  * redrawn where the window's look depends on that state. A click on the pixel map walks the hero to the tile under it;
  * one on the strip opens the inventory or uses a belt slot. */
 /** A name the map's click layer writes over a tile, in its cells. */
-type MapLabel = { x: number; y: number; text: string; color: string }
+type MapLabel = { x: number; y: number; lines: { text: string; color: string }[] }
 /** Where the pointer rests over the map, in its cells, with the map's size; null off it. */
 let mapPointer: { x: number; y: number; columns: number; rows: number } | null = null
 
@@ -859,8 +859,9 @@ const mapHoverOf = (g: Game): { lit?: PixelRect; label: MapLabel | null } => {
   const lit = isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined
   const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? (g.floor ?? []).filter(f => f.x === tile.x && f.y === tile.y).map(f => f.item) : []
   if (lying.length === 0) return { lit, label: null }
-  const { text, color } = lyingLabel(lying)
-  return { lit, label: { ...mapLabelAt(tileToCell(g, tile, size, view), text, size), color } }
+  const { lines } = lyingLabel(lying)
+  const at = mapLabelAt(tileToCell(g, tile, size, view), lines.map(l => l.text), size)
+  return { lit, label: { x: at.x, y: at.y, lines: at.lines.map((text, i) => ({ text, color: lines[i]!.color ?? INK.dim })) } }
 }
 
 /** The pointer over the map (or off it): where it rests kept, the map drawn again when what the hover shows changes. */

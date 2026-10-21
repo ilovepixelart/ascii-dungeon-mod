@@ -842,12 +842,13 @@ test('the pointer over a floor tile lights it, as the windows light theirs; over
   await ui.unmount()
 })
 
-test('the pointer over an item lying on the map names it there, in its tier\'s color; off it, no name', async ($, on) => {
+test('the pointer over items lying on the map names them there, a row each in its tier\'s color; off them, no name', async ($, on) => {
   const g0 = newGame()
   const level = levelOf(g0)
   const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: g0.x + dx!, y: g0.y + dy! })).find(t => level.tiles[t.y]?.[t.x] === '.')!
   const item = { ...plainItem(g0, 'ring', 'rare'), name: 'Band of the Lost Find' }
-  storeIn(on, new Map<string, unknown>([['save', { ...g0, floor: [{ ...beside, item }] }]]))
+  const boots = { ...plainItem({ nextId: g0.nextId + 1 }, 'boots', 'epic'), name: 'Boots of the Long Walk' }
+  storeIn(on, new Map<string, unknown>([['save', { ...g0, floor: [{ ...beside, item }, { ...beside, item: boots }] }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -859,10 +860,11 @@ test('the pointer over an item lying on the map names it there, in its tier\'s c
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
   const over = cells.find(c => same(tileUnder(c), beside))!
-  const label = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: { text: string; color: string } | null }).label ?? null
+  const label = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: { lines: { text: string; color: string }[] } | null }).label ?? null
   expect(await label()).toBeNull()
   await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
-  expect(await label()).toMatchObject({ text: 'Band of the Lost Find', color: RARITY_COLOR.rare })
+  // Both, a row each, the Epic first.
+  expect((await label())?.lines).toEqual([{ text: 'Boots of the Long Walk', color: RARITY_COLOR.epic }, { text: 'Band of the Lost Find', color: RARITY_COLOR.rare }])
   await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'map-clicks' } as never)
   expect(await label()).toBeNull()
   await ui.unmount()

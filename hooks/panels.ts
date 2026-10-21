@@ -62,14 +62,20 @@ const takenSet = (taken: readonly number[]) => {
   return set
 }
 
+/** The most rows a floor label stacks: past it, the last says how many more lie there. */
+const LABEL_ROWS = 5
+
 /**
- * What a floor item's label says, and in which color: one item, its name in its tier's; several on one tile, how many
- * and every name, in the rarest one's tier, so nothing lying under another goes unseen.
+ * What a floor label says: each item lying on the tile on a row of its own, in its tier's color, the rarest first, so
+ * nothing lying under another goes unseen; past LABEL_ROWS, the rest counted, uncolored. `color` is the rarest one's,
+ * the text map's `*`.
  */
-export const lyingLabel = (items: readonly Item[]): { text: string; color: string } => {
-  const rarest = items.reduce((a, b) => (RARITY_RANK.indexOf(b.rarity) > RARITY_RANK.indexOf(a.rarity) ? b : a))
-  const text = items.length === 1 ? rarest.name : `${items.length} items: ${items.map(i => i.name).join(', ')}`
-  return { text, color: RARITY_COLOR[rarest.rarity] }
+export const lyingLabel = (items: readonly Item[]): { lines: { text: string; color?: string }[]; color: string } => {
+  const rank = (i: Item) => RARITY_RANK.indexOf(i.rarity)
+  const sorted = [...items].sort((a, b) => rank(b) - rank(a))
+  const lines = sorted.map(i => ({ text: i.name, color: RARITY_COLOR[i.rarity] }))
+  const shown = lines.length <= LABEL_ROWS ? lines : [...lines.slice(0, LABEL_ROWS - 1), { text: `+${lines.length - LABEL_ROWS + 1} more` }]
+  return { lines: shown, color: lines[0]!.color }
 }
 
 /** The items lying on the floor at a cell, left there when the bag was full. */

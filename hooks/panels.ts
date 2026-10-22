@@ -7,6 +7,7 @@ import { MAP_H, MAP_W, OPENED_GLYPH, cellId, floorThing, isFloor, roomAt, same, 
 import type { Level, Pos } from './map'
 import { TOWN_GROUND, TOWN_H, TOWN_W, townDecorAt, townSpotAt } from './town'
 import type { TownSpot } from './town'
+import { countText } from './names'
 import { CANVAS, INK, MEMORY_BG, MEMORY_FG, WOOD_BG, WOOD_FG, light, mix, shade } from './palette'
 import { hash } from './rng'
 
@@ -285,7 +286,7 @@ export const statusRuns = (g: Game): Run[] => [
   ...stat('XP', `${g.xp}/${xpToLevel(g.level)}`),
   ...stat('Atk', `+${attackBonus(g)}`),
   ...stat('Def', String(defense(g))),
-  ...stat('Gold', String(g.gold)),
+  ...stat('Gold', countText(g.gold)),
   ...stat('Potions', String(countOf(g.belt[slotOf('health')]))),
   ...stat('Depth', g.where === 'town' ? `Town (depth ${g.depth})` : `${g.depth} (best ${g.deepest})`),
 ]

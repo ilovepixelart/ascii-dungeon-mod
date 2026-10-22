@@ -15,6 +15,7 @@ import { heroChrome, heroTabAt } from './herotabs'
 import { SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
+import { countText } from './names'
 
 const CHROME: Chrome = { title: 'CODEX' }
 const top = WINDOW_TOP
@@ -74,8 +75,8 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
     ? [[{ text: `Uniques slain ${c.uniques.length} of ${uniques.length}, big bosses ${c.bigs.length} of ${bigs.length}.` }]]
     : [
         [{ text: `Legendaries found ${foundLegendaries(c)} of ${LEGENDARIES.length}.` }],
-        [{ text: `Deepest ${c.deepest}, level ${c.level}, kills ${c.kills}, bosses ${c.bosses}.`, dim: true }],
-        [{ text: `Deaths ${c.deaths}, heroes retired ${c.retired ?? 0}, gold found ${c.gold}.`, dim: true }],
+        [{ text: `Deepest ${c.deepest}, level ${c.level}, kills ${countText(c.kills)}, bosses ${countText(c.bosses)}.`, dim: true }],
+        [{ text: `Deaths ${countText(c.deaths)}, heroes retired ${c.retired ?? 0}, gold found ${countText(c.gold)}.`, dim: true }],
       ]
   const under = ui.page === 'foes' ? ROW2_Y + FOE_BOX : CARD_RECT.y + BUTTON_H
   const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []

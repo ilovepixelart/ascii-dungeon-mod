@@ -165,8 +165,8 @@ describe('the codex window', () => {
     expect(said(shown(told), 'foes')).toEqual(['Uniques slain 3 of 5, big bosses 1 of 5.'])
     expect(said(shown(told), 'finds')).toEqual([
       'Legendaries found 2 of 7.',
-      'Deepest 34, level 22, kills 1240, bosses 12.',
-      'Deaths 9, heroes retired 2, gold found 18450.',
+      'Deepest 34, level 22, kills 1,240, bosses 12.',
+      'Deaths 9, heroes retired 2, gold found 18,450.',
     ])
   })
 

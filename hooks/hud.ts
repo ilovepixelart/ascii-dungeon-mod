@@ -10,7 +10,8 @@ import { CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar } fr
 import { TIERS, activeTier, nameOf } from './consumables'
 import type { Tier } from './consumables'
 import type { Action } from './game'
-import { boxShape, drawBox, goldText, uncovered } from './window'
+import { boxShape, drawBox, uncovered } from './window'
+import { countText } from './names'
 import type { Gesture, OverlayBox } from './window'
 import { PAL, PX, TOWN_THING_ART, heroArt } from './pixelart'
 
@@ -148,7 +149,7 @@ const sideLineParts = (g: Game, w: number) => {
     words.push({ text, x: x + MARK_W + MARK_GAP, ink })
     return x + MARK_W + MARK_GAP + text.length
   }
-  const goldEnd = markThen(MARK.coin, SIDE_LINE_X, goldText(g.gold), GOLD_INK)
+  const goldEnd = markThen(MARK.coin, SIDE_LINE_X, countText(g.gold), GOLD_INK)
   let depthEnd = markThen(MARK.stairs, goldEnd + 3, g.where === 'town' ? 'TOWN' : String(g.depth), NUM_INK)
   // The depth's twist, if it has one, right after its number.
   const mod = g.where === 'dungeon' ? depthMod(g.world, g.depth) : undefined

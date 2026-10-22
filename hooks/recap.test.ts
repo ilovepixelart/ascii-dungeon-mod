@@ -111,6 +111,10 @@ describe('the recap window', () => {
     expect(texts(shown(one))).toEqual(['12 tool calls', 'Depth 14, level 18.', '1 kill, 1 champion, +412 gold, 0 deaths.', '1 green test run, 1 commit, 2 pushes, 1 PR.'])
   })
 
+  test('a count of a thousand or more has its thousands set off by commas', async () => {
+    expect(texts(shown({ ...told, calls: 1234, kills: 1000, gold: 25000 })).slice(0, 3)).toEqual(['1,234 tool calls', 'Depth 11 to 14, level 17 to 18.', '1,000 kills, 2 champions, +25,000 gold, 0 deaths.'])
+  })
+
   test('leaves out work and a find when there were none, and champions when none fell', async () => {
     const quiet = { ...told, champions: 0, tests: 0, commits: 0, pushes: 0, prs: 0 }
     expect(texts(shown(quiet))).toEqual(['34 tool calls', 'Depth 11 to 14, level 17 to 18.', '21 kills, +412 gold, 0 deaths.'])

@@ -12,6 +12,7 @@ import { PORTRAIT, drawItem, portrait } from './pieces'
 import { canvas, fill, frame } from './canvas'
 import { word } from './window'
 import { INK, SURFACE } from './ui/tokens'
+import { countText } from './names'
 
 export const CARD_W = 200
 const PAD = 6
@@ -52,7 +53,7 @@ export const cardHead = (g: Game) => {
   return [
     { text: `LEVEL ${g.level} ${CLASS_NAME[g.cls].toUpperCase()}`, ink: INK.gold },
     { text: `DEEPEST ${deepest(g)}`, ink: INK.text },
-    { text: `KILLS ${c.kills}  DEATHS ${c.deaths}`, ink: INK.dim },
+    { text: `KILLS ${countText(c.kills)}  DEATHS ${countText(c.deaths)}`, ink: INK.dim },
     ...(retired > 0 ? [{ text: `${retired} ${retired === 1 ? 'HERO' : 'HEROES'} RETIRED`, ink: INK.dim }] : []),
   ]
 }
@@ -77,7 +78,7 @@ export const cardPixels = (g: Game): string[][] => {
   fill(body, PAD, y, CARD_W - 2 * PAD, 1, SURFACE.line)
   y += 4
   word(body, `UNIQUES ${c.uniques.length} OF ${Object.keys(UNIQUES).length}   BIG BOSSES ${c.bigs.length} OF ${Object.keys(BIG_BOSSES).length}`, PAD, y, INK.text)
-  word(body, `LEGENDARIES ${legendariesFound(g)} OF ${LEGENDARIES.length}   GOLD FOUND ${c.gold}`, PAD, y + LINE, INK.text)
+  word(body, `LEGENDARIES ${legendariesFound(g)} OF ${LEGENDARIES.length}   GOLD FOUND ${countText(c.gold)}`, PAD, y + LINE, INK.text)
   y += 2 * LINE + 2
   talents.forEach((t, i) => word(body, t, PAD, y + i * LINE, INK.dim))
   y += talents.length * LINE + 2
@@ -95,7 +96,7 @@ export const cardText = (g: Game): string => {
   const talents = (g.talents ?? []).map(t => TALENTS[t].name)
   return [
     `ASCII Dungeon: Level ${g.level} ${CLASS_NAME[g.cls]}, deepest depth ${g.deepest}${where}`,
-    `Kills ${c.kills}, deaths ${c.deaths}, gold found ${c.gold.toLocaleString('en-US')}${(c.retired ?? 0) > 0 ? `, heroes retired ${c.retired}` : ''}`,
+    `Kills ${countText(c.kills)}, deaths ${countText(c.deaths)}, gold found ${countText(c.gold)}${(c.retired ?? 0) > 0 ? `, heroes retired ${c.retired}` : ''}`,
     `Uniques ${c.uniques.length} of ${Object.keys(UNIQUES).length}, big bosses ${c.bigs.length} of ${Object.keys(BIG_BOSSES).length}, Legendaries ${legendariesFound(g)} of ${LEGENDARIES.length}`,
     `Wearing: ${worn.join(', ') || 'nothing'}`,
     `Talents: ${talents.join(', ') || 'none yet'}`,

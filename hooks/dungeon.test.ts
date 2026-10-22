@@ -864,9 +864,51 @@ test('the pointer over items lying on the map names them there, a row each in it
   expect(await label()).toBeNull()
   await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
   // Both, a row each, the Epic first.
-  expect((await label())?.lines).toEqual([{ text: 'Boots of the Long Walk', color: RARITY_COLOR.epic }, { text: 'Band of the Lost Find', color: RARITY_COLOR.rare }])
+  expect((await label())?.lines).toEqual([{ text: 'Boots of the Long Walk', color: RARITY_COLOR.epic, id: boots.id }, { text: 'Band of the Lost Find', color: RARITY_COLOR.rare, id: item.id }])
   await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'map-clicks' } as never)
   expect(await label()).toBeNull()
+  await ui.unmount()
+})
+
+test('the pointer moved from a tile onto its label keeps it, its row lit; a click on a row picks that item first', async ($, on) => {
+  const clock = mock.clock(on)
+  const g0 = newGame()
+  const level = levelOf(g0)
+  const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: g0.x + dx!, y: g0.y + dy! })).find(t => level.tiles[t.y]?.[t.x] === '.')!
+  const band = { ...plainItem(g0, 'ring', 'rare'), name: 'Band of the Lost Find' }
+  const boots = { ...plainItem({ nextId: g0.nextId + 1 }, 'boots', 'epic'), name: 'Boots of the Long Walk' }
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...g0, nextId: g0.nextId + 2, floor: [{ ...beside, item: boots }, { ...beside, item: band }] }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const map = await ui.find({ type: 'Raster', key: 'map' })
+  const columns = map?.props.columns as number
+  const rows = map?.props.rows as number
+  const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
+  const over = cells.find(c => same(tileUnder(c), beside))!
+  type Shown = { x: number; y: number; row?: number; lines: { text: string }[]; grounds: string[][] }
+  const label = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: Shown | null }).label ?? null
+  await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
+  const shown = (await label())!
+  expect(shown.row).toBeUndefined()
+  // Onto the label's second row, Band of the Lost Find, over other tiles: the label stays, that row lit.
+  const onBand = { x: shown.x + 2, y: shown.y + 1 }
+  expect(same(tileUnder(onBand), beside)).toBe(false)
+  await ui.pointer({ type: 'move', ...onBand, in: 'map-clicks' } as never)
+  const held = (await label())!
+  expect([held.x, held.y, held.row]).toEqual([shown.x, shown.y, 1])
+  expect(held.grounds[1]).not.toEqual(shown.grounds[1])
+  expect(held.grounds[0]).toEqual(shown.grounds[0])
+  // A click there picks it: the hero walks onto the tile and takes the Band before the Boots.
+  await ui.pointer({ type: 'down', ...onBand, button: 'left', in: 'map-clicks' } as never)
+  await clock.advance(2000)
+  const after = kept.get('save') as Game
+  expect([after.x, after.y]).toEqual([beside.x, beside.y])
+  const taken = after.log.filter(l => l.startsWith('You pick up the '))
+  expect(taken).toEqual(['You pick up the Band of the Lost Find (Rare).', 'You pick up the Boots of the Long Walk (Epic).'])
   await ui.unmount()
 })
 

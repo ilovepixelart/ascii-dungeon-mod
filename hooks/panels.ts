@@ -66,14 +66,14 @@ const takenSet = (taken: readonly number[]) => {
 const LABEL_ROWS = 5
 
 /**
- * What a floor label says: each item lying on the tile on a row of its own, in its tier's color, the rarest first, so
- * nothing lying under another goes unseen; past LABEL_ROWS, the rest counted, uncolored. `color` is the rarest one's,
- * the text map's `*`.
+ * What a floor label says: each item lying on the tile on a row of its own, in its tier's color, with its id to pick it
+ * by, the rarest first, so nothing lying under another goes unseen; past LABEL_ROWS, the rest counted, uncolored.
+ * `color` is the rarest one's, the text map's `*`.
  */
-export const lyingLabel = (items: readonly Item[]): { lines: { text: string; color?: string }[]; color: string } => {
+export const lyingLabel = (items: readonly Item[]): { lines: { text: string; color?: string; id?: number }[]; color: string } => {
   const rank = (i: Item) => RARITY_RANK.indexOf(i.rarity)
   const sorted = [...items].sort((a, b) => rank(b) - rank(a))
-  const lines = sorted.map(i => ({ text: i.name, color: RARITY_COLOR[i.rarity] }))
+  const lines = sorted.map(i => ({ text: i.name, color: RARITY_COLOR[i.rarity], id: i.id }))
   const shown = lines.length <= LABEL_ROWS ? lines : [...lines.slice(0, LABEL_ROWS - 1), { text: `+${lines.length - LABEL_ROWS + 1} more` }]
   return { lines: shown, color: lines[0]!.color }
 }

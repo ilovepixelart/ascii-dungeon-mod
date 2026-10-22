@@ -55,7 +55,7 @@ import { levelOf } from './world'
 import { ATTRIBUTES, bagRows, foeRuns, logRuns, lyingLabel, mapRows, statusRuns } from './panels'
 import { PX } from './pixelart'
 import { INK } from './ui/tokens'
-import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, mapLabelAt, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { FRAMES_PER_TILE, STILL, layerBuildCount, stampCells, walkState, benchRoute, clickToTile, labelGrounds, labelRowAt, mapLabelAt, pixelMapFrame, tileRect, tileToCell, deathScene, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
 import type { Ambient, Hit, PixelRect } from './pixels'
 import { base64Of, bytesOf, mixdown, readWav, walkCues, wavOf } from './mixdown'
 import { workOf } from './work'
@@ -835,10 +835,14 @@ const current = async ($: EngineInterface) => normalize(await read($, game))
 /** Each click layer's gestures, to its window: what the window makes of a gesture, its own state kept, and the pane
  * redrawn where the window's look depends on that state. A click on the pixel map walks the hero to the tile under it;
  * one on the strip opens the inventory or uses a belt slot. */
-/** A name the map's click layer writes over a tile, in its cells. */
-type MapLabel = { x: number; y: number; lines: { text: string; color: string }[] }
+/** The names the map's click layer writes over a tile, in its cells: the tile they lie on, each row's item (none on the
+ * row counting the rest), the row the pointer is on. */
+type MapLabel = { x: number; y: number; tile: Pos; lines: { text: string; color: string; id?: number }[]; row?: number }
 /** Where the pointer rests over the map, in its cells, with the map's size; null off it. */
 let mapPointer: { x: number; y: number; columns: number; rows: number } | null = null
+/** The tile whose label the pointer moved onto from it: the label stays while the pointer is on it, though the tiles
+ * under it are others, so a row can be chosen. */
+let pinned: Pos | null = null
 
 /** Whether a click on `tile` acts: in the dungeon a seen floor tile, in town open ground or a townsperson's spot. */
 const isClickable = (g: Game, tile: Pos) => {
@@ -851,31 +855,52 @@ const isClickable = (g: Game, tile: Pos) => {
  * there would act, and the name of an item seen lying there. Worked out on every draw, so a step, a pickup or a new
  * depth never leaves a stale one.
  */
-const mapHoverOf = (g: Game): { lit?: PixelRect; label: MapLabel | null } => {
-  if (mapPointer === null) return { label: null }
-  const size = { columns: mapPointer.columns, rows: mapPointer.rows }
+const mapHoverOf = (g: Game, pointer = mapPointer): { lit?: PixelRect; label: MapLabel | null } => {
+  if (pointer === null) return { label: null }
+  const size = { columns: pointer.columns, rows: pointer.rows }
   const view = camera?.place === placeOf(g) ? camera.at : undefined
-  const tile = clickToTile(g, mapPointer, view)
-  const lit = isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined
+  const litAt = (tile: Pos) => (isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined)
+  const held = pinned === null ? null : labelFor(g, pinned, size, view)
+  const row = held === null ? undefined : labelRowAt({ ...held, lines: held.lines.map(l => l.text) }, { x: Math.floor(pointer.x), y: Math.floor(pointer.y) })
+  if (held !== null && row !== undefined) return { lit: litAt(held.tile), label: { ...held, row } }
+  const tile = clickToTile(g, pointer, view)
+  return { lit: litAt(tile), label: labelFor(g, tile, size, view) }
+}
+
+/** The label of what lies on a seen tile, in the map's cells; null with nothing there. */
+const labelFor = (g: Game, tile: Pos, size: { columns: number; rows: number }, view: Pos | undefined): MapLabel | null => {
   const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? (g.floor ?? []).filter(f => f.x === tile.x && f.y === tile.y).map(f => f.item) : []
-  if (lying.length === 0) return { lit, label: null }
+  if (lying.length === 0) return null
   const { lines } = lyingLabel(lying)
   const at = mapLabelAt(tileToCell(g, tile, size, view), lines.map(l => l.text), size)
-  return { lit, label: { x: at.x, y: at.y, lines: at.lines.map((text, i) => ({ text, color: lines[i]!.color ?? INK.dim })) } }
+  return { x: at.x, y: at.y, tile, lines: at.lines.map((text, i) => ({ text, color: lines[i]!.color ?? INK.dim, id: lines[i]!.id })) }
 }
+
+/** What the map's click layer writes for the hover: the label with each cell's ground from the map drawn under it, the
+ * row the pointer is on lit as the hover lights a tile. */
+const labelOnMap = (label: MapLabel | null, frame: Uint32Array, columns: number) =>
+  label === null ? null : { ...label, grounds: labelGrounds(frame, columns, { ...label, lines: label.lines.map(l => l.text) }, label.row) }
 
 /** The pointer over the map (or off it): where it rests kept, the map drawn again when what the hover shows changes. */
 const onMapHover = async ($: EngineInterface, data: { x?: number; y?: number; columns?: number; rows?: number }) => {
   const g = await current($)
   const before = JSON.stringify(mapHoverOf(g))
   mapPointer = data.x !== undefined && data.y !== undefined && data.columns !== undefined && data.rows !== undefined ? { x: data.x, y: data.y, columns: data.columns, rows: data.rows } : null
+  const hover = mapHoverOf(g)
+  pinned = hover.label?.tile ?? null
   if (JSON.stringify(mapHoverOf(g)) !== before) $.ui.invalidate('ui.render')
 }
 
+/** A click on the map: on a label's row, that item picked from its tile (the row counting the rest walks there); else
+ * the hero walks to the tile under it. */
 const onMapClick = async ($: EngineInterface, data: unknown) => {
   await resume($)
   const g = await current($)
-  await act($, { kind: 'goto', ...clickToTile(g, data as { x: number; y: number; columns: number; rows: number }, camera?.place === placeOf(g) ? camera.at : undefined) }, true)
+  const click = data as { x: number; y: number; columns: number; rows: number }
+  const { label } = mapHoverOf(g, click)
+  const id = label?.row === undefined ? undefined : label.lines[label.row]?.id
+  if (label?.row !== undefined) await act($, id === undefined ? { kind: 'goto', ...label.tile } : { kind: 'pick', ...label.tile, id }, true)
+  else await act($, { kind: 'goto', ...clickToTile(g, click, camera?.place === placeOf(g) ? camera.at : undefined) }, true)
 }
 
 const onBagClick = async ($: EngineInterface, data: unknown) => {
@@ -1961,12 +1986,14 @@ const mapView = (p: Pane, l: Layout) => {
     return rows.map(p.line)
   }
   const stride = l.heroAt !== undefined && walk !== null && isStrideFrame(walk.frame)
+  const hover = mapHoverOf(p.g)
+  const map = pixelMapFrame(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? hover.lit : undefined)
   return (
     <Box>
-      <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(pixelMap(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? mapHoverOf(p.g).lit : undefined))} />
+      <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(map.cells)} />
       {Client !== undefined && (
         <Box position="absolute" top={0} left={0}>
-          <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, label: mapHoverOf(p.g).label }} width={l.mapWidth} height={l.pixelRows} />
+          <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, label: labelOnMap(hover.label, map.frame, l.mapWidth) }} width={l.mapWidth} height={l.pixelRows} />
         </Box>
       )}
     </Box>

@@ -4,12 +4,23 @@
 // no button is held too (a hover; none once it leaves), and writes the label the hooks hand it, names over a tile.
 import type { ClientModule } from 'claude-code'
 
-/** Names written over the surface from a cell down, a row each in its color. */
-type Label = { x: number; y: number; lines: { text: string; color: string }[] }
+/** Names written over the surface from a cell down, a row each in its color, each cell on its ground (the map under it,
+ * darkened, the row the pointer is on lit), which the hooks work out. */
+type Label = { x: number; y: number; lines: { text: string; color: string }[]; grounds?: string[][] }
 type Props = { columns: number; rows: number; label?: Label | null }
 
-// The text boxes' fill (POPOVER_BG in window.ts), so a name reads over any tile.
+// The text boxes' fill (POPOVER_BG in window.ts): a cell's ground when the hooks give none.
 const LABEL_BG = '#0e0d13'
+
+/** A row's text in runs of one ground: each cell on its own, cells that share one written together. */
+const runsOf = (text: string, grounds: readonly string[] | undefined) =>
+  [...text].reduce<{ text: string; bg: string }[]>((runs, ch, i) => {
+    const bg = grounds?.[i] ?? LABEL_BG
+    const last = runs.at(-1)
+    if (last?.bg === bg) last.text += ch
+    else runs.push({ text: ch, bg })
+    return runs
+  }, [])
 
 const clicks: ClientModule<Props> = (props, surface) => {
   const { Box, Text } = surface.elements
@@ -31,7 +42,10 @@ const clicks: ClientModule<Props> = (props, surface) => {
         left: label.x,
         flexDirection: 'column',
         // The rows padded to the widest, so the label is one block over the map.
-        children: label.lines.map(l => Text({ color: l.color, backgroundColor: LABEL_BG, bold: true, children: ` ${l.text.padEnd(Math.max(...label.lines.map(m => m.text.length)))} ` })),
+        children: label.lines.map((l, r) => {
+          const text = ` ${l.text.padEnd(Math.max(...label.lines.map(m => m.text.length)))} `
+          return Text({ children: runsOf(text, label.grounds?.[r]).map(run => Text({ color: l.color, backgroundColor: run.bg, bold: true, children: run.text })) })
+        }),
       }),
     ],
   })

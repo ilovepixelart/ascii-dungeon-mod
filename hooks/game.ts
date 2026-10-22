@@ -33,6 +33,7 @@ export type Action =
   | { kind: 'walk' }
   | { kind: 'move'; dx: number; dy: number }
   | { kind: 'goto'; x: number; y: number }
+  | { kind: 'pick'; x: number; y: number; id: number }
   /** Exactly these tiles, in order: what a walk cut short has visibly walked. */
   | { kind: 'trail'; path: readonly Pos[] }
   | { kind: 'stairs' }
@@ -1218,6 +1219,22 @@ const goTo = (g: Game, target: Pos) => {
   if (same(target, level.stairs) && same(g, level.stairs)) descendAfterWalk(g)
 }
 
+/**
+ * An item chosen from those lying on a tile: it goes first of them, then the hero walks onto the tile (or, there
+ * already, takes from it), and as on any step there, what fits goes into the bag in that order. So with room for one,
+ * the one taken is the one chosen.
+ */
+const pick = (g: Game, at: Pos, id: number) => {
+  const chosen = (g.floor ?? []).find(f => same(f, at) && f.item.id === id)
+  if (chosen === undefined) {
+    say(g, 'That is no longer there.')
+    return
+  }
+  g.floor = [chosen, ...(g.floor ?? []).filter(f => f !== chosen)]
+  if (same(g, at)) pickUpFloor(g)
+  else goTo(g, at)
+}
+
 /** Down the stairs the hero walked to, the walk kept past the descent so it can be played on the level it was walked on. */
 const descendAfterWalk = (g: Game) => {
   const walked = g.walked
@@ -1292,6 +1309,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   walk: g => step(g, 1),
   move: (g, a) => move(g, a.dx, a.dy),
   goto: (g, a) => goTo(g, { x: a.x, y: a.y }),
+  pick: (g, a) => pick(g, { x: a.x, y: a.y }, a.id),
   trail: (g, a) => trail(g, a.path),
   stairs: g => takeStairs(g),
   restart: () => undefined,

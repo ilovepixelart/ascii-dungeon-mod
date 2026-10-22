@@ -24,25 +24,25 @@ import { CURSOR, artLabel } from './pieces'
 /** The narrowest pane with the dash: its two orbs and the belt between them. */
 export const DASH_COLUMNS = 105
 export const isDash = (columns: number) => columns >= DASH_COLUMNS
-/** The dash's height: its top band, the belt, its bottom band. Even, a whole number of cells. */
-export const DASH_H = 16
+/** The dash's height: its lit top line, the belt, its dark edge. Even, a whole number of cells. */
+export const DASH_H = 12
 /** An orb's glass, across and down, and the carved socket round it. */
 const GLASS = 22
 const SOCKET = 2
 export const ORB_BOX = GLASS + 2 * SOCKET
-/** The socket's top: its middle 4.5 px over the dash's top line, high enough that the belt fits under the two orbs'
- * curves on a 105-column pane, its bottom on the dash's row 8. */
-const BOX_TOP = -17
+/** The socket's top: its middle 8.5 px over the dash's top line, high enough that the belt fits under the two orbs'
+ * curves on a 105-column pane, its bottom on the dash's row 4. */
+const BOX_TOP = -21
 const GLASS_TOP = BOX_TOP + SOCKET
-/** The belt's top, under the top band. */
-export const BELT_Y = 3
+/** The belt's top, under the lit top line. */
+export const BELT_Y = 1
 /** The belt's five slots a pixel apart, centred between the orbs: where slot `i` starts on a pane `columns` wide. */
 const BELT_W = 5 * BELT_SLOT_W + 4
 export const dashBeltX = (columns: number, i: number) => Math.floor((columns - BELT_W) / 2) + i * (BELT_SLOT_W + 1)
 export const xpBoxX = (columns: number) => columns - ORB_BOX
 /** The buttons in the dash's corners under the orbs, each at its icon's left column, a socket cut a pixel round it:
  * the bag and settings under the HP orb, the portal under the XP. */
-export const BUTTON_Y = 10
+export const BUTTON_Y = 6
 export const dashButtons = (columns: number) => [
   { icon: 'bag' as const, x: 3 },
   { icon: 'settings' as const, x: 11 },
@@ -103,7 +103,7 @@ export const orbPhase = (now: number) => Math.floor(now / ORB_STEP_MS) % ORB_PHA
  * holds and the map shows the same frame whenever it is drawn. It ripples in the dash's own rows. */
 const isStill = (y: number) => GLASS_TOP + y < 0
 /** The dash's rows the orbs' numbers stand on, over the map at their middles: two whole cells. */
-const ORB_TEXT_Y = -6
+const ORB_TEXT_Y = -10
 
 /** The glass: its wall a pixel thick, lit where the light comes from (the top left), dark across from it. */
 const WALL_LIT = '#9aa4b4'
@@ -280,12 +280,10 @@ const plaquePixels = (g: Game, columns: number): Pixel[] => {
   return out
 }
 
-/** The dash's own rows' stone: its top band lit, the belt's row carved, its bottom band shaded to a dark edge. */
+/** The dash's own rows' stone: its top line lit, the belt's rows carved, its bottom line a dark edge. */
 const bandInk = (x: number, y: number) => {
   if (y === 0) return STONE_LIT
-  if (y === 1 || y === DASH_H - 3) return STONE
-  if (y === 2 || y === DASH_H - 1) return STONE_EDGE
-  if (y === DASH_H - 2) return STONE_DARK
+  if (y === DASH_H - 1) return STONE_EDGE
   return (x * 3 + y * 5) % 11 === 0 ? CARVE : STONE_DARK
 }
 

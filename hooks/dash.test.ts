@@ -29,19 +29,19 @@ const text = (b: { lines: { text: string }[][] }) => b.lines[0]!.map(r => r.text
 const tap = (x: number, y: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x, y }, at: { x, y }, button })
 
 describe('the dash', () => {
-  test('takes over from the bars at 105 columns: 16 px tall, its orbs 26 px boxes at both ends, the belt centred between', async () => {
+  test('takes over from the bars at 105 columns: 12 px tall, its orbs 26 px boxes at both ends, the belt centred between', async () => {
     expect([isDash(104), isDash(105)]).toEqual([false, true])
     expect([stripHeight(105), stripHeight(104)]).toEqual([DASH_H, 28])
-    expect([DASH_H, ORB_BOX, xpBoxX(W)]).toEqual([16, 26, 79])
+    expect([DASH_H, ORB_BOX, xpBoxX(W)]).toEqual([12, 26, 79])
     // Five 10 px slots a pixel apart, 54 px, from (105 - 54) / 2: the last ends at 79.
     expect([0, 1, 2, 3, 4].map(i => dashBeltX(W, i))).toEqual([25, 36, 47, 58, 69])
     const c = dashStrip(hero(), W)
-    expect([c.px.length, c.px[0]!.length]).toEqual([16, W])
+    expect([c.px.length, c.px[0]!.length]).toEqual([12, W])
   })
 
-  test('stands its orbs high over the map, their middles 4.5 px over the dash, 22 px with their crests', async () => {
+  test('stands its orbs high over the map, their middles 8.5 px over the dash, 26 px with their crests', async () => {
     const rows = overMap(hero(), W)
-    expect(DASH_OVER).toBe(22)
+    expect(DASH_OVER).toBe(26)
     // The crests' top row is their horns' tips, 10 px apart, 7 in from each box; the map between them.
     const top = rows[0]!
     expect([top[7], top[17], top[xpBoxX(W) + 7]].every(p => p !== MAP_GROUND)).toBe(true)
@@ -52,15 +52,15 @@ describe('the dash', () => {
 
   test('tucks the belt under the orbs\' curves: the sockets stop short of the slots on the belt\'s top row', async () => {
     const px = dashStrip(hero(), W).px
-    // On row 3, 7.5 below the sockets' middles: the pixel before the first slot (24) is 13.7 from the HP's (12.5) and
-    // the one after the last (79) 14.6 from the XP's (91.5), both past the socket's 13: the dash's carved band.
+    // On row 1, the belt's top, 9.5 below the sockets' middles: the pixel before the first slot (24) is 14.9 from the HP's
+    // (12.5) and the one after the last (79) 15.7 from the XP's (91.5), both past the socket's 13: the dash's carved stone.
     const band = new Set(['#333322', '#222211'])
-    expect([px[3]![24], px[3]![79]].every(p => band.has(p!))).toBe(true)
+    expect([px[1]![24], px[1]![79]].every(p => band.has(p!))).toBe(true)
   })
 
   test('fills the HP orb red at every share, to its share, the empty glass the dark seen through it', async () => {
-    // Over the map 6 px up (glass row 9 of 22), box column 11: the surface rests on row 1 + (1 - share) * 20.
-    const at = (hp: number) => overMap(hero({ hp, maxHp: 100 }), W)[DASH_OVER - 6]![11]
+    // Over the map 10 px up (glass row 9 of 22, its top 19 up), box column 11: the surface rests on row 1 + (1 - share) * 20.
+    const at = (hp: number) => overMap(hero({ hp, maxHp: 100 }), W)[DASH_OVER - 10]![11]
     const int = (hex: string) => Number.parseInt(hex.slice(1), 16)
     expect([at(100), at(70)]).toEqual([int(RED[1]), int(RED[1])])
     // At 60%: the surface on row 9, lit. At 55%: on row 10, under row 9, which is glass.
@@ -80,7 +80,7 @@ describe('the dash', () => {
     const orbs = overLabels(g, W).slice(0, 4)
     expect(orbs.map(text)).toEqual(['86/100', 'HP', '12/20', 'LV1'])
     // Centred on 22 columns of glass two in from the box: 86/100 has 8 before it; HP 10; 12/20 8; LV1 9. Rows 8
-    // and 9 of the dash's layer over the map: 6 and 4 px over the dash.
+    // and 9 of the dash's layer over the map, 26 px tall: 10 and 8 px over the dash.
     expect(orbs.map(b => [b.x + 1, b.y + 1])).toEqual([[10, 8], [12, 9], [89, 8], [90, 9]])
     const rows = overMap(g, W)
     const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`
@@ -111,8 +111,8 @@ describe('the plaque', () => {
   test('writes its words in its own layer\'s cells, on the plaque\'s face', async () => {
     const said = words(hero())
     expect(said.map(text)).toEqual([String(hero().depth), String(hero().gold)])
-    // Row 0 of the layer is 22 px over the dash's top; the words 6 px over it, on its 16th pixel row, cell 8.
-    expect(said.every(b => b.y + 1 === 8 && b.bg === PLAQUE_FACE)).toBe(true)
+    // Row 0 of the layer is 26 px over the dash's top; the words 6 px over it, on its 20th pixel row, cell 10.
+    expect(said.every(b => b.y + 1 === 10 && b.bg === PLAQUE_FACE)).toBe(true)
   })
 
   test('has a skull at each end from 120 columns, its room given to the words narrower', async () => {
@@ -155,17 +155,17 @@ describe('clicks on the dash', () => {
     expect([at('bag'), at('settings'), at('portal')]).toEqual([{ kind: 'panel', panel: 'bag' }, { kind: 'panel', panel: 'settings' }, { kind: 'portal' }])
     expect(dashHit(W, 33, -5)).toBe('log')
     // The band under the XP orb left of the portal, a gap between two slots, and the map above the plaque: nothing.
-    expect([dashHit(W, 85, 12), dashHit(W, 35, 8), dashHit(W, 50, -14)]).toEqual([undefined, undefined, undefined])
+    expect([dashHit(W, 85, 8), dashHit(W, 35, 8), dashHit(W, 50, -14)]).toEqual([undefined, undefined, undefined])
   })
 
-  test('its layer over the map reads a click by its cell: row 0 is 22 px up', async () => {
+  test('its layer over the map reads a click by its cell: row 0 is 26 px up', async () => {
     expect(dashOverGesture(tap(33.5, (DASH_OVER - 5) / 2 + 0.25), W)).toEqual({ actions: [], isLog: true })
     expect(dashOverGesture(tap(13.5, (DASH_OVER - 7) / 2 + 0.25), W)).toEqual({ actions: [{ kind: 'panel', panel: 'sheet' }] })
     expect(dashOverGesture(tap(13.5, 5.75, 'right'), W)).toEqual({ actions: [] })
   })
 
   test('hands a click on its layer that lands on none of it to the map under it, in the layer\'s cells', async () => {
-    // Cell 50, 1: 20 px up, x 50, between the crests' horns and over the plaque: the map.
+    // Cell 50, 1: 24 px up, x 50, between the crests' horns and over the plaque: the map.
     expect(dashOverGesture(tap(50.5, 1.25), W)).toEqual({ actions: [], toMap: { x: 50.5, y: 1.25 } })
     expect(dashOverGesture(tap(50.5, 1.25, 'right'), W)).toEqual({ actions: [] })
   })

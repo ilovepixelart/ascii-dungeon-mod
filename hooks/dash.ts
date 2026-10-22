@@ -27,12 +27,12 @@ export const isDash = (columns: number) => columns >= DASH_COLUMNS
 /** The dash's height: its top band, the belt, its bottom band. Even, a whole number of cells. */
 export const DASH_H = 16
 /** An orb's glass, across and down, and the carved socket round it. */
-const GLASS = 24
+const GLASS = 22
 const SOCKET = 2
 export const ORB_BOX = GLASS + 2 * SOCKET
-/** The socket's top: its middle 7.5 px over the dash's top line, high enough that the belt fits under the two orbs'
- * curves on a 105-column pane, its bottom on the dash's row 6. */
-const BOX_TOP = -21
+/** The socket's top: its middle 4.5 px over the dash's top line, high enough that the belt fits under the two orbs'
+ * curves on a 105-column pane, its bottom on the dash's row 8. */
+const BOX_TOP = -17
 const GLASS_TOP = BOX_TOP + SOCKET
 /** The belt's top, under the top band. */
 export const BELT_Y = 3
@@ -42,7 +42,7 @@ export const dashBeltX = (columns: number, i: number) => Math.floor((columns - B
 export const xpBoxX = (columns: number) => columns - ORB_BOX
 /** The buttons in the dash's corners under the orbs, each at its icon's left column, a socket cut a pixel round it:
  * the bag and settings under the HP orb, the portal under the XP. */
-export const BUTTON_Y = 9
+export const BUTTON_Y = 10
 export const dashButtons = (columns: number) => [
   { icon: 'bag' as const, x: 3 },
   { icon: 'settings' as const, x: 11 },
@@ -102,8 +102,8 @@ export const orbPhase = (now: number) => Math.floor(now / ORB_STEP_MS) % ORB_PHA
 /** The glass's rows over the map, its numbers' among them: the surface lies still across them, so the numbers' ground
  * holds and the map shows the same frame whenever it is drawn. It ripples in the dash's own rows. */
 const isStill = (y: number) => GLASS_TOP + y < 0
-/** The dash's rows the orbs' numbers stand on, over the map near their middles: two whole cells. */
-const ORB_TEXT_Y = -10
+/** The dash's rows the orbs' numbers stand on, over the map at their middles: two whole cells. */
+const ORB_TEXT_Y = -6
 
 /** The glass: its wall a pixel thick, lit where the light comes from (the top left), dark across from it. */
 const WALL_LIT = '#9aa4b4'

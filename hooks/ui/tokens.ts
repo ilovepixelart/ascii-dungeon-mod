@@ -44,8 +44,6 @@ export const SURFACE = {
   line: '#2c2834',
   card: '#15131b',
   cardEdge: '#3a3644',
-  /** A found entry's box in the codex. */
-  litEdge: '#3a3440',
   /** What is not yet found: its shape alone. */
   shade: '#2e2a38',
   frame: '#6b6258',

@@ -6,7 +6,7 @@ import type { Game, Orders } from '../types'
 import type { Action } from './game'
 import { ordersOf } from './game'
 import { BG, canvas, fill } from './canvas'
-import { BUTTON_H, button, buttonBox, buttonW } from './pieces'
+import { BUTTON_H, buttonBox, buttonFace, buttonW } from './pieces'
 import { SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -47,15 +47,19 @@ const ROWS_Y = top + TABS_H + 4
 const ROWS = 3
 const ROW_STEP = BUTTON_H + 2
 /** Each button of the page and its place, in window pixels: its row's left to right, SPACE.gap apart; a row a cell under
- * the one above, so every row starts on a whole cell. */
-const placed = (g: Game, sound: SoundSettings, ui: SettingsUi) => rowsOf(g, sound, ui).flatMap((row, r) => {
-  let x = PAD
-  return row.map(k => {
-    const rect = { x, y: ROWS_Y + r * ROW_STEP, w: buttonW(k.key, k.label), h: BUTTON_H }
-    x += rect.w + SPACE.gap
-    return { ...k, rect }
+ * the one above, so every row starts on a whole cell. A column's buttons are one width, its widest's, so they line up. */
+const placed = (g: Game, sound: SoundSettings, ui: SettingsUi) => {
+  const rows = rowsOf(g, sound, ui)
+  const widths = rows.reduce<number[]>((w, row) => row.map((k, i) => Math.max(w[i] ?? 0, buttonW(k.key, k.label))), [])
+  return rows.flatMap((row, r) => {
+    let x = PAD
+    return row.map((k, i) => {
+      const rect = { x, y: ROWS_Y + r * ROW_STEP, w: widths[i]!, h: BUTTON_H }
+      x += rect.w + SPACE.gap
+      return { ...k, rect }
+    })
   })
-})
+}
 
 /** An order's label as the window says it: the order as it stands. */
 export const orderWord = (g: Pick<Game, 'orders'>, which: keyof Orders) => {
@@ -89,14 +93,14 @@ export const settingsPixels = (g: Game, sound: SoundSettings, ui: SettingsUi = S
   const body = canvas(WINDOW_W, SETTINGS_H - top)
   tabGround(body, PAGES, ui.page === 'game' ? 0 : 1, 0)
   fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, SURFACE.line)
-  for (const k of placed(g, sound, ui)) button(body, k.key, k.label, k.rect.x, k.rect.y - top, 'ready')
+  for (const k of placed(g, sound, ui)) buttonFace(body, k.rect.x, k.rect.y - top, k.rect.w, 'ready')
   return windowPixels(CHROME, body.px).px
 }
 
 /** The text over the window: its pages' tab labels, its buttons' words. */
 export const settingsOverlay = (g: Game, sound: SoundSettings, ui: SettingsUi = SETTINGS_UI): OverlayBox[] => [
   ...textTabBoxes(PAGES, ui.page === 'game' ? 0 : 1, top, BG),
-  ...placed(g, sound, ui).map(k => buttonBox(k.key, k.label, k.rect.x, k.rect.y, 'ready')),
+  ...placed(g, sound, ui).map(k => ({ ...buttonBox(k.key, k.label, k.rect.x, k.rect.y, 'ready'), w: k.rect.w })),
 ]
 
 /** What a gesture does: the page shown, game actions, and the sound as it now is. */

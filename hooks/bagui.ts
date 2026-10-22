@@ -5,7 +5,7 @@ import type { Action, Run } from './game'
 import { CELL } from './icons'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, beltHot, dropTarget, removable, wornOutlines } from './inventory'
 import type { Drag } from './inventory'
-import { POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
+import { BAG_H, BAG_W, POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
 import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
@@ -92,19 +92,20 @@ const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
 /** Covering an item being compared costs this much against one pixel of any other: it is never worth it. */
 const KEEP = 100000
 
+/** The room a chosen item's white brackets take outside it. */
+const BRACKET = 2
+
 /**
- * What a box would hide: each pixel of the title bar (the hero's tabs, the gold), a bag item, worn piece or filled belt
- * slot counts 1, the two items being compared KEEP. The result is the weight under a box.
+ * What a box would hide: each pixel of the title bar (the hero's tabs, the gold), the bag's grid, a worn slot or a belt
+ * slot counts 1, filled or empty (a slot is the window's shape either way); the two items being compared, their
+ * brackets with them, KEEP. The result is the weight under a box.
  */
 export const coverage = (g: Game, keep: readonly Rect[]) => coverageOf(ROWS, [
   { rect: { x: 0, y: 0, w: WINDOW_W, h: WINDOW_TOP }, weight: 1 },
-  ...g.bag.map(i => ({ rect: { x: BAG_X + i.x * CELL, y: INV_TOP + BAG_Y + i.y * CELL, w: i.w * CELL, h: i.h * CELL }, weight: 1 })),
-  ...(Object.keys(WORN_SLOTS) as Slot[]).filter(slot => g.gear[slot] !== undefined).map(slot => {
-    const [x, y, w, h] = WORN_SLOTS[slot]
-    return { rect: { x, y: INV_TOP + y, w, h }, weight: 1 }
-  }),
-  ...g.belt.flatMap((b, i) => (b === null ? [] : [{ rect: beltSlotRect(BELT_X, INV_TOP + BELT_Y, i), weight: 1 }])),
-  ...keep.map(rect => ({ rect, weight: KEEP })),
+  { rect: { x: BAG_X, y: INV_TOP + BAG_Y, w: BAG_W * CELL + 1, h: BAG_H * CELL + 1 }, weight: 1 },
+  ...(Object.values(WORN_SLOTS)).map(([x, y, w, h]) => ({ rect: { x, y: INV_TOP + y, w, h }, weight: 1 })),
+  ...g.belt.map((_, i) => ({ rect: beltSlotRect(BELT_X, INV_TOP + BELT_Y, i), weight: 1 })),
+  ...keep.map(r => ({ rect: { x: r.x - BRACKET, y: r.y - BRACKET, w: r.w + 2 * BRACKET, h: r.h + 2 * BRACKET }, weight: KEEP })),
 ])
 
 /** The boxes over the panel: the belt's counts that no card covers, then the cards. */

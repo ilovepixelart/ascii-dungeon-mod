@@ -18,10 +18,11 @@ import type { Pos } from './map'
 import { INK, SURFACE } from './ui/tokens'
 
 /** The compact screen's width, and the narrowest pane it is drawn in. */
-export const COMPACT_W = 80
-const BAG_X = 1
+export const COMPACT_W = 82
+/** A pixel of room round the window's parts: the bag's brackets keep off its left edge, the list off its right. */
+const BAG_X = 2
 const BAG_Y = 2
-const BELT_X = 1
+const BELT_X = 2
 const BELT_Y = BAG_Y + BAG_H * CELL + 1 + 3
 const LIST_X = BAG_X + BAG_W * CELL + 3
 /** The screen's height in pixels: the bag, the belt, a pixel of room. */
@@ -29,7 +30,7 @@ export const COMPACT_H = WINDOW_TOP + BELT_Y + 10 + 2
 const ROWS = COMPACT_H / 2
 const SLOT_WORD: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 /** The worn list, in cells: two rows a slot, its name and what is worn there. */
-const LIST: Rect = { x: LIST_X, y: WINDOW_TOP / 2 + 1, w: COMPACT_W - LIST_X, h: SLOTS.length * 2 + 2 }
+const LIST: Rect = { x: LIST_X, y: WINDOW_TOP / 2 + 1, w: COMPACT_W - LIST_X - 1, h: SLOTS.length * 2 + 2 }
 const CLOSE = closeBoxOf(COMPACT_W)
 
 const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)

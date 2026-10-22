@@ -52,6 +52,21 @@ describe('the settings window', () => {
     expect(settingsOverlay(hero(), ON, ORDERS).filter(b => b.role === 'tabs').map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['GAME', 'ORDERS'])
   })
 
+  test('a column\'s buttons line up: one left edge and one width, the widest\'s, on either page', async () => {
+    const OFF = { ...ON, effects: false, music: false }
+    for (const [ui, sound] of [[GAME, ON], [GAME, OFF], [ORDERS, ON]] as const) {
+      const buttons = buttonsIn(settingsOverlay(hero(), sound, ui))
+      // Two to a row on Game (left then right), one on Orders.
+      const perRow = ui === GAME ? 2 : 1
+      for (let col = 0; col < perRow; col += 1) {
+        const column = buttons.filter((_, i) => i % perRow === col)
+        expect([...new Set(column.map(b => `${b.x},${b.w}`))]).toHaveLength(1)
+      }
+    }
+    // Orders' widest, DRINK AT QUARTER HP: 21 cells with its key, the room and the frame 25.
+    expect(buttonsIn(settingsOverlay(hero(), ON, ORDERS)).map(b => b.w)).toEqual([25, 25, 25])
+  })
+
   test('each order button says the order as it stands', async () => {
     const said = (orders: Game['orders']) => buttonsIn(settingsOverlay(hero({ orders }), ON, ORDERS)).map(b => b.text)
     const base = { drink: 25, smoke: false, leave: 'common' } as const

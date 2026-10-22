@@ -16,6 +16,7 @@ release may change behaviour.
 - The last words and numbers drawn in the pixel font are terminal text: the shop's prices, the belt's counts in the
   bag, the compact bag, the shop and the strip, the strip's gold, depth and effects, the start screen's class names,
   the talent cards' ribbons and the dog's pets. The deep's two marks are buttons.
+- Settings' buttons line up in columns: a column's buttons are one width, its widest's.
 - Buttons are written in terminal text on a face 6 pixels tall, where their key and label were the pixel font on one
   11 tall; the windows are shorter for it. The hero sheet's attributes are written the same way.
 - The codex draws each unique at its size on the map, half a big boss's each way and standing on the same floor,
@@ -29,6 +30,12 @@ release may change behaviour.
 - A nemesis grew a fifth stronger with every win, without end. One that kept winning went deeper and grew again each
   time, until no hero could beat it (18 wins: four and a half times a champion's HP and attack). It now grows by its
   first three wins alone.
+- How it plays drew its rules' icons where its text box's fill covered them, and a text box's blank rows took no
+  room, so the rules ran together over an empty bottom. The icons have a column of their own and every blank row keeps
+  its row.
+- The bag's cards stood on empty worn slots, empty grid cells and the chosen item's white brackets; they go on open
+  ground first. The compact bag's brackets and worn list touched the window's edges; it has a pixel of room each side,
+  and needs a pane 82 columns wide (80 before).
 - Text over a window's pixels, the hero's tabs first, sat on a band of a slightly different shade: the terminal paints
   pixels at 4 bits a channel and text in full. Text grounds take the pixels' painted color, and a hovered tab's label
   the glow's, so the hover's outline is no longer cut by the label's row.

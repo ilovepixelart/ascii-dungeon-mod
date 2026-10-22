@@ -16,8 +16,9 @@ const HEAD_ROWS = 2
 const YOURS = 'You pick the gear and the talents, and set the orders.'
 /** Each rule takes three rows of the box: what happens, what it comes to, a row of room. */
 const RULE_ROWS = 3
-/** Cells of room left of the text, for the icons drawn there. */
-const ICON_PAD = 8
+/** The icons' column, left of the text: the text's box starts past it, so its fill leaves the icons' pixels showing. */
+const ICON_X = 5
+const TEXT_X = 11
 
 /** Each rule: its icon, what happens, what it comes to; `work` for what rewards the player's work. */
 export const HELP_ROWS: readonly { icon: keyof typeof MARK; when: string; does: string; work?: true }[] = [
@@ -38,8 +39,11 @@ export const helpOverlay = (): OverlayBox[] => {
     ...HELP_ROWS.flatMap(r => [[{ text: r.when, bold: true, ...(r.work === true ? { color: INK.good } : {}) }], [{ text: r.does, dim: true }], []]),
     [{ text: YOURS, dim: true }],
   ]
-  return [{ role: 'about', x: 2, y: top / 2 + 1, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines, pad: ICON_PAD }]
+  return [{ role: 'about', x: TEXT_X, y: top / 2 + 1, w: WINDOW_W - 2 - TEXT_X, h: lines.length + 2, border: SURFACE.frame, lines }]
 }
+
+/** The box's frame, in cells: round the icons' column and the text, the width of every window's box. */
+const frameOf = (box: OverlayBox) => ({ ...box, x: 2, w: WINDOW_W - 4 })
 
 /** The window's height in pixels, title bar and all. */
 export const helpHeight = () => {
@@ -52,8 +56,8 @@ export const helpPixels = (): string[][] => {
   const body = canvas(WINDOW_W, helpHeight() - top)
   const c = windowPixels(CHROME, body.px)
   const box = helpOverlay()[0]!
-  drawBox(c, box)
-  HELP_ROWS.forEach((r, i) => mark(c, MARK[r.icon], box.x + 3, 2 * (box.y + 1 + HEAD_ROWS + i * RULE_ROWS)))
+  drawBox(c, frameOf(box))
+  HELP_ROWS.forEach((r, i) => mark(c, MARK[r.icon], ICON_X, 2 * (box.y + 1 + HEAD_ROWS + i * RULE_ROWS)))
   return c.px
 }
 

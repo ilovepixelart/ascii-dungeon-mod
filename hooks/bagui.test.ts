@@ -5,7 +5,9 @@ import { BAG_UI_IDLE, bagGesture, bagOverlay, coverage } from './bagui'
 import type { BagUi } from './bagui'
 import { CELL } from './icons'
 import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
-import { plainItem } from './items'
+import { BAG_H, BAG_W, plainItem } from './items'
+import { BELT_SLOT_W, SLOT } from './canvas'
+import { shots } from './screens'
 import { newGame } from './world'
 import { apply } from './game'
 /** The window's cards and menus, the labels on its art left out. */
@@ -224,6 +226,20 @@ describe('popovers', () => {
     }
   })
 
+  test('a card or menu covers no slot, filled or empty, nor the bag\'s grid nor a chosen item\'s brackets: in every kit', async () => {
+    const grid = { x: BAG_X, y: INV_TOP + BAG_Y, w: BAG_W * CELL + 1, h: BAG_H * CELL + 1 }
+    const slots = Object.values(WORN_SLOTS).map(([x, y, w, h]) => ({ x, y: INV_TOP + y, w, h }))
+    const belt = [0, 1, 2, 3, 4].map(i => ({ x: BELT_X + i * BELT_STEP, y: INV_TOP + BELT_Y, w: BELT_SLOT_W, h: SLOT }))
+    let seen = 0
+    for (const s of shots().filter(x => x.name.startsWith('inventory-'))) {
+      for (const b of s.boxes.filter(x => x.role === 'worn' || x.role === 'item' || x.role === 'menu')) {
+        seen += 1
+        for (const r of [grid, ...slots, ...belt]) expect([s.name, b.role, covered(r, b)]).toEqual([s.name, b.role, 0])
+      }
+    }
+    expect(seen).toBeGreaterThan(20)
+  })
+
   test('where the screen has room, the popovers cover no item at all', async () => {
     const g = knight()
     const ring = put(g, 'ring', 'rare', 6, 1)
@@ -246,9 +262,11 @@ describe('popovers', () => {
     for (let y = 0; y < 6; y += 1) for (let x = 0; x < 8; x += 1) put(g, 'ring', 'common', x, y)
     const kept = bagRect(g.bag[0]!)
     const cost = coverage(g, [kept])
-    // The kept ring's first pixel row, one cell wide; against the whole screen but the kept ring's own rows.
+    // The kept ring's first pixel row, one cell wide; against the whole screen under the kept ring and its brackets'
+    // 2 px.
     const one = cost(kept.x, Math.floor(kept.y / 2), 1, 1)
-    const rest = cost(0, Math.floor((kept.y + kept.h) / 2) + 1, INV_W, (INV_TOP + INV_H) / 2 - Math.floor((kept.y + kept.h) / 2) - 1)
+    const below = Math.floor((kept.y + kept.h + 2) / 2) + 1
+    const rest = cost(0, below, INV_W, (INV_TOP + INV_H) / 2 - below)
     expect(rest).toBeGreaterThan(0)
     expect(one).toBeGreaterThan(rest)
   })

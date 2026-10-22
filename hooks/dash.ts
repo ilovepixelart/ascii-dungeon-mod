@@ -9,7 +9,7 @@ import { xpToLevel } from './balance'
 import { BELT_SLOT_W, BG, SLOT, canvas, put } from './canvas'
 import type { Canvas } from './canvas'
 import { beltCounts, beltSlot, inkOn, mix } from './pieces'
-import { EFFECTS, FORTUNE_INITIAL, GOLD_INK, HP_TONES, MARK, MARK_INK, NUM_INK, SLOT_STEP, XP_FILL } from './hud'
+import { EFFECTS, FORTUNE_INITIAL, GOLD_INK, HP_TONES, MARK, MARK_INK, NUM_INK, XP_FILL } from './hud'
 import { depthMod } from './game'
 import { countText } from './names'
 import { hexToInt } from './pixels'
@@ -25,8 +25,9 @@ export const DASH_COLUMNS = 105
 export const isDash = (columns: number) => columns >= DASH_COLUMNS
 /** The dash's height: its top band, the belt, its bottom band. Even, a whole number of cells. */
 export const DASH_H = 16
-/** An orb's glass, across and down, and the carved socket round it. */
-const GLASS = 22
+/** An orb's glass, across and down, and the carved socket round it: on a 105-column pane, room for the belt's five
+ * slots a pixel apart between the two. */
+const GLASS = 20
 const SOCKET = 2
 export const ORB_BOX = GLASS + 2 * SOCKET
 /** The socket's top: its bottom on the dash's bottom line, so the orb stands above the dash. */
@@ -34,31 +35,37 @@ const BOX_TOP = DASH_H - ORB_BOX
 const GLASS_TOP = BOX_TOP + SOCKET
 /** The belt's top, under the top band. */
 export const BELT_Y = 3
-/** Where belt slot `i` starts: a pixel past the HP orb's socket, the health potion beside the HP. */
-export const dashBeltX = (i: number) => ORB_BOX + 1 + i * SLOT_STEP
+/** Where belt slot `i` starts: a pixel past the HP orb's socket, the health potion beside the HP, each slot a pixel
+ * apart. */
+export const dashBeltX = (i: number) => ORB_BOX + 1 + i * (BELT_SLOT_W + 1)
 export const xpBoxX = (columns: number) => columns - ORB_BOX
 
-/** Stone, lit to shaded, and the carving cut into it. */
-const STONE_LIT = '#77715f'
-const STONE = '#504b40'
-const STONE_DARK = '#302d27'
-const STONE_EDGE = '#17150f'
-const CARVE = '#211e19'
+/** Stone, lit to shaded, and the carving cut into it: on the host's 17-step grid, so the terminal paints these greys
+ * as they are, not drifted toward red. */
+const STONE_LIT = '#777766'
+const STONE = '#555544'
+const STONE_DARK = '#333322'
+const STONE_EDGE = '#111111'
+const CARVE = '#222211'
 /** The plaque's face, what its words stand on. */
-export const PLAQUE_FACE = '#1b1915'
+export const PLAQUE_FACE = '#222222'
 
 /** Sprites, a key a pixel: stone lit, stone, dark; a gargoyle's ember eyes; a bone's white. */
 const INK: Readonly<Record<string, string>> = { L: STONE_LIT, S: STONE, K: STONE_EDGE, e: '#ff6a2a', E: '#ffd34d', w: '#d8d2c0', W: '#a89f8a' }
-/** A horned gargoyle's head, crowning a socket: horns, brow, ember eyes, a jaw of teeth. */
+/** A horned gargoyle's head, crowning a socket: horns curving up from a heavy brow, ember eyes under it between its
+ * cheekbones, a snout and its nostrils, a row of fangs biting the socket's rim. */
 const CREST: readonly string[] = [
-  'S.........S',
-  'SL.......LS',
-  '.SL.....LS.',
+  'K.........K',
+  'SK.......KS',
+  '.SLK...KLS.',
   '..SLLLLLS..',
-  '..SeSLSeS..',
-  '...SSSSS...',
-  '...KwKwK...',
+  '.KSeLSLeSK.',
+  '..KSSKSSK..',
+  '...wKwKw...',
 ]
+/** The horns at the plaque's top corners, curling out over the orbs: the left one, read from its top, the right its
+ * mirror. */
+const HORN: readonly string[] = ['K...', 'SK..', 'LSS.', '.LLS', '..LS']
 /** A skull at each end of the plaque. */
 const SKULL: readonly string[] = ['.www.', 'wwwww', 'wKwKw', '.wWw.', '.w.w.']
 /** The plaque's buttons, 5 by 5: the bag, the settings gear, the portal. */
@@ -73,7 +80,8 @@ const CREST_Y = BOX_TOP - CREST.length + 1
 /** How many rows the dash stands over the map. */
 export const DASH_OVER = -CREST_Y
 /** The plaque's rows, its marks' and its words' (a whole cell, as the map's rows are). */
-const PLAQUE_TOP = -8
+/** The plaque's rows: its lit top edge, the groove engraved under it, its face, its dark foot on the dash. */
+const PLAQUE_TOP = -10
 const PLAQUE_BOTTOM = -1
 const MARK_Y = -7
 export const PLAQUE_TEXT_Y = -6
@@ -180,14 +188,14 @@ const plaqueSpan = (columns: number) => ({ x0: ORB_BOX + 1, x1: xpBoxX(columns) 
 /** The narrowest pane whose plaque has a skull at each end: narrower, the room goes to the gold and the depth. */
 export const SKULL_COLUMNS = 120
 /** How far in from each end of the plaque its words and buttons start: past a skull, or its stone edge. */
-const plaqueEnd = (columns: number) => (columns >= SKULL_COLUMNS ? SKULL[0]!.length + 2 : 2)
-/** The plaque's buttons, right to left from its end, each at its left column. */
+const plaqueEnd = (columns: number) => (columns >= SKULL_COLUMNS ? SKULL[0]!.length + 3 : 2)
+/** The plaque's buttons, right to left from its end, each at its left column, each in a socket a pixel round it. */
 export const plaqueIcons = (columns: number) => {
   const right = plaqueSpan(columns).x1 - plaqueEnd(columns)
-  return (['portal', 'settings', 'bag'] as const).map((icon, i) => ({ icon, x: right - 4 - i * 6 }))
+  return (['portal', 'settings', 'bag'] as const).map((icon, i) => ({ icon, x: right - 4 - i * 7 }))
 }
-/** Where the plaque's words run: from its first end, short of its first button. */
-const plaqueLine = (columns: number) => ({ x: plaqueSpan(columns).x0 + plaqueEnd(columns), end: Math.min(...plaqueIcons(columns).map(i => i.x)) - 2 })
+/** Where the plaque's words run: from its first end, short of its first button's socket. */
+const plaqueLine = (columns: number) => ({ x: plaqueSpan(columns).x0 + plaqueEnd(columns), end: Math.min(...plaqueIcons(columns).map(i => i.x)) - 3 })
 
 /** A mark's width, and the cell between a mark and its word. */
 const MARK_W = 5
@@ -218,20 +226,47 @@ export const plaqueParts = (g: Game, line: { x: number; end: number }) => {
   return { marks, words }
 }
 
-/** The plaque: a stone face lit along its top and dark along its bottom, a skull at each end, its marks and buttons. */
+/** The plaque's stone at x, y: its top edge lit with its corners cut, the groove under it, its face's sides lit on the
+ * left and shaded on the right, its dark foot; undefined at a cut corner, where the map shows. */
+const plaqueStone = (x: number, y: number, x0: number, x1: number) => {
+  const inset = Math.max(0, PLAQUE_TOP + 2 - y)
+  if (x < x0 + inset || x > x1 - inset) return undefined
+  if (y === PLAQUE_TOP) return STONE_LIT
+  if (y === PLAQUE_TOP + 1) return x === x0 + 1 ? STONE_LIT : x === x1 - 1 ? STONE : STONE_EDGE
+  if (y === PLAQUE_BOTTOM) return STONE_EDGE
+  if (x === x0) return STONE_LIT
+  return x === x1 ? STONE : PLAQUE_FACE
+}
+
+/** A button's socket, cut into the plaque's face a pixel round its icon: dark, its bottom and right lips catching the
+ * light from the top left. */
+const socketAround = (x: number): Pixel[] => {
+  const out: Pixel[] = []
+  for (let y = MARK_Y - 1; y <= MARK_Y + 5; y += 1) for (let dx = -1; dx <= 5; dx += 1) {
+    const isLip = y === MARK_Y + 5 || dx === 5
+    out.push({ x: x + dx, y, ink: isLip ? STONE : STONE_EDGE })
+  }
+  return out
+}
+
+/** The plaque: its carved stone, a rivet at each end, horns curling up from its top corners, a skull at each end on
+ * a wide pane, its marks, and its buttons in their sockets. */
 const plaquePixels = (g: Game, columns: number): Pixel[] => {
   const { x0, x1 } = plaqueSpan(columns)
   const out: Pixel[] = []
   for (let y = PLAQUE_TOP; y <= PLAQUE_BOTTOM; y += 1) for (let x = x0; x <= x1; x += 1) {
-    const ink = y === PLAQUE_TOP ? STONE_LIT : y === PLAQUE_BOTTOM ? STONE_EDGE : x === x0 || x === x1 ? STONE : PLAQUE_FACE
-    out.push({ x, y, ink })
+    const ink = plaqueStone(x, y, x0, x1)
+    if (ink !== undefined) out.push({ x, y, ink })
   }
-  if (columns >= SKULL_COLUMNS) out.push(...sprite(SKULL, x0 + 1, MARK_Y, INK), ...sprite(SKULL, x1 - SKULL[0]!.length, MARK_Y, INK))
+  for (const x of [x0 + 1, x1 - 1]) out.push({ x, y: PLAQUE_TEXT_Y, ink: STONE_LIT }, { x, y: PLAQUE_TEXT_Y + 1, ink: STONE_EDGE })
+  const hornY = PLAQUE_TOP - HORN.length + 1
+  out.push(...sprite(HORN, x0 - 2, hornY, INK), ...sprite(HORN.map(r => [...r].reverse().join('')), x1 - 1, hornY, INK))
+  if (columns >= SKULL_COLUMNS) out.push(...sprite(SKULL, x0 + 2, MARK_Y, INK), ...sprite(SKULL, x1 - 1 - SKULL[0]!.length, MARK_Y, INK))
   for (const m of plaqueParts(g, plaqueLine(columns)).marks) out.push(...sprite(m.rows, m.x, MARK_Y, MARK_INK))
   const isShut = g.where !== 'town' && g.foe !== null
   for (const { icon, x } of plaqueIcons(columns)) {
     const { rows, ink } = ICON[icon]
-    out.push(...sprite(rows, x, MARK_Y, icon === 'portal' && isShut ? { c: PORTAL_SHUT, C: PORTAL_SHUT, b: STONE_EDGE } : ink))
+    out.push(...socketAround(x), ...sprite(rows, x, MARK_Y, icon === 'portal' && isShut ? { c: PORTAL_SHUT, C: PORTAL_SHUT, b: STONE_EDGE } : ink))
   }
   return out
 }

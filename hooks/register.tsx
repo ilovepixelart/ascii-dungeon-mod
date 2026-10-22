@@ -8,7 +8,7 @@ import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
-import { INSET, beltMenuBox, hasOrbs, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels, orbPhase } from './hud'
+import { OVER_ROWS, isDash, orbPhase, overMapBoxes, overMapGesture, stripBeltMenu, stripBoxes, stripGesture, stripHeight, stripHot, stripOverMap, stripPixels } from './strip'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
@@ -144,13 +144,13 @@ const onHover = ($: EngineInterface, element: string, at: Pos | null) => {
 
 /** The strip as last drawn, for the orbs' ripple to repaint: its size and the boxes over it; none without the strip. */
 let stripShown: { columns: number; rows: number; boxes: readonly OverlayBox[] } | null = null
-/** The orbs' ripple as last painted. */
+/** The orbs' ripple as last painted: the strip's alone, the dash's rows over the map lying still. */
 let ripple = 0
 
 /** The strip as Raster cells, the orbs at the ripple's phase, what the pointer is over lit. */
 const stripCells = (g: Game, width: number, boxes: readonly OverlayBox[]) => {
-  const c = hudPixels(g, width, boxes, ripple)
-  return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width, boxes), width, false) })
+  const c = stripPixels(g, width, boxes, ripple)
+  return canvasCells({ ...c, px: litWindow('hud', c.px, stripHot(g, width, boxes), width, false) })
 }
 
 /** A window's clickable places with its close box (the strip has none); and its pixels with the one under the pointer lit. */
@@ -338,7 +338,7 @@ const drawWalk = ($: EngineInterface, w: Walk, frame: number, at: ReturnType<typ
   const view = cameraFor(drawnGame, at, size.columns, size.rows)
   const builds = layerBuildCount()
   const drawFrom = fineNow()
-  const drawn = pixelMap(drawnGame, size.columns, size.rows, at, view, [], 0, isStrideFrame(frame))
+  const drawn = pixelMap(drawnGame, size.columns, size.rows, at, view, [], 0, isStrideFrame(frame), STILL, undefined, stripOverMap(drawnGame, size.columns, 0))
   ;(layerBuildCount() === builds ? keptMaps : builtMaps).add(fineNow() - drawFrom)
   // The bench walk's frames carry their number, so a measure reads which arrived: skipped, repeated, late.
   sendLatest($, isBenching ? stampCells(drawn, frame) : drawn, size)
@@ -499,7 +499,7 @@ const playHits = ($: EngineInterface, g: Game, hits: readonly Hit[]) => {
       return false
     }
     const view = cameraFor(g, tileCenter(g), mapSize.columns, mapSize.rows)
-    const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame), mapSize)
+    const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame, false, STILL, undefined, stripOverMap(g, mapSize.columns, 0)), mapSize)
     if (painted.deny === undefined) return true
     // A map the host will not take (a window over it, the pane resized) ends the blow: the idle motion and the death
     // window wait on it no longer.
@@ -520,7 +520,7 @@ const endHits = async ($: EngineInterface) => {
   if (size !== null) {
     const g = normalize(await read($, game))
     const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit), size)
+    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit, stripOverMap(g, size.columns, 0)), size)
   }
   $.ui.invalidate('ui.render')
 }
@@ -603,21 +603,27 @@ const ambientTick = async ($: EngineInterface) => {
   shown = next
   const size = mapSize
   const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit), size)
+  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit, stripOverMap(g, size.columns, 0)), size)
 }
 
-/** A ripple's repaint on its way to the host: one at a time, so a slow host is never sent a queue of them. */
+/** A ripple's repaint on its way to the host: one at a time, so a slow host is never sent a queue of them; and the
+ * strip it last sent, forgotten when the pane draws the strip itself. */
 let isRippling = false
+let lastRipple: string | null = null
 
 /** Repaints the strip when the orbs' ripple moves on a phase: the strip alone, its numbers still where they were, sent
  * without holding up the idle timer. A strip the host will not take (a window over it, the pane resized) holds still
  * till the pane draws it again. */
 const rippleTick = ($: EngineInterface, g: Game, now: number) => {
   const strip = stripShown
-  if (strip === null || isRippling || !hasOrbs(strip.columns - 2 * INSET) || orbPhase(now) === ripple) return
+  if (strip === null || isRippling || !isDash(strip.columns) || orbPhase(now) === ripple) return
   ripple = orbPhase(now)
+  // A ripple that moves nothing on the strip (both surfaces over the map, or none) sends nothing.
+  const cells = stripCells(g, strip.columns, strip.boxes)
+  if (cells === lastRipple) return
+  lastRipple = cells
   isRippling = true
-  void $.ui.blit({ requestId: PANE, key: 'hud', cells: stripCells(g, strip.columns, strip.boxes), columns: strip.columns, rows: strip.rows })
+  void $.ui.blit({ requestId: PANE, key: 'hud', cells, columns: strip.columns, rows: strip.rows })
     .catch(() => ({ deny: 'failed' }))
     .then(painted => {
       if (painted.deny !== undefined) stripShown = null
@@ -1034,8 +1040,16 @@ const onTalkClick = async ($: EngineInterface, data: unknown) => {
 }
 
 const onHudClick = async ($: EngineInterface, data: unknown) => {
-  const outcome = hudGesture(await current($), beltMenu, data as Gesture, hudWidth)
+  const outcome = stripGesture(await current($), beltMenu, data as Gesture, hudWidth)
   beltMenu = outcome.menu
+  if (outcome.isLog === true) isLogOpen = true
+  await actAll($, outcome.actions)
+  $.ui.invalidate('ui.render')
+}
+
+/** A gesture on the dash's layer over the map: its orbs and crests, its plaque's buttons and words. */
+const onDashClick = async ($: EngineInterface, data: unknown) => {
+  const outcome = overMapGesture(data as Gesture, hudWidth)
   if (outcome.isLog === true) isLogOpen = true
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
@@ -1116,6 +1130,9 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       return true
     case 'hud-clicks':
       await onHudClick($, data)
+      return true
+    case 'dash-clicks':
+      await onDashClick($, data)
       return true
     case 'death-clicks':
       await onDeathClick($, data)
@@ -1247,7 +1264,7 @@ const sizesOf = (p: Pane) => {
   const isCompactBag = g.panel === 'bag' && Raster !== undefined && !isPixelBag && columns >= COMPACT_W
   // While the bag is open the map gives up the rows the bag needs, down to a strip.
   const hasHud = Raster !== undefined && columns >= HUD_COLUMNS
-  const hudRows = hudLayout(columns).height / 2
+  const hudRows = stripHeight(columns) / 2
   // The dashboard's rows: the pixel strip alone, or five text rows and a 5-line log; the character sheet's when open.
   const dashRows = (hasHud ? hudRows : 14) + (isLogOpen ? LOG_TEXT_ROWS : isHelpOpen ? HELP_TEXT_ROWS : (PANEL_ROWS[g.panel] ?? 0))
   // The pane's top row, while it is short of the size the game plays best in: too narrow first, else too short.
@@ -1269,7 +1286,7 @@ const layOut = (p: Pane) => {
   const { e, g } = p
   hudWidth = e.props.bodyColumns
   // A belt slot's menu, while the slot still holds something to choose.
-  const menuBox = beltMenu === null ? undefined : beltMenuBox(g, beltMenu, hudWidth)
+  const menuBox = beltMenu === null ? undefined : stripBeltMenu(g, beltMenu, hudWidth)
   if (menuBox === undefined) beltMenu = null
   const sizes = sizesOf(p)
   isPixelDash = sizes.hasHud
@@ -2056,13 +2073,18 @@ const mapView = (p: Pane, l: Layout) => {
   }
   const stride = l.heroAt !== undefined && walk !== null && isStrideFrame(walk.frame)
   const hover = mapHoverOf(p.g)
-  const map = pixelMapFrame(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? hover.lit : undefined)
+  const map = pixelMapFrame(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? hover.lit : undefined, stripOverMap(l.told, l.mapWidth, 0))
   return (
     <Box>
       <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(map.cells)} />
       {Client !== undefined && (
         <Box position="absolute" top={0} left={0}>
           <Client key="map-clicks" module="./clicks.ts" props={{ columns: l.mapWidth, rows: l.pixelRows, blocks: mapBlocks(p.g, hover.label, map.frame, { columns: l.mapWidth, rows: l.pixelRows }) }} width={l.mapWidth} height={l.pixelRows} />
+        </Box>
+      )}
+      {Client !== undefined && isDash(l.mapWidth) && l.pixelRows > OVER_ROWS && (
+        <Box position="absolute" top={l.pixelRows - OVER_ROWS} left={0}>
+          <Client key="dash-clicks" module="./windowclient.ts" props={{ columns: l.mapWidth, rows: OVER_ROWS, boxes: onPixels(overMapBoxes(l.told, l.mapWidth)) }} width={l.mapWidth} height={OVER_ROWS} />
         </Box>
       )}
     </Box>
@@ -2073,6 +2095,7 @@ const mapView = (p: Pane, l: Layout) => {
 const stripView = (p: Pane, l: Layout) => {
   const { e, g, Box, Raster, Client } = p
   stripShown = l.hasHud && Raster !== undefined ? { columns: e.props.bodyColumns, rows: l.hudRows, boxes: l.menuBoxes } : null
+  lastRipple = null
   if (!l.hasHud || Raster === undefined) {
     return (
       <Box flexDirection="column">
@@ -2087,7 +2110,7 @@ const stripView = (p: Pane, l: Layout) => {
         <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={stripCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
         {Client !== undefined && (
           <Box position="absolute" top={0} left={0}>
-            <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: onPixels(hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes)) }} width={e.props.bodyColumns} height={l.hudRows} />
+            <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: onPixels(stripBoxes(l.told, e.props.bodyColumns, l.menuBoxes)) }} width={e.props.bodyColumns} height={l.hudRows} />
           </Box>
         )}
       </Box>

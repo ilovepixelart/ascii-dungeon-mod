@@ -14,7 +14,9 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
-import { BELT_BELOW_Y, INSET, ORB_STEP_MS, orbSize, orbTop, sideLineAt, stripLeft, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
+import { INSET } from './hud'
+import { BELT_Y, DASH_OVER, ORB_STEP_MS, dashBeltX, plaqueIcons } from './dash'
+import { stripHeight, stripOverMap } from './strip'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
@@ -32,7 +34,8 @@ import { arrive } from './world'
 import { SETTINGS_UI, settingsRect } from './settings'
 import { cardText } from './herocard'
 import { codexCardRect } from './codexwindow'
-import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import { FOE_BAR_FILL, FRAMES_PER_TILE, HIT_FRAMES, STILL, stampCells, stampOf, walkState, benchRoute, clickToTile, hexToInt, hitFramesFor, hitsBetween, isStrideFrame, pixelMap, tileCamera, walkPosition, walkingGame } from './pixels'
+import type { Ambient, Hit } from './pixels'
 
 const PANE = {
   plugin: 'ascii-dungeon',
@@ -241,9 +244,14 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
 const WIDE = { ...PANE, props: { ...PANE.props, bodyColumns: 110 } } as const
 /** The wide pane's strip: its content's width, where its portrait is clicked, and its orbs' middle. */
-const STRIP_W = WIDE.props.bodyColumns - 2 * INSET
-const PORTRAIT_AT = stripLeft(STRIP_W) + 5
-const ORB_MID = { x: orbSize(STRIP_W) / 2, y: orbTop(orbSize(STRIP_W)) + orbSize(STRIP_W) / 2 }
+/** The map's cells as the pane sends them: the dash's upper half over its bottom, at rest, on a pane wide enough for it. */
+const paneMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL) =>
+  pixelMap(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, undefined, stripOverMap(g, columns, 0))
+/** Where the wide pane's dash is clicked, in its pixels (a row above 0 over the map): the HP orb for the sheet, a
+ * plaque button, the plaque's words for the log. */
+const SHEET_AT = { x: 13, y: 8 }
+const iconAt = (icon: 'bag' | 'settings' | 'portal') => ({ x: plaqueIcons(WIDE.props.bodyColumns).find(i => i.icon === icon)!.x + 2, y: -5 })
+const LOG_AT = { x: 30, y: -5 }
 
 /** Every toast the pane raises, in order. */
 const toasts = (on: On) => {
@@ -256,7 +264,14 @@ const toasts = (on: On) => {
 }
 /** The strip's cell over its content pixel x, y at the wide pane's width: INSET in, two pixels a cell down. */
 const stripCell = (x: number, y: number) => ({ x: INSET + x, y: Math.floor((INSET + y) / 2) })
-const INNER = WIDE.props.bodyColumns - 2 * INSET
+/** A click on the dash at x, y of its pixels, as the pane takes one: on its strip rows through the strip's layer, on
+ * the rows above it through its own layer over the map's bottom, row 0 of which is DASH_OVER pixels up. */
+const clickDash = async (ui: { pointer: (e: never) => Promise<unknown> }, at: { x: number; y: number }) => {
+  if (at.y >= 0) return clickStrip(ui, at.x - INSET, at.y - INSET)
+  const cell = { x: at.x + 0.5, y: (DASH_OVER + at.y) / 2 + 0.25 }
+  await ui.pointer({ type: 'down', ...cell, button: 'left', in: 'dash-clicks' } as never)
+  await ui.pointer({ type: 'up', ...cell, button: 'left', in: 'dash-clicks' } as never)
+}
 /** A click on the strip, as its click layer reads one: a press and its release in the same place. */
 const clickStrip = async (ui: { pointer: (e: never) => Promise<unknown> }, x: number, y: number) => {
   await ui.pointer({ type: 'down', ...stripCell(x, y), button: 'left', in: 'hud-clicks' } as never)
@@ -278,7 +293,7 @@ const cellsIn = (g: Game, _columns: number, _rows: number) =>
 test('on a wide terminal pane the bag opens as the pixel inventory with the item card under it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeUndefined()
-  await clickStrip(ui, PORTRAIT_AT, 5)
+  await clickDash(ui, iconAt('bag'))
   const bag = await ui.find({ type: 'Raster', key: 'bag' })
   expect(bag?.props.columns).toBe(INV_W)
   expect(bag?.props.rows).toBe((INV_TOP + INV_H) / 2)
@@ -343,7 +358,7 @@ test('on a wide pane the start screen is a pixel window over the map; a hero cho
 
 test('on a wide pane the strip\'s XP line opens the character sheet as a pixel window, which closes back to the map', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
+  await clickDash(ui, SHEET_AT)
   expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeDefined()
   expect(await ui.find({ type: 'Client', key: 'sheet-clicks' })).toBeDefined()
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeUndefined()
@@ -355,7 +370,7 @@ test('on a wide pane the strip\'s XP line opens the character sheet as a pixel w
 
 test('the sheet\'s Codex opens the codex as a pixel window; its close box closes it back to the map', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
+  await clickDash(ui, SHEET_AT)
   await ui.press({ key: 'sheet-codex' })
   expect(await ui.find({ type: 'Raster', key: 'codex' })).toBeDefined()
   expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeUndefined()
@@ -407,7 +422,7 @@ test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet'
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
+  await clickDash(ui, SHEET_AT)
   await ui.press({ key: 'sheet-retire' })
   expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeDefined()
   const back = retireButtons({ ...saved, panel: 'retire' }, { slot: null }).back
@@ -505,7 +520,7 @@ test('on a wide pane a talent\'s number key chooses its card, as on the start sc
 
 test('a click on the strip\'s gold and depth line opens the log over the map; its close box closes it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-  await clickStrip(ui, sideLineAt(STRIP_W).x + 2, sideLineAt(STRIP_W).y + 2)
+  await clickDash(ui, LOG_AT)
   expect(await ui.find({ type: 'Raster', key: 'log' })).toBeDefined()
   const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
   await ui.pointer({ type: 'down', ...close, button: 'left', in: 'log-clicks' } as never)
@@ -566,7 +581,7 @@ test('on a wide pane a mark card, clicked, chooses that mark', async ($, on) => 
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
+  await clickDash(ui, SHEET_AT)
   await ui.press({ key: 'sheet-deep' })
   const card = deepCards({ ...saved, panel: 'deep' })[1]!
   const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 3) / 2) }
@@ -671,7 +686,7 @@ test('a session begun with nothing waiting says nothing of it', async ($, on) =>
 
 test('How it plays opens from settings over it, and closes back to settings', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
+  await clickDash(ui, iconAt('settings'))
   expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeDefined()
   const r = settingsRect(newGame(), { effects: true, music: true, volume: 4 }, SETTINGS_UI, 'help')!
   const at = { x: r.x + 2, y: Math.floor((r.y + 4) / 2) }
@@ -767,7 +782,7 @@ test('a wide terminal pane of the best size draws the pixel strip alone under th
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
   const hud = await ui.find({ type: 'Raster', key: 'hud' })
   expect(hud?.props.columns).toBe(110)
-  expect(hud?.props.rows).toBe(hudLayout(110).height / 2)
+  expect(hud?.props.rows).toBe(stripHeight(110) / 2)
   expect(await ui.findAll({ type: 'Button' })).toEqual([])
   expect(await ui.findAll({ type: 'Text' })).toEqual([])
   await ui.unmount()
@@ -776,8 +791,8 @@ test('a wide terminal pane of the best size draws the pixel strip alone under th
 test('what a click comes to shows as a toast: a belt slot drinks, and the empty slot says so', async ($, on) => {
   const said = toasts(on)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, beltSlotX(INNER, 0) + 6, BELT_BELOW_Y + 5)
-  await clickStrip(ui, beltSlotX(INNER, 0) + 6, BELT_BELOW_Y + 5)
+  await clickDash(ui, { x: dashBeltX(0) + 5, y: BELT_Y + 5 })
+  await clickDash(ui, { x: dashBeltX(0) + 5, y: BELT_Y + 5 })
   expect(said).toEqual(['You drink a Health Potion. +0 HP', 'Belt slot 1 is empty.'])
   await ui.unmount()
 })
@@ -798,7 +813,7 @@ test('a foe summoned by a tool call is toasted with its threat; the narrow pane 
 
 test('clicking the level line opens the character sheet, and its Close button shuts it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
+  await clickDash(ui, SHEET_AT)
   expect(await ui.find({ type: 'Button', key: 'train-might' })).toBeDefined()
   await ui.press({ key: 'sheet-close' })
   expect(await ui.find({ type: 'Button', key: 'train-might' })).toBeUndefined()
@@ -1022,7 +1037,7 @@ test('a click during a walk goes to the tile drawn under the pointer, the hero w
   const startCenter = viewOf(g, columns, rows)
   const explored = apply(g, { kind: 'walk' })
   expect(same(explored, g)).toBe(false)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(pixelMap(explored, columns, rows, undefined, startCenter))
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(paneMap(explored, columns, rows, undefined, startCenter))
   await ui.unmount()
 })
 
@@ -1051,7 +1066,7 @@ test('on a pane of 80 to 104 columns the compact inventory takes the pane, and c
 test('on a wide terminal the inventory takes the whole pane while it is open, and closes back to the map', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeDefined()
-  await clickStrip(ui, PORTRAIT_AT, 5)
+  await clickDash(ui, iconAt('bag'))
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'hud' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
@@ -1066,7 +1081,7 @@ test('on a wide terminal the inventory takes the whole pane while it is open, an
 test('with the mouse: gear is taken off, dragged back on, and a bag item destroyed from its menu after a second click', async ($, on) => {
   const said = toasts(on)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, PORTRAIT_AT, 5)
+  await clickDash(ui, iconAt('bag'))
   // A cell (x, y) of the click layer is the screen pixels x and 2y, 2y + 1; a pointer there lands on 2y + 1.
   const at = (px: number, py: number) => ({ x: px, y: Math.floor(py / 2) })
   const tap = async (p: { x: number; y: number }, button: 'left' | 'right' = 'left') => {
@@ -1101,8 +1116,7 @@ test('with the mouse: gear is taken off, dragged back on, and a bag item destroy
 test('clicking the portrait in the strip opens the inventory', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Client', key: 'hud-clicks' })).toBeDefined()
-  await ui.pointer({ type: 'down', x: INSET + PORTRAIT_AT, y: 2, button: 'left', in: 'hud-clicks' })
-  await ui.pointer({ type: 'up', x: INSET + PORTRAIT_AT, y: 2, button: 'left', in: 'hud-clicks' })
+  await clickDash(ui, iconAt('bag'))
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
   await ui.unmount()
 })
@@ -1127,11 +1141,11 @@ test('a step plays as a walk: the hero is drawn at his starting tile first, at h
   // Nothing has happened yet: the step is carried out when the walk ends, so the map is as it was until the first frame.
   expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(shown)
   await clock.advance(400)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(pixelMap(after, columns, rows, undefined, startCenter))
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(paneMap(after, columns, rows, undefined, startCenter))
   // In between, a frame was painted at every tick, each one a frame further along: 1 px at a time, the camera
   // holding still for a one-tile step.
   expect(frames.length).toBe(4 - 1)
-  frames.forEach((cells, i) => expect(cells).toBe(pixelMap(after, columns, rows, walkPosition([start, after], i + 1), startCenter, [], 0, isStrideFrame(i + 1))))
+  frames.forEach((cells, i) => expect(cells).toBe(paneMap(after, columns, rows, walkPosition([start, after], i + 1), startCenter, [], 0, isStrideFrame(i + 1))))
   await ui.unmount()
 })
 
@@ -1185,7 +1199,7 @@ test('a walk whose repaint is refused gives way to an ordinary redraw', async ($
   await clock.advance(80)
   const after = apply(start, { kind: 'walk' })
   const startCenter = viewOf(start, map?.props.columns as number, map?.props.rows as number)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(pixelMap(after, map?.props.columns as number, map?.props.rows as number, undefined, startCenter))
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(paneMap(after, map?.props.columns as number, map?.props.rows as number, undefined, startCenter))
   await ui.unmount()
 })
 
@@ -1206,11 +1220,11 @@ test('the portal slot takes the hero to town and back, the map and the toasts sa
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
-  await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+  await clickDash(ui, iconAt('portal'))
   expect(said).toEqual(['You step through the portal into town.'])
   const town = apply(newGame(), { kind: 'portal' })
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(pixelMap(town, columns, rows, undefined, viewOf(town, columns, rows)))
-  await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).toBe(paneMap(town, columns, rows, undefined, viewOf(town, columns, rows)))
+  await clickDash(ui, iconAt('portal'))
   expect(said).toEqual(['You step through the portal into town.', 'You step back through the portal.'])
   await ui.unmount()
 })
@@ -1221,7 +1235,7 @@ test('no frame around the game: neither the map nor the inventory screen draws a
   // Pixel view: the larger-pixel map, then the inventory screen.
   expect(await bordered()).toBe(0)
   expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.columns).toBe(WIDE.props.bodyColumns)
-  await clickStrip(ui, PORTRAIT_AT, 5)
+  await clickDash(ui, iconAt('bag'))
   expect(await bordered()).toBe(0)
   await ui.unmount()
 })
@@ -1229,10 +1243,10 @@ test('no frame around the game: neither the map nor the inventory screen draws a
 test('the map takes every row the strip leaves, nothing for text rows or a frame', async $ => {
   // At the best size, so no note takes a row.
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-  const strip = hudLayout(WIDE.props.bodyColumns).height / 2
-  // The strip: 24 px of content and 2 px of frame and room each side, 28 px, 14 rows.
-  expect(strip).toBe(14)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(80 - 14)
+  const strip = stripHeight(WIDE.props.bodyColumns) / 2
+  // The dash: its top band, the belt and its bottom band, 16 px, 8 rows.
+  expect(strip).toBe(8)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(80 - 8)
   await ui.unmount()
 })
 
@@ -1299,7 +1313,7 @@ test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dun
   })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   // The player's own game is somewhere else entirely: in town. The bench does not use it.
-  await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+  await clickDash(ui, iconAt('portal'))
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
@@ -1309,7 +1323,7 @@ test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dun
   // Every frame but the last is repainted in place; the last hands back to the ordinary drawing. After it, only the
   // player's own town, its water shimmering.
   const town = apply(newGame(), { kind: 'portal' })
-  const still = [false, true].map(shimmer => pixelMap(town, columns, rows, undefined, viewOf(town, columns, rows), [], 0, false, { bob: false, shimmer }))
+  const still = [false, true].map(shimmer => paneMap(town, columns, rows, undefined, viewOf(town, columns, rows), [], 0, false, { bob: false, shimmer }))
   expect(frames.length).toBeGreaterThanOrEqual(40 * 4 - 1)
   expect(frames.slice(0, 40 * 4 - 1).some(f => still.includes(f))).toBe(false)
   expect(frames.slice(40 * 4 - 1).every(f => still.includes(f))).toBe(true)
@@ -1318,7 +1332,7 @@ test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dun
   const route = benchRoute(bench, 40)
   // A new place: the camera starts on the tile line nearest the hero as the first frame draws him.
   const at = walkPosition(route, 1)
-  expect(frames[0]).toBe(stampCells(pixelMap(walkingGame(bench, bench, route, 1), columns, rows, at, tileCamera(null, at, columns, rows * 2), [], 0, true), 1))
+  expect(frames[0]).toBe(stampCells(paneMap(walkingGame(bench, bench, route, 1), columns, rows, at, tileCamera(null, at, columns, rows * 2), [], 0, true), 1))
   // Each bench frame carries its number: every one of them sent, in order, once; nothing after the bench is stamped.
   const stamps = frames.map(stampOf)
   expect(stamps.slice(0, 40 * 4 - 1)).toEqual(Array.from({ length: 40 * 4 - 1 }, (_, i) => (i + 1) % 16))
@@ -1361,7 +1375,7 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const said = toasts(on)
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount(TALL)
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     const map = await ui.find({ type: 'Raster', key: 'map' })
     const town = apply(newGame(), { kind: 'portal' })
     said.length = 0
@@ -1383,7 +1397,7 @@ describe('a click is carried out when the hero gets there, not when it is made',
       return { value: {} }
     })
     const ui = await $.ui.mount(TALL)
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     const map = await ui.find({ type: 'Raster', key: 'map' })
     const columns = map?.props.columns as number
     const rows = map?.props.rows as number
@@ -1445,7 +1459,7 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const said = toasts(on)
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount(TALL)
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     const map = await ui.find({ type: 'Raster', key: 'map' })
     const columns = map?.props.columns as number
     const rows = map?.props.rows as number
@@ -1520,7 +1534,7 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const expected = Array.from({ length: (path.length - 1) * 4 - 1 }, (_, i) => {
       const at = walkPosition(path, i + 1)
       camera = tileCamera(camera, at, columns, rows * 2)
-      return pixelMap(walkState(g, tiles, i + 1), columns, rows, at, camera, [], 0, isStrideFrame(i + 1))
+      return paneMap(walkState(g, tiles, i + 1), columns, rows, at, camera, [], 0, isStrideFrame(i + 1))
     })
     expect(frames.length).toBe(expected.length)
     frames.forEach((cells, i) => {
@@ -1563,7 +1577,7 @@ const atTheSpot = async ($: Engine, on: On, spot: keyof typeof TOWN_SPOTS, first
   on('ui.blit', () => ({ value: {} }))
   const ui = await mountTall($)
   await first?.(ui)
-  await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+  await clickDash(ui, iconAt('portal'))
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const town = apply(newGame(), { kind: 'portal' })
   await ui.pointer({ type: 'down', ...cellOf(town, TOWN_SPOTS[spot], map?.props.columns as number, map?.props.rows as number), button: 'left', in: 'map-clicks' })
@@ -1669,7 +1683,7 @@ test('in a pane too narrow for its window the smith offers to temper each worn i
 /** The worn sword taken off into the bag through the inventory, then the hero walked to the stash in a wide pane. */
 const swordToTheStash = async ($: Engine, on: On) =>
   atTheSpot($, on, 'stash', async ui => {
-    await clickStrip(ui, PORTRAIT_AT, 5)
+    await clickDash(ui, iconAt('bag'))
     const [x, y, w, h] = WORN_SLOTS.weapon
     const slot = { x: x + Math.floor(w / 2), y: Math.floor((INV_TOP + y + Math.floor(h / 2)) / 2) }
     await ui.pointer({ type: 'down', ...slot, button: 'left', in: 'bag-clicks' })
@@ -1751,7 +1765,7 @@ test('on a wide pane every townsperson opens a pixel window of their words with 
   const said = toasts(on)
   on('ui.blit', () => ({ value: {} }))
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-  await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+  await clickDash(ui, iconAt('portal'))
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
@@ -1762,8 +1776,8 @@ test('on a wide pane every townsperson opens a pixel window of their words with 
   for (const who of Object.keys(first) as (keyof typeof first)[]) {
     // Out and back through the portal: the camera recenters on the arrival, where the cells below assume it.
     if (who !== 'healer') {
-      await clickStrip(ui, portalSlotX(INNER) + 5, 5)
-      await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+      await clickDash(ui, iconAt('portal'))
+      await clickDash(ui, iconAt('portal'))
       await clock.advance(5000)
     }
     await ui.pointer({ type: 'down', ...cellOf(town, TOWN_SPOTS[who], columns, rows), button: 'left', in: 'map-clicks' })
@@ -1786,7 +1800,7 @@ test('in a pane too narrow for their window the dog has a text window of its own
   const clock = mock.clock(on)
   on('ui.blit', () => ({ value: {} }))
   const wide = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-  await clickStrip(wide, portalSlotX(INNER) + 5, 5)
+  await clickDash(wide, iconAt('portal'))
   const map = await wide.find({ type: 'Raster', key: 'map' })
   const town = apply(newGame(), { kind: 'portal' })
   await wide.pointer({ type: 'down', ...cellOf(town, TOWN_SPOTS.dog, map?.props.columns as number, map?.props.rows as number), button: 'left', in: 'map-clicks' })
@@ -1863,7 +1877,7 @@ describe('idle motion in the pane', () => {
     expect(ambientAt(SHIMMER, SHIMMER, false).shimmer).toBe(false)
   })
 
-  test('with orbs the strip alone repaints as the ripple moves, a phase every ORB_STEP_MS; with bars it holds still', async ($, on) => {
+  test('with the dash the strip alone repaints as a surface in it ripples, a phase every ORB_STEP_MS; with bars it holds still', async ($, on) => {
     const clock = mock.clock(on)
     const painted: { key: string; cells: string }[] = []
     on('ui.blit', (_$, e) => {
@@ -1871,6 +1885,12 @@ describe('idle motion in the pane', () => {
       return { value: {} }
     })
     on('tool.call', () => ({ result: {} as never }))
+    // A hero at a fifth of their HP: the surface low in the orb, in the dash's own rows, where it ripples.
+    storeIn(on, new Map<string, unknown>([['save', { ...newGame(), hp: 6 }]]))
+    on('command.register', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('session.start', (_$, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
     const orbs = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, bodyColumns: 140 }, surface: 'terminal' })
     expect(await orbs.find({ type: 'Raster', key: 'hud' })).toBeDefined()
     // A tool that moves nothing on the map starts the idle timer, as the session's start does.
@@ -1910,9 +1930,9 @@ describe('idle motion in the pane', () => {
     await clock.advance(IDLE_BEFORE_BOB_MS - 200)
     expect(frames).toEqual([])
     await clock.advance(400)
-    expect(frames.at(-1)).toBe(pixelMap(g, columns, rows, undefined, view, [], 0, false, { bob: true, shimmer: false }))
+    expect(frames.at(-1)).toBe(paneMap(g, columns, rows, undefined, view, [], 0, false, { bob: true, shimmer: false }))
     await clock.advance(12 * FRAME_MS)
-    const down = pixelMap(g, columns, rows, undefined, view, [], 0, false, { bob: false, shimmer: false })
+    const down = paneMap(g, columns, rows, undefined, view, [], 0, false, { bob: false, shimmer: false })
     expect(frames.at(-1)).toBe(down)
     // Lifted again, then a tool call: the hero is back down at once and waits another 10 s.
     await clock.advance(12 * FRAME_MS)
@@ -1944,8 +1964,9 @@ describe('pickups on a walk', () => {
     on('session.start', (_$, e) => ({ cwd: e.cwd }))
     await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-    // The strip as drawn: its pixels and the text over them (the gold and the belt's counts are text).
-    const hud = async () => JSON.stringify([(await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells, ((await ui.find({ type: 'Client', key: 'hud-clicks' }))?.props.props as { boxes?: unknown } | undefined)?.boxes])
+    // The dash as drawn: its pixels and the text over them, the belt's counts on it and the gold on its plaque.
+    const boxesOf = async (key: string) => ((await ui.find({ type: 'Client', key }))?.props.props as { boxes?: unknown } | undefined)?.boxes
+    const hud = async () => JSON.stringify([(await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells, await boxesOf('hud-clicks'), await boxesOf('dash-clicks')])
     // The same game beside the pane's, read by read, until a read's walk takes something up.
     let g = newGame(world)
     for (let call = 0; call < READS; call += 1) {
@@ -2024,7 +2045,7 @@ describe('footsteps and the portal', () => {
     })
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(1000)
     await $.command.run({ command: 'dungeon-bench', args: '' } as never)
     await clock.advance(40 * 4 * FRAME_MS + 1000)
@@ -2051,7 +2072,7 @@ describe('footsteps and the portal', () => {
     })
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(1000)
     await $.command.run({ command: 'dungeon-bench', args: '' } as never)
     await clock.advance(40 * 4 * FRAME_MS + 1000)
@@ -2107,7 +2128,7 @@ describe('town music in the pane', () => {
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
     // Into town, out, and in again.
     for (let i = 0; i < 3; i += 1) {
-      await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+      await clickDash(ui, iconAt('portal'))
       await clock.advance(1000)
     }
     await ui.unmount()
@@ -2127,7 +2148,7 @@ describe('town music in the pane', () => {
     })
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(2 * TUNE_MS + 100)
     await ui.unmount()
     expect(rounds).toEqual([false, false, false])
@@ -2142,7 +2163,7 @@ describe('town music in the pane', () => {
     })
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(1000)
     const map = await ui.find({ type: 'Raster', key: 'map' })
     const town = apply(newGame(), { kind: 'portal' })
@@ -2173,7 +2194,7 @@ describe('the mix in the pane', () => {
     const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
     const town = apply(newGame(), { kind: 'portal' })
     // Through the portal and off at once to the healer: the walk's first steps sound while the portal's still does.
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     const map = await ui.find({ type: 'Raster', key: 'map' })
     await ui.pointer({ type: 'down', ...cellOf(town, TOWN_SPOTS.healer, map?.props.columns as number, map?.props.rows as number), button: 'left', in: 'map-clicks' })
     await clock.advance(5000)
@@ -2196,22 +2217,22 @@ describe('the mix in the pane', () => {
     })
     on('ui.blit', () => ({ value: {} }))
     const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-    await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('settings'))
     // Full, then a quarter: one press goes round to it.
     await ui.press({ key: 'settings-volume' })
     await ui.press({ key: 'settings-close' })
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(1000)
     expect(played.find(p => p.asset === 'sounds/portal.wav')?.gain).toBe(gainOf('portal') / 4)
     expect(played.find(p => p.asset === 'sounds/town.wav')?.gain).toBe(MUSIC_GAIN / 4)
     // Back to the dungeon, music off, and into town again: no tune.
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(1000)
-    await clickStrip(ui, settingsSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('settings'))
     await ui.press({ key: 'settings-music' })
     await ui.press({ key: 'settings-close' })
     played.length = 0
-    await clickStrip(ui, portalSlotX(INNER) + 5, 5)
+    await clickDash(ui, iconAt('portal'))
     await clock.advance(1000)
     expect(played.some(p => p.asset === 'sounds/portal.wav')).toBe(true)
     expect(played.some(p => p.asset === 'sounds/town.wav')).toBe(false)
@@ -2227,7 +2248,7 @@ describe('the inventory during a walk', () => {
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
     await $.tool.call({ tool: 'Read', file_path: '/a.ts' })
     await clock.advance(FRAME_MS)
-    await clickStrip(ui, PORTRAIT_AT, 5)
+    await clickDash(ui, iconAt('bag'))
     expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
     await clock.advance(5000)
     expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()

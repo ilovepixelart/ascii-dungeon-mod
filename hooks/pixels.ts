@@ -1062,13 +1062,17 @@ const lightRect = (frame: Uint32Array, width: number, height: number, r: PixelRe
 }
 
 /** The map's cells; `lit`, the tile under the pointer, lit for the hover over everything else. */
-export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect) =>
-  pixelMapFrame(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, lit).cells
+export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect, over?: Over) =>
+  pixelMapFrame(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, lit, over).cells
 
 /** The map's Raster cells and the frame they pack, for what is written over it to take its ground from. */
-export const pixelMapFrame = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect) => {
+/** What a caller paints over the map's frame last, `height` pixels tall: the dash standing over its bottom. */
+export type Over = (frame: Uint32Array, height: number) => void
+
+export const pixelMapFrame = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect, over?: Over) => {
   const drawn = frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient })
   const frame = lit === undefined ? drawn : lightRect(drawn, columns, rows * 2, lit)
+  over?.(frame, rows * 2)
   return { cells: rasterCells(frame, columns, rows), frame }
 }
 

@@ -5,6 +5,7 @@
 import type { Game, HeroClass, Rarity, Talent } from '../types'
 import { LOG_KEPT, apply, newGame } from './game'
 import { hudPixels } from './hud'
+import { dashLabels, dashStrip } from './dash'
 import { BASES } from './items/catalog'
 import { plainItem } from './items/loot'
 import { inventoryScreenPixels } from './inventory'
@@ -107,7 +108,8 @@ export const shots = (): Shot[] => {
     const stash = { ...smith, stashed: [g.bag.slice(0, 4)] }
     out.push(shot(`sheet-${cls}`, sheetPixels(g), sheetOverlay(g)))
     out.push(shot(`start-${cls}`, startPixels(g, { cls }), startOverlay(g, { cls })))
-    out.push(shot(`strip-${cls}`, hudPixels(g, 111).px))
+    out.push(shot(`strip-${cls}`, hudPixels(g, 100).px))
+    out.push(shot(`dash-${cls}`, dashStrip(g, 105).px, dashLabels(g, 105)))
     out.push(shot(`forge-${cls}`, forgePixels(smith, { slot: null, menu: false } as never), forgeOverlay(smith, { slot: null, menu: false } as never)))
     // A Rare from the bag worn and just reforged, the old piece to keep: Before and Keep old shown.
     const piece = g.bag.find(i => i.rarity === 'rare')!

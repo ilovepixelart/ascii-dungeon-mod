@@ -33,7 +33,7 @@ describe('the title bar in terminal text', () => {
 
   test('every window the previews draw has its title bar\'s text, and no pixel letters in the bar', async () => {
     // The strip under the map is in the previews too, and is no window.
-    const all = shots().filter(s => !s.name.startsWith('strip-'))
+    const all = shots().filter(s => !s.name.startsWith('strip-') && !s.name.startsWith('dash-'))
     const missing = all.filter(s => !s.boxes.some(b => b.role === 'title') && s.px.length > HEAD_H).map(s => s.name)
     const lettered = all.filter(s => s.px.slice(0, HEAD_H).some(row => row.includes(TITLE_INK))).map(s => s.name)
     expect([missing, lettered]).toEqual([[], []])

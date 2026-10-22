@@ -1,14 +1,12 @@
-// The dashboard strip under the map, all in pixels: the hero's portrait, the HP and XP with their numbers, the settings
-// and the portal, the belt, and a line of gold, depth and the running effects; a belt slot's menu of its tiers. From
-// ORB_WIDTH_MIN the HP and XP are orbs at the strip's ends, each filled to its share with a rippling surface, the line
-// of gold and depth in the top row; narrower, they are bars in the top row, the line beside the belt.
+// The dashboard strip under the map, all in pixels: the hero's portrait, the HP and XP bars with their numbers, the
+// settings and the portal, the belt, and a line of gold, depth and the running effects; a belt slot's menu of its tiers.
 import type { Game } from '../types'
 import { xpToLevel } from './balance'
 import { depthMod } from './game'
 import type { DepthMod } from './game'
 import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
-import { CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar, inkOn, mix } from './pieces'
+import { CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar } from './pieces'
 import { TIERS, activeTier, nameOf } from './consumables'
 import type { Tier } from './consumables'
 import type { Action } from './game'
@@ -39,27 +37,6 @@ export const SLOT_STEP = BELT_SLOT_W - 1
  * row is a whole cell of the framed strip (its content INSET from the top). */
 export const SIDE_LINE_Y = BELT_BELOW_Y + 3
 export const SIDE_LINE_X = 5 * SLOT_STEP + 1 + 3
-
-/** The orbs' sizes, across and down: the smallest, on the narrowest strip with orbs, and the largest, the strip's
- * height but a pixel of room above and below. Even, so an orb's middle rows are always the same two text rows. */
-export const ORB_MIN = 16
-export const ORB = 22
-/** What lies between the orbs in the top row at its fullest: a pixel each side, the portrait, the gold and the depth
- * with its twist (31 px at six figures and depth 100), the settings and the portal. */
-const BETWEEN_ORBS = 69
-/** The narrowest strip (content pixels) with orbs: a 105-column pane, its orbs ORB_MIN across. */
-export const ORB_WIDTH_MIN = BETWEEN_ORBS + 2 * ORB_MIN
-export const hasOrbs = (width: number) => width >= ORB_WIDTH_MIN
-/** An orb's size on a strip `width` wide: what the room beside the top row's parts allows, ORB_MIN to ORB. */
-export const orbSize = (width: number) => Math.max(ORB_MIN, Math.min(ORB, 2 * Math.floor((width - BETWEEN_ORBS) / 4)))
-/** An orb's top: centred down the strip. */
-export const orbTop = (size: number) => (BELT_BELOW_Y + SLOT + 2 - size) / 2
-/** Where the portrait and the belt start: a pixel past the HP orb, with orbs. */
-export const stripLeft = (width: number) => (hasOrbs(width) ? orbSize(width) + 1 : 0)
-/** The XP orb's left edge, flush right. */
-export const xpOrbX = (width: number) => width - orbSize(width)
-/** With orbs, the side line's marks in the top row past the portrait, their text on a whole cell. */
-export const ORB_SIDE_Y = 3
 
 /** HP's red, the same at every share as Diablo's life globe: its lit top, its body and its shade. */
 export const HP_TONES = ['#f06a5a', '#c0392b', '#8a231a'] as const
@@ -94,7 +71,7 @@ export const MARK_INK: Readonly<Record<string, string>> = {
   r: '#e04a5a', w: '#ffb0b8', y: '#ffd34d', Y: '#fff2a8', o: '#b08a1e', s: '#9a9aa4', g: '#5ccf6a', b: '#7fe3ff', B: '#d8f8ff', f: '#f06a5a', F: '#ffd34d', x: '#e0b84a', X: '#fff2a8', c: '#8a6cf0', C: '#e4dcff', n: '#6b6258', m: '#a88ae0', h: '#e08a5a',
 }
 /** The fortune in force, by its initial beside the crystal ball. */
-const FORTUNE_INITIAL: Readonly<Record<NonNullable<Game['fortune']>['kind'], string>> = { luck: 'L', riches: 'R', insight: 'I' }
+export const FORTUNE_INITIAL: Readonly<Record<NonNullable<Game['fortune']>['kind'], string>> = { luck: 'L', riches: 'R', insight: 'I' }
 export const mark = (c: Canvas, rows: readonly string[], x: number, y: number) =>
   rows.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, x + dx, y + dy, MARK_INK[k] ?? '#ff00ff')))
 
@@ -105,8 +82,8 @@ export const BELT_W = 5 * SLOT_STEP + 1
  * framed strip is a whole number of cells. */
 export const contentLayout = (_width: number) => ({ height: BELT_BELOW_Y + SLOT + 2 })
 
-/** The portal slot: flush right in the top row, or a pixel short of the XP orb. */
-export const portalSlotX = (width: number) => (hasOrbs(width) ? xpOrbX(width) - 1 : width) - SLOT
+/** The portal slot: flush right in the top row. */
+export const portalSlotX = (width: number) => width - SLOT
 /** The settings slot: left of the portal, a pixel apart. */
 export const settingsSlotX = (width: number) => portalSlotX(width) - SLOT - 1
 /**
@@ -132,15 +109,8 @@ export const hudLayout = (width: number) => {
   return { ...inner, height: inner.height + 2 * INSET }
 }
 
-/** Where belt slot `i` starts: from the left edge of the belt's row, past the HP orb when there is one. */
-export const beltSlotX = (width: number, i: number) => stripLeft(width) + i * SLOT_STEP
-
-/** The side line's place in `width`: beside the belt, to the strip's end; with orbs, in the top row past the portrait,
- * up to a pixel short of the settings slot. */
-export const sideLineAt = (width: number) =>
-  hasOrbs(width)
-    ? { x: stripLeft(width) + PORTRAIT + 3, y: ORB_SIDE_Y, end: settingsSlotX(width) - 1 }
-    : { x: SIDE_LINE_X, y: SIDE_LINE_Y, end: width }
+/** Where belt slot `i` starts: from the left edge of the belt's row. */
+export const beltSlotX = (_width: number, i: number) => i * SLOT_STEP
 
 const PORTAL_SHUT = '#2e3440'
 
@@ -155,128 +125,19 @@ const bars = (c: Canvas, g: Game, width: number) => {
   flatBar(c, BAR_X, XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY)
 }
 
-/** The ripple's phases, one every ORB_STEP_MS, round and round. */
-export const ORB_PHASES = 8
-export const ORB_STEP_MS = 200
-export const orbPhase = (now: number) => Math.floor(now / ORB_STEP_MS) % ORB_PHASES
-/** The orb's rows its numbers stand on, two text rows on its middle: the surface lies still across them, so their
- * ground holds. */
-const stillTop = (size: number) => size / 2 - 2
-const isStill = (size: number, y: number) => y >= stillTop(size) && y < stillTop(size) + 4
-/** The XP orb's lit surface, and its shade. */
-export const XP_LIGHT = '#f0d070'
-const XP_SHADE = '#a88430'
-/** The glass's wall, a pixel thick: lit where the light comes from (the top left), dark across from it. */
-const WALL_LIT = '#9aa4b4'
-const WALL_SHADE = '#3a3e48'
-const GLINT = '#ffffff'
+export const EFFECTS = ['fury', 'ward', 'regen'] as const
 
-/** An orb's inks: its liquid, the liquid's lit surface, its shade where the round turns from the light, and the empty
- * glass, the strip's ground seen through it, tinted by the liquid. */
-type OrbInks = { liquid: string; surface: string; shade: string; glass: string }
-const hpShare = (g: Game) => Math.max(0, g.hp) / g.maxHp
-const xpShare = (g: Game) => g.xp / xpToLevel(g.level)
-const seenThrough = (liquid: string) => mix(BG, liquid, 0.14)
-const HP_INKS: OrbInks = { liquid: HP_TONES[1], surface: HP_TONES[0], shade: HP_TONES[2], glass: seenThrough(HP_TONES[1]) }
-const XP_INKS: OrbInks = { liquid: XP_FILL, surface: XP_LIGHT, shade: XP_SHADE, glass: seenThrough(XP_FILL) }
-
-/** Where on the round a pixel is: its distance from the middle, the wall's radius, and its angle, 0 pointing right and
- * -90 up, so the light's side (the top left) is about -135. */
-const roundAt = (size: number, x: number, y: number) => {
-  const centre = (size - 1) / 2
-  return { d: Math.hypot(x - centre, y - centre), r: size / 2, angle: (Math.atan2(y - centre, x - centre) * 180) / Math.PI }
-}
-
-/** The glass's light, over whatever it shows: a short curved highlight just inside the wall on the light's side and one
- * hot pixel in it, white, as a glass ball catches the light; undefined elsewhere. */
-const glint = (size: number, x: number, y: number) => {
-  const { d, r, angle } = roundAt(size, x, y)
-  if (d > r - 3 && d <= r - 2 && angle > -165 && angle < -105) return mix(GLINT, WALL_LIT, 0.25)
-  const hot = Math.round(size * 0.3)
-  return x === hot && y === hot ? GLINT : undefined
-}
-
-/** The liquid at a pixel: its body, shaded where the round turns away from the light (its bottom right), and a thin
- * light just inside the wall there, the light come through the glass. */
-const liquidAt = (size: number, x: number, y: number, inks: OrbInks) => {
-  const { d, r, angle } = roundAt(size, x, y)
-  const isFar = angle > 0 && angle < 90
-  if (isFar && d > r - 2) return mix(inks.liquid, GLINT, 0.22)
-  return isFar && d > r - 3.5 ? inks.shade : inks.liquid
-}
-
-/**
- * A `size` orb's pixel at x, y of its square, `share` full, the ripple at `phase`: undefined outside its round; its
- * wall, a pixel thick; the glass above the surface, the surface lit, the liquid under it; the glass's light over all.
- * The surface rests on row 1 + (1 - share) * (size - 2), a pixel up or down with the ripple but on its still rows.
- */
-export const orbPixel = (size: number, x: number, y: number, share: number, phase: number, inks: OrbInks): string | undefined => {
-  const { d, r } = roundAt(size, x, y)
-  if (d > r) return undefined
-  if (d > r - 1) return x + y < size - 1 ? WALL_LIT : WALL_SHADE
-  const light = glint(size, x, y)
-  if (light !== undefined) return light
-  const full = Math.max(0, Math.min(1, share))
-  if (full === 0) return inks.glass
-  const wave = isStill(size, y) ? 0 : Math.round(Math.sin((x / 7 + phase / ORB_PHASES) * 2 * Math.PI) * 0.9)
-  const surface = Math.round(1 + (1 - full) * (size - 2)) + wave
-  if (y < surface) return inks.glass
-  return y === surface ? inks.surface : liquidAt(size, x, y, inks)
-}
-
-/** A `size` orb drawn on `c` at x, centred down the strip. */
-const orb = (c: Canvas, size: number, x: number, share: number, phase: number, inks: OrbInks) => {
-  const top = orbTop(size)
-  for (let dy = 0; dy < size; dy += 1) for (let dx = 0; dx < size; dx += 1) {
-    const p = orbPixel(size, dx, dy, share, phase, inks)
-    if (p !== undefined) put(c, x + dx, top + dy, p)
-  }
-}
-
-/** The text row an orb's numbers start on, in the framed strip's cells: the first of its still rows, the same at every size. */
-export const ORB_TEXT_ROW = (INSET + orbTop(ORB) + stillTop(ORB)) / 2
-
-/** A line of text centred on a `size` orb at x (content pixels), on its text row `row` (0 or 1), each character on the
- * orb's two pixels under it as near as one ground shows them, in the ink that reads there. */
-const orbLabel = (text: string, size: number, x: number, row: number, share: number, inks: OrbInks): OverlayBox<'label'> => {
-  const x0 = Math.floor((size - text.length) / 2)
-  const y = stillTop(size) + 2 * row
-  const runs = [...text].map((ch, i) => {
-    const [top, bottom] = [y, y + 1].map(py => orbPixel(size, x0 + i, py, share, 0, inks) ?? BG) as [string, string]
-    const ground = top === bottom ? top : mix(top, bottom, 0.5)
-    return { text: ch, color: inkOn(ground), bg: ground, bold: true }
-  })
-  return { role: 'label', x: INSET + x + x0 - 1, y: ORB_TEXT_ROW + row - 1, w: text.length + 2, h: 3, border: runs[0]!.bg, bg: runs[0]!.bg, pad: 0, lines: [runs] }
-}
-
-/** A count of `of` as an orb writes it: in full while it fits inside a `size` orb's middle, else as a percent. */
-const fitted = (n: number, of: number, size: number) => {
-  const full = `${n}/${of}`
-  return full.length <= size - 4 ? full : `${Math.floor((100 * n) / of)}%`
-}
-
-/** Each orb's numbers on it, in the framed strip's cells: the HP over HP; the XP over the level, a + while points wait. */
-const orbLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
-  const size = orbSize(width)
-  const xpX = xpOrbX(width)
-  return [
-    orbLabel(fitted(Math.max(0, g.hp), g.maxHp, size), size, 0, 0, hpShare(g), HP_INKS),
-    orbLabel('HP', size, 0, 1, hpShare(g), HP_INKS),
-    orbLabel(fitted(g.xp, xpToLevel(g.level), size), size, xpX, 0, xpShare(g), XP_INKS),
-    orbLabel(`LV${g.level}${g.points > 0 ? '+' : ''}`, size, xpX, 1, xpShare(g), XP_INKS),
-  ]
-}
-
-const EFFECTS = ['fury', 'ward', 'regen'] as const
-
+/** The side line's text row, in the strip's content pixels: the whole cell on its marks' middle rows. */
+const SIDE_TEXT_Y = SIDE_LINE_Y + 1
 /** A mark's width, and the cell between a mark and its number. */
 const MARK_W = 5
 const MARK_GAP = 1
 
-/** The side line, left to right in the content's pixels from `line.x` to `line.end`: each mark, and each number as text
- * a cell a character. Gold (in full, thousands set apart, as the title bar writes it) and depth from the left; the
- * running effects from the right, each left out once it would reach the depth. */
-const sideLineParts = (g: Game, line: { x: number; end: number }) => {
+/** The side line, left to right in pixels from `line.x` to `line.end`: each mark, and each number as text a cell a
+ * character. Gold (in full, thousands set apart, as the title bar writes it) and depth from the left; the running
+ * effects from the right, each left out once it would reach the depth. The strip's is past the belt; the dash's on
+ * its plaque. */
+export const sideLineParts = (g: Game, line: { x: number; end: number }) => {
   const marks: { rows: readonly string[]; x: number }[] = []
   const words: { text: string; x: number; ink: string }[] = []
   const markThen = (rows: readonly string[], x: number, text: string, ink: string) => {
@@ -306,21 +167,16 @@ const sideLineParts = (g: Game, line: { x: number; end: number }) => {
 }
 
 const sideLine = (c: Canvas, g: Game) => {
-  const line = sideLineAt(c.w)
-  for (const m of sideLineParts(g, line).marks) mark(c, m.rows, m.x, line.y)
+  for (const m of sideLineParts(g, { x: SIDE_LINE_X, end: c.w }).marks) mark(c, m.rows, m.x, SIDE_LINE_Y)
 }
 
-/** The strip, `width` pixels wide and as tall as `contentLayout` says; with orbs, their ripple at `phase`. */
-export const hudContent = (g: Game, width: number, phase = 0): Canvas => {
+/** The strip, `width` pixels wide and as tall as `contentLayout` says. */
+export const hudContent = (g: Game, width: number): Canvas => {
   const c = canvas(width, contentLayout(width).height)
-  const left = stripLeft(width)
-  fill(c, left + 1, 1, PX, PX, SLOT_BG)
-  frame(c, left, 0, PORTRAIT, PORTRAIT, GRID)
-  art(c, heroArt(g), left + 1, 1)
-  if (hasOrbs(width)) {
-    orb(c, orbSize(width), 0, hpShare(g), phase, HP_INKS)
-    orb(c, orbSize(width), xpOrbX(width), xpShare(g), phase, XP_INKS)
-  } else bars(c, g, width)
+  fill(c, 1, 1, PX, PX, SLOT_BG)
+  frame(c, 0, 0, PORTRAIT, PORTRAIT, GRID)
+  art(c, heroArt(g), 1, 1)
+  bars(c, g, width)
   const top = BELT_BELOW_Y
   g.belt.forEach((slot, i) => beltSlot(c, slot, beltSlotX(width, i), top))
   // The portal, dark while a foe lives and it will not open.
@@ -358,8 +214,8 @@ const ironAt = (x: number, y: number, w: number, h: number) => {
 }
 
 /** The strip in its iron frame: `width` pixels across, the contents INSET from each edge. */
-export const hudPixels = (g: Game, width: number, boxes: readonly OverlayBox[] = [], phase = 0): Canvas => {
-  const inner = hudContent(g, width - 2 * INSET, phase)
+export const hudPixels = (g: Game, width: number, boxes: readonly OverlayBox[] = []): Canvas => {
+  const inner = hudContent(g, width - 2 * INSET)
   const h = inner.h + 2 * INSET
   const c = canvas(width, h)
   for (let y = 0; y < h; y += 1) for (let x = 0; x < width; x += 1) {
@@ -384,16 +240,12 @@ export const hudHit = (width: number, click: { x: number; y: number }): { kind: 
 
 type HudAction = ReturnType<typeof hudHit>
 
-/** The strip's top: the portrait for the bag, the portal, the gear for settings; the XP bar's line, or either orb, for
- * the character sheet. */
+/** The strip's top: the portrait for the bag, the portal, the gear for settings, the XP bar's line for the character sheet. */
 const topHit = (px: number, py: number, width: number): HudAction => {
-  const inside = (x: number, y: number, w: number, h: number) => px >= x && px < x + w && py >= y && py < y + h
-  const size = orbSize(width)
-  if (hasOrbs(width) && (inside(0, orbTop(size), size, size) || inside(xpOrbX(width), orbTop(size), size, size))) return { kind: 'panel', panel: 'sheet' }
-  if (inside(stripLeft(width), 0, PORTRAIT, PORTRAIT)) return { kind: 'panel', panel: 'bag' }
-  if (inside(portalSlotX(width), 0, SLOT, SLOT)) return { kind: 'portal' }
-  if (inside(settingsSlotX(width), 0, SLOT, SLOT)) return { kind: 'panel', panel: 'settings' }
-  if (!hasOrbs(width) && inside(HEART_X, LINE2_Y, settingsSlotX(width) - HEART_X, HP_H)) return { kind: 'panel', panel: 'sheet' }
+  if (px < PORTRAIT && py < PORTRAIT) return { kind: 'panel', panel: 'bag' }
+  if (px >= portalSlotX(width) && px < width && py < SLOT) return { kind: 'portal' }
+  if (px >= settingsSlotX(width) && px < settingsSlotX(width) + SLOT && py < SLOT) return { kind: 'panel', panel: 'settings' }
+  if (px >= HEART_X && px < settingsSlotX(width) && py >= LINE2_Y && py < LINE2_Y + HP_H) return { kind: 'panel', panel: 'sheet' }
   return undefined
 }
 
@@ -407,20 +259,19 @@ const beltHit = (px: number, py: number, width: number): HudAction => {
   return undefined
 }
 
-/** What a click on the strip acts on, in its pixels, as `hudHit` reads them: the portrait, the XP line or the orbs, the
- * gear, the portal while it can open, each belt slot holding something, and the side line, which opens the log. What
- * lies under an open belt menu (among `boxes`) is not lit: a click there lands on the menu. */
+/** What a click on the strip acts on, in its pixels, as `hudHit` reads them: the portrait, the XP line, the gear, the
+ * portal while it can open, each belt slot holding something, and the side line, which opens the log. What lies
+ * under an open belt menu (among `boxes`) is not lit: a click there lands on the menu. */
 export const hudHot = (g: Game, width: number, boxes: readonly OverlayBox[] = []) => {
   const w = width - 2 * INSET
   const at = (x: number, y: number, rw: number, rh: number) => ({ x: INSET + x, y: INSET + y, w: rw, h: rh })
-  const line = sideLineAt(w)
   return uncovered([
-    at(stripLeft(w), 0, PORTRAIT, PORTRAIT),
-    ...(hasOrbs(w) ? [0, xpOrbX(w)].map(x => at(x, orbTop(orbSize(w)), orbSize(w), orbSize(w))) : [at(HEART_X, LINE2_Y, settingsSlotX(w) - HEART_X, HP_H)]),
+    at(0, 0, PORTRAIT, PORTRAIT),
+    at(HEART_X, LINE2_Y, settingsSlotX(w) - HEART_X, HP_H),
     at(settingsSlotX(w), 0, SLOT, SLOT),
     ...(g.foe === null ? [at(portalSlotX(w), 0, SLOT, SLOT)] : []),
     ...g.belt.flatMap((s, i) => (s === null ? [] : [at(beltSlotX(w, i), BELT_BELOW_Y, BELT_SLOT_W, SLOT)])),
-    at(line.x, line.y, line.end - line.x, SIDE_LINE_H),
+    at(SIDE_LINE_X, SIDE_LINE_Y, w - SIDE_LINE_X, SIDE_LINE_H),
   ], boxes.filter(b => b.role === 'belt'))
 }
 
@@ -451,7 +302,7 @@ export const beltMenuBox = (g: Game, slot: number, width: number): OverlayBox<'b
   if (s === null || s === undefined || tiers.length === 0) return undefined
   const active = activeTier(s)
   const box = boxShape('belt', tiers.map(t => [t === active ? { text: '> ', color: CURSOR, bold: true } : { text: '  ' }, { text: nameOf(s.kind, t), bold: t === active }, { text: ` x${s.tiers[t - 1]}`, dim: true }]), CURSOR)
-  return { ...box, x: Math.max(0, Math.min(INSET + beltSlotX(width - 2 * INSET, slot), width - box.w)), y: Math.max(0, Math.floor((INSET + BELT_BELOW_Y) / 2) - box.h) }
+  return { ...box, x: Math.max(0, Math.min(INSET + beltSlotX(width, slot), width - box.w)), y: Math.max(0, Math.floor((INSET + BELT_BELOW_Y) / 2) - box.h) }
 }
 
 /**
@@ -464,8 +315,7 @@ const SIDE_LINE_H = 5
 const isOnSideLine = (width: number, click: { x: number; y: number }) => {
   const px = Math.floor(click.x) - INSET
   const py = Math.floor(click.y * 2) - INSET
-  const line = sideLineAt(width - 2 * INSET)
-  return px >= line.x && px < line.end && py >= line.y && py < line.y + SIDE_LINE_H
+  return px >= SIDE_LINE_X && px < width - 2 * INSET && py >= SIDE_LINE_Y && py < SIDE_LINE_Y + SIDE_LINE_H
 }
 
 /** A gesture on the strip: the belt menu as it now is, the game actions, and whether the log is asked for (the side line). */
@@ -483,26 +333,18 @@ export const hudGesture = (g: Game, menu: BeltMenu, gesture: Gesture, width: num
   return { menu: null, actions: hit === undefined ? [] : [hit] }
 }
 
-/** The strip's text, in its cells: the HP and the level on their bars or the orbs, the belt's counts, and the side
- * line's gold, depth and effects. */
+/**
+ * The HP and the level as text on their bars, in the strip's cells, like the inventory's cards: the HP on the HP bar's
+ * middle, the level (a + while points wait, in the level's own ink) on the XP bar, each character on the bar's color under it.
+ */
 export const hudLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
-  const w = width - 2 * INSET
-  const line = sideLineAt(w)
-  return [
-    ...(hasOrbs(w) ? orbLabels(g, w) : barLabels(g, w)),
-    ...beltCounts(g, i => INSET + beltSlotX(w, i), INSET + BELT_BELOW_Y),
-    ...sideLineParts(g, line).words.map(word => artLabel(word.text, INSET + word.x, INSET + line.y + 1, word.ink, BG)),
-  ]
-}
-
-/** The HP and the level as text on their bars, in the strip's cells: the HP on the HP bar's middle, the level (a +
- * while points wait, in the level's own ink) on the XP bar, each character on the bar's color under it. */
-const barLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
-  const { barW } = barsLayout(g, width)
+  const { barW } = barsLayout(g, width - 2 * INSET)
   const share = Math.max(0, g.hp) / g.maxHp
   const level = `LV${g.level}${g.points > 0 ? '+' : ''}`
   return [
     barLabel(INSET + BAR_X, INSET + HP_Y, barW, share, HP_TONES[1], HP_EMPTY, `${Math.max(0, g.hp)}/${g.maxHp}`),
     barLabel(INSET + BAR_X, INSET + XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY, level),
+    ...beltCounts(g, i => INSET + beltSlotX(width, i), INSET + BELT_BELOW_Y),
+    ...sideLineParts(g, { x: SIDE_LINE_X, end: width - 2 * INSET }).words.map(w => artLabel(w.text, INSET + w.x, INSET + SIDE_TEXT_Y, w.ink, BG)),
   ]
 }

@@ -92,9 +92,9 @@ const layout = (g: Game, ui: ForgeUi) => {
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
   const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : RARITY_COLOR[item.rarity], lines }
-  const temperAt: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 2, w: buttonW('T', 'TEMPER'), h: BUTTON_H }
-  const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w: buttonW('R', 'REFORGE'), h: BUTTON_H }
-  const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x: WORK_X, y: reforgeAt.y + BUTTON_H + 2, w: buttonW('K', 'KEEP OLD'), h: BUTTON_H } : undefined
+  const temperAt: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 2, w: buttonW('TEMPER'), h: BUTTON_H }
+  const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w: buttonW('REFORGE'), h: BUTTON_H }
+  const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x: WORK_X, y: reforgeAt.y + BUTTON_H + 2, w: buttonW('KEEP OLD'), h: BUTTON_H } : undefined
   const end = Math.max(WINDOW_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
   const buttons = item === undefined ? [] : [
     { key: 'T', label: 'TEMPER', at: temperAt, state: stateOf(whyNotTemper(g, item)) },
@@ -108,7 +108,7 @@ export const forgeHeight = (g: Game, ui: ForgeUi) => layout(g, ui).height
 /** The work card, then the buttons' words. */
 export const forgeOverlay = (g: Game, ui: ForgeUi): OverlayBox[] => {
   const l = layout(g, ui)
-  return [l.box, ...l.buttons.map(b => buttonBox(b.key, b.label, b.at.x, b.at.y, b.state))]
+  return [l.box, ...l.buttons.map(b => buttonBox(b.label, b.at.x, b.at.y, b.state))]
 }
 
 /** The temper pips, one a tempering, filled as far as done, from `x`, `y` their top left. */
@@ -133,7 +133,7 @@ export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
   if (l.item !== undefined) {
     // Beside Temper, on its middle.
     temperPips(body, l.item, l.temperAt.x + l.temperAt.w + 4, l.temperAt.y - WINDOW_TOP + Math.floor((BUTTON_H - 4) / 2))
-    for (const b of l.buttons) button(body, b.key, b.label, b.at.x, b.at.y - WINDOW_TOP, b.state)
+    for (const b of l.buttons) button(body, b.label, b.at.x, b.at.y - WINDOW_TOP, b.state)
   }
   const c = windowPixels({ title: 'SMITH', gold: g.gold }, body.px)
   drawBox(c, l.box)

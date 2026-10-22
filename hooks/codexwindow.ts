@@ -60,7 +60,7 @@ const bigs = Object.entries(BIG_BOSSES)
 
 /** The Card button, under the Legendaries on Finds: it saves the hero card and copies it as text. */
 export const CARD_KEY = { key: 'K', label: 'CARD' }
-const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.key, CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 3), w: buttonW(CARD_KEY.key, CARD_KEY.label), h: BUTTON_H }
+const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 3), w: buttonW(CARD_KEY.label), h: BUTTON_H }
 /** The Card button's place, in window pixels, on the page it is on: Finds; none on Foes. */
 export const codexCardRect = (ui: CodexUi = { page: 'finds' }): Rect | undefined => (ui.page === 'finds' ? CARD_RECT : undefined)
 
@@ -78,7 +78,7 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
         [{ text: `Deaths ${c.deaths}, heroes retired ${c.retired ?? 0}, gold found ${c.gold}.`, dim: true }],
       ]
   const under = ui.page === 'foes' ? ROW2_Y + FOE_BOX : CARD_RECT.y + BUTTON_H
-  const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.key, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []
+  const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []
   return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
 }
 
@@ -122,7 +122,7 @@ const drawFinds = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
     const w = icon[0]?.length ?? 0
     art(body, icon, x + Math.floor((LEG_W - w) / 2), y + Math.floor((LEG_H - icon.length) / 2), lit.legendaries[i] ? undefined : SHADE)
   })
-  button(body, CARD_KEY.key, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y - top, 'ready')
+  button(body, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y - top, 'ready')
 }
 
 /** The window's pixels: the hero's tabs, the pages' tabs, the page's boxes (and on Finds, Card), the box under them. */

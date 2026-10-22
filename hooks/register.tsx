@@ -1290,6 +1290,14 @@ const fitLine = (p: Pane, rows: number, under: number) => {
   return note === undefined ? undefined : <p.Text dimColor wrap="truncate-end">{note}</p.Text>
 }
 
+/** The line over the keys' row under a window, saying how to reach them: the composer has the keyboard until ctrl+x tab
+ * gives it to the pane (a click on a window does not). */
+const keysHint = ({ Box, Text }: Pane) => (
+  <Box marginTop={1}>
+    <Text dimColor>ctrl+x tab for keys:</Text>
+  </Box>
+)
+
 const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = [], hasClose = true) => {
   const { Box, Text, Raster, Client } = p
   const px = litWindow(key, drawn, hot, INV_W, hasClose)
@@ -1307,7 +1315,8 @@ const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], bo
           )}
         </Box>
       </Box>
-      <Box marginTop={1} columnGap={2}>{keys}</Box>
+      {keysHint(p)}
+      <Box columnGap={2}>{keys}</Box>
       {hint !== undefined && <Text dimColor>{hint}</Text>}
       {p.logTail()}
     </Box>
@@ -1344,7 +1353,8 @@ const pixelBag = (p: Pane, l: Layout) => {
         </Box>
       </Box>
       {g.cursor === null && <Box flexDirection="column" marginTop={1}>{l.card}</Box>}
-      <Box marginTop={1} columnGap={2}>
+      {keysHint(p)}
+      <Box columnGap={2}>
         {bagActions(p)}
         <Button key="destroy" label={bagUi.menu?.confirm === true ? 'Destroy? again' : 'Destroy'} hotkey="d" plain onPress={destroyKey} />
         <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
@@ -1390,7 +1400,8 @@ const pixelShop = (p: Pane) => {
           )}
         </Box>
       </Box>
-      <Box marginTop={1} columnGap={2}>
+      {keysHint(p)}
+      <Box columnGap={2}>
         <Button key="shop-buy" label="Buy" hotkey="b" plain dimColor={chosen !== null && whyNot(g, chosen) !== undefined} onPress={buyKey} />
         <Button key="shop-ware" label="Next ware" hotkey="w" plain onPress={showWare(nextWare(shopUi))} />
         <Button key="shop-sell" label="Sell" hotkey="s" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'sell' })} />
@@ -1590,7 +1601,8 @@ const talkWindow = (p: Pane, who: Speaker) => {
           )}
         </Box>
       </Box>
-      <Box marginTop={1} columnGap={2}>
+      {keysHint(p)}
+      <Box columnGap={2}>
         {deed !== undefined && <Button key="talk-act" label={deed.label[0] + deed.label.slice(1).toLowerCase()} hotkey={deed.key.toLowerCase()} plain dimColor={deed.state === 'off'} onPress={press(deed.action)} />}
         <Button key={`${who}-close`} label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: who })} />
       </Box>
@@ -1675,7 +1687,8 @@ const textSheet = (p: Pane) => {
           <Text dimColor>{a.effect(g)}</Text>
         </Box>
       ))}
-      <Box marginTop={1} columnGap={2}>
+      {keysHint(p)}
+      <Box columnGap={2}>
         <Button key="sheet-codex" label="Codex" plain onPress={press({ kind: 'panel', panel: 'codex' })} />
         {retireKey(p)}
         {talentKey(p)}

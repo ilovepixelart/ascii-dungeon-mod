@@ -42,7 +42,7 @@ const layout = (g: Game, ui: RetireUi) => {
   const item = slot === undefined ? undefined : g.gear[slot]
   const boxes = worn(g).map((s, i) => ({ slot: s, x: PAD + i * BOX_STEP, y: top + BOXES_Y }))
   const buttonsY = onCell(top + BOXES_Y + BOX_H + 4)
-  const [rw, bw] = [buttonW(RETIRE.key, RETIRE.label), buttonW(BACK.key, BACK.label)]
+  const [rw, bw] = [buttonW(RETIRE.label), buttonW(BACK.label)]
   const retire: Rect = { x: Math.floor((WINDOW_W - rw - 4 - bw) / 2), y: buttonsY, w: rw, h: BUTTON_H }
   const back: Rect = { x: retire.x + retire.w + 4, y: buttonsY, w: bw, h: BUTTON_H }
   const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
@@ -61,8 +61,8 @@ export const retireOverlay = (g: Game, ui: RetireUi): OverlayBox[] => {
   ]
   return [
     { role: 'about', x: 2, y: Math.ceil((l.retire.y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
-    buttonBox(RETIRE.key, RETIRE.label, l.retire.x, l.retire.y, l.retireState),
-    buttonBox(BACK.key, BACK.label, l.back.x, l.back.y, 'ready'),
+    buttonBox(RETIRE.label, l.retire.x, l.retire.y, l.retireState),
+    buttonBox(BACK.label, l.back.x, l.back.y, 'ready'),
   ]
 }
 
@@ -96,8 +96,8 @@ export const retirePixels = (g: Game, ui: RetireUi): string[][] => {
   const l = layout(g, ui)
   const body = canvas(WINDOW_W, retireHeight(g, ui) - top)
   for (const b of l.boxes) pieceBox(body, g.gear[b.slot]!, b.x, b.y - top, b.slot === l.slot)
-  button(body, RETIRE.key, RETIRE.label, l.retire.x, l.retire.y - top, l.retireState)
-  button(body, BACK.key, BACK.label, l.back.x, l.back.y - top, 'ready')
+  button(body, RETIRE.label, l.retire.x, l.retire.y - top, l.retireState)
+  button(body, BACK.label, l.back.x, l.back.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)
   for (const b of retireOverlay(g, ui)) if (b.role !== 'button') drawBox(c, b)
   return c.px

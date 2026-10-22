@@ -52,7 +52,7 @@ const toldLines = (g: Game, r: Recap): Run[][] => [
 /** Play on, centered under the find (under the portrait without one). */
 const playRect = (r: Recap): Rect => {
   const y = onCell(r.best === undefined ? FIND_Y : FIND_Y + FIND_BOX + 3)
-  const w = buttonW(PLAY.key, PLAY.label)
+  const w = buttonW(PLAY.label)
   return { x: Math.floor((WINDOW_W - w) / 2), y, w, h: BUTTON_H }
 }
 
@@ -65,7 +65,7 @@ export const recapOverlay = (g: Game): OverlayBox[] => {
   return [
     box(told, (top + 2) / 2),
     ...(r.best === undefined ? [] : [box([[{ text: 'Best find', dim: true }], [{ text: r.best.name, bold: true, color: RARITY_COLOR[r.best.rarity] }]], Math.ceil(FIND_Y / 2))]),
-    buttonBox(PLAY.key, PLAY.label, play.x, play.y, 'armed'),
+    buttonBox(PLAY.label, play.x, play.y, 'armed'),
   ]
 }
 
@@ -85,7 +85,7 @@ export const recapPixels = (g: Game): string[][] => {
   portrait(body, heroArt(g), PAD, 2, FACE)
   if (r.best !== undefined) drawItem(body, { ...g, cursor: null }, r.best, FIND_X, FIND_Y - top, FIND_BOX, FIND_BOX)
   const play = playRect(r)
-  button(body, PLAY.key, PLAY.label, play.x, play.y - top, 'armed')
+  button(body, PLAY.label, play.x, play.y - top, 'armed')
   const c = windowPixels(CHROME, body.px)
   for (const b of recapOverlay(g)) if (b.role !== 'button') drawBox(c, b)
   return c.px

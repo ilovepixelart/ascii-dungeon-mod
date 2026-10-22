@@ -690,6 +690,18 @@ test('How it plays opens from settings over it, and closes back to settings', as
   await ui.unmount()
 })
 
+test('under a pixel window, the keys\' row first says how to reach them: the composer has the keyboard till ctrl+x tab', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'settings' }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'ctrl+x tab for keys:' })).toBeDefined()
+  await ui.unmount()
+})
+
 test('as text, How it plays lists the rules and closes', async $ => {
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'settings' })
@@ -2099,13 +2111,13 @@ describe('a pane short of the size the game plays best in', () => {
 
   test('says so on its top row, wide enough but short; narrow, the width note alone', async $ => {
     const short = await $.ui.mount(sized(110, 40))
-    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 48 rows tall; this one is 110 by 40.' })).toBeDefined()
+    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 49 rows tall; this one is 110 by 40.' })).toBeDefined()
     await short.unmount()
     const narrow = await $.ui.mount(sized(90, 40))
     expect(await narrow.find({ type: 'Text', text: /^Widen the pane for the full pixel windows/ })).toBeDefined()
     expect(await narrow.find({ type: 'Text', text: /^ASCII Dungeon plays best/ })).toBeUndefined()
     await narrow.unmount()
-    const best = await $.ui.mount(sized(110, 48))
+    const best = await $.ui.mount(sized(110, 49))
     expect(await best.find({ type: 'Text', text: /^ASCII Dungeon plays best|^Widen the pane/ })).toBeUndefined()
     await best.unmount()
   })
@@ -2117,7 +2129,7 @@ describe('a pane short of the size the game plays best in', () => {
       await ui.unmount()
       return n
     }
-    expect((await rowsAt(48)) - (await rowsAt(47))).toBe(2)
+    expect((await rowsAt(49)) - (await rowsAt(48))).toBe(2)
   })
 
   test('a window it cannot show whole says on its top row the rows it needs; a pane that holds it says nothing', async ($, on) => {
@@ -2128,11 +2140,11 @@ describe('a pane short of the size the game plays best in', () => {
     await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
     const cut = await $.ui.mount(sized(110, 30))
     expect((await cut.find({ type: 'Raster', key: 'settings' }))?.props.rows).toBe(26)
-    // Settings is 26 rows (its body from row 14, three rows of buttons a cell apart: 52 pixels), with 5 under it and
-    // this line: 32.
-    expect(await cut.find({ type: 'Text', text: 'This window needs 32 rows to show whole; the pane has 30. Make it taller, or scroll down.' })).toBeDefined()
+    // Settings is 26 rows (its body from row 14, three rows of buttons a cell apart: 52 pixels), with 6 under it and
+    // this line: 33.
+    expect(await cut.find({ type: 'Text', text: 'This window needs 33 rows to show whole; the pane has 30. Make it taller, or scroll down.' })).toBeDefined()
     await cut.unmount()
-    const whole = await $.ui.mount(sized(110, 32))
+    const whole = await $.ui.mount(sized(110, 33))
     expect(await whole.find({ type: 'Text', text: /^This window needs/ })).toBeUndefined()
     await whole.unmount()
   })

@@ -20,7 +20,7 @@ const EASY = INK.easy
 const HARD = INK.hard
 /** The tiers the window lists, the deepest reached last. */
 const SHOWN = 3
-/** The fork's two choices side by side, each a button: the letter key in gold, the mark's name beside it in its ink. */
+/** The fork's two choices side by side, each a button: the mark's name in its ink. */
 const CARD_W = Math.floor((WINDOW_W - 2 * PAD - SPACE.gap) / 2)
 const CARD_H = BUTTON_H
 /** The letter keys of the two cards, the easier first. */
@@ -62,10 +62,10 @@ const tierLine = (g: Game, tier: number): Run[] => {
 
 const cardState = (c: Card): ButtonState => (c.isChosen ? 'armed' : 'ready')
 
-/** A choice's words on its face: its key in gold, its mark's name in the mark's ink. */
-const cardBox = (c: Card, i: number): OverlayBox<'button'> => {
+/** A choice's words on its face: its mark's name in the mark's ink. */
+const cardBox = (c: Card): OverlayBox<'button'> => {
   const ground = buttonGround(cardState(c))
-  return { role: 'button', x: c.rect.x, y: c.rect.y / 2, w: c.rect.w, h: 3, border: ground, bg: ground, pad: 1, lines: [[{ text: CARD_KEYS[i]!, color: INK.gold, bold: true }, { text: ` ${MARKS[c.mark].name.toUpperCase()}`, color: inkOf(c.mark), bold: true }]] }
+  return { role: 'button', x: c.rect.x, y: c.rect.y / 2, w: c.rect.w, h: 3, border: ground, bg: ground, pad: 1, lines: [[{ text: MARKS[c.mark].name.toUpperCase(), color: inkOf(c.mark), bold: true }]] }
 }
 
 /** The note under the cards: how the fork is chosen, or with none waiting where the next opens. */

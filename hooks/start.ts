@@ -50,7 +50,7 @@ const BACK_KEY = ['B', 'BACK'] as const
 /** The buttons' row, centered: Start, Help and, with a game under way, Back. */
 const buttonKeys = (g: Game) => (isUnderWay(g) ? [START_KEY, HELP_KEY, BACK_KEY] : [START_KEY, HELP_KEY])
 const buttonRects = (g: Game): Rect[] => {
-  const ws = buttonKeys(g).map(([key, label]) => buttonW(key, label))
+  const ws = buttonKeys(g).map(([, label]) => buttonW(label))
   let x = Math.floor((WINDOW_W - ws.reduce((a, b) => a + b, 0) - BUTTON_GAP * (ws.length - 1)) / 2)
   return ws.map(w => {
     const rect = { x, y: top + BUTTON_Y, w, h: BUTTON_H }
@@ -87,7 +87,7 @@ export const startOverlay = (g: Game, ui: StartUi): OverlayBox[] => {
   const lines = aboutLines(g, ui)
   return [
     { role: 'about', x: 2, y: (top + BODY_H) / 2, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
-    ...buttonsOf(g).map(b => buttonBox(b.key, b.label, b.rect.x, b.rect.y, b.state)),
+    ...buttonsOf(g).map(b => buttonBox(b.label, b.rect.x, b.rect.y, b.state)),
     ...nameBoxes(ui),
   ]
 }
@@ -108,7 +108,7 @@ const nameBoxes = (ui: StartUi) => CLASSES.map((cls, i) =>
 export const startPixels = (g: Game, ui: StartUi): string[][] => {
   const body = canvas(WINDOW_W, startHeight(g, ui) - top)
   CLASSES.forEach((cls, i) => card(body, cls, i, cls === ui.cls))
-  for (const b of buttonsOf(g)) button(body, b.key, b.label, b.rect.x, b.rect.y - top, b.state)
+  for (const b of buttonsOf(g)) button(body, b.label, b.rect.x, b.rect.y - top, b.state)
   const c = windowPixels(CHROME, body.px)
   for (const b of startOverlay(g, ui)) if (b.role === 'about') drawBox(c, b)
   return c.px

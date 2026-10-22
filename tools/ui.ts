@@ -44,10 +44,10 @@ y += half * 8 + 4
 
 heading('BUTTONS  READY  OFF  ARMED  PRICED')
 let bx = 4
-for (const state of ['ready', 'off', 'armed'] as const) bx += button(sheet, 'T', 'TAKE', bx, y, state) + 4
-button(sheet, 'B', 'BUY', bx, y, 'ready', 120)
-bx += buttonW('B', 'BUY', 120) + 4
-button(sheet, 'B', 'BUY', bx, y, 'ready', 120)
+for (const state of ['ready', 'off', 'armed'] as const) bx += button(sheet, 'TAKE', bx, y, state) + 4
+button(sheet, 'BUY', bx, y, 'ready', 120)
+bx += buttonW('BUY', 120) + 4
+button(sheet, 'BUY', bx, y, 'ready', 120)
 y += BUTTON_H + 6
 
 heading('CARDS  FLAT  BEVELED BY FAMILY  RECEDED AND CHOSEN')
@@ -66,7 +66,7 @@ y += CARD.h + 12
 
 heading('WINDOW  TEXT BOX')
 const body = canvas(WINDOW_W, 40)
-button(body, 'C', 'CLOSE', 4, 26, 'armed')
+button(body, 'CLOSE', 4, 26, 'armed')
 const win = windowPixels({ title: 'WINDOW' }, body.px)
 drawBox(win, { x: 2, y: 8, w: WINDOW_W - 4, h: 4, border: SURFACE.frame })
 blit(win, 4, y)

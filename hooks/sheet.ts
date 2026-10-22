@@ -34,13 +34,13 @@ const ROW_W = Math.floor((WINDOW_W - 2 * PAD - SPACE.gap) / 2)
 const rowRect = (i: number): Rect => ({ x: PAD + (i % 2) * (ROW_W + SPACE.gap), y: ROWS_Y + Math.floor(i / 2) * (BUTTON_H + 2), w: ROW_W, h: BUTTON_H })
 export const plusRect = (i: number): Rect => {
   const r = rowRect(i)
-  const w = buttonW('+', '')
+  const w = buttonW('+')
   return { x: r.x + r.w - w, y: r.y, w, h: BUTTON_H }
 }
 
 /** The Retire button, centered under the attributes: lit once the hero has slain a big boss, when it opens the retire window. */
 export const RETIRE_KEY = { key: 'R', label: 'RETIRE' }
-export const RETIRE_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(RETIRE_KEY.key, RETIRE_KEY.label)) / 2), y: rowRect(3).y + BUTTON_H + 2, w: buttonW(RETIRE_KEY.key, RETIRE_KEY.label), h: BUTTON_H }
+export const RETIRE_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(RETIRE_KEY.label)) / 2), y: rowRect(3).y + BUTTON_H + 2, w: buttonW(RETIRE_KEY.label), h: BUTTON_H }
 
 /** The window's height in pixels. */
 export const SHEET_H = RETIRE_RECT.y + RETIRE_RECT.h + 2
@@ -81,8 +81,8 @@ export const sheetOverlay = (g: Game): OverlayBox[] => {
   return [
     { role: 'head', x: SIDE_X, y: (top + 2) / 2, w: WINDOW_W - SIDE_X - 2, h: head.length + 2, border: SURFACE.frame, lines: head },
     barLabel(xp.x, xp.y, xp.w, g.xp / xpToLevel(g.level), XP_TONES[1], XP_EMPTY, `${g.xp}/${xpToLevel(g.level)}`),
-    ...ATTRIBUTES.flatMap((_, i) => [attributeBox(g, i), buttonBox('+', '', plusRect(i).x, plusRect(i).y, plusState(g))]),
-    buttonBox(RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y, retireState(g)),
+    ...ATTRIBUTES.flatMap((_, i) => [attributeBox(g, i), buttonBox('+', plusRect(i).x, plusRect(i).y, plusState(g))]),
+    buttonBox(RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y, retireState(g)),
   ]
 }
 
@@ -99,9 +99,9 @@ export const sheetPixels = (g: Game): string[][] => {
     const p = plusRect(i)
     fill(body, r.x, r.y - top, r.w, r.h, SURFACE.card)
     frame(body, r.x, r.y - top, r.w, r.h, SURFACE.cardEdge)
-    button(body, '+', '', p.x, p.y - top, plusState(g))
+    button(body, '+', p.x, p.y - top, plusState(g))
   })
-  button(body, RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, retireState(g))
+  button(body, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, retireState(g))
   const c = windowPixels(heroChrome(g, 'sheet'), body.px)
   // The head box alone has a frame of its own: the bar's numbers lie on the bar, the rest on their faces.
   for (const b of sheetOverlay(g)) if (b.role === 'head') drawBox(c, b)

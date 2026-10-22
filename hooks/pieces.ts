@@ -223,11 +223,10 @@ const BUTTON_EDGE = { ready: SURFACE.buttonEdge, off: SURFACE.tab, armed: CURSOR
 const BUTTON_LIT = SURFACE.buttonLit
 const OFF_INK = INK.off
 
-/** The gap between a button's key and its label; none when either is empty, so a key alone sits centered. */
-const keyGap = (key: string, label: string) => (key === '' || label === '' ? 0 : 1)
 const costText = (cost: number) => `${cost} gold`
-/** A button's width in cells: its key, its label and, when it costs, its price; a cell of room each side in its frame. */
-export const buttonW = (key: string, label: string, cost?: number) => 4 + key.length + keyGap(key, label) + label.length + (cost === undefined ? 0 : 1 + costText(cost).length)
+/** A button's width in cells: its label and, when it costs, its price; a cell of room each side in its frame. Its key
+ * is not drawn on it: the pane has the keys only after ctrl+x tab, and the line under the window says them. */
+export const buttonW = (label: string, cost?: number) => 4 + label.length + (cost === undefined ? 0 : 1 + costText(cost).length)
 
 /** A button's face, `w` wide at x, y, in its state's inks: for a button wider than its words. */
 export const buttonFace = (c: Canvas, x: number, y: number, w: number, state: ButtonState) => {
@@ -240,23 +239,22 @@ export const buttonFace = (c: Canvas, x: number, y: number, w: number, state: Bu
 export const buttonGround = (state: ButtonState) => BUTTON_BG[state]
 
 /** A button's frame and face at x, y; its words are `buttonBox`'s. Returns its width. */
-export const button = (c: Canvas, key: string, label: string, x: number, y: number, state: ButtonState, cost?: number) => {
-  const w = buttonW(key, label, cost)
+export const button = (c: Canvas, label: string, x: number, y: number, state: ButtonState, cost?: number) => {
+  const w = buttonW(label, cost)
   buttonFace(c, x, y, w, state)
   return w
 }
 
-/** A button's words as terminal text on its face, for the button `button` draws at x, y in window pixels: its key in
- * gold, its label, its price (grey when it cannot be paid); all grey when off. */
-export const buttonBox = (key: string, label: string, x: number, y: number, state: ButtonState, cost?: number, canPay = true): OverlayBox<'button'> => {
+/** A button's words as terminal text on its face, for the button `button` draws at x, y in window pixels: its label,
+ * bold, its price (grey when it cannot be paid); all grey when off. */
+export const buttonBox = (label: string, x: number, y: number, state: ButtonState, cost?: number, canPay = true): OverlayBox<'button'> => {
   const isOff = state === 'off'
   const runs: Run[] = [
-    { text: key, color: isOff ? OFF_INK : GOLD_INK, bold: !isOff },
-    { text: `${' '.repeat(keyGap(key, label))}${label}`, color: isOff ? OFF_INK : INK.text },
+    { text: label, color: isOff ? OFF_INK : INK.text, bold: !isOff },
     ...(cost === undefined ? [] : [{ text: ` ${costText(cost)}`, color: canPay && !isOff ? GOLD_INK : UNPAID_INK }]),
   ]
   const bg = BUTTON_BG[state]
-  return { role: 'button', x, y: y / 2, w: buttonW(key, label, cost), h: 3, border: bg, bg, pad: 1, lines: [runs] }
+  return { role: 'button', x, y: y / 2, w: buttonW(label, cost), h: 3, border: bg, bg, pad: 1, lines: [runs] }
 }
 
 /** A portrait's size: an 8 by 8 sprite at three times its size, inside a two pixel frame. */

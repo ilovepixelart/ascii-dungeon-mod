@@ -16,7 +16,7 @@ names below point at it.
 ## Shapes
 
 - Slots are 10 by 10: a 1 px frame round an 8 by 8 picture (`SLOT`, `PX`). The portrait, the gear, the portal, the belt
-  slots (15 wide for their count) and the shop's ware tags all use it.
+  slots (their count as text on the icon's corner) and the shop's ware tags all use it.
 - Pictures in a slot weigh alike: a round or open shape fills its 8 by 8, a dense one (the gear) keeps a pixel of room
   all round, so the gear and the portal look the same size.
 - Marks are 5 across: the heart and the star 4 down, the strip's side marks (coin, steps, effects) 5 down.

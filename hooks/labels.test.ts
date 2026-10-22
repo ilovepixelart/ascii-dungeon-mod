@@ -4,6 +4,12 @@ import { artLabel } from './pieces'
 import { shots } from './screens'
 import { hudBoxes } from './hud'
 import { newGame } from './world'
+import type { Game } from '../types'
+import type { Gesture, OverlayBox } from './window'
+import { apply } from './game'
+import { BAG_UI_IDLE, bagGesture, bagOverlay } from './bagui'
+import { compactGesture, compactOverlay } from './compact'
+import { SHOP_UI_IDLE, WARES, shopGesture, shopOverlay } from './shop'
 
 describe('a label on art', () => {
   test('is a box over its letters alone, on its whole cell, on the ground under it', async () => {
@@ -44,5 +50,28 @@ describe('the windows\' labels', () => {
     const g = { ...newGame(4), gold: 214, depth: 7, belt: [{ kind: 'health' as const, tiers: [3, 0, 0] as [number, number, number] }, null, null, null, null] }
     const words = hudBoxes(g, 111, []).filter(b => b.role === 'label').map(b => b.lines[0]!.map(r => r.text).join(''))
     expect(words.slice(2)).toEqual(['3', '214', '7'])
+  })
+})
+
+describe('a click on a label on art', () => {
+  // A click at a label's first character, as the click layer reports one: the cell, to the middle.
+  const on = (b: { x: number; y: number }): Gesture => ({ type: 'release', from: { x: b.x + 1.5, y: b.y + 1.5 }, at: { x: b.x + 1.5, y: b.y + 1.5 }, button: 'left' })
+  const kitted = (): Game => ({ ...newGame(4, 'knight'), belt: (['health', 'regen', 'fury', 'ward', 'smoke'] as const).map(kind => ({ kind, tiers: [2, 0, 0] as [number, number, number] })) })
+
+  test('goes through to what it labels: a belt slot\'s count uses the slot, in the bag, the compact bag and the merchant', async () => {
+    const g = kitted()
+    const counts = (boxes: readonly OverlayBox[]) => boxes.filter(b => b.role === 'label')
+    counts(bagOverlay(g, BAG_UI_IDLE)).forEach((b, i) => expect(bagGesture(g, BAG_UI_IDLE, on(b)).actions).toEqual([{ kind: 'use', slot: i }]))
+    counts(compactOverlay(g, BAG_UI_IDLE)).forEach((b, i) => expect(compactGesture(g, BAG_UI_IDLE, on(b)).actions).toEqual([{ kind: 'use', slot: i }]))
+    const town = { ...apply(g, { kind: 'portal' }), gold: 300 }
+    const shopCounts = counts(shopOverlay(town, SHOP_UI_IDLE)).slice(WARES.length)
+    expect(shopCounts).toHaveLength(5)
+    shopCounts.forEach((b, i) => expect(shopGesture(town, SHOP_UI_IDLE, on(b)).actions).toEqual([{ kind: 'use', slot: i }]))
+  })
+
+  test('a ware\'s price chooses the ware', async () => {
+    const town = { ...apply(kitted(), { kind: 'portal' }), gold: 300 }
+    const prices = shopOverlay(town, SHOP_UI_IDLE).filter(b => b.role === 'label').slice(0, WARES.length)
+    prices.forEach((b, i) => expect(shopGesture(town, SHOP_UI_IDLE, on(b)).ui.ware).toBe(WARES[i]))
   })
 })

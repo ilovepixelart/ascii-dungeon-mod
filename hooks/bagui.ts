@@ -9,7 +9,7 @@ import { BAG_H, BAG_W, POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGG
 import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
-import { beltCountsAt, beltSlotRect, clearOf, itemOutline } from './pieces'
+import { beltCountsAt, beltSlotRect, clearOf, clickable, itemOutline } from './pieces'
 import { CLICK_SLOP, WINDOW_TOP, WINDOW_W, boxShape, coverage as coverageOf, isInside, pixel, place, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
@@ -192,7 +192,7 @@ const menuClick = (g: Game, ui: BagUi, at: Pos): { ui: BagUi; actions: Action[] 
 const click = (g: Game, ui: BagUi, at: Pos, button: string): { ui: BagUi; actions: Action[] } => {
   if (ui.menu !== null) return menuClick(g, ui, at)
   // A click on a popover lands on the box, not on what it covers.
-  if (bagOverlay(g, ui).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
+  if (clickable(bagOverlay(g, ui)).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
   const tab = heroTabAt(g, 'bag', pixel(at))
   if (tab !== undefined) return { ui, actions: tab }
   const h = hit(g, pixel(at))
@@ -225,4 +225,4 @@ export const bagGesture = (g: Game, ui: BagUi, gesture: Gesture): { ui: BagUi; a
  * With a menu open, nothing: a click anywhere but on the menu only closes it.
  */
 export const inventoryHot = (g: Game, ui: BagUi): Rect[] =>
-  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y), ...heroTabsHot(g, 'bag')], bagOverlay(g, ui))
+  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y), ...heroTabsHot(g, 'bag')], clickable(bagOverlay(g, ui)))

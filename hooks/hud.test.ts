@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { depthMod, isBossDepth, newGame } from './game'
 import {
-  BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_Y, XP_FILL, XP_Y,
+  BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_X, SIDE_LINE_Y, XP_FILL, XP_Y,
   BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudHot, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
 import type { Gesture } from './window'
@@ -32,9 +32,9 @@ describe('the strip', () => {
   test('is the pane\'s width and the same height at every width: the top row, the belt, the side line', async () => {
     for (const width of [72, W, 140]) {
       const c = hudContent(hero(), width)
-      expect(c.px.length).toBe(28)
+      expect(c.px.length).toBe(24)
       for (const row of c.px) expect(row.length).toBe(width)
-      expect(contentLayout(width).height).toBe(28)
+      expect(contentLayout(width).height).toBe(24)
     }
     expect(beltSlotX(W, 0)).toBe(0)
     expect(portalSlotX(W) + SLOT).toBe(W)
@@ -137,8 +137,8 @@ describe('the strip', () => {
   test('marks a slot by the tier it uses next: no pip for the first tier, one for the second, two for the third', async () => {
     const pips = (tiers: [number, number, number]) => {
       const c = hudContent(hero({ belt: [{ kind: 'health', tiers }, null, null, null, null] }), W)
-      // The pips sit on the slot's last inner row, right of the icon.
-      return ink(c, beltSlotX(W, 0) + 1 + PX, BELT_BELOW_Y + PX, BELT_SLOT_W - 2 - PX, 1).filter(p => p === TIER_INK).length
+      // The pips sit on the slot's top inner row from its left, every other pixel, over the icon.
+      return [1, 3].filter(dx => c.px[BELT_BELOW_Y + 1]![beltSlotX(W, 0) + dx] === TIER_INK).length
     }
     expect([pips([1, 0, 0]), pips([3, 1, 0]), pips([1, 1, 1])]).toEqual([0, 1, 2])
   })
@@ -150,15 +150,18 @@ const sideWords = (g: Game, w = W) =>
 
 describe('the side line', () => {
   test('gives the gold and the depth, or the town, as text after their marks', async () => {
-    // The coin's 5 px, a cell, the gold; 3 cells; the steps' 5 px, a cell, the depth.
-    expect(sideWords(hero({ gold: 214, depth: 7 }))).toEqual([{ text: '214', x: 6, color: GOLD_INK }, { text: '7', x: 18, color: NUM_INK }])
-    expect(sideWords(hero({ gold: 214, where: 'town' }))[1]).toEqual({ text: 'TOWN', x: 18, color: NUM_INK })
+    // Past the belt (five slots sharing their frames, 46 px) and 3 px: the coin's 5 px from 49, a cell, the gold; 3 cells;
+    // the steps' 5 px, a cell, the depth.
+    expect(sideWords(hero({ gold: 214, depth: 7 }))).toEqual([{ text: '214', x: 55, color: GOLD_INK }, { text: '7', x: 67, color: NUM_INK }])
+    expect(sideWords(hero({ gold: 214, where: 'town' }))[1]).toEqual({ text: 'TOWN', x: 67, color: NUM_INK })
+    // The gold in full, thousands set apart, as the title bar writes it.
+    expect(sideWords(hero({ gold: 251952, depth: 7 }))[0]!.text).toBe('251,952')
     // Its row is the whole cell on the marks' middle rows.
     expect(hudLabels(hero(), W + 2 * INSET).some(b => b.y * 2 + 2 === INSET + SIDE_LINE_Y + 1)).toBe(true)
   })
 
   test('shows an effect only while it runs, with what is left, flush right', async () => {
-    const line = (g: Game) => new Set(ink(hudContent(g, W), 0, SIDE_LINE_Y, W, 5))
+    const line = (g: Game) => new Set(ink(hudContent(g, W), SIDE_LINE_X, SIDE_LINE_Y, W - SIDE_LINE_X, 5))
     const none = line(hero())
     for (const color of [MARK_INK.g, MARK_INK.b, MARK_INK.f]) expect(none.has(color!)).toBe(false)
     // Fury last: its mark, a cell and "5" end at the right edge; regen 3 cells before it.
@@ -168,7 +171,7 @@ describe('the side line', () => {
   })
 
   test('shows the fortune in force flush right, a crystal ball and its initial, the effects to its left', async () => {
-    const line = (g: Game) => new Set(ink(hudContent(g, W), 0, SIDE_LINE_Y, W, 5))
+    const line = (g: Game) => new Set(ink(hudContent(g, W), SIDE_LINE_X, SIDE_LINE_Y, W - SIDE_LINE_X, 5))
     expect(line(hero()).has(MARK_INK.c!)).toBe(false)
     expect(line(hero({ fortune: { kind: 'riches', depth: 1 } })).has(MARK_INK.c!)).toBe(true)
     const words = sideWords(hero({ fortune: { kind: 'riches', depth: 1 }, effects: { regen: 0, ward: 0, fury: 5 } })).slice(2)
@@ -176,27 +179,27 @@ describe('the side line', () => {
   })
 
   test('leaves out the fortune when it would come within 3 cells of the depth', async () => {
-    // 12840 gold on depth 12: the gold from 6 to 10, the depth from 20 to 21, ending at 22. The ball and "L" take 7
-    // from the right edge: at 32 they start at 25 and show; at 31 at 24, and are left out.
-    const line = (w: number) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, fortune: { kind: 'luck', depth: 12 } }), w), 0, SIDE_LINE_Y, w, 5))
-    expect(line(32).has(MARK_INK.c!)).toBe(true)
-    expect(line(31).has(MARK_INK.c!)).toBe(false)
+    // 12840 gold on depth 12: "12,840" from 55 to 60, the depth from 70 to 71, ending at 72. The ball and "L" take 7
+    // from the right edge: at 82 they start at 75 and show; at 81 at 74, and are left out.
+    const line = (w: number) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, fortune: { kind: 'luck', depth: 12 } }), w), SIDE_LINE_X, SIDE_LINE_Y, w - SIDE_LINE_X, 5))
+    expect(line(82).has(MARK_INK.c!)).toBe(true)
+    expect(line(81).has(MARK_INK.c!)).toBe(false)
   })
 
   test('leaves out an effect that would run into the depth, never clipping one', async () => {
-    // At 42 with 12840 gold on depth 12, worked by hand: fury from 35, ward from 25, 3 clear of the depth's end at 22;
-    // regen would start at 15.
+    // At 92 with 12840 gold on depth 12, worked by hand: fury from 85, ward from 75, 3 clear of the depth's end at 72;
+    // regen would start at 65.
     const g = hero({ gold: 12840, depth: 12, effects: { regen: 3, ward: 2, fury: 5 } })
-    const line = new Set(ink(hudContent(g, 42), 0, SIDE_LINE_Y, 42, 5))
+    const line = new Set(ink(hudContent(g, 92), SIDE_LINE_X, SIDE_LINE_Y, 92 - SIDE_LINE_X, 5))
     expect([line.has(MARK_INK.f!), line.has(MARK_INK.b!), line.has(MARK_INK.g!)]).toEqual([true, true, false])
-    expect(sideWords(g, 42).slice(2).map(w => [w.text, w.x])).toEqual([['5', 41], ['2', 31]])
+    expect(sideWords(g, 92).slice(2).map(w => [w.text, w.x])).toEqual([['5', 91], ['2', 81]])
     // A cell narrower, the ward would start 2 clear: left out.
-    expect(new Set(ink(hudContent(g, 41), 0, SIDE_LINE_Y, 41, 5)).has(MARK_INK.b!)).toBe(false)
+    expect(new Set(ink(hudContent(g, 91), SIDE_LINE_X, SIDE_LINE_Y, 91 - SIDE_LINE_X, 5)).has(MARK_INK.b!)).toBe(false)
   })
 
   test('keeps 3 cells between the depth and an effect', async () => {
-    // At 40, fury from 33; regen "10" would start at 22, on the depth's end, so it is left out; alone it starts at 32.
-    const line = (g: Partial<Game>) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, ...g }), 40), 0, SIDE_LINE_Y, 40, 5))
+    // At 90, fury from 83; regen "10" would start at 72, on the depth's end, so it is left out; alone it starts at 82.
+    const line = (g: Partial<Game>) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, ...g }), 90), SIDE_LINE_X, SIDE_LINE_Y, 90 - SIDE_LINE_X, 5))
     expect(line({ effects: { regen: 10, ward: 0, fury: 5 } }).has(MARK_INK.g!)).toBe(false)
     expect(line({ effects: { regen: 10, ward: 0, fury: 0 } }).has(MARK_INK.g!)).toBe(true)
   })
@@ -212,7 +215,7 @@ describe("the depth's twist on the side line", () => {
     for (let d = 10; d < 400; d += 1) if (depthMod(world, d) === undefined && !isBossDepth(d)) return d
     throw new Error('plain')
   }
-  const line = (g: Game, w = W) => new Set(ink(hudContent(g, w), 0, SIDE_LINE_Y, w, 5))
+  const line = (g: Game, w = W) => new Set(ink(hudContent(g, w), SIDE_LINE_X, SIDE_LINE_Y, w - SIDE_LINE_X, 5))
 
   test('a twisted depth has its mark after its number; a plain one, or the town, none', async () => {
     expect(line(hero({ depth: twisted('gloom') })).has(MARK_INK.m!)).toBe(true)
@@ -225,8 +228,8 @@ describe("the depth's twist on the side line", () => {
     // At 37 with 12840 gold and a two-digit depth: the depth ends at 22, a twist's mark from 24 to 28; regen "3"
     // starts at 30, 8 clear of a plain depth and 1 of the mark.
     const g = (depth: number) => hero({ gold: 12840, depth, effects: { regen: 3, ward: 0, fury: 0 } })
-    expect(line(g(plain()), 37).has(MARK_INK.g!)).toBe(true)
-    expect(line(g(twisted('horde')), 37).has(MARK_INK.g!)).toBe(false)
+    expect(line(g(plain()), 87).has(MARK_INK.g!)).toBe(true)
+    expect(line(g(twisted('horde')), 87).has(MARK_INK.g!)).toBe(false)
   })
 })
 
@@ -313,7 +316,8 @@ describe('clicks on the strip', () => {
       for (let i = 0; i < 5; i += 1) expect(hit(beltSlotX(inner, i) + 6, BELT_BELOW_Y + 6)).toEqual({ kind: 'use', slot: i })
       expect(hit(portalSlotX(inner) + 6, 6)).toEqual({ kind: 'portal' })
       expect(hit(settingsSlotX(inner) + 5, 5)).toEqual({ kind: 'panel', panel: 'settings' })
-      expect(hit(5, SIDE_LINE_Y + 2)).toBeUndefined()
+      // Between the belt and the side line: nothing.
+      expect(hit(SIDE_LINE_X - 2, SIDE_LINE_Y + 2)).toBeUndefined()
       // On the iron itself: nothing.
       expect(hudHit(width, { x: 1, y: 1 })).toBeUndefined()
     }
@@ -510,9 +514,9 @@ test('a pixel stands between the portrait and the marks', async () => {
 test('a slot counts the tier it uses next, as its icon and pips show it; the other tiers are not counted', async () => {
   const count = (tiers: [number, number, number]) => {
     const g = hero({ belt: [null, null, { kind: 'fury', tiers }, null, null] })
-    return hudLabels(g, 111).filter(b => b.y === 8).map(b => ({ text: b.lines[0]![0]!.text, x: b.x + 1 }))
+    return hudLabels(g, 111).filter(b => b.y === 9).map(b => ({ text: b.lines[0]![0]!.text, x: b.x + 1 }))
   }
-  // Against the slot's right edge, the frame's column before it; on the strip's row 18, its middle's whole cell.
+  // On the icon's bottom right, against the slot's frame; on the strip's row 20, the last whole cell inside the slot.
   const right = INSET + beltSlotX(111, 2) + BELT_SLOT_W - 1
   expect(count([3, 0, 0])).toEqual([{ text: '3', x: right - 1 }])
   expect(count([2, 1, 0])).toEqual([{ text: '1', x: right - 1 }])
@@ -520,10 +524,11 @@ test('a slot counts the tier it uses next, as its icon and pips show it; the oth
   expect(count([99, 99, 99])).toEqual([{ text: '99', x: right - 2 }])
 })
 
-test('a pixel stands under the star, above and below the side line, and between the content and the metal', async () => {
+test('a pixel under the star; the side line\'s marks on the belt\'s middle; two pixels under the belt; one between the content and the metal', async () => {
   expect(BELT_BELOW_Y - (XP_Y + 4)).toBe(1)
-  expect(SIDE_LINE_Y - (BELT_BELOW_Y + SLOT)).toBe(1)
-  expect(contentLayout(100).height - (SIDE_LINE_Y + 5)).toBe(0)
+  // A 10 px slot and 5 px marks: 3 rows down, so the text's row (the marks' second and third) is a whole cell framed.
+  expect([SIDE_LINE_Y - BELT_BELOW_Y, (INSET + SIDE_LINE_Y + 1) % 2]).toEqual([3, 0])
+  expect(contentLayout(100).height - (BELT_BELOW_Y + SLOT)).toBe(2)
   expect(INSET - FRAME).toBe(1)
 })
 
@@ -542,7 +547,8 @@ test('the side line lights over just the rows a click on it opens the log from',
   const g = hero()
   const line = hudHot(g, width).at(-1)!
   expect([line.y, line.h]).toEqual([INSET + SIDE_LINE_Y, 5])
-  const tap = (py: number) => hudGesture(g, null, { type: 'release', from: { x: 10, y: py / 2 }, at: { x: 10, y: py / 2 }, button: 'left' }, width)
+  const x = INSET + SIDE_LINE_X + 2
+  const tap = (py: number) => hudGesture(g, null, { type: 'release', from: { x, y: py / 2 }, at: { x, y: py / 2 }, button: 'left' }, width)
   expect([tap(line.y).isLog, tap(line.y + line.h - 1).isLog, tap(line.y - 1).isLog, tap(line.y + line.h).isLog]).toEqual([true, true, undefined, undefined])
 })
 

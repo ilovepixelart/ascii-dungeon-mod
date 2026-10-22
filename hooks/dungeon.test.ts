@@ -14,7 +14,7 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
-import { BELT_BELOW_Y, INSET, LINE2_Y, SIDE_LINE_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
+import { BELT_BELOW_Y, INSET, LINE2_Y, SIDE_LINE_X, SIDE_LINE_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
@@ -500,7 +500,7 @@ test('on a wide pane a talent\'s number key chooses its card, as on the start sc
 
 test('a click on the strip\'s gold and depth line opens the log over the map; its close box closes it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-  await clickStrip(ui, 10, SIDE_LINE_Y + 2)
+  await clickStrip(ui, SIDE_LINE_X + 2, SIDE_LINE_Y + 2)
   expect(await ui.find({ type: 'Raster', key: 'log' })).toBeDefined()
   const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
   await ui.pointer({ type: 'down', ...close, button: 'left', in: 'log-clicks' } as never)
@@ -1174,9 +1174,9 @@ test('the map takes every row the strip leaves, nothing for text rows or a frame
   // At the best size, so no note takes a row.
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
   const strip = hudLayout(WIDE.props.bodyColumns).height / 2
-  // The strip: 28 px of content and 2 px of frame and room each side, 32 px, 16 rows.
-  expect(strip).toBe(16)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(80 - 16)
+  // The strip: 24 px of content and 2 px of frame and room each side, 28 px, 14 rows.
+  expect(strip).toBe(14)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(80 - 14)
   await ui.unmount()
 })
 

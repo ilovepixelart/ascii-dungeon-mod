@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- Window titles, the gold in a title bar and the codex's and settings' page tabs are written in terminal text, where
+  they were in the pixel font.
 - The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,
   so a click moves between them. The tabs' labels are written in terminal text, which fits all five beside the bag's
   gold.
@@ -20,6 +22,9 @@ release may change behaviour.
 - A nemesis grew a fifth stronger with every win, without end. One that kept winning went deeper and grew again each
   time, until no hero could beat it (18 wins: four and a half times a champion's HP and attack). It now grows by its
   first three wins alone.
+- Text over a window's pixels, the hero's tabs first, sat on a band of a slightly different shade: the terminal paints
+  pixels at 4 bits a channel and text in full. Text grounds take the pixels' painted color, and a hovered tab's label
+  the glow's, so the hover's outline is no longer cut by the label's row.
 - A hero stopped on the stairs by a foe can go down by clicking them once it is gone; the click said to finish the
   task, so the hero had to step off the stairs and back.
 - On a big boss depth the arena often grows over a room beside the stairs, or right up against one with no wall
@@ -52,8 +57,8 @@ release may change behaviour.
   where it was cut.
 - The name of an item lying on the map ran past the map's right edge on a map narrower than the name, and below the
   map on a map four rows tall. It is held inside the map, cut to fit with an ellipsis.
-- Gold of 1,000,000 or more ran under the close box in a window's title bar. Past six digits it is written in
-  thousands (1234K), past 99,999,999 in millions (2000M).
+- Gold of 1,000,000 or more ran under the close box in a window's title bar. It is written in full, its thousands
+  set apart by commas, and ends short of the close box at any amount.
 - The text dashboard names its colors by role: the points to spend on the Character button are drawn in the
   sheet's green, where they were a gold of their own.
 - A quest's pay refused for want of bag room rolled its item first: each press of Claim used up an item and a roll

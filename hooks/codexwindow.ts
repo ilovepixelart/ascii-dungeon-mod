@@ -9,11 +9,11 @@ import { LEGENDARIES } from './items'
 import { ICONS } from './icons'
 import { BOSS_ART, PAL, foeArtOf } from './pixelart'
 import { BUTTON_H, button, buttonW, tierBox } from './pieces'
-import { art, canvas, fill, frame } from './canvas'
+import { BG, art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
+import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'CODEX' }
@@ -65,7 +65,7 @@ export const codexCardRect = (ui: CodexUi = { page: 'finds' }): Rect | undefined
 const foundLegendaries = (c: Codex) => c.legendaries.filter(n => LEGENDARIES.some(l => l.name === n)).length
 
 /** The box under the page, in cells: on Foes how many of each are slain; on Finds how many Legendaries are found, then
- * the records. */
+ * the records. Last, the pages' tab labels. */
 export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
   const c = codexOf(g)
   const lines: Run[][] = ui.page === 'foes'
@@ -76,7 +76,7 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
         [{ text: `Deaths ${c.deaths}, heroes retired ${c.retired ?? 0}, gold found ${c.gold}.`, dim: true }],
       ]
   const under = ui.page === 'foes' ? ROW2_Y + FOE_BOX : CARD_RECT.y + BUTTON_H
-  return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
+  return [{ role: 'about', x: 2, y: Math.ceil((under + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG)]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -126,12 +126,12 @@ const drawFinds = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
 export const codexPixels = (g: Game, ui: CodexUi = CODEX_UI): string[][] => {
   const lit = codexLit(g)
   const body = canvas(WINDOW_W, codexHeight(g, ui) - top)
-  tabRow(body, PAGES, pageIndex(ui), 0)
+  tabGround(body, PAGES, pageIndex(ui), 0)
   fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, SURFACE.line)
   if (ui.page === 'foes') drawFoes(body, lit)
   else drawFinds(body, lit)
   const c = windowPixels(heroChrome(g, 'codex'), body.px)
-  for (const b of codexOverlay(g, ui)) drawBox(c, b)
+  for (const b of codexOverlay(g, ui)) if (b.role !== 'tabs') drawBox(c, b)
   return c.px
 }
 
@@ -148,7 +148,7 @@ export const codexGesture = (g: Game, ui: CodexUi, gesture: Gesture): CodexOutco
   if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return none
   const tab = heroTabAt(g, 'codex', at)
   if (tab !== undefined) return { ...none, actions: tab }
-  const page = tabRects(PAGES, top).findIndex(r => isInside(at, r.x, r.y, r.w, r.h))
+  const page = textTabRects(PAGES, top).findIndex(r => isInside(at, r.x, r.y, r.w, r.h))
   if (page >= 0) return { ...none, ui: { page: page === 0 ? 'foes' : 'finds' } }
   const card = codexCardRect(ui)
   if (card !== undefined && isInside(at, card.x, card.y, card.w, card.h)) return { ...none, isCard: true }
@@ -156,4 +156,4 @@ export const codexGesture = (g: Game, ui: CodexUi, gesture: Gesture): CodexOutco
 }
 
 /** What a click acts on, in window pixels: the page not shown, and on Finds Card. */
-export const codexHot = (ui: CodexUi): Rect[] => [...tabRects(PAGES, top).filter((_, i) => i !== pageIndex(ui)), ...(ui.page === 'finds' ? [CARD_RECT] : [])]
+export const codexHot = (ui: CodexUi): Rect[] => [...textTabRects(PAGES, top).filter((_, i) => i !== pageIndex(ui)), ...(ui.page === 'finds' ? [CARD_RECT] : [])]

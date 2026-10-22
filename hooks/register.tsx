@@ -22,7 +22,7 @@ import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import { deepGesture, deepHeight, deepHot, deepOverlay, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
-import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsHot, settingsPixels, soundFrom, volumeShare } from './settings'
+import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsHot, settingsOverlay, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SettingsUi } from './settings'
 import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import { logGesture, logHeight, logOverlay, logPixels } from './logwindow'
@@ -32,10 +32,10 @@ import { BAG_UI_IDLE, bagGesture, bagOverlay, inventoryHot } from './bagui'
 import type { BagUi, Gesture } from './bagui'
 import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverlay, shopPixels, whyNot } from './shop'
 import type { ShopUi } from './shop'
-import { closeBoxOf, pixel } from './window'
+import { chromeBoxes, closeBoxOf, onPixels, pixel } from './window'
 import type { OverlayBox, Rect } from './window'
 import { hoveredRect, lightUp } from './ui/kit'
-import { heroTabsBox, heroTabsHot } from './herotabs'
+import { heroTabsHot } from './herotabs'
 import { canvasCells } from './canvas'
 import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeHot, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
 import type { ForgeUi } from './forge'
@@ -1293,6 +1293,7 @@ const fitLine = (p: Pane, rows: number, under: number) => {
 const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], boxes: readonly OverlayBox[], keys: RenderChildren, hint?: string, hot: readonly Rect[] = [], hasClose = true) => {
   const { Box, Text, Raster, Client } = p
   const px = litWindow(key, drawn, hot, INV_W, hasClose)
+  const text = onPixels([...chromeBoxes(drawn), ...boxes], litIn(key))
   return (
     <Box flexDirection="column">
       {fitLine(p, height / 2, UNDER_WINDOW + (hint === undefined ? 0 : HINT_ROWS))}
@@ -1301,7 +1302,7 @@ const pixelWindow = (p: Pane, key: string, height: number, drawn: string[][], bo
           {Raster !== undefined && <Raster key={key} columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key={`${key}-clicks`} module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes }} width={INV_W} height={height / 2} />
+              <Client key={`${key}-clicks`} module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes: text }} width={INV_W} height={height / 2} />
             </Box>
           )}
         </Box>
@@ -1318,6 +1319,7 @@ const pixelBag = (p: Pane, l: Layout) => {
   const { redraw, run, g, Box, Text, Button, Raster, Client, press } = p
   const rows = (INV_TOP + INV_H) / 2
   const popovers = bagOverlay(g, bagUi)
+  const drawn = inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers)
   const destroyKey = () => {
     const id = g.cursor
     if (id === null) return
@@ -1333,10 +1335,10 @@ const pixelBag = (p: Pane, l: Layout) => {
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', inventoryScreenPixels(g, bagUi.drag ?? undefined, popovers), inventoryHot(g, bagUi), INV_W, bagUi.menu === null) })} />}
+          {Raster !== undefined && <Raster key="bag" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: rows * 2, px: litWindow('bag', drawn, inventoryHot(g, bagUi), INV_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: [heroTabsBox(g, 'bag'), ...popovers] }} width={INV_W} height={rows} />
+              <Client key="bag-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: onPixels([...chromeBoxes(drawn), ...popovers], litIn('bag')) }} width={INV_W} height={rows} />
             </Box>
           )}
         </Box>
@@ -1374,15 +1376,16 @@ const pixelShop = (p: Pane) => {
   }
   const chosen = shopUi.ware
   const junk = junkValue(g)
+  const drawn = shopPixels(g, shopUi, boxes)
   return (
     <Box flexDirection="column">
       {fitLine(p, rows, UNDER_WINDOW + HINT_ROWS)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', shopPixels(g, shopUi, boxes), shopHot(g, shopUi), INV_W, !shopUi.menu) })} />}
+          {Raster !== undefined && <Raster key="shop" columns={INV_W} rows={rows} cells={canvasCells({ w: INV_W, h: SHOP_H, px: litWindow('shop', drawn, shopHot(g, shopUi), INV_W, !shopUi.menu) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes }} width={INV_W} height={rows} />
+              <Client key="shop-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows, boxes: onPixels([...chromeBoxes(drawn), ...boxes], litIn('shop')) }} width={INV_W} height={rows} />
             </Box>
           )}
         </Box>
@@ -1433,14 +1436,15 @@ const startScreen = (p: Pane) => {
 const compactBag = (p: Pane) => {
   const { g, Box, Text, Button, Raster, Client, press } = p
   const boxes = compactOverlay(g, bagUi)
+  const drawn = compactPixels(g, boxes)
   return (
     <Box flexDirection="column">
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', compactPixels(g, boxes), compactHot(g, bagUi), COMPACT_W, bagUi.menu === null) })} />}
+          {Raster !== undefined && <Raster key="cbag" columns={COMPACT_W} rows={COMPACT_H / 2} cells={canvasCells({ w: COMPACT_W, h: COMPACT_H, px: litWindow('cbag', drawn, compactHot(g, bagUi), COMPACT_W, bagUi.menu === null) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes }} width={COMPACT_W} height={COMPACT_H / 2} />
+              <Client key="cbag-clicks" module="./windowclient.ts" props={{ columns: COMPACT_W, rows: COMPACT_H / 2, boxes: onPixels([...chromeBoxes(drawn), ...boxes], litIn('cbag')) }} width={COMPACT_W} height={COMPACT_H / 2} />
             </Box>
           )}
         </Box>
@@ -1456,7 +1460,7 @@ const compactBag = (p: Pane) => {
 
 const sheetWindow = (p: Pane) => {
   const { g, Button, press } = p
-  return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), [heroTabsBox(g, 'sheet'), ...sheetOverlay(g)], [
+  return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), sheetOverlay(g), [
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
     <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     retireKey(p, 'r'),
@@ -1572,15 +1576,16 @@ const talkWindow = (p: Pane, who: Speaker) => {
   const height = talkHeight(g, who)
   const boxes = talkOverlay(g, who)
   const deed = talkAction(g, who)
+  const drawn = talkPixels(g, who)
   return (
     <Box flexDirection="column">
       {fitLine(p, height / 2, UNDER_WINDOW)}
       <Box flexDirection="column" alignItems="center">
         <Box>
-          {Raster !== undefined && <Raster key="talk" columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px: litWindow('talk', talkPixels(g, who), talkHot(g, who)) })} />}
+          {Raster !== undefined && <Raster key="talk" columns={INV_W} rows={height / 2} cells={canvasCells({ w: INV_W, h: height, px: litWindow('talk', drawn, talkHot(g, who)) })} />}
           {Client !== undefined && (
             <Box position="absolute" top={0} left={0}>
-              <Client key="talk-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes }} width={INV_W} height={height / 2} />
+              <Client key="talk-clicks" module="./windowclient.ts" props={{ columns: INV_W, rows: height / 2, boxes: onPixels([...chromeBoxes(drawn), ...boxes], litIn('talk')) }} width={INV_W} height={height / 2} />
             </Box>
           )}
         </Box>
@@ -1607,12 +1612,12 @@ const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pa
   { is: (_, l) => l.isCompactBag, draw: compactBag },
   { is: p => p.g.panel === 'death' && !isFalling && p.g.fallen !== undefined && p.isWindowWide, draw: p => pixelWindow(p, 'death', deathHeight(p.g), deathPixels(p.g), deathOverlay(p.g), [wakeKey(p)], undefined, deathHot(p.g)) },
   { is: p => p.g.panel === 'recap' && p.isWindowWide, draw: p => pixelWindow(p, 'recap', recapHeight(p.g), recapPixels(p.g), recapOverlay(p.g), [playOnKey(p, 'p')], undefined, recapHot(p.g)) },
-  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), [], settingsKeys(p, true), undefined, settingsHot(p.g, soundSettings, settingsUi)) },
+  { is: p => p.g.panel === 'settings' && p.isWindowWide, draw: p => pixelWindow(p, 'settings', SETTINGS_H, settingsPixels(p.g, soundSettings, settingsUi), settingsOverlay(settingsUi), settingsKeys(p, true), undefined, settingsHot(p.g, soundSettings, settingsUi)) },
   { is: p => p.g.panel === 'sheet' && p.isWindowWide, draw: sheetWindow },
   { is: p => p.g.panel === 'retire' && p.isWindowWide, draw: retireWindow },
-  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), [heroTabsBox(p.g, 'talent'), ...talentOverlay(p.g, talentUi)], talentKeys(p, true), undefined, [...talentHot(p.g, talentUi), ...heroTabsHot(p.g, 'talent')]) },
-  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), [heroTabsBox(p.g, 'deep'), ...deepOverlay(p.g)], deepKeys(p, true), undefined, [...deepHot(p.g), ...heroTabsHot(p.g, 'deep')]) },
-  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g, codexUi), codexPixels(p.g, codexUi), [heroTabsBox(p.g, 'codex'), ...codexOverlay(p.g, codexUi)], [pageKey(p), cardKey(p, 'k'), codexClose(p, 'c')], undefined, [...codexHot(codexUi), ...heroTabsHot(p.g, 'codex')]) },
+  { is: p => p.g.panel === 'talent' && p.isWindowWide, draw: p => pixelWindow(p, 'talent', talentHeight(p.g, talentUi), talentPixels(p.g, talentUi), talentOverlay(p.g, talentUi), talentKeys(p, true), undefined, [...talentHot(p.g, talentUi), ...heroTabsHot(p.g, 'talent')]) },
+  { is: p => p.g.panel === 'deep' && p.isWindowWide, draw: p => pixelWindow(p, 'deep', deepHeight(p.g), deepPixels(p.g), deepOverlay(p.g), deepKeys(p, true), undefined, [...deepHot(p.g), ...heroTabsHot(p.g, 'deep')]) },
+  { is: p => p.g.panel === 'codex' && p.isWindowWide, draw: p => pixelWindow(p, 'codex', codexHeight(p.g, codexUi), codexPixels(p.g, codexUi), codexOverlay(p.g, codexUi), [pageKey(p), cardKey(p, 'k'), codexClose(p, 'c')], undefined, [...codexHot(codexUi), ...heroTabsHot(p.g, 'codex')]) },
   { is: p => p.g.panel === 'forge' && p.isWindowWide, draw: forgeWindow },
   { is: p => p.g.panel === 'stash' && p.isWindowWide, draw: stashWindow },
   { is: p => isSpeaker(p.g.panel) && p.isWindowWide, draw: p => talkWindow(p, p.g.panel as Speaker) },
@@ -1971,7 +1976,7 @@ const stripView = (p: Pane, l: Layout) => {
         <Raster key="hud" columns={e.props.bodyColumns} rows={l.hudRows} cells={stripCells(l.told, e.props.bodyColumns, l.menuBoxes)} />
         {Client !== undefined && (
           <Box position="absolute" top={0} left={0}>
-            <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes) }} width={e.props.bodyColumns} height={l.hudRows} />
+            <Client key="hud-clicks" module="./windowclient.ts" props={{ columns: e.props.bodyColumns, rows: l.hudRows, boxes: onPixels(hudBoxes(l.told, e.props.bodyColumns, l.menuBoxes)) }} width={e.props.bodyColumns} height={l.hudRows} />
           </Box>
         )}
       </Box>

@@ -2,9 +2,9 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
-import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, settingsGesture, settingsPixels, settingsRect, soundFrom } from './settings'
+import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, settingsGesture, settingsOverlay, settingsPixels, settingsRect, soundFrom } from './settings'
 import type { SettingsUi, SoundSettings } from './settings'
-import { CLOSE_BOX, WINDOW_TOP, WINDOW_W, tabRects } from './window'
+import { CLOSE_BOX, WINDOW_TOP, WINDOW_W } from './window'
 import type { Gesture, Rect } from './window'
 import { newGame } from './world'
 
@@ -46,9 +46,10 @@ describe('the settings window', () => {
   })
 
   test('a click on a page\'s tab shows that page', async () => {
-    const [game, orders] = tabRects([{ label: 'GAME' }, { label: 'ORDERS' }], WINDOW_TOP)
-    expect(settingsGesture(hero(), ON, GAME, middle(orders!)).ui).toEqual(ORDERS)
-    expect(settingsGesture(hero(), ON, ORDERS, middle(game!)).ui).toEqual(GAME)
+    // In terminal text from column 2 under the title bar: GAME on columns 2 to 7, ORDERS on 9 to 16.
+    expect(settingsGesture(hero(), ON, GAME, tap(12, WINDOW_TOP + 4)).ui).toEqual(ORDERS)
+    expect(settingsGesture(hero(), ON, ORDERS, tap(4, WINDOW_TOP + 4)).ui).toEqual(GAME)
+    expect(settingsOverlay(ORDERS).map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['GAME', 'ORDERS'])
   })
 
   test('each order button says the order as it stands', async () => {

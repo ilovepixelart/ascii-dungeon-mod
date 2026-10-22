@@ -5,11 +5,11 @@
 import type { Game, Orders } from '../types'
 import type { Action } from './game'
 import { ordersOf } from './game'
-import { canvas, fill } from './canvas'
+import { BG, canvas, fill } from './canvas'
 import { BUTTON_H, button, buttonW } from './pieces'
 import { SPACE, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabRects, tabRow, windowPixels } from './window'
-import type { Chrome, Gesture, Rect } from './window'
+import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
+import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'SETTINGS' }
 const top = WINDOW_TOP
@@ -85,11 +85,14 @@ export const settingsRect = (g: Game, sound: SoundSettings, ui: SettingsUi, does
 /** The window's pixels: the title bar, the pages' tabs, the page's buttons. */
 export const settingsPixels = (g: Game, sound: SoundSettings, ui: SettingsUi = SETTINGS_UI): string[][] => {
   const body = canvas(WINDOW_W, SETTINGS_H - top)
-  tabRow(body, PAGES, ui.page === 'game' ? 0 : 1, 0)
+  tabGround(body, PAGES, ui.page === 'game' ? 0 : 1, 0)
   fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, SURFACE.line)
   for (const k of placed(g, sound, ui)) button(body, k.key, k.label, k.rect.x, k.rect.y - top, 'ready')
   return windowPixels(CHROME, body.px).px
 }
+
+/** The text over the window: its pages' tab labels. */
+export const settingsOverlay = (ui: SettingsUi = SETTINGS_UI): OverlayBox[] => textTabBoxes(PAGES, ui.page === 'game' ? 0 : 1, top, BG)
 
 /** What a gesture does: the page shown, game actions, and the sound as it now is. */
 export type SettingsOutcome = { ui: SettingsUi; actions: Action[]; sound: SoundSettings; isHelp?: true }
@@ -102,7 +105,7 @@ export const settingsGesture = (g: Game, sound: SoundSettings, ui: SettingsUi, g
   const from = pixel(gesture.from)
   const at = pixel(gesture.at)
   if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return none
-  const page = tabRects(PAGES, top).findIndex(r => isInside(at, r.x, r.y, r.w, r.h))
+  const page = textTabRects(PAGES, top).findIndex(r => isInside(at, r.x, r.y, r.w, r.h))
   if (page >= 0) return { ...none, ui: { page: page === 0 ? 'game' : 'orders' } }
   const hit = placed(g, sound, ui).find(k => isInside(at, k.rect.x, k.rect.y, k.rect.w, k.rect.h))
   if (hit === undefined) return isInside(at, ...CLOSE_BOX) ? { ...none, actions: [{ kind: 'panel', panel: 'settings' }] } : none
@@ -115,6 +118,6 @@ export const settingsGesture = (g: Game, sound: SoundSettings, ui: SettingsUi, g
 
 /** What a click acts on, in window pixels: the page not shown, and the page's buttons. */
 export const settingsHot = (g: Game, sound: SoundSettings, ui: SettingsUi): Rect[] => [
-  ...tabRects(PAGES, top).filter((_, i) => i !== (ui.page === 'game' ? 0 : 1)),
+  ...textTabRects(PAGES, top).filter((_, i) => i !== (ui.page === 'game' ? 0 : 1)),
   ...placed(g, sound, ui).map(k => k.rect),
 ]

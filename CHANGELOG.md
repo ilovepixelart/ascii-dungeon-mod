@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- A pile's names show what beats what you wear first, with a green arrow; past five, four a page and a row
+  (`< 1-4 of 13 >`) whose click shows the next; the row under the pointer shows its item's card beside them, as the
+  bag compares it.
 - The strip is a row shorter: the gold, depth and effects sit beside the belt, the gold written in full with its
   thousands set apart. Belt slots are 10 by 10 like every slot, their counts on the icon's corner, in the bag, the
   compact bag and the merchant too.

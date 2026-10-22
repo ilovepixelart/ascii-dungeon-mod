@@ -861,13 +861,17 @@ test('the pointer over items lying on the map names them there, a row each in it
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
   const over = cells.find(c => same(tileUnder(c), beside))!
-  const label = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: { lines: { text: string; color: string }[] } | null }).label ?? null
-  expect(await label()).toBeNull()
+  const blocks = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks?: { rows: { text: string; color?: string }[][] }[] }).blocks ?? []
+  expect(await blocks()).toEqual([])
   await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
-  // Both, a row each, the Epic first.
-  expect((await label())?.lines).toEqual([{ text: 'Boots of the Long Walk', color: RARITY_COLOR.epic, id: boots.id }, { text: 'Band of the Lost Find', color: RARITY_COLOR.rare, id: item.id }])
+  // Both, a row each: the boots first, as a new knight wears none and they would be an upgrade, with the arrow; the
+  // band, no upgrade by isUpgrade, keeps the arrow's room.
+  expect((await blocks())[0]!.rows).toEqual([
+    [{ text: '\u25b2 ', color: INK.good }, { text: 'Boots of the Long Walk', color: RARITY_COLOR.epic }],
+    [{ text: '  ', color: INK.good }, { text: 'Band of the Lost Find', color: RARITY_COLOR.rare }],
+  ])
   await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'map-clicks' } as never)
-  expect(await label()).toBeNull()
+  expect(await blocks()).toEqual([])
   await ui.unmount()
 })
 
@@ -888,10 +892,19 @@ test('a pile past five on a tile still draws its names, the row counting the res
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const over = cells.find(c => same(clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows)), beside))!
   await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
-  // The pane drew its own tree, the engine not refusing it: the label is there, its last row the count alone.
-  const label = ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: { lines: Record<string, unknown>[] } | null }).label
-  expect(label?.lines.at(-1)).toEqual({ text: '+3 more', color: INK.dim })
+  // The pane drew its own tree, the engine not refusing it: the label is there, its last row turning the page.
+  const blocks = ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks?: { rows: Record<string, unknown>[][] }[] }).blocks
+  expect(blocks?.[0]!.rows.at(-1)).toEqual([{ text: '< 1-4 of 7 >', color: INK.dim }])
   expect(await ui.drawn()).toBeDefined()
+  // Onto the label and its last row: a click there shows the next page, the hero staying where he is.
+  type Shown = { x: number; y: number; rows: { text: string }[][] }
+  const shown = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks: Shown[] }).blocks[0]!
+  const first = await shown()
+  const onPage = { x: first.x + 2, y: first.y + first.rows.length - 1 }
+  await ui.pointer({ type: 'move', ...onPage, in: 'map-clicks' } as never)
+  await ui.pointer({ type: 'down', ...onPage, button: 'left', in: 'map-clicks' } as never)
+  const texts = (await shown()).rows.map(r => r.map(x => x.text).join('').trim())
+  expect(texts).toEqual(['Ring 5', 'Ring 6', 'Ring 7', '< 5-7 of 7 >'])
   await ui.unmount()
 })
 
@@ -914,19 +927,21 @@ test('the pointer moved from a tile onto its label keeps it, its row lit; a clic
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
   const over = cells.find(c => same(tileUnder(c), beside))!
-  type Shown = { x: number; y: number; row?: number; lines: { text: string }[]; grounds: string[][] }
-  const label = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: Shown | null }).label ?? null
+  type Shown = { x: number; y: number; rows: { text: string }[][]; grounds: string[][] }
+  const blocks = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks?: Shown[] }).blocks ?? []
   await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
-  const shown = (await label())!
-  expect(shown.row).toBeUndefined()
-  // Onto the label's second row, Band of the Lost Find, over other tiles: the label stays, that row lit.
-  const onBand = { x: shown.x + 2, y: shown.y + 1 }
+  const [shown, noCard] = await blocks()
+  expect(noCard).toBeUndefined()
+  // Onto the label's second row, Band of the Lost Find, over other tiles: the label stays, that row lit, its card beside.
+  const onBand = { x: shown!.x + 2, y: shown!.y + 1 }
   expect(same(tileUnder(onBand), beside)).toBe(false)
   await ui.pointer({ type: 'move', ...onBand, in: 'map-clicks' } as never)
-  const held = (await label())!
-  expect([held.x, held.y, held.row]).toEqual([shown.x, shown.y, 1])
-  expect(held.grounds[1]).not.toEqual(shown.grounds[1])
-  expect(held.grounds[0]).toEqual(shown.grounds[0])
+  const [held, cardBlock] = await blocks()
+  expect([held!.x, held!.y]).toEqual([shown!.x, shown!.y])
+  expect(held!.grounds[1]).not.toEqual(shown!.grounds[1])
+  expect(held!.grounds[0]).toEqual(shown!.grounds[0])
+  // The Band's card, as the bag shows it: its name, then what it is.
+  expect(cardBlock!.rows.slice(0, 2).map(r => r.map(x => x.text).join(''))).toEqual(['Band of the Lost Find', 'Rare Ring'])
   // A click there picks it: the hero walks onto the tile and takes the Band before the Boots.
   await ui.pointer({ type: 'down', ...onBand, button: 'left', in: 'map-clicks' } as never)
   await clock.advance(2000)

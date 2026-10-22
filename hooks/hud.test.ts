@@ -5,7 +5,7 @@ import { foeAhead } from './fixtures'
 import { xpToLevel } from './balance'
 import { depthMod, isBossDepth, newGame } from './game'
 import {
-  ORB, ORB_PHASES, ORB_SIDE_Y, ORB_WIDTH_MIN, XP_EMPTY, XP_LIGHT, hasOrbs, orbSize, orbTop, sideLineAt, stripLeft, xpOrbX,
+  ORB, ORB_PHASES, ORB_SIDE_Y, ORB_WIDTH_MIN, XP_LIGHT, hasOrbs, orbSize, orbTop, sideLineAt, stripLeft, xpOrbX,
   BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_X, SIDE_LINE_Y, XP_FILL, XP_Y,
   BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudHot, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
@@ -603,18 +603,32 @@ describe('the orbs, from 105 columns', () => {
   test('fill the HP orb to the HP\'s share, its surface lit, in the HP\'s tone: green above 70%, amber to 40%, red below', async () => {
     // Down its middle on the rows the ripple leaves still (9 to 12): the surface on row 1 + (1 - share) * 20, rounded.
     const column = (hp: number) => [9, 10, 11, 12].map(y => hudContent(hero({ hp, maxHp: 100 }), IN, 3).px[ORB_Y + y]![11])
+    // The empty glass is the strip's ground seen through it, tinted a seventh by the liquid.
+    const glass = (tone: string) => mix(BG, tone, 0.14)
     expect(column(100)).toEqual(Array(4).fill(HP_TONES.healthy[1]))
     // 60%: row 9. 50%: row 11. 35%: row 14, under them all.
     expect(column(60)).toEqual([HP_TONES.hurt[0], HP_TONES.hurt[1], HP_TONES.hurt[1], HP_TONES.hurt[1]])
-    expect(column(50)).toEqual(['#1e2420', '#1e2420', HP_TONES.hurt[0], HP_TONES.hurt[1]])
-    expect(column(35)).toEqual(Array(4).fill('#1e2420'))
-    expect(column(0)).toEqual(Array(4).fill('#1e2420'))
+    expect(column(50)).toEqual([glass(HP_TONES.hurt[1]), glass(HP_TONES.hurt[1]), HP_TONES.hurt[0], HP_TONES.hurt[1]])
+    expect(column(35)).toEqual(Array(4).fill(glass(HP_TONES.critical[1])))
+    expect(column(0)).toEqual(Array(4).fill(glass(HP_TONES.critical[1])))
   })
 
   test('fill the XP orb by the share of the way to the next level, in gold', async () => {
     // Level 1 needs 20: 10 is half, its surface on row 11.
     const column = [9, 10, 11, 12].map(y => hudContent(hero({ xp: 10, level: 1 }), IN).px[ORB_Y + y]![xpOrbX(IN) + 11])
-    expect(column).toEqual([XP_EMPTY, XP_EMPTY, XP_LIGHT, XP_FILL])
+    expect(column).toEqual([mix(BG, XP_FILL, 0.14), mix(BG, XP_FILL, 0.14), XP_LIGHT, XP_FILL])
+  })
+
+  test('are glass: a wall a pixel thick, lit on the top left and dark on the bottom right, a white glint on the light side', async () => {
+    const c = hudContent(hero({ hp: 100, maxHp: 100 }), IN)
+    const at = (x: number, y: number) => c.px[ORB_Y + y]![x]!
+    // Across the middle row: the wall's one pixel at each end, then the inside.
+    const row = c.px[ORB_Y + 11]!.slice(0, ORB)
+    expect([row[0], row[21]]).toEqual(['#9aa4b4', '#3a3e48'])
+    expect([row[1], row[20]].some(p => p === '#9aa4b4' || p === '#3a3e48')).toBe(false)
+    // Its hot pixel, three tenths in from the top left, pure white; nothing white on the far side.
+    expect(at(7, 7)).toBe('#ffffff')
+    expect(c.px.slice(ORB_Y + 12, ORB_Y + ORB).some(r => r.slice(11, ORB).includes('#ffffff'))).toBe(false)
   })
 
   test('ripple: the phases differ under the number\'s rows and hold still on them; nothing else moves', async () => {

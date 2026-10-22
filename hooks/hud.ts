@@ -168,49 +168,76 @@ export const orbPhase = (now: number) => Math.floor(now / ORB_STEP_MS) % ORB_PHA
  * ground holds. */
 const stillTop = (size: number) => size / 2 - 2
 const isStill = (size: number, y: number) => y >= stillTop(size) && y < stillTop(size) + 4
-/** The XP orb's lit surface. */
+/** The XP orb's lit surface, and its shade. */
 export const XP_LIGHT = '#f0d070'
-const RIM_LIT = '#5a5f6b'
-const RIM_SHADE = '#3a3e48'
-const GLOSS = '#ffffff'
-/** A few pixels of light on the glass, high on the left, placed on the largest orb and scaled to the others. */
-const GLOSS_AT: readonly (readonly [number, number])[] = [[5, 4], [6, 4], [5, 5], [4, 6]]
+const XP_SHADE = '#a88430'
+/** The glass's wall, a pixel thick: lit where the light comes from (the top left), dark across from it. */
+const WALL_LIT = '#9aa4b4'
+const WALL_SHADE = '#3a3e48'
+const GLINT = '#ffffff'
 
-/** An orb's inks: its liquid, the liquid's lit surface, and the empty glass. */
-type OrbInks = { liquid: string; surface: string; glass: string }
+/** An orb's inks: its liquid, the liquid's lit surface, its shade where the round turns from the light, and the empty
+ * glass, the strip's ground seen through it, tinted by the liquid. */
+type OrbInks = { liquid: string; surface: string; shade: string; glass: string }
 const hpShare = (g: Game) => Math.max(0, g.hp) / g.maxHp
 const xpShare = (g: Game) => g.xp / xpToLevel(g.level)
-const hpInks = (g: Game): OrbInks => ({ liquid: hpTones(hpShare(g))[1], surface: hpTones(hpShare(g))[0], glass: HP_EMPTY })
-const XP_INKS: OrbInks = { liquid: XP_FILL, surface: XP_LIGHT, glass: XP_EMPTY }
+const seenThrough = (liquid: string) => mix(BG, liquid, 0.14)
+const hpInks = (g: Game): OrbInks => {
+  const [surface, liquid, shade] = hpTones(hpShare(g))
+  return { liquid, surface, shade, glass: seenThrough(liquid) }
+}
+const XP_INKS: OrbInks = { liquid: XP_FILL, surface: XP_LIGHT, shade: XP_SHADE, glass: seenThrough(XP_FILL) }
+
+/** Where on the round a pixel is: its distance from the middle, the wall's radius, and its angle, 0 pointing right and
+ * -90 up, so the light's side (the top left) is about -135. */
+const roundAt = (size: number, x: number, y: number) => {
+  const centre = (size - 1) / 2
+  return { d: Math.hypot(x - centre, y - centre), r: size / 2, angle: (Math.atan2(y - centre, x - centre) * 180) / Math.PI }
+}
+
+/** The glass's light, over whatever it shows: a short curved highlight just inside the wall on the light's side and one
+ * hot pixel in it, white, as a glass ball catches the light; undefined elsewhere. */
+const glint = (size: number, x: number, y: number) => {
+  const { d, r, angle } = roundAt(size, x, y)
+  if (d > r - 3 && d <= r - 2 && angle > -165 && angle < -105) return mix(GLINT, WALL_LIT, 0.25)
+  const hot = Math.round(size * 0.3)
+  return x === hot && y === hot ? GLINT : undefined
+}
+
+/** The liquid at a pixel: its body, shaded where the round turns away from the light (its bottom right), and a thin
+ * light just inside the wall there, the light come through the glass. */
+const liquidAt = (size: number, x: number, y: number, inks: OrbInks) => {
+  const { d, r, angle } = roundAt(size, x, y)
+  const isFar = angle > 0 && angle < 90
+  if (isFar && d > r - 2) return mix(inks.liquid, GLINT, 0.22)
+  return isFar && d > r - 3.5 ? inks.shade : inks.liquid
+}
 
 /**
  * A `size` orb's pixel at x, y of its square, `share` full, the ripple at `phase`: undefined outside its round; its
- * rim, lit top left and shaded bottom right; the glass above the surface, the surface lit, the liquid under it. The
- * surface rests on row 1 + (1 - share) * (size - 2), a pixel up or down with the ripple but on its still rows.
+ * wall, a pixel thick; the glass above the surface, the surface lit, the liquid under it; the glass's light over all.
+ * The surface rests on row 1 + (1 - share) * (size - 2), a pixel up or down with the ripple but on its still rows.
  */
 export const orbPixel = (size: number, x: number, y: number, share: number, phase: number, inks: OrbInks): string | undefined => {
-  const centre = (size - 1) / 2
-  const d = Math.hypot(x - centre, y - centre)
-  if (d > size / 2) return undefined
-  if (d > size / 2 - 1.5) return x + y < size - 1 ? RIM_LIT : RIM_SHADE
+  const { d, r } = roundAt(size, x, y)
+  if (d > r) return undefined
+  if (d > r - 1) return x + y < size - 1 ? WALL_LIT : WALL_SHADE
+  const light = glint(size, x, y)
+  if (light !== undefined) return light
   const full = Math.max(0, Math.min(1, share))
   if (full === 0) return inks.glass
   const wave = isStill(size, y) ? 0 : Math.round(Math.sin((x / 7 + phase / ORB_PHASES) * 2 * Math.PI) * 0.9)
   const surface = Math.round(1 + (1 - full) * (size - 2)) + wave
   if (y < surface) return inks.glass
-  return y === surface ? inks.surface : inks.liquid
+  return y === surface ? inks.surface : liquidAt(size, x, y, inks)
 }
 
-/** A `size` orb drawn on `c` at x, centred down the strip, with the gloss on its glass. */
+/** A `size` orb drawn on `c` at x, centred down the strip. */
 const orb = (c: Canvas, size: number, x: number, share: number, phase: number, inks: OrbInks) => {
   const top = orbTop(size)
   for (let dy = 0; dy < size; dy += 1) for (let dx = 0; dx < size; dx += 1) {
     const p = orbPixel(size, dx, dy, share, phase, inks)
     if (p !== undefined) put(c, x + dx, top + dy, p)
-  }
-  for (const [gx, gy] of GLOSS_AT) {
-    const [dx, dy] = [Math.round((gx * size) / ORB), Math.round((gy * size) / ORB)]
-    put(c, x + dx, top + dy, mix(c.px[top + dy]![x + dx]!, GLOSS, 0.45))
   }
 }
 

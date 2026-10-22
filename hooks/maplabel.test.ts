@@ -44,9 +44,18 @@ test('a tile with several items names each on its own row in its tier\'s color, 
   })
 })
 
-test('past five items, four are named and the rest counted', async () => {
+test('past five items, four a page and a row that says which and turns it, round to the first past the last', async () => {
   const seven = Array.from({ length: 7 }, (_, i) => ({ ...plainItem({ nextId: 10 + i }, 'ring'), name: `Ring ${i + 1}` }))
-  expect(lyingLabel(seven).lines).toEqual([...['Ring 1', 'Ring 2', 'Ring 3', 'Ring 4'].map((text, i) => ({ text, color: RARITY_COLOR.common, id: 10 + i })), { text: '+3 more' }])
+  const ring = (i: number) => ({ text: `Ring ${i}`, color: RARITY_COLOR.common, id: 9 + i })
+  expect(lyingLabel(seven).lines).toEqual([ring(1), ring(2), ring(3), ring(4), { text: '< 1-4 of 7 >', turnsPage: true }])
+  expect(lyingLabel(seven, 1).lines).toEqual([ring(5), ring(6), ring(7), { text: '< 5-7 of 7 >', turnsPage: true }])
+  expect(lyingLabel(seven, 2).lines).toEqual(lyingLabel(seven, 0).lines)
+})
+
+test('what beats what is worn comes first, marked; then the rarest', async () => {
+  const [a, b, c] = (['common', 'epic', 'rare'] as const).map((rarity, i) => ({ ...plainItem({ nextId: 20 + i }, 'ring', rarity), name: `Ring ${rarity}` }))
+  const lines = lyingLabel([a!, b!, c!], 0, i => i.id === a!.id).lines
+  expect(lines.map(l => [l.text, l.isUp ?? false])).toEqual([['Ring common', true], ['Ring epic', false], ['Ring rare', false]])
 })
 
 test('a label\'s ground is the map under each cell, its two pixels averaged and darkened; the row the pointer is on lit', async () => {

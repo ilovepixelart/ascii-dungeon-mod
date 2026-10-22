@@ -62,20 +62,29 @@ const takenSet = (taken: readonly number[]) => {
   return set
 }
 
-/** The most rows a floor label stacks: past it, the last says how many more lie there. */
+/** The most rows a floor label stacks: past it, a page of one fewer items and a row to turn the page. */
 const LABEL_ROWS = 5
+const PAGE = LABEL_ROWS - 1
+
+/** A row of a floor label: an item, its name in its tier's color, its id to pick it by, and whether it beats what is
+ * worn; or the row that turns the page, uncolored. */
+export type LabelLine = { text: string; color?: string; id?: number; isUp?: true; turnsPage?: true }
 
 /**
- * What a floor label says: each item lying on the tile on a row of its own, in its tier's color, with its id to pick it
- * by, the rarest first, so nothing lying under another goes unseen; past LABEL_ROWS, the rest counted, uncolored.
- * `color` is the rarest one's, the text map's `*`.
+ * What a floor label says: each item lying on the tile on a row of its own, what beats what is worn first (`isUp`),
+ * then the rarest, so the best choice is on top; past LABEL_ROWS, PAGE of them at a time from `page` (round past the
+ * last) and a row saying which and turning the page. `color` is the first one's, the text map's `*`.
  */
-export const lyingLabel = (items: readonly Item[]): { lines: { text: string; color?: string; id?: number }[]; color: string } => {
-  const rank = (i: Item) => RARITY_RANK.indexOf(i.rarity)
+export const lyingLabel = (items: readonly Item[], page = 0, isUp: (item: Item) => boolean = () => false): { lines: LabelLine[]; color: string } => {
+  const rank = (i: Item) => (isUp(i) ? RARITY_RANK.length : 0) + RARITY_RANK.indexOf(i.rarity)
   const sorted = [...items].sort((a, b) => rank(b) - rank(a))
-  const lines = sorted.map(i => ({ text: i.name, color: RARITY_COLOR[i.rarity], id: i.id }))
-  const shown = lines.length <= LABEL_ROWS ? lines : [...lines.slice(0, LABEL_ROWS - 1), { text: `+${lines.length - LABEL_ROWS + 1} more` }]
-  return { lines: shown, color: lines[0]!.color }
+  const line = (i: Item): LabelLine => ({ text: i.name, color: RARITY_COLOR[i.rarity], id: i.id, ...(isUp(i) ? { isUp: true as const } : {}) })
+  const color = RARITY_COLOR[sorted[0]!.rarity]
+  if (sorted.length <= LABEL_ROWS) return { lines: sorted.map(line), color }
+  const pages = Math.ceil(sorted.length / PAGE)
+  const from = (page % pages) * PAGE
+  const shown = sorted.slice(from, from + PAGE)
+  return { lines: [...shown.map(line), { text: `< ${from + 1}-${from + shown.length} of ${sorted.length} >`, turnsPage: true }], color }
 }
 
 /** The items lying on the floor at a cell, left there when the bag was full. */

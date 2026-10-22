@@ -1264,12 +1264,12 @@ test('no frame around the game: neither the map nor the inventory screen draws a
 })
 
 test('the map takes every row the strip leaves, nothing for text rows or a frame', async $ => {
-  // At the best size, so no note takes a row.
-  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  // Past the best size, so no note takes a row, and short of the whole map's 72 rows, so the map is not cut to them.
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 60 } }, surface: 'terminal' })
   const strip = stripHeight(WIDE.props.bodyColumns) / 2
-  // The dash: its top band, the belt and its bottom band, 16 px, 8 rows.
-  expect(strip).toBe(8)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(80 - 8)
+  // The dash: its lit top line, the belt's 10 px and its dark edge, 12 px, 6 rows.
+  expect(strip).toBe(6)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(60 - 6)
   await ui.unmount()
 })
 

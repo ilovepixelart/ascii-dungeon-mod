@@ -7,7 +7,7 @@ import { CELL } from './icons'
 import { BAG_H, BAG_W, RARITY_COLOR, plainItem } from './items'
 import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
 import type { Gesture, OverlayBox } from './window'
-import { CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
+import { CHEST_UI_IDLE, chestGesture, chestTitle, chestOverlay, chestPixels, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
 import { SET_PLACES } from './stash'
 import { INK } from './ui/tokens'
 import { CURSOR } from './pieces'
@@ -190,6 +190,14 @@ describe('the stash, crowded', () => {
 })
 
 describe('the stash\'s tabs', () => {
+  test('the title counts the tab shown: what it holds of its room; a tab not bought, no count', async () => {
+    const g = hero()
+    g.stashed = [Array.from({ length: 4 }, (_, i) => item(g, 'ring', 'common', { id: 600 + i }))]
+    g.stashSets = [{ ...item(g, 'ring', 'epic', { id: 700 }), set: SET_PLACES[0]!.set as Item['set'], base: SET_PLACES[0]!.base }]
+    // Nine places on the sets' tab: three sets of three pieces.
+    expect([0, 'sets', 1, 'legends'].map(tab => chestTitle(g, { ...CHEST_UI_IDLE, tab: tab as ChestUi['tab'] }))).toEqual(['STASH 4/10', 'STASH 1/9', 'STASH', 'STASH'])
+  })
+
   // The tabs from x 2 in the window's body rows 14 to 23: 1, 2, 3, 4 three cells each and a cell apart, then SETS and
   // LEGENDS; a click on one at its middle row.
   const onTab = (x: number) => click(x + 0.5, 9.5)

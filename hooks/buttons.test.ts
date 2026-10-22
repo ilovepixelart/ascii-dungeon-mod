@@ -55,6 +55,25 @@ describe('the windows\' buttons', () => {
     expect(seen).toBeGreaterThan(50)
   })
 
+  test('on every window, each button\'s words are centred on its face, however wide the face', async () => {
+    let wide = 0
+    for (const s of all) {
+      for (const b of s.boxes.filter(x => x.role === 'button')) {
+        const words = b.lines[0]!.map(r => r.text).join('').length
+        const room = b.w - 2 - words
+        if (room > 2) wide += 1
+        // The room left by the words, split evenly, the odd cell on the right.
+        expect([s.name, b.pad]).toEqual([s.name, Math.floor(room / 2)])
+      }
+    }
+    expect(wide).toBeGreaterThan(5)
+  })
+
+  test('the smith\'s jobs, one under another, are one width', async () => {
+    const widths = all.find(s => s.name === 'forge-keep-knight')!.boxes.filter(b => b.role === 'button').map(b => b.w)
+    expect(widths).toEqual([widths[0], widths[0], widths[0]])
+  })
+
   test('each window says its buttons', async () => {
     const said = (name: string) => buttonsIn(all.find(s => s.name === name)!.boxes).map(b => b.text)
     expect(said('settings-game')).toEqual(['NEW GAME', 'HELP', 'SOUND OFF', 'MUSIC OFF', 'VIEW PIXEL', 'VOL 100'])

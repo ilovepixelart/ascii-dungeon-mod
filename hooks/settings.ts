@@ -6,7 +6,7 @@ import type { Game, Orders } from '../types'
 import type { Action } from './game'
 import { ordersOf } from './game'
 import { BG, canvas, fill } from './canvas'
-import { BUTTON_H, buttonBox, buttonFace, buttonW } from './pieces'
+import { BUTTON_H, buttonFace, buttonW, wideButtonBox } from './pieces'
 import { SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -100,7 +100,7 @@ export const settingsPixels = (g: Game, sound: SoundSettings, ui: SettingsUi = S
 /** The text over the window: its pages' tab labels, its buttons' words. */
 export const settingsOverlay = (g: Game, sound: SoundSettings, ui: SettingsUi = SETTINGS_UI): OverlayBox[] => [
   ...textTabBoxes(PAGES, ui.page === 'game' ? 0 : 1, top, BG),
-  ...placed(g, sound, ui).map(k => ({ ...buttonBox(k.label, k.rect.x, k.rect.y, 'ready'), w: k.rect.w })),
+  ...placed(g, sound, ui).map(k => wideButtonBox(k.label, k.rect.x, k.rect.y, k.rect.w, 'ready')),
 ]
 
 /** What a gesture does: the page shown, game actions, and the sound as it now is. */

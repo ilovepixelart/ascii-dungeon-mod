@@ -31,6 +31,7 @@ names below point at it.
   font (3 by 5, `FONT`) is left to the map's floating combat numbers and the saved hero card; `scripts/check-font.mjs`
   fails on any other use.
 - Labels of the chrome (titles, tabs, buttons, ribbons) are upper case; sentences are sentence case.
+- A count is written in full, its thousands set off by commas (`countText`): gold, kills, calls, everywhere.
 - A number on a bar is centred on it, on its middle two rows, each character on the bar's color under it, in the ink
   that reads there (`inkOn`). So a 4 px bar starts on an odd pixel row.
 - The pixel font has every character the game asks of it; a missing one is a failing test (`missingGlyphs`).

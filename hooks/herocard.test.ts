@@ -27,7 +27,7 @@ describe('the card as text', () => {
   test('who, how deep and in which tier, the records, the codex counts, what is worn and the talents', async () => {
     expect(cardText(hero()).split('\n')).toEqual([
       'ASCII Dungeon: Level 88 Knight, deepest depth 105 (tier VI, Lean)',
-      'Kills 4210, deaths 30, gold found 54,702, heroes retired 2',
+      'Kills 4,210, deaths 30, gold found 54,702, heroes retired 2',
       'Uniques 2 of 5, big bosses 1 of 5, Legendaries 1 of 7',
       `Wearing: ${plainHero(3).gear.weapon!.name} (Common), Oathbound Plate (Epic), Sharp Band (Rare)`,
       'Talents: Grudge, Haggler',
@@ -37,14 +37,14 @@ describe('the card as text', () => {
   test('above the tiers, no tier; none retired, none said; no talents, none yet', async () => {
     const lines = cardText(hero({ deepest: 30, talents: [], codex: { ...hero().codex!, retired: 0 } })).split('\n')
     expect(lines[0]).toBe('ASCII Dungeon: Level 88 Knight, deepest depth 30')
-    expect(lines[1]).toBe('Kills 4210, deaths 30, gold found 54,702')
+    expect(lines[1]).toBe('Kills 4,210, deaths 30, gold found 54,702')
     expect(lines[4]).toBe('Talents: none yet')
   })
 })
 
 describe('the card as a picture', () => {
   test('beside the portrait: level and class, the deepest depth and its tier, kills and deaths, the heroes retired', async () => {
-    expect(cardHead(hero()).map(l => l.text)).toEqual(['LEVEL 88 KNIGHT', 'DEEPEST 105  TIER VI', 'KILLS 4210  DEATHS 30', '2 HEROES RETIRED'])
+    expect(cardHead(hero()).map(l => l.text)).toEqual(['LEVEL 88 KNIGHT', 'DEEPEST 105  TIER VI', 'KILLS 4,210  DEATHS 30', '2 HEROES RETIRED'])
   })
 
   test('above the tiers, no tier; one retired, one hero; none, no line', async () => {

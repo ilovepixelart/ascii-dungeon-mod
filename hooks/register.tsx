@@ -34,6 +34,7 @@ import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverla
 import type { ShopUi } from './shop'
 import { chromeBoxes, closeBoxOf, onPixels, pixel } from './window'
 import type { OverlayBox, Rect } from './window'
+import { countText } from './names'
 import { hoveredRect, lightUp } from './ui/kit'
 import { heroTabsHot } from './herotabs'
 import { canvasCells } from './canvas'
@@ -1770,7 +1771,7 @@ const textShop = ({ g, Box, Text, Button, press }: Pane) => (
   <Box flexDirection="column">
     <Text>
       <Text bold>The merchant</Text>
-      <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
+      <Text color={INK.gold}>{`  Gold ${countText(g.gold)}`}</Text>
     </Text>
     {WARES.map(ware => (
       <Button key={`buy-${ware}`} label={`Buy ${nameOf(wareOf(ware).kind, wareOf(ware).tier)}: ${priceOfWare(ware, g)} gold`} plain dimColor={g.gold < priceOfWare(ware, g)} onPress={press({ kind: 'buy', ware })} />
@@ -1790,7 +1791,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
       <Text>
         <Text bold>The smith</Text>
         <Text dimColor>{`  Temper: +1 to the main stat, up to ${TEMPER_MAX} times. Reforge: new affixes, ${reforgeCost(g)} gold`}</Text>
-        <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
+        <Text color={INK.gold}>{`  Gold ${countText(g.gold)}`}</Text>
       </Text>
       {worn.length === 0 && <Text dimColor>You wear nothing for the smith to work on.</Text>}
       {worn.map(({ slot, item }) => {
@@ -1849,7 +1850,7 @@ const textMystic = (p: Pane) => {
     <Box flexDirection="column">
       <Text>
         <Text bold>The mystic</Text>
-        <Text color={INK.gold}>{`  Gold ${g.gold}`}</Text>
+        <Text color={INK.gold}>{`  Gold ${countText(g.gold)}`}</Text>
       </Text>
       <Text>{g.fortune === null ? 'No fortune in force.' : `${FORTUNE_NAME[g.fortune.kind]}, until you change depth.`}</Text>
       {g.fortune === null
@@ -1922,7 +1923,7 @@ const textRecap = (p: Pane) => {
   return (
     <Box flexDirection="column">
       <Text bold>While you worked</Text>
-      <Text>{`${r.calls} tool calls, depth ${r.depth} to ${g.depth}, level ${r.level} to ${g.level}. ${r.kills} kills, +${r.gold} gold, ${r.deaths} deaths.`}</Text>
+      <Text>{`${countText(r.calls)} tool calls, depth ${r.depth} to ${g.depth}, level ${r.level} to ${g.level}. ${countText(r.kills)} kills, +${countText(r.gold)} gold, ${r.deaths} deaths.`}</Text>
       {work.length > 0 && <Text>{`Your work: ${work.join(', ')}.`}</Text>}
       {r.best !== undefined && <Text>{'Best find: '}<Text color={RARITY_COLOR[r.best.rarity]}>{r.best.name}</Text></Text>}
       <Box columnGap={2}>{playOnKey(p)}</Box>
@@ -1955,7 +1956,7 @@ const textCodex = (p: Pane) => {
       <Text>{`Uniques ${c.uniques.length}/${uniques.length}: ${named(c.uniques, uniques) || 'none yet'}`}</Text>
       <Text>{`Big bosses ${c.bigs.length}/${bigs.length}: ${named(c.bigs, bigs) || 'none yet'}`}</Text>
       <Text>{`Legendaries ${legendaries.length}/${LEGENDARIES.length}: ${legendaries.map(l => l.name).join(', ') || 'none yet'}`}</Text>
-      <Text dimColor>{`Deepest ${c.deepest}, level ${c.level}, ${c.kills} kills, ${c.bosses} bosses, ${c.deaths} deaths, ${c.gold} gold.`}</Text>
+      <Text dimColor>{`Deepest ${c.deepest}, level ${c.level}, ${countText(c.kills)} kills, ${countText(c.bosses)} bosses, ${countText(c.deaths)} deaths, ${countText(c.gold)} gold.`}</Text>
       <Box columnGap={2}>
         {cardKey(p)}
         {codexClose(p)}

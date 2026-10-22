@@ -8,6 +8,7 @@ import { RARITY_COLOR } from './items'
 import { INK, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
+import { countText } from './names'
 import { canvas } from './canvas'
 import { begun } from './recap'
 
@@ -23,7 +24,7 @@ const SLAIN = INK.danger
 const PLAY = { key: 'P', label: 'PLAY ON' }
 const FIND_Y = top + 2 + FACE + 3
 
-const many = (n: number, one: string, more = `${one}s`) => `${n} ${n === 1 ? one : more}`
+const many = (n: number, one: string, more = `${one}s`) => `${countText(n)} ${n === 1 ? one : more}`
 const fromTo = (what: string, from: number, to: number) => (from === to ? `${what} ${to}` : `${what} ${from} to ${to}`)
 
 
@@ -37,11 +38,11 @@ const recapOf = (g: Game): Recap => g.recap ?? begun(g)
 
 /** What happened, beside the portrait: the calls, the depth and level, the fighting, the work. */
 const toldLines = (g: Game, r: Recap): Run[][] => [
-  [{ text: `${r.calls} tool calls`, bold: true }],
+  [{ text: `${countText(r.calls)} tool calls`, bold: true }],
   [{ text: `${fromTo('Depth', r.depth, g.depth)}, ${fromTo('level', r.level, g.level)}.`, ...(g.level > r.level ? { color: INK.good } : {}) }],
   [
     { text: `${many(r.kills, 'kill')}${r.champions > 0 ? `, ${many(r.champions, 'champion')}` : ''}, ` },
-    { text: `+${r.gold} gold`, color: INK.gold },
+    { text: `+${countText(r.gold)} gold`, color: INK.gold },
     { text: ', ' },
     { text: many(r.deaths, 'death'), ...(r.deaths > 0 ? { color: SLAIN } : { dim: true }) },
     { text: '.' },

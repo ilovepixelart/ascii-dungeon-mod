@@ -4,6 +4,7 @@ import type { Run } from './game'
 import { GRID, art, canvas, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
 import { textMask } from './pixelart'
+import { countText } from './names'
 import type { Pos } from './map'
 import { coin, mix } from './pieces'
 import { GLOW } from './ui/glow'
@@ -84,9 +85,6 @@ export const textTabBoxes = (items: readonly Tab[], chosen: number, y = 0, groun
     return { role: 'tabs', x: r.x, y: y / 2 + 1, w: label.length + 2, h: 3, border: bg, bg, pad: 0, lines: [[{ text: label, color: isOn ? TITLE_INK : LABEL_INK, bold: isOn }]] }
   })
 
-/** Gold as the title bar writes it: in full, thousands set apart by commas. */
-export const goldText = (gold: number) => String(gold).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-
 /** Where the title bar's gold starts, its coin's left: clear of the title or tabs in a narrow window. */
 const goldX = (chrome: Chrome, width: number) => {
   const tabs = chrome.tabs === undefined ? undefined : textTabRects(chrome.tabs.items).at(-1)
@@ -101,7 +99,7 @@ const chromeText = (chrome: Chrome, width: number): OverlayBox[] => {
     ? textTabBoxes(chrome.tabs.items, chrome.tabs.chosen).map(b => ({ ...b, role: 'title' }))
     : [{ role: 'title', x: TITLE_X - 1, y: 1, w: chrome.title.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text: chrome.title, color: TITLE_INK, bold: true }]] }]
   if (chrome.gold === undefined) return head
-  const text = goldText(chrome.gold)
+  const text = countText(chrome.gold)
   return [...head, { role: 'gold', x: goldX(chrome, width) + 5, y: 1, w: text.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text, color: GOLD_INK, bold: true }]] }]
 }
 

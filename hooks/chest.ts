@@ -16,6 +16,7 @@ import type { ButtonState } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, tabGround, textTabBoxes, textTabRects, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Tab, Weighted } from './window'
 import { INK, SURFACE } from './ui/tokens'
+import { countText } from './names'
 
 /** What the window shows beyond the game: the tab shown, the stored item chosen (a bag item is chosen in the game), and
  * its menu. */
@@ -78,7 +79,7 @@ const offerLines = (g: Game, tab: StashTab): Run[][] => {
   const why = whyNotBuy(g, tab)
   const name = tabName(tab)
   const head: Run[] = [{ text: `${name.charAt(0).toUpperCase()}${name.slice(1)} costs ` }, { text: `${tabPrice(tab)} gold`, color: INK.gold }, { text: '.' }]
-  const reason = why === undefined ? 'Buy it to keep more, from hero to hero.' : why.startsWith('buy ') ? `${why.charAt(0).toUpperCase()}${why.slice(1)}.` : `You have ${g.gold} gold.`
+  const reason = why === undefined ? 'Buy it to keep more, from hero to hero.' : why.startsWith('buy ') ? `${why.charAt(0).toUpperCase()}${why.slice(1)}.` : `You have ${countText(g.gold)} gold.`
   return [head, [{ text: reason, dim: true }]]
 }
 const buyState = (g: Game, tab: StashTab): ButtonState => (whyNotBuy(g, tab) === undefined ? 'ready' : 'off')

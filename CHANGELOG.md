@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- Buttons say what they do, without a key letter: a key reaches the pane only after ctrl+x tab, the prompt having the
+  keyboard otherwise, so a key on a button promised what a press there would not do. The keys' row under a window
+  now has "ctrl+x tab for keys:" on a line over it, so the pane plays best 49 rows tall (48 before).
 - Window titles, the gold in a title bar and the codex's and settings' page tabs are written in terminal text, where
   they were in the pixel font.
 - The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,

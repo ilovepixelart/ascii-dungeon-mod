@@ -26,7 +26,7 @@ describe('the size the game plays best in', () => {
   })
 
   test('is said for a pane narrower or shorter than it, and not at it', async () => {
-    expect(sizeNote(96, 40)).toBe('ASCII Dungeon plays best in a pane at least 105 columns wide and 48 rows tall; this one is 96 by 40.')
+    expect(sizeNote(96, 40)).toBe('ASCII Dungeon plays best in a pane at least 105 columns wide and 49 rows tall; this one is 96 by 40.')
     expect(sizeNote(BEST_COLUMNS - 1, BEST_ROWS)).toBeDefined()
     expect(sizeNote(BEST_COLUMNS, BEST_ROWS - 1)).toBeDefined()
     expect(sizeNote(BEST_COLUMNS, BEST_ROWS)).toBeUndefined()

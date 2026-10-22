@@ -71,11 +71,11 @@ describe('choosing', () => {
     expect(isUnderWay(first)).toBe(false)
     expect(isUnderWay({ ...first, xp: 3 })).toBe(true)
     expect(isUnderWay({ ...first, deepest: 2 })).toBe(true)
-    const [s, h, b] = [buttonW('S', 'START'), buttonW('H', 'HELP'), buttonW('B', 'BACK')]
+    const [s, h, b] = [buttonW('START'), buttonW('HELP'), buttonW('BACK')]
     // A first game: Start, 3 pixels, Help, the pair centered, 3 pixels under the cards.
     const x0 = Math.floor((WINDOW_W - s - 3 - h) / 2)
     const keys = keyColumns(first)!
-    expect(buttonsIn(startOverlay(first, { cls: 'knight' })).map(b => b.text)).toEqual(['S START', 'H HELP'])
+    expect(buttonsIn(startOverlay(first, { cls: 'knight' })).map(b => b.text)).toEqual(['START', 'HELP'])
     expect(keys.xs).toEqual([x0, x0 + s + 3])
     expect(keys.y).toBe(cardRect(0).y + cardRect(0).h + 3)
     expect(startGesture(first, { cls: 'mage' }, tap(x0 + 1, keys.y + 2)).actions).toEqual([{ kind: 'restart', cls: 'mage' }])
@@ -91,8 +91,8 @@ describe('choosing', () => {
 
   test('Help asks for the how-it-plays window and leaves the game and the chosen hero as they were', async () => {
     for (const g of [onStart(), onStart({ xp: 3 })]) {
-      const s = buttonW('S', 'START')
-      const left = Math.floor((WINDOW_W - s - 3 - buttonW('H', 'HELP') - (isUnderWay(g) ? 3 + buttonW('B', 'BACK') : 0)) / 2)
+      const s = buttonW('START')
+      const left = Math.floor((WINDOW_W - s - 3 - buttonW('HELP') - (isUnderWay(g) ? 3 + buttonW('BACK') : 0)) / 2)
       expect(startGesture(g, { cls: 'rogue' }, tap(left + s + 3 + 2, keyColumns(g)!.y + 2))).toEqual({ ui: { cls: 'rogue' }, actions: [], isHelp: true })
     }
   })
@@ -138,8 +138,8 @@ describe('the screen', () => {
 
   test('frames Help white on a first game only', async () => {
     const helpEdge = (g: Game) => {
-      const s = buttonW('S', 'START')
-      const left = Math.floor((WINDOW_W - s - 3 - buttonW('H', 'HELP') - (isUnderWay(g) ? 3 + buttonW('B', 'BACK') : 0)) / 2)
+      const s = buttonW('START')
+      const left = Math.floor((WINDOW_W - s - 3 - buttonW('HELP') - (isUnderWay(g) ? 3 + buttonW('BACK') : 0)) / 2)
       return startPixels(g, { cls: 'knight' })[cardRect(0).y + cardRect(0).h + 3]![left + s + 3 + 4]
     }
     const first = onStart()

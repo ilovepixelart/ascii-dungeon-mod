@@ -158,7 +158,7 @@ describe('the retire window', () => {
     const early = { ...g, bossSlain: 5 }
     const b = retireButtons(early, IDLE)
     expect(retireGesture(early, IDLE, tap({ x: b.retire.x + 2, y: b.retire.y + 4 })).actions).toEqual([])
-    const lit = (x: Game) => buttonsIn(retireOverlay(x, IDLE)).find(k => k.text === 'R RETIRE')!.isLit
+    const lit = (x: Game) => buttonsIn(retireOverlay(x, IDLE)).find(k => k.text === 'RETIRE')!.isLit
     expect(lit(early)).toBe(false)
     expect(lit(g)).toBe(true)
   })

@@ -55,7 +55,7 @@ describe('keeping the old roll', () => {
     expect(forgeOverlay(g, { slot: 'helm' })[0]!.lines.some(l => l[0]?.text === 'Before: ')).toBe(false)
     // The buttons, top to bottom: Temper, Reforge, Keep old.
     const buttons = buttonsIn(forgeOverlay(reforged, { slot: 'helm' }))
-    expect(buttons.map(b => b.text)).toEqual(['T TEMPER', 'R REFORGE', 'K KEEP OLD'])
+    expect(buttons.map(b => b.text)).toEqual(['TEMPER', 'REFORGE', 'KEEP OLD'])
     const keep = buttons[2]!
     const tap: Gesture = { type: 'release', from: { x: keep.x + 2.5, y: (keep.y + 2) / 2 + 0.25 }, at: { x: keep.x + 2.5, y: (keep.y + 2) / 2 + 0.25 }, button: 'left' }
     expect(forgeGesture(reforged, { slot: 'helm' }, tap).actions).toEqual([{ kind: 'keepOld' }])

@@ -63,16 +63,16 @@ describe('the settings window', () => {
         expect([...new Set(column.map(b => `${b.x},${b.w}`))]).toHaveLength(1)
       }
     }
-    // Orders' widest, DRINK AT QUARTER HP: 21 cells with its key, the room and the frame 25.
-    expect(buttonsIn(settingsOverlay(hero(), ON, ORDERS)).map(b => b.w)).toEqual([25, 25, 25])
+    // Orders' widest, DRINK AT QUARTER HP: 19 cells, with the room and the frame 23.
+    expect(buttonsIn(settingsOverlay(hero(), ON, ORDERS)).map(b => b.w)).toEqual([23, 23, 23])
   })
 
   test('each order button says the order as it stands', async () => {
     const said = (orders: Game['orders']) => buttonsIn(settingsOverlay(hero({ orders }), ON, ORDERS)).map(b => b.text)
     const base = { drink: 25, smoke: false, leave: 'common' } as const
-    expect(said(undefined)).toEqual(['D DRINK AT QUARTER HP', 'F SMOKE NEVER', 'K TAKE ALL LOOT'])
+    expect(said(undefined)).toEqual(['DRINK AT QUARTER HP', 'SMOKE NEVER', 'TAKE ALL LOOT'])
     expect(said(base)).toEqual(said(undefined))
-    expect(said({ drink: 50, smoke: true, leave: 'rare' })).toEqual(['D DRINK AT HALF HP', 'F SMOKE WHEN LOW', 'K LEAVE BELOW RARE'])
+    expect(said({ drink: 50, smoke: true, leave: 'rare' })).toEqual(['DRINK AT HALF HP', 'SMOKE WHEN LOW', 'LEAVE BELOW RARE'])
   })
 
   test('the volume steps a quarter up, from full back round to a quarter; effects and music flip and flip back', async () => {
@@ -83,14 +83,14 @@ describe('the settings window', () => {
   })
 
   test('each sound button says how the sound is set', async () => {
-    const said = (s: SoundSettings) => buttonsIn(settingsOverlay(hero(), s)).map(b => b.text).filter(t => /^[EML] /.test(t))
-    expect(said(ON)).toEqual(['E SOUND ON', 'M MUSIC ON', `L VOL ${(100 * ON.volume) / VOLUME_STEPS}`])
-    expect(said({ ...ON, effects: false, music: false, volume: 2 })).toEqual(['E SOUND OFF', 'M MUSIC OFF', 'L VOL 50'])
+    const said = (s: SoundSettings) => buttonsIn(settingsOverlay(hero(), s)).map(b => b.text).filter(t => /^(SOUND|MUSIC|VOL) /.test(t))
+    expect(said(ON)).toEqual(['SOUND ON', 'MUSIC ON', `VOL ${(100 * ON.volume) / VOLUME_STEPS}`])
+    expect(said({ ...ON, effects: false, music: false, volume: 2 })).toEqual(['SOUND OFF', 'MUSIC OFF', 'VOL 50'])
   })
 
   test('Help draws its key in gold where it stands', async () => {
     const r = settingsRect(hero(), ON, GAME, 'help')!
-    expect(buttonsIn(settingsOverlay(hero(), ON)).find(b => b.x === r.x && b.y === r.y)).toMatchObject({ text: 'H HELP', isLit: true })
+    expect(buttonsIn(settingsOverlay(hero(), ON)).find(b => b.x === r.x && b.y === r.y)).toMatchObject({ text: 'HELP', isLit: true })
   })
 
   test('the close box closes it; a drag or a click on nothing does nothing', async () => {

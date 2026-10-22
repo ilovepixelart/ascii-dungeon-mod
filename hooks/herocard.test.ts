@@ -104,6 +104,6 @@ describe('Card in the codex', () => {
     expect(codexHeight(g, FINDS)).toBeLessThanOrEqual(80)
     expect(CARD_KEY).toEqual({ key: 'K', label: 'CARD' })
     // Its words, its key lit, are written where the button is.
-    expect(buttonsIn(codexOverlay(g, FINDS))).toEqual([{ text: 'K CARD', isLit: true, x: r.x, y: r.y, w: r.w, h: r.h }])
+    expect(buttonsIn(codexOverlay(g, FINDS))).toEqual([{ text: 'CARD', isLit: true, x: r.x, y: r.y, w: r.w, h: r.h }])
   })
 })

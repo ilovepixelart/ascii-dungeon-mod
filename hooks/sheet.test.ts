@@ -54,7 +54,7 @@ describe('the character sheet', () => {
 
   test('Retire opens the retire window once a big boss is slain, lit; before, it is dark and does nothing', async () => {
     const r = RETIRE_RECT
-    const lit = (g: Game) => buttonsIn(sheetOverlay(g)).find(b => b.text === 'R RETIRE')!.isLit
+    const lit = (g: Game) => buttonsIn(sheetOverlay(g)).find(b => b.text === 'RETIRE')!.isLit
     expect(sheetGesture(hero({ bossSlain: 10 }), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'retire' }])
     expect(lit(hero({ bossSlain: 10 }))).toBe(true)
     expect(sheetGesture(hero({ bossSlain: 5 }), tap(r.x + 2, r.y + 4))).toEqual([])

@@ -151,7 +151,7 @@ const layout = (g: Game, who: Speaker) => {
   const hasStatus = who === 'healer' || who === 'dog' || (who === 'elder' && g.quest !== null)
   const act = ACT[who](g)
   const buttonY = onCell(statusY + (hasStatus ? 8 : 0))
-  const buttonRect: Rect | undefined = act === undefined ? undefined : { x: SIDE_X, y: buttonY, w: buttonW(act.key, act.label, act.cost), h: BUTTON_H }
+  const buttonRect: Rect | undefined = act === undefined ? undefined : { x: SIDE_X, y: buttonY, w: buttonW(act.label, act.cost), h: BUTTON_H }
   const sideEnd = buttonRect !== undefined ? buttonRect.y + BUTTON_H : hasStatus ? statusY + 6 : (box.y + box.h) * 2
   const end = Math.max(top + 2 + PORTRAIT, sideEnd)
   // Even, so the window ends on a whole cell.
@@ -187,7 +187,7 @@ export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => {
     ...(b === undefined ? [] : [barLabel(at.x, at.y, at.w, b.share, b.color, b.empty, b.text)]),
     // The dog's pets beside its heart, on the mark's middle rows.
     ...(who === 'dog' ? [artLabel(`x ${g.petted}`, SIDE_X + 7, onCell(l.statusY + 1), NUM_INK, BG)] : []),
-    ...(l.act === undefined || l.buttonRect === undefined ? [] : [buttonBox(l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y, l.act.state, l.act.cost, l.act.canPay)]),
+    ...(l.act === undefined || l.buttonRect === undefined ? [] : [buttonBox(l.act.label, l.buttonRect.x, l.buttonRect.y, l.act.state, l.act.cost, l.act.canPay)]),
   ]
 }
 
@@ -212,7 +212,7 @@ export const talkPixels = (g: Game, who: Speaker): string[][] => {
     mark(body, who === 'healer' ? MARK.heart : MARK.xp, SIDE_X, at.y - l.top)
     flatBar(body, at.x, at.y - l.top, at.w, b.share, b.color, b.empty)
   }
-  if (l.act !== undefined && l.buttonRect !== undefined) button(body, l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y - l.top, l.act.state, l.act.cost)
+  if (l.act !== undefined && l.buttonRect !== undefined) button(body, l.act.label, l.buttonRect.x, l.buttonRect.y - l.top, l.act.state, l.act.cost)
   const c = windowPixels(CHROME[who](g), body.px)
   drawBox(c, l.box)
   return c.px

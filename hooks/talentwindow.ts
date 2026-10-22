@@ -51,12 +51,12 @@ export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y:
 const faceRect = (i: number, chosen: number): Rect => ({ ...cardRect(i), y: top + CARD_Y - (i === chosen ? LIFT : 0), h: CARD_H })
 const BUTTONS_Y = onCell(CARD_Y + CARD_H + 5)
 export const takeRect = (): Rect => {
-  const w = buttonW('T', 'TAKE')
-  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('L', 'LATER')) / 2), y: top + BUTTONS_Y, w, h: BUTTON_H }
+  const w = buttonW('TAKE')
+  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('LATER')) / 2), y: top + BUTTONS_Y, w, h: BUTTON_H }
 }
 export const laterRect = (): Rect => {
   const t = takeRect()
-  return { x: t.x + t.w + 4, y: t.y, w: buttonW('L', 'LATER'), h: BUTTON_H }
+  return { x: t.x + t.w + 4, y: t.y, w: buttonW('LATER'), h: BUTTON_H }
 }
 /** The box under the buttons, in cells: the chosen talent's line; then Take's and Later's words, and each card's
  * ribbon's. */
@@ -67,8 +67,8 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
   const lines: Run[][] = [[{ text: `${TALENTS[t].name}: `, bold: true }, { text: TALENTS[t].does }]]
   return [
     { role: 'about', x: 2, y: Math.floor((takeRect().y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
-    buttonBox('T', 'TAKE', takeRect().x, takeRect().y, 'armed'),
-    buttonBox('L', 'LATER', laterRect().x, laterRect().y, 'ready'),
+    buttonBox('TAKE', takeRect().x, takeRect().y, 'armed'),
+    buttonBox('LATER', laterRect().x, laterRect().y, 'ready'),
     ...offered.map((o, i) => {
       const isOn = i === chosenOf(g, ui)
       return ribbonLabel(FAMILIES[FAMILY_OF[o]], cardRect(i).x, CARD_W, top + CARD_Y - (isOn ? LIFT : 0) + RIBBON_Y, isOn ? asIs : recede)
@@ -111,8 +111,8 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
   const height = offerHeight(g, ui)
   const body = canvas(WINDOW_W, height - top)
   offered.forEach((t, i) => drawCard(body, t, i, i === chosen))
-  button(body, 'T', 'TAKE', takeRect().x, takeRect().y - top, 'armed')
-  button(body, 'L', 'LATER', laterRect().x, laterRect().y - top, 'ready')
+  button(body, 'TAKE', takeRect().x, takeRect().y - top, 'armed')
+  button(body, 'LATER', laterRect().x, laterRect().y - top, 'ready')
   const c = windowPixels(heroChrome(g, 'talent'), body.px)
   for (const b of talentOverlay(g, ui)) if (b.role === 'about') drawBox(c, b)
   return c.px

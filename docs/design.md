@@ -48,8 +48,11 @@ names below point at it.
 
 - One width (`WINDOW_W`), one title bar, a 9 by 9 close box with its X centred, a pixel of room all round.
 - A window's parts, top to bottom: title; picture and words; what the window shows (a bar, a stat, wares); its
-  actions as buttons with their key in gold. A part a window lacks leaves no hole.
-- A choice is a button (`BUTTON_H`, 6 px): its key in gold, its label, framed white when armed or chosen, grey and
+  actions as buttons that say what they do. A part a window lacks leaves no hole.
+- A button says its label, never its key: the composer has the keyboard, and a key reaches the pane only after
+  ctrl+x tab (a click on a window does not give it the focus). The keys' row under a window says so first, then lists
+  them.
+- A choice is a button (`BUTTON_H`, 6 px): its label, framed white when armed or chosen, grey and
   sunken when it cannot act. A choice wider than its words (the deep's marks) is the same face, wider
   (`buttonFace`).
 - Popovers (cards, menus, the belt's tiers) stand on what they are about, never over it.

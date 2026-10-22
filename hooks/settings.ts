@@ -50,7 +50,7 @@ const ROW_STEP = BUTTON_H + 2
  * the one above, so every row starts on a whole cell. A column's buttons are one width, its widest's, so they line up. */
 const placed = (g: Game, sound: SoundSettings, ui: SettingsUi) => {
   const rows = rowsOf(g, sound, ui)
-  const widths = rows.reduce<number[]>((w, row) => row.map((k, i) => Math.max(w[i] ?? 0, buttonW(k.key, k.label))), [])
+  const widths = rows.reduce<number[]>((w, row) => row.map((k, i) => Math.max(w[i] ?? 0, buttonW(k.label))), [])
   return rows.flatMap((row, r) => {
     let x = PAD
     return row.map((k, i) => {
@@ -100,7 +100,7 @@ export const settingsPixels = (g: Game, sound: SoundSettings, ui: SettingsUi = S
 /** The text over the window: its pages' tab labels, its buttons' words. */
 export const settingsOverlay = (g: Game, sound: SoundSettings, ui: SettingsUi = SETTINGS_UI): OverlayBox[] => [
   ...textTabBoxes(PAGES, ui.page === 'game' ? 0 : 1, top, BG),
-  ...placed(g, sound, ui).map(k => ({ ...buttonBox(k.key, k.label, k.rect.x, k.rect.y, 'ready'), w: k.rect.w })),
+  ...placed(g, sound, ui).map(k => ({ ...buttonBox(k.label, k.rect.x, k.rect.y, 'ready'), w: k.rect.w })),
 ]
 
 /** What a gesture does: the page shown, game actions, and the sound as it now is. */

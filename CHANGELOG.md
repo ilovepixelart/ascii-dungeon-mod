@@ -13,6 +13,8 @@ release may change behaviour.
 - The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,
   so a click moves between them. The tabs' labels are written in terminal text, which fits all five beside the bag's
   gold.
+- The codex draws each unique at its size on the map, half a big boss's each way and standing on the same floor,
+  where it was doubled to a big boss's size.
 
 ### Fixed
 

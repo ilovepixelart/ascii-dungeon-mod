@@ -89,13 +89,13 @@ describe('the hover lights what a click acts on', () => {
     expect(deepGesture(chosen, tap(centre(cb!.rect).x, centre(cb!.rect).y))).toEqual([{ kind: 'mark', mark: b }])
   })
 
-  test('the talent cards: a click acts exactly where a card is lit, the chosen one lifted', async () => {
+  test('the talent cards: a click acts exactly where a card is lit', async () => {
     const g = { ...plainHero(3), level: 10 }
     const ui = { chosen: 0 }
-    const hot = talentHot(g, ui).slice(0, 3)
+    const hot = talentHot(g).slice(0, 3)
     for (const r of hot) for (const p of [{ x: centre(r).x, y: r.y - 1 }, { x: centre(r).x, y: r.y + r.h }]) {
       const out = talentGesture(g, ui, tap(p.x, p.y))
-      expect([lit(talentHot(g, ui), p), out.actions.length > 0 || !same(out.ui, ui)]).toEqual([false, false])
+      expect([lit(talentHot(g), p), out.actions.length > 0 || !same(out.ui, ui)]).toEqual([false, false])
     }
   })
 

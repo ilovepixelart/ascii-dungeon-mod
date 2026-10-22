@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { BG, canvas } from './canvas'
+import { canvas } from './canvas'
 import type { Canvas } from './canvas'
-import { bevelCard, flatCard, gem, hoveredRect, lightUp, recede, ribbon, ribbonLabel, sparkles } from './ui/kit'
+import { flatCard, hoveredRect, lightUp, ribbon, ribbonLabel } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 
 const at = (c: Canvas, x: number, y: number) => c.px[y]![x]
@@ -17,57 +17,21 @@ describe('cards', () => {
     }
   })
 
-  test('a beveled card rests lit top and left, dark bottom and right; chosen, it rises by the lift with a white rim', async () => {
-    const f = FAMILIES.fight
-    const r = { x: 2, y: 6, w: 10, h: 12 }
-    const resting = canvas(14, 24)
-    bevelCard(resting, r, f, false, 3, ink => ink)
-    expect([at(resting, 5, 6), at(resting, 2, 9), at(resting, 5, 17), at(resting, 11, 9)]).toEqual([f.light, f.light, f.dark, f.dark])
-    const chosen = canvas(14, 24)
-    bevelCard(chosen, r, f, true, 3, ink => ink)
-    expect(at(chosen, 5, 3)).toBe(INK.focus)
-    expect(at(chosen, 5, 2)).toBe(BG)
-    // Its shadow stays where it rested, a row deeper than a resting card's.
-    expect([at(chosen, 5, 18), at(chosen, 5, 20), at(resting, 5, 20)]).toEqual([SURFACE.shadow, SURFACE.shadow, BG])
-  })
-
-  test('a gem\'s heart is white when chosen, its family\'s ink when not', async () => {
-    const f = FAMILIES.work
-    const on = canvas(5, 5)
-    gem(on, f, 2, 2, true, ink => ink)
-    const off = canvas(5, 5)
-    gem(off, f, 2, 2, false, ink => ink)
-    expect([at(on, 2, 2), at(on, 2, 1), at(off, 2, 2), at(off, 2, 1)]).toEqual([INK.focus, f.ink, f.ink, f.dark])
-  })
-
-  test('a ribbon in its family\'s ink, its ends notched in the face\'s tint', async () => {
+  test('a ribbon in its family\'s ink, its ends notched to the card\'s face', async () => {
     const f = FAMILIES.road
     const c = canvas(30, 10)
-    ribbon(c, f, 0, 30, 1, ink => ink)
+    ribbon(c, f, 0, 30, 1)
     // Notched on its middle three rows, the second to the fourth below its top.
-    expect([at(c, 2, 2), at(c, 2, 3), at(c, 2, 5), at(c, 2, 6), at(c, 27, 4)]).toEqual([f.ink, f.top, f.top, f.ink, f.top])
+    expect([at(c, 2, 2), at(c, 2, 3), at(c, 2, 5), at(c, 2, 6), at(c, 27, 4)]).toEqual([f.ink, SURFACE.card, SURFACE.card, f.ink, SURFACE.card])
     expect([at(c, 3, 1), at(c, 3, 7)]).toEqual([f.ink, f.dark])
     // No letters in pixels: its word is text.
     expect(c.px.flat()).not.toContain(INK.onRibbon)
   })
 
-  test('a ribbon\'s word is text centred on it, on the first whole cell two rows down, on the ribbon\'s ink as toned', async () => {
+  test('a ribbon\'s word is text centred on it, on the first whole cell two rows down, on the ribbon\'s ink', async () => {
     const f = FAMILIES.road
     // SURVIVAL on a 30 wide ribbon from 0: 8 letters from 11; the ribbon at row 1, its word on row 4.
-    expect(ribbonLabel(f, 0, 30, 1, ink => ink)).toEqual({ role: 'label', x: 10, y: 1, w: 10, h: 3, border: f.ink, bg: f.ink, pad: 0, lines: [[{ text: 'SURVIVAL', color: INK.onRibbon, bold: true }]] })
-    expect(ribbonLabel(f, 0, 30, 2, recede).bg).toBe(recede(f.ink))
-  })
-
-  test('the chosen card\'s sparkles sit clear of it, white and gold at each top corner', async () => {
-    const c = canvas(20, 10)
-    sparkles(c, { x: 4, y: 4, w: 10, h: 5 })
-    expect([at(c, 2, 2), at(c, 2, 3), at(c, 3, 2), at(c, 15, 2), at(c, 15, 3), at(c, 14, 2)]).toEqual([INK.focus, INK.gold, INK.gold, INK.focus, INK.gold, INK.gold])
-    expect(c.px.slice(4).flat().every(p => p === BG)).toBe(true)
-  })
-
-  test('what is not chosen recedes a quarter and more into the dark', async () => {
-    // White at 72%, the veil #0b0a0f at 28%: 255 * 0.72 + 11 * 0.28 = 186.7, + 10 * 0.28 = 186.4, + 15 * 0.28 = 187.8.
-    expect(recede('#ffffff')).toBe('#bbbabc')
+    expect(ribbonLabel(f, 0, 30, 1)).toEqual({ role: 'label', x: 10, y: 1, w: 10, h: 3, border: f.ink, bg: f.ink, pad: 0, lines: [[{ text: 'SURVIVAL', color: INK.onRibbon, bold: true }]] })
   })
 })
 

@@ -217,14 +217,12 @@ describe('the talent window', () => {
     })
   })
 
-  test('the chosen card stands lifted and rimmed white; the others in their family\'s colors, not white', async () => {
+  test('the cards stand level, the chosen one framed white and the others in the start screen\'s card edge', async () => {
     for (let chosen = 0; chosen < 3; chosen += 1) {
       const px = talentPixels(g, ui(chosen))
-      talentCards(g).forEach((c, i) => {
-        // The rim's top edge: at the click area's top when lifted, LIFT lower otherwise.
-        const lifted = px[c.rect.y]![c.rect.x + 5]
-        expect(lifted === '#ffffff').toBe(i === chosen)
-      })
+      const edges = talentCards(g).map(c => [px[c.rect.y]![c.rect.x + 5], px[c.rect.y + c.rect.h - 1]![c.rect.x + 5], px[c.rect.y + 9]![c.rect.x]])
+      expect(edges).toEqual([0, 1, 2].map(i => Array(3).fill(i === chosen ? '#ffffff' : '#3a3644')))
+      expect(new Set(talentCards(g).map(c => c.rect.y)).size).toBe(1)
     }
   })
 

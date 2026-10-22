@@ -1,5 +1,5 @@
 // The talent window: while a talent is owed, the three offered as cards side by side, each its family's ribbon and its
-// icon, the chosen one lifted, its name and line in the box below; a click chooses a card,
+// icon, the chosen one framed white, its name and line in the box below; a click chooses a card,
 // again (or Take) takes it, Later leaves it owed. With none owed, the talents taken and the level of the next. Pure:
 // the click layer reports whole gestures, this decides the window's next state and the game actions they make.
 import type { Game, Talent } from '../types'
@@ -8,8 +8,7 @@ import { TALENTS, TALENT_EVERY, offer } from './talents'
 import { BUTTON_H, button, buttonBox, buttonW, onCell } from './pieces'
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
-import { asIs, bevelCard, gem, recede, ribbon, ribbonLabel, sparkles } from './ui/kit'
-import type { Tone } from './ui/kit'
+import { flatCard, ribbon, ribbonLabel } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 import type { FamilyName } from './ui/tokens'
 import { heroChrome, heroTabAt } from './herotabs'
@@ -33,9 +32,8 @@ export const familyOf = (t: Talent) => FAMILY_OF[t]
 
 const GAP = 6
 const CARD_W = 26
-const CARD_H = 34
+const CARD_H = 31
 const CARD_Y = 6
-const LIFT = 2
 /** The ribbon's top, down a card's face. */
 const RIBBON_Y = 4
 /** The icon at its own size inside a pixel of backdrop and a frame. */
@@ -45,10 +43,8 @@ const chosenOf = (g: Game, ui: TalentUi) => Math.min(Math.max(0, ui.chosen), Mat
 
 /** Where the cards row and its parts go, in window pixels. */
 const rowX = Math.floor((WINDOW_W - (3 * CARD_W + 2 * GAP)) / 2)
-/** A card's place: its column, lifted when chosen; what a click on it covers, lifted or not. */
-export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y: top + CARD_Y - LIFT, w: CARD_W, h: CARD_H + LIFT })
-/** A card's face as drawn, the chosen one lifted: where a click on it acts and the hover lights it. */
-const faceRect = (i: number, chosen: number): Rect => ({ ...cardRect(i), y: top + CARD_Y - (i === chosen ? LIFT : 0), h: CARD_H })
+/** A card's place in its column: where a click on it acts and the hover lights it. */
+export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y: top + CARD_Y, w: CARD_W, h: CARD_H })
 const BUTTONS_Y = onCell(CARD_Y + CARD_H + 5)
 export const takeRect = (): Rect => {
   const w = buttonW('TAKE')
@@ -69,10 +65,7 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
     { role: 'about', x: 2, y: Math.floor((takeRect().y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
     buttonBox('TAKE', takeRect().x, takeRect().y, 'armed'),
     buttonBox('LATER', laterRect().x, laterRect().y, 'ready'),
-    ...offered.map((o, i) => {
-      const isOn = i === chosenOf(g, ui)
-      return ribbonLabel(FAMILIES[FAMILY_OF[o]], cardRect(i).x, CARD_W, top + CARD_Y - (isOn ? LIFT : 0) + RIBBON_Y, isOn ? asIs : recede)
-    }),
+    ...offered.map((o, i) => ribbonLabel(FAMILIES[FAMILY_OF[o]], cardRect(i).x, CARD_W, top + CARD_Y + RIBBON_Y)),
   ]
 }
 const offerHeight = (g: Game, ui: TalentUi) => {
@@ -83,25 +76,20 @@ const offerHeight = (g: Game, ui: TalentUi) => {
 type Canvas = ReturnType<typeof canvas>
 
 /** The icon at its own size, on a lit backdrop with a floor, framed, its top at ay. */
-const drawArt = (body: Canvas, t: Talent, x: number, ay: number, tone: Tone) => {
+const drawArt = (body: Canvas, t: Talent, x: number, ay: number) => {
   const ax = x + Math.floor((CARD_W - ART) / 2)
-  fill(body, ax, ay, ART, ART, tone(SURFACE.backdrop))
-  fill(body, ax + 1, ay + ART - 4, ART - 2, 3, tone(SURFACE.floor))
-  frame(body, ax, ay, ART, ART, tone(SURFACE.frame))
-  TALENT_ICON[t].forEach((row, iy) => [...row].forEach((k, ix) => k !== '.' && put(body, ax + 1 + ix, ay + 1 + iy, tone(PAL[k] ?? INK.missing))))
+  fill(body, ax, ay, ART, ART, SURFACE.backdrop)
+  fill(body, ax + 1, ay + ART - 4, ART - 2, 3, SURFACE.floor)
+  frame(body, ax, ay, ART, ART, SURFACE.frame)
+  TALENT_ICON[t].forEach((row, iy) => [...row].forEach((k, ix) => k !== '.' && put(body, ax + 1 + ix, ay + 1 + iy, PAL[k] ?? INK.missing)))
 }
 
-/** A card: its family's beveled face, the ribbon, the icon, the gem; lifted with sparkles when chosen, else receded. */
+/** A card: a flat face as the start screen's, framed white when chosen, its family's ribbon and the icon. */
 const drawCard = (body: Canvas, t: Talent, i: number, isOn: boolean) => {
-  const f = FAMILIES[FAMILY_OF[t]]
-  const tone = isOn ? asIs : recede
   const x = cardRect(i).x
-  const y = CARD_Y - (isOn ? LIFT : 0)
-  bevelCard(body, { x, y: CARD_Y, w: CARD_W, h: CARD_H }, f, isOn, LIFT, tone)
-  ribbon(body, f, x, CARD_W, y + RIBBON_Y, tone)
-  drawArt(body, t, x, y + 13, tone)
-  gem(body, f, x + Math.floor(CARD_W / 2), y + CARD_H - 4, isOn, tone)
-  if (isOn) sparkles(body, { x, y, w: CARD_W, h: CARD_H })
+  flatCard(body, { x, y: CARD_Y, w: CARD_W, h: CARD_H }, isOn)
+  ribbon(body, FAMILIES[FAMILY_OF[t]], x, CARD_W, CARD_Y + RIBBON_Y)
+  drawArt(body, t, x, CARD_Y + 13)
 }
 
 /** The offer as cards: the row, Take and Later, the box. */
@@ -166,17 +154,14 @@ export const talentGesture = (g: Game, ui: TalentUi, gesture: Gesture): Outcome 
   const offered = offer(g)
   if (offered.length === 0) return isInside(at, ...CLOSE_BOX) ? close : none
   const chosen = chosenOf(g, ui)
-  const card = offered.findIndex((_, i) => inside(faceRect(i, chosen)))
+  const card = offered.findIndex((_, i) => inside(cardRect(i)))
   if (card >= 0) return card === chosen ? { ui, actions: [{ kind: 'talent', talent: offered[card]! }] } : { ui: { chosen: card }, actions: [] }
   if (inside(takeRect())) return { ui, actions: [{ kind: 'talent', talent: offered[chosen]! }] }
   return inside(laterRect()) || isInside(at, ...CLOSE_BOX) ? close : none
 }
 
-/** What a click acts on, in window pixels, as drawn: each card's face (the chosen one lifted), Take and Later; with
- * none owed, nothing but the tabs. */
-export const talentHot = (g: Game, ui: TalentUi): Rect[] => {
+/** What a click acts on, in window pixels, as drawn: each card, Take and Later; with none owed, nothing but the tabs. */
+export const talentHot = (g: Game): Rect[] => {
   if (offer(g).length === 0) return []
-  const chosen = chosenOf(g, ui)
-  const faces = offer(g).map((_, i) => faceRect(i, chosen))
-  return [...faces, takeRect(), laterRect()]
+  return [...offer(g).map((_, i) => cardRect(i)), takeRect(), laterRect()]
 }

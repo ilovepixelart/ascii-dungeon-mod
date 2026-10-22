@@ -70,12 +70,13 @@ export const hoveredRect = (rects: readonly Rect[], at: { x: number; y: number }
   rects.filter(r => at.x >= r.x && at.x < r.x + r.w && at.y >= r.y && at.y < r.y + r.h).sort((a, b) => a.w * a.h - b.w * b.h)[0]
 
 /** Lights `r` on the canvas in place, through what is drawn there: its outline `GLOW.edge` of the way to `ink`, its
- * inside `GLOW.inside` (so a place framed in the ink already lights too). The one glow every highlight uses. */
+ * inside `GLOW.inside` (so a place framed in the ink already lights too); a `fill` place, all of it `GLOW.fill`. The
+ * one glow every highlight uses. */
 export const glow = (c: Canvas, r: Rect, ink: string) => {
   for (let y = Math.max(0, r.y); y < Math.min(c.h, r.y + r.h); y += 1) {
     for (let x = Math.max(0, r.x); x < Math.min(c.w, r.x + r.w); x += 1) {
       const isEdge = x === r.x || x === r.x + r.w - 1 || y === r.y || y === r.y + r.h - 1
-      c.px[y]![x] = mix(c.px[y]![x]!, ink, isEdge ? GLOW.edge : GLOW.inside)
+      c.px[y]![x] = mix(c.px[y]![x]!, ink, r.look === 'fill' ? GLOW.fill : isEdge ? GLOW.edge : GLOW.inside)
     }
   }
 }

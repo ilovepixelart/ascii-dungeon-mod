@@ -30,6 +30,8 @@ release may change behaviour.
 - A nemesis grew a fifth stronger with every win, without end. One that kept winning went deeper and grew again each
   time, until no hero could beat it (18 wins: four and a half times a champion's HP and attack). It now grows by its
   first three wins alone.
+- A hovered tab was outlined like a button: its sides, a pixel each, showed as two thick grey bars round the word. A
+  tab is lit by a tint alone now, its word bright.
 - How it plays drew its rules' icons where its text box's fill covered them, and a text box's blank rows took no
   room, so the rules ran together over an empty bottom. The icons have a column of their own and every blank row keeps
   its row.

@@ -9,7 +9,6 @@ export const INK = {
   off: '#5a5664',
   gold: '#ffd34d',
   focus: '#ffffff',
-  focusShade: '#9a96a4',
   white: '#ffffff',
   onRibbon: '#14101a',
   /** Text on a bright bar or a light color. */
@@ -36,7 +35,7 @@ export const INK = {
   xpShade: '#a88430',
 } as const
 
-/** What things are drawn on: the ground, title bar, cards, buttons, frames, lines, and the shadows under them. */
+/** What things are drawn on: the ground, title bar, cards, buttons, frames and lines. */
 export const SURFACE = {
   ground: '#0b0b10',
   titleBar: '#15131b',
@@ -52,9 +51,6 @@ export const SURFACE = {
   frame: '#6b6258',
   backdrop: '#1c2230',
   floor: '#232a3a',
-  inset: '#0c0a10',
-  shadow: '#06050a',
-  veil: '#0b0a0f',
   /** A text box's fill, under the click layer's text. */
   popover: '#0e0d13',
   /** A button's face, and a row standing out; an off button's, and an empty box. */
@@ -73,11 +69,11 @@ export const SURFACE = {
 /** Pixels between things side by side. */
 export const SPACE = { gap: 3 } as const
 
-/** A family a card belongs to: its ribbon's word, its ink, the light and dark of its bevel, its face top to bottom. */
-export type Family = { label: string; ink: string; light: string; dark: string; top: string; bottom: string }
+/** A family a card belongs to: its ribbon's word, its ink, and the ribbon's dark underside. */
+export type Family = { label: string; ink: string; dark: string }
 export const FAMILIES = {
-  work: { label: 'CRAFT', ink: '#5ccf6a', light: '#a8f0b0', dark: '#2c6a36', top: '#1a2a20', bottom: '#0f1612' },
-  fight: { label: 'COMBAT', ink: '#f06a5a', light: '#ffb0a6', dark: '#7a2a24', top: '#2c1820', bottom: '#160d11' },
-  road: { label: 'SURVIVAL', ink: '#ffd34d', light: '#fff0b0', dark: '#8a6a1a', top: '#2a2416', bottom: '#15120b' },
+  work: { label: 'CRAFT', ink: '#5ccf6a', dark: '#2c6a36' },
+  fight: { label: 'COMBAT', ink: '#f06a5a', dark: '#7a2a24' },
+  road: { label: 'SURVIVAL', ink: '#ffd34d', dark: '#8a6a1a' },
 } as const satisfies Record<string, Family>
 export type FamilyName = keyof typeof FAMILIES

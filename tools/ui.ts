@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { canvas, fill, put } from '../hooks/canvas'
 import type { Canvas } from '../hooks/canvas'
 import { BUTTON_H, button, buttonW } from '../hooks/pieces'
-import { asIs, bevelCard, flatCard, gem, recede, ribbon, sparkles } from '../hooks/ui/kit'
+import { flatCard, ribbon } from '../hooks/ui/kit'
 import { FAMILIES, INK, SURFACE } from '../hooks/ui/tokens'
 import { WINDOW_W, drawBox, windowPixels, word } from '../hooks/window'
 import { png } from './png'
@@ -16,8 +16,8 @@ if (out === undefined) throw new Error('usage: bun tools/ui.ts <out-dir>')
 mkdirSync(out, { recursive: true })
 
 const CARD = { w: 30, h: 40 }
-/** Wide enough for the row of cards: two flat, then each family receded and chosen. */
-const W = 8 * (CARD.w + 3) + 14
+/** Wide enough for the row of cards: plain and chosen, then one with each family's ribbon. */
+const W = 5 * (CARD.w + 3) + 14
 const sheet = canvas(W, 330)
 const blit = (src: Canvas, x: number, y: number) => src.px.forEach((row, dy) => row.forEach((p, dx) => put(sheet, x + dx, y + dy, p)))
 let y = 4
@@ -50,18 +50,14 @@ bx += buttonW('BUY', 120) + 4
 button(sheet, 'BUY', bx, y, 'ready', 120)
 y += BUTTON_H + 6
 
-heading('CARDS  FLAT  BEVELED BY FAMILY  RECEDED AND CHOSEN')
+heading('CARDS  PLAIN  CHOSEN  RIBBON BY FAMILY')
 flatCard(sheet, { x: 4, y: y + 3, w: CARD.w, h: CARD.h }, false)
 flatCard(sheet, { x: 4 + CARD.w + 3, y: y + 3, w: CARD.w, h: CARD.h }, true)
-Object.values(FAMILIES).forEach((f, i) => [false, true].forEach((isOn, j) => {
-  const x = 4 + (2 + 2 * i + j) * (CARD.w + 3) + 6
-  const tone = isOn ? asIs : recede
-  const top = y + 3 - (isOn ? 3 : 0)
-  bevelCard(sheet, { x, y: y + 3, w: CARD.w, h: CARD.h }, f, isOn, 3, tone)
-  ribbon(sheet, f, x, CARD.w, top + 4, tone)
-  gem(sheet, f, x + Math.floor(CARD.w / 2), top + CARD.h - 7, isOn, tone)
-  if (isOn) sparkles(sheet, { x, y: top, w: CARD.w, h: CARD.h })
-}))
+Object.values(FAMILIES).forEach((f, i) => {
+  const x = 4 + (2 + i) * (CARD.w + 3) + 6
+  flatCard(sheet, { x, y: y + 3, w: CARD.w, h: CARD.h }, false)
+  ribbon(sheet, f, x, CARD.w, y + 7)
+})
 y += CARD.h + 12
 
 heading('WINDOW  TEXT BOX')

@@ -112,7 +112,11 @@ def parse(text):
 
 
 def blank(cells):
-    return all(ch == " " and st["bg"] is None for ch, st, _ in cells)
+    """A margin row: spaces alone, on one ground at most (tmux -N keeps the pane's empty cells on the pane's ground)."""
+    return (
+        all(ch == " " for ch, _, _ in cells)
+        and len({st["bg"] for _, st, _ in cells}) <= 1
+    )
 
 
 def crop_pane(rows):

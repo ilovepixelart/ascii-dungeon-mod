@@ -61,9 +61,14 @@ class Crop(unittest.TestCase):
         )
         self.assertEqual(chars(crop_pane(parse(screen))), [" PANE ", " two  "])
 
-    def test_a_row_with_a_ground_is_not_blank(self):
-        screen = "x│\x1b[48;2;1;2;3m  \x1b[0m\nx│ y"
-        self.assertEqual(chars(crop_pane(parse(screen))), ["  ", " y"])
+    def test_a_margin_row_of_spaces_on_one_ground_is_blank_and_one_of_two_grounds_is_not(
+        self,
+    ):
+        # tmux -N keeps a row's trailing spaces with their ground: the pane's empty rows come on the pane's ground.
+        pane = "\x1b[48;2;36;36;36m      \x1b[0m"
+        window = "\x1b[48;2;17;17;17m   \x1b[48;2;68;68;85m \x1b[0m"
+        screen = "\n".join([f"x│{pane}", f"x│{window}", f"x│ y{pane}", f"x│{pane}"])
+        self.assertEqual(chars(crop_pane(parse(screen))), ["    ", " y      "])
 
 
 if __name__ == "__main__":

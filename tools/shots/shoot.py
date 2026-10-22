@@ -49,8 +49,9 @@ def tmux(*args, check=True):
 
 
 def screen(escapes=False):
+    """The pane's text, with its escapes when asked; -N keeps a row's trailing cells, a window's ground among them."""
     return tmux(
-        "capture-pane", "-p", *(["-e"] if escapes else []), "-t", "s", check=False
+        "capture-pane", "-p", "-N", *(["-e"] if escapes else []), "-t", "s", check=False
     )
 
 

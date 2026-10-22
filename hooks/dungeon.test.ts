@@ -23,6 +23,7 @@ import { PX } from './pixelart'
 import { CLOSE_BOX } from './window'
 import { RARITY_COLOR, plainItem } from './items'
 import { retireButtons } from './retirewindow'
+import { COMPACT_W } from './compact'
 import { TALENTS, offer } from './talents'
 import { takeRect, talentCards } from './talentwindow'
 import { pairOf } from './deep'
@@ -700,6 +701,41 @@ test('under a pixel window, the keys\' row first says how to reach them: the com
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: 'ctrl+x tab for keys:' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('the start screen\'s keys stand in a row with no bar among them, as every window\'s do', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'start' }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const start = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  expect(await start.find({ type: 'Raster', key: 'start' })).toBeDefined()
+  expect(await start.find({ type: 'Text', text: '|' })).toBeUndefined()
+  await start.unmount()
+})
+
+test('the settings\' view key is named as the sound\'s are, capitalized', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'settings' }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  const label = (key: string) => ui.find({ type: 'Button', key }).then(b => String(b?.props.label))
+  expect([await label('settings-effects'), await label('settings-view')]).toEqual([expect.stringMatching(/^Sound: /), expect.stringMatching(/^View: /)])
+  await ui.unmount()
+})
+
+test('the compact inventory says how to reach its keys, and its hint fits the narrowest pane it opens in', async $ => {
+  const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, bodyColumns: COMPACT_W }, surface: 'terminal' })
+  await ui.pointer({ type: 'down', x: INSET + 5, y: Math.floor((INSET + 5) / 2), button: 'left', in: 'hud-clicks' } as never)
+  await ui.pointer({ type: 'up', x: INSET + 5, y: Math.floor((INSET + 5) / 2), button: 'left', in: 'hud-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'cbag' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'ctrl+x tab for keys:' })).toBeDefined()
+  const hint = await ui.find({ type: 'Text', text: /^Click an item/ })
+  expect(String(hint?.props.children).length).toBeLessThanOrEqual(COMPACT_W)
   await ui.unmount()
 })
 

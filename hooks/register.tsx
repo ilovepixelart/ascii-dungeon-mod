@@ -207,7 +207,7 @@ const undoLabel = (g: Game) => {
   return `Undo sale: ${what} (${sold.coins} gold)`
 }
 
-const VIEW_LABEL: Readonly<Record<Game['zoom'], string>> = { 1: 'view: map', 2: 'view: ASCII', 3: 'view: pixel' }
+const VIEW_LABEL: Readonly<Record<Game['zoom'], string>> = { 1: 'View: map', 2: 'View: ASCII', 3: 'View: pixel' }
 
 const stopWalk = () => {
   // A walk cut short takes its footsteps with it; one played out (walk already null) leaves its last sounds to finish.
@@ -1489,7 +1489,6 @@ const startScreen = (p: Pane) => {
   }
   const keys = [
     ...HEROES.map((cls, i) => <Button key={`start-${cls}`} label={cls === ui.cls ? `[${CLASS_NAME[cls]}]` : CLASS_NAME[cls]} hotkey={String(i + 1)} plain dimColor={cls !== ui.cls} onPress={choose(cls)} />),
-    <Text dimColor>|</Text>,
     <Button key="start-go" label={`Start as ${CLASS_NAME[ui.cls]}`} hotkey="s" plain onPress={press(begin(ui.cls))} />,
     helpKey(p, 'h'),
     ...(isUnderWay(g) ? [<Button key="start-back" label="Back to your game" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'start' })} />] : []),
@@ -1522,11 +1521,12 @@ const compactBag = (p: Pane) => {
           )}
         </Box>
       </Box>
-      <Box marginTop={1} columnGap={2} flexWrap="wrap">
+      {keysHint(p)}
+      <Box columnGap={2} flexWrap="wrap">
         {bagActions(p)}
         <Button key="bag" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'bag' })} />
       </Box>
-      <Text dimColor>Click an item to compare it, again for its menu; drag it to move it. Click what you wear to take it off.</Text>
+      <Text dimColor>Click an item to compare it, again for its menu; click a worn row to take it off.</Text>
     </Box>
   )
 }

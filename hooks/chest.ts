@@ -5,7 +5,7 @@
 // gestures, this decides the window's next state and the game actions to apply.
 import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
-import { LEGEND_PLACES, SET_PLACES, STASH_SIZE, stashRoom, stashedItems, tabItems, tabName, tabPrice, whereToStore, whyNotBuy } from './stash'
+import { LEGEND_PLACES, SET_PLACES, STASH_SIZE, tabItems, tabName, tabPrice, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
 import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit } from './items'
 import { BG, canvas, fill } from './canvas'
@@ -118,7 +118,13 @@ export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
   return [...tabs, list, ...cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), ui.menu ? boxShape('menu', [entry('s', 'Store', whyNotStore(g, item, ui.tab))], CURSOR) : undefined, WINDOW_W, [list])]
 }
 
-/** The window's pixels: title and the stash's count; the tabs and their rule; the bag; a tab not bought, its Buy
+/** The title: the stash, and what the tab shown holds of its room; a tab not bought, no count. */
+export const chestTitle = (g: Game, ui: ChestUi) => {
+  const held = tabItems(g, ui.tab)
+  return held === undefined ? 'STASH' : `STASH ${held.length}/${rowsOf(g, ui.tab).length}`
+}
+
+/** The window's pixels: title and the tab's count; the tabs and their rule; the bag; a tab not bought, its Buy
  * button; the frames of the boxes over them. */
 export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] = []): string[][] => {
   const body = canvas(WINDOW_W, CHEST_H - top)
@@ -130,7 +136,7 @@ export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] =
     const buy = BUY_RECT
     button(body, BUY, buy.x, buy.y - top, buyState(g, ui.tab))
   }
-  const c = windowPixels({ title: `STASH ${stashedItems(g).length}/${stashRoom(g)}` }, body.px)
+  const c = windowPixels({ title: chestTitle(g, ui) }, body.px)
   for (const b of boxes) if (b.role !== 'tabs' && b.role !== 'button') drawBox(c, b)
   return c.px
 }

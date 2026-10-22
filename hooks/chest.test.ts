@@ -32,7 +32,7 @@ describe('the chest', () => {
     g.stashed = [[item(g, 'ring', 'rare', { id: 501, name: 'Band of Wit' }), item(g, 'robe', 'epic', { id: 502, name: 'Robe of Embers' })]]
     const list = lines(g, { stored: 502, menu: false, tab: 0 }, 'list')!
     expect(list.length).toBe(STASH_SIZE)
-    expect(list.slice(0, 3)).toEqual(['  Band of Wit', '> Robe of Embers', '-'])
+    expect(list.slice(0, 3)).toEqual(['  Band of Wit', '> Robe of Embers', '  -'])
   })
 
   test('a clicked row is chosen and shows its card; again, or right-clicked, its menu: Take', async () => {

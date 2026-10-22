@@ -66,7 +66,7 @@ const chosenBag = (g: Game, ui: ChestUi) => (ui.stored === null ? g.bag.find(i =
  * rest of the room a dash. */
 const listLines = (g: Game, ui: ChestUi): Run[][] =>
   rowsOf(g, ui.tab).map((item, i) => {
-    if (item === undefined) return [{ text: placeName(ui.tab, i) === undefined ? '-' : `  ${placeName(ui.tab, i)}`, dim: true }]
+    if (item === undefined) return [{ text: `  ${placeName(ui.tab, i) ?? '-'}`, dim: true }]
     const isChosen = item.id === ui.stored
     // A name too long for the row shows as its base's: the card says the whole.
     const name = item.name.length <= LIST.w - 6 ? item.name : (baseOf(item.base)?.name ?? item.name.slice(0, LIST.w - 6))

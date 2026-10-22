@@ -8,6 +8,10 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- The stash has tabs and is the town's, kept from hero to hero: four plain tabs of ten, the first free and the rest
+  bought in turn for 1,000, 2,500 and 5,000 gold, and a sets' tab and a Legendaries' tab of a place each, 3,000 gold
+  each. Its window shows the tabs over its list, a tab's price and Buy where it is not bought, and the two boards place
+  by place. Saves of version 12 keep their stash as tab 1.
 - The talent families are named Craft, Combat and Survival, where they were Work, Fight and Road.
 - Buttons say what they do, without a key letter: a key reaches the pane only after ctrl+x tab, the prompt having the
   keyboard otherwise, so a key on a button promised what a press there would not do. The keys' row under a window

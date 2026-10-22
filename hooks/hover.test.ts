@@ -70,7 +70,7 @@ describe('the hover lights what a click acts on', () => {
   test('the stash: each stored item\'s row is lit, and a click on it chooses it', async () => {
     const stored = [plainItem({ nextId: 6001 }, 'ring'), plainItem({ nextId: 6002 }, 'amulet')]
     const g = inTown({ stashed: [stored], bag: [] })
-    const list = chestOverlay(g, CHEST_UI_IDLE)[0]!
+    const list = chestOverlay(g, CHEST_UI_IDLE).find(b => b.role === 'list')!
     stored.forEach((item, i) => {
       const p = { x: list.x + 3, y: (list.y + 1 + i) * 2 + 1 }
       expect(chestGesture(g, CHEST_UI_IDLE, tap(p.x, p.y)).ui.stored).toBe(item.id)
@@ -138,7 +138,7 @@ describe('the hover with a card open', () => {
       found.push(...dead(shopHot(chosen, shopUi), p => shopGesture(chosen, shopUi, tap(p.x, p.y)), shopUi).map(p => `shop ${item.id} ${p.x},${p.y}`))
     }
     for (const stored of g.stashed[0]!) {
-      const ui = { stored: stored.id, menu: false }
+      const ui = { stored: stored.id, menu: false, tab: 0 }
       found.push(...dead(chestHot(g, ui), p => chestGesture(g, ui, tap(p.x, p.y)), ui).map(p => `stash ${stored.id} ${p.x},${p.y}`))
     }
     expect(found.slice(0, 6)).toEqual([])
@@ -151,7 +151,7 @@ describe('the hover with a card open', () => {
     const idle = (out: { actions: readonly unknown[] }) => out.actions.length === 0
     const bagUi = { menu: { id: item.id, confirm: false }, drag: null }
     const shopUi = { ware: null, menu: true }
-    const stashUi = { stored: g.stashed[0]![0]!.id, menu: true }
+    const stashUi = { stored: g.stashed[0]![0]!.id, menu: true, tab: 0 }
     const found = [
       ...inventoryHot(chosen, bagUi).map(centre).filter(p => idle(bagGesture(chosen, bagUi, tap(p.x, p.y)))).map(p => `bag ${p.x},${p.y}`),
       ...compactHot(chosen, bagUi).map(centre).filter(p => idle(compactGesture(chosen, bagUi, tap(p.x, p.y)))).map(p => `compact ${p.x},${p.y}`),

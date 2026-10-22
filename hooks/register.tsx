@@ -39,9 +39,9 @@ import { heroTabsHot } from './herotabs'
 import { canvasCells } from './canvas'
 import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeHot, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
 import type { ForgeUi } from './forge'
-import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
+import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, idleOn, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
-import { stashRoom, stashedItems } from './stash'
+import { stashRoom, stashedItems, tabItems, whyNotBuy } from './stash'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
@@ -1589,21 +1589,27 @@ const stashWindow = (p: Pane) => {
   const stored = stashedItems(g).find(i => i.id === chestUi.stored)
   const take = async () => {
     if (stored === undefined) return
-    chestUi = CHEST_UI_IDLE
+    chestUi = idleOn(chestUi)
     await run({ kind: 'retrieve', id: stored.id }, true)
   }
   const onBag = (action: Action) => async () => {
-    chestUi = CHEST_UI_IDLE
+    chestUi = idleOn(chestUi)
     await run(action, true)
   }
+  const forSale = tabItems(g, chestUi.tab) === undefined
   return pixelWindow(p, 'chest', CHEST_H, chestPixels(g, chestUi, boxes), boxes, [
-    <Button key="chest-store" label="Store" hotkey="s" plain dimColor={g.cursor === null || chestUi.stored !== null || whyNotStore(g, g.bag.find(i => i.id === g.cursor)!) !== undefined} onPress={onBag({ kind: 'store' })} />,
+    <Button key="chest-store" label="Store" hotkey="s" plain dimColor={g.cursor === null || chestUi.stored !== null || whyNotStore(g, g.bag.find(i => i.id === g.cursor)!, chestUi.tab) !== undefined} onPress={onBag(storeOn(chestUi))} />,
     <Button key="chest-take" label="Take" hotkey="t" plain dimColor={stored === undefined || whyNotTake(g, stored) !== undefined} onPress={take} />,
     <Button key="chest-next" label="Next in the chest" hotkey="w" plain onPress={() => {
       chestUi = nextStored(g, chestUi)
       redraw()
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
+    <Button key="chest-tab" label="Next tab" hotkey="p" plain onPress={() => {
+      chestUi = nextTab(chestUi)
+      redraw()
+    }} />,
+    ...(forSale ? [<Button key="chest-buy" label="Buy tab" hotkey="b" plain dimColor={whyNotBuy(g, chestUi.tab) !== undefined} onPress={() => run({ kind: 'buyTab', tab: chestUi.tab }, true)} />] : []),
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
   ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi), !chestUi.menu)
 }

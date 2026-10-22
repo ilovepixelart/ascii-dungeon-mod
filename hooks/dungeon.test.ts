@@ -716,7 +716,7 @@ test('the start screen\'s keys stand in a row with no bar among them, as every w
   await start.unmount()
 })
 
-test('the settings\' view key is named as the sound\'s are, capitalized', async ($, on) => {
+test('the settings\' keys have no view key, and name the sound capitalized', async ($, on) => {
   storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'settings' }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
@@ -724,7 +724,8 @@ test('the settings\' view key is named as the sound\'s are, capitalized', async 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   const label = (key: string) => ui.find({ type: 'Button', key }).then(b => String(b?.props.label))
-  expect([await label('settings-effects'), await label('settings-view')]).toEqual([expect.stringMatching(/^Sound: /), expect.stringMatching(/^View: /)])
+  expect(await label('settings-effects')).toMatch(/^Sound: /)
+  expect(await ui.find({ type: 'Button', key: 'settings-view' })).toBeUndefined()
   await ui.unmount()
 })
 

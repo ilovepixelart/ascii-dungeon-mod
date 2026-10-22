@@ -1284,7 +1284,6 @@ const settingsKeys = (p: Pane, isWindow = false) => {
     helpKey(p, isWindow ? 'h' : undefined),
     <Button key="settings-effects" label={soundSettings.effects ? 'Sound: on' : 'Sound: off'} hotkey="e" plain onPress={soundKey('effects')} />,
     <Button key="settings-music" label={soundSettings.music ? 'Music: on' : 'Music: off'} hotkey="m" plain onPress={soundKey('music')} />,
-    <Button key="settings-view" label={VIEW_LABEL[g.zoom]} hotkey="v" plain onPress={press({ kind: 'zoom' })} />,
     <Button key="settings-volume" label={`Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`} hotkey="l" plain onPress={soundKey('volume')} />,
   ]
   const orders = [orderKey('drink', 'd'), orderKey('smoke', 'f'), orderKey('leave', 'k')]

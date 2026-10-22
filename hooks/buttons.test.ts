@@ -76,7 +76,7 @@ describe('the windows\' buttons', () => {
 
   test('each window says its buttons', async () => {
     const said = (name: string) => buttonsIn(all.find(s => s.name === name)!.boxes).map(b => b.text)
-    expect(said('settings-game')).toEqual(['NEW GAME', 'HELP', 'SOUND OFF', 'MUSIC OFF', 'VIEW PIXEL', 'VOL 100'])
+    expect(said('settings-game')).toEqual(['NEW GAME', 'HELP', 'SOUND OFF', 'MUSIC OFF', 'VOL 100'])
     expect(said('settings-orders')).toEqual(['DRINK AT QUARTER HP', 'SMOKE NEVER', 'TAKE ALL LOOT'])
     expect(said('start-knight')).toEqual(['START', 'HELP', 'BACK'])
     expect(said('sheet-knight')).toEqual(['+', '+', '+', '+', 'RETIRE'])

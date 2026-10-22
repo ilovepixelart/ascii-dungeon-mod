@@ -1,5 +1,5 @@
 // The settings window, opened from the gear in the strip, on two pages. Game: a new game (the start screen), help, the
-// sound (effects and music each on or off), the view and the volume of both. Orders: the hero's standing orders. Pure:
+// sound (effects and music each on or off) and the volume of both. Orders: the hero's standing orders. Pure:
 // the click layer reports whole gestures, this decides what they do. The sound settings are the session's, not the
 // game's; the `sound` and `music` options start them.
 import type { Game, Orders } from '../types'
@@ -14,7 +14,6 @@ import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 const CHROME: Chrome = { title: 'SETTINGS' }
 const top = WINDOW_TOP
 const PAD = 3
-const VIEW_WORD: Readonly<Record<Game['zoom'], string>> = { 1: 'VIEW MAP', 2: 'VIEW ASCII', 3: 'VIEW PIXEL' }
 
 /** The sound as set: effects and music each on or off, and the volume in quarters, 1 to VOLUME_STEPS. */
 export type SoundSettings = { effects: boolean; music: boolean; volume: number }
@@ -22,7 +21,7 @@ export const VOLUME_STEPS = 4
 /** The share of each clip's own level everything plays at. */
 export const volumeShare = (s: SoundSettings) => s.volume / VOLUME_STEPS
 
-type Does = 'new' | 'help' | 'view' | 'effects' | 'music' | 'volume' | keyof Orders
+type Does = 'new' | 'help' | 'effects' | 'music' | 'volume' | keyof Orders
 
 const DRINK_WORD: Readonly<Record<Orders['drink'], string>> = { 25: 'DRINK AT QUARTER HP', 50: 'DRINK AT HALF HP', 0: 'DRINK NEVER' }
 const LEAVE_WORD: Readonly<Partial<Record<Orders['leave'], string>>> = { common: 'TAKE ALL LOOT', uncommon: 'LEAVE COMMONS', rare: 'LEAVE BELOW RARE' }
@@ -38,7 +37,7 @@ const rowsOf = (g: Game, sound: SoundSettings, ui: SettingsUi): Key[][] => ui.pa
   ? [
       [{ key: 'N', label: 'NEW GAME', does: 'new' }, { key: 'H', label: 'HELP', does: 'help' }],
       [{ key: 'E', label: sound.effects ? 'SOUND ON' : 'SOUND OFF', does: 'effects' }, { key: 'M', label: sound.music ? 'MUSIC ON' : 'MUSIC OFF', does: 'music' }],
-      [{ key: 'V', label: VIEW_WORD[g.zoom], does: 'view' }, { key: 'L', label: `VOL ${(100 * sound.volume) / VOLUME_STEPS}`, does: 'volume' }],
+      [{ key: 'L', label: `VOL ${(100 * sound.volume) / VOLUME_STEPS}`, does: 'volume' }],
     ]
   : [[{ key: 'D', label: orderWord(g, 'drink'), does: 'drink' }], [{ key: 'F', label: orderWord(g, 'smoke'), does: 'smoke' }], [{ key: 'K', label: orderWord(g, 'leave'), does: 'leave' }]]
 
@@ -50,7 +49,9 @@ const ROW_STEP = BUTTON_H + 2
  * the one above, so every row starts on a whole cell. A column's buttons are one width, its widest's, so they line up. */
 const placed = (g: Game, sound: SoundSettings, ui: SettingsUi) => {
   const rows = rowsOf(g, sound, ui)
-  const widths = rows.reduce<number[]>((w, row) => row.map((k, i) => Math.max(w[i] ?? 0, buttonW(k.label))), [])
+  // Every column's width, its widest button's, over all the rows that reach it: a short row keeps the others'.
+  const columns = Math.max(...rows.map(row => row.length))
+  const widths = Array.from({ length: columns }, (_, i) => Math.max(...rows.map(row => (row[i] === undefined ? 0 : buttonW(row[i]!.label)))))
   return rows.flatMap((row, r) => {
     let x = PAD
     return row.map((k, i) => {
@@ -106,8 +107,8 @@ export const settingsOverlay = (g: Game, sound: SoundSettings, ui: SettingsUi = 
 /** What a gesture does: the page shown, game actions, and the sound as it now is. */
 export type SettingsOutcome = { ui: SettingsUi; actions: Action[]; sound: SoundSettings; isHelp?: true }
 
-/** A page's tab shows it; a button clicked: New game opens the start screen, Help the how-it-plays window, the view
- * steps to the next, a sound button sets the sound, an order steps; the close box closes. */
+/** A page's tab shows it; a button clicked: New game opens the start screen, Help the how-it-plays window, a sound
+ * button sets the sound, an order steps; the close box closes. */
 export const settingsGesture = (g: Game, sound: SoundSettings, ui: SettingsUi, gesture: Gesture): SettingsOutcome => {
   const none = { ui, actions: [], sound }
   if (gesture.type === 'drag') return none
@@ -121,7 +122,6 @@ export const settingsGesture = (g: Game, sound: SoundSettings, ui: SettingsUi, g
   const does = hit.does
   if (does === 'help') return { ...none, isHelp: true }
   if (does === 'new') return { ...none, actions: [{ kind: 'panel', panel: 'start' }] }
-  if (does === 'view') return { ...none, actions: [{ kind: 'zoom' }] }
   return isOrder(does) ? { ...none, actions: [{ kind: 'order', order: does }] } : { ...none, sound: nextSound(sound, does) }
 }
 

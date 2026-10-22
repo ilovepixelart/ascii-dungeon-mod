@@ -1,7 +1,7 @@
 // The stash's window: its tabs over the chest's list on the left, the bag on the right, as in the inventory. A tab
 // shows its items a row each in their tier's color; the sets' and the Legendaries' tabs a row a place, filled or not;
 // a tab not yet bought, its price and a Buy button. A row or a bag item is chosen with a click and shows its card; a
-// second click (or a right-click) opens its menu: take it out, or store it. Pure: the click layer reports whole
+// second click opens its menu: take it out, or store it. A right-click takes it out or stores it at once. Pure: the click layer reports whole
 // gestures, this decides the window's next state and the game actions to apply.
 import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
@@ -164,8 +164,17 @@ const listClick = (g: Game, ui: ChestUi, at: { x: number; y: number }, button: s
   const row = isInside(at, LIST.x + 1, LIST.y + 1, LIST.w - 2, LIST.h - 2) ? Math.floor(at.y) - LIST.y - 1 : -1
   const stored = rowsOf(g, ui.tab)[row]
   if (stored === undefined) return undefined
+  const letGo: Action[] = g.cursor === null ? [] : [{ kind: 'deselect' }]
+  if (button === 'right' && whyNotTake(g, stored) === undefined) return { ui: idleOn(ui), actions: [...letGo, { kind: 'retrieve', id: stored.id }] }
   const again = ui.stored === stored.id
-  return { ui: { ...ui, stored: stored.id, menu: again || button === 'right' }, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
+  return { ui: { ...ui, stored: stored.id, menu: again || button === 'right' }, actions: letGo }
+}
+
+/** A click on a bag item: chosen, again its menu; a right-click stores it at once, or opens the menu saying why not. */
+const bagClick = (g: Game, ui: ChestUi, item: Item, button: string): Outcome => {
+  if (button === 'right' && whyNotStore(g, item, ui.tab) === undefined) return { ui: idleOn(ui), actions: [{ kind: 'select', id: item.id }, storeOn(ui)] }
+  const again = ui.stored === null && g.cursor === item.id
+  return { ui: { ...ui, stored: null, menu: again || button === 'right' }, actions: again ? [] : [{ kind: 'select', id: item.id }] }
 }
 
 const click = (g: Game, ui: ChestUi, at: { x: number; y: number }, button: string): Outcome => {
@@ -179,10 +188,7 @@ const click = (g: Game, ui: ChestUi, at: { x: number; y: number }, button: strin
     const r = itemRect(i)
     return isInside(p, r.x, r.y, r.w, r.h)
   })
-  if (item !== undefined) {
-    const again = ui.stored === null && g.cursor === item.id
-    return { ui: { ...ui, stored: null, menu: again || button === 'right' }, actions: again ? [] : [{ kind: 'select', id: item.id }] }
-  }
+  if (item !== undefined) return bagClick(g, ui, item, button)
   if (isInside(p, ...CLOSE_BOX)) return { ui: CHEST_UI_IDLE, actions: [{ kind: 'panel', panel: 'stash' }] }
   return { ui: idleOn(ui), actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
 }

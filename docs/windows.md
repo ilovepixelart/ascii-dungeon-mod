@@ -65,7 +65,7 @@ Every window keeps these; review them with `tools/windows.ts`, which draws each 
 ## The stash
 
 - The chest on the left as a list, a row a stored item in its tier's color (the chosen one marked `>`), its count in the label; the bag on the right.
-- A row or a bag item is chosen with a click and shows its card; a second click (or a right-click) opens Take or Store, which says why when the chest is full or the bag has no room (`whyNotStore`, `whyNotTake`).
+- A row or a bag item is chosen with a click and shows its card; a second click opens Take or Store, which says why when the chest is full or the bag has no room (`whyNotStore`, `whyNotTake`). A right-click moves it at once: a row's item into the bag, a bag item onto the tab shown (or its own special tab); when it cannot, the right-click opens the menu, which says why.
 - The chest is a list, not a grid: its ten items keep no places, and a grid with room for ten of the largest would not fit beside the bag.
 
 ## The start screen

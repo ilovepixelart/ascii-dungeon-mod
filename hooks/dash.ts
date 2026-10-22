@@ -1,7 +1,8 @@
-// The dash, Diablo's way, on a pane DASH_COLUMNS wide or more: a glass orb in a carved stone socket at each bottom
-// corner, HP on the left and XP on the right, standing above a short stone dash between them that holds the belt, a
-// horned gargoyle crest on each socket; over the map above the dash, a stone plaque between two skulls with the gold,
-// the depth and the running effects, then the bag, settings and the portal. Its pixels are in one frame: row 0 is the
+// The dash, Diablo's way, on a pane DASH_COLUMNS wide or more: a big glass orb in a carved stone socket at each bottom
+// corner, HP on the left and XP on the right, standing high over the map with its numbers on it, a horned gargoyle
+// crest on each socket; under the orbs' curves a short stone dash that holds the belt, with the bag and settings
+// buttons under the HP orb and the portal under the XP; over the map between the orbs, a carved stone plaque of the
+// depth, the gold and the running effects. Its pixels are in one frame: row 0 is the
 // dash's top line, rows 0 to DASH_H - 1 the dash the pane draws as the strip, the rows above it, down to -DASH_OVER,
 // drawn over the map's bottom. Narrower panes keep the strip of bars (hud.ts). Pure.
 import type { Game } from '../types'
@@ -25,20 +26,28 @@ export const DASH_COLUMNS = 105
 export const isDash = (columns: number) => columns >= DASH_COLUMNS
 /** The dash's height: its top band, the belt, its bottom band. Even, a whole number of cells. */
 export const DASH_H = 16
-/** An orb's glass, across and down, and the carved socket round it: on a 105-column pane, room for the belt's five
- * slots a pixel apart between the two. */
-const GLASS = 20
+/** An orb's glass, across and down, and the carved socket round it. */
+const GLASS = 24
 const SOCKET = 2
 export const ORB_BOX = GLASS + 2 * SOCKET
-/** The socket's top: its bottom on the dash's bottom line, so the orb stands above the dash. */
-const BOX_TOP = DASH_H - ORB_BOX
+/** The socket's top: its middle 7.5 px over the dash's top line, high enough that the belt fits under the two orbs'
+ * curves on a 105-column pane, its bottom on the dash's row 6. */
+const BOX_TOP = -21
 const GLASS_TOP = BOX_TOP + SOCKET
 /** The belt's top, under the top band. */
 export const BELT_Y = 3
-/** Where belt slot `i` starts: a pixel past the HP orb's socket, the health potion beside the HP, each slot a pixel
- * apart. */
-export const dashBeltX = (i: number) => ORB_BOX + 1 + i * (BELT_SLOT_W + 1)
+/** The belt's five slots a pixel apart, centred between the orbs: where slot `i` starts on a pane `columns` wide. */
+const BELT_W = 5 * BELT_SLOT_W + 4
+export const dashBeltX = (columns: number, i: number) => Math.floor((columns - BELT_W) / 2) + i * (BELT_SLOT_W + 1)
 export const xpBoxX = (columns: number) => columns - ORB_BOX
+/** The buttons in the dash's corners under the orbs, each at its icon's left column, a socket cut a pixel round it:
+ * the bag and settings under the HP orb, the portal under the XP. */
+export const BUTTON_Y = 9
+export const dashButtons = (columns: number) => [
+  { icon: 'bag' as const, x: 3 },
+  { icon: 'settings' as const, x: 11 },
+  { icon: 'portal' as const, x: columns - 8 },
+]
 
 /** Stone, lit to shaded, and the carving cut into it: on the host's 17-step grid, so the terminal paints these greys
  * as they are, not drifted toward red. */
@@ -75,8 +84,8 @@ const ICON: Readonly<Record<'bag' | 'settings' | 'portal', { rows: readonly stri
   portal: { rows: ['.ccc.', 'cCbCc', 'cb.bc', 'cCbCc', '.ccc.'], ink: { c: '#3a7bd5', C: '#7fe3ff', b: '#1f4a8a' } },
 }
 const PORTAL_SHUT = '#3a3e48'
-/** The crest's top: on the socket, a row into it. */
-const CREST_Y = BOX_TOP - CREST.length + 1
+/** The crest's top: on the socket, its fangs two rows into it. */
+const CREST_Y = BOX_TOP - CREST.length + 2
 /** How many rows the dash stands over the map. */
 export const DASH_OVER = -CREST_Y
 /** The plaque's rows, its marks' and its words' (a whole cell, as the map's rows are). */
@@ -90,10 +99,11 @@ export const PLAQUE_TEXT_Y = -6
 export const ORB_PHASES = 8
 export const ORB_STEP_MS = 200
 export const orbPhase = (now: number) => Math.floor(now / ORB_STEP_MS) % ORB_PHASES
-/** The glass's rows its numbers stand on, the dash's text rows 2 and 3, and those over the map: the surface lies
- * still across them, so the numbers' ground holds and the map shows the same frame whenever it is drawn. */
-const STILL_TOP = 4 - GLASS_TOP
-const isStill = (y: number) => (y >= STILL_TOP && y < STILL_TOP + 4) || GLASS_TOP + y < 0
+/** The glass's rows over the map, its numbers' among them: the surface lies still across them, so the numbers' ground
+ * holds and the map shows the same frame whenever it is drawn. It ripples in the dash's own rows. */
+const isStill = (y: number) => GLASS_TOP + y < 0
+/** The dash's rows the orbs' numbers stand on, over the map near their middles: two whole cells. */
+const ORB_TEXT_Y = -10
 
 /** The glass: its wall a pixel thick, lit where the light comes from (the top left), dark across from it. */
 const WALL_LIT = '#9aa4b4'
@@ -183,19 +193,14 @@ const orbPixels = (bx: number, share: number, phase: number, inks: OrbInks): Pix
   return [...out, ...sprite(CREST, bx + Math.floor((ORB_BOX - CREST[0]!.length) / 2), CREST_Y, INK)]
 }
 
-/** The plaque's place between the orbs, its first and last columns. */
+/** The plaque's place between the orbs, its first and last columns, a pixel clear of their sockets. */
 const plaqueSpan = (columns: number) => ({ x0: ORB_BOX + 1, x1: xpBoxX(columns) - 2 })
 /** The narrowest pane whose plaque has a skull at each end: narrower, the room goes to the gold and the depth. */
 export const SKULL_COLUMNS = 120
 /** How far in from each end of the plaque its words and buttons start: past a skull, or its stone edge. */
 const plaqueEnd = (columns: number) => (columns >= SKULL_COLUMNS ? SKULL[0]!.length + 3 : 2)
-/** The plaque's buttons, right to left from its end, each at its left column, each in a socket a pixel round it. */
-export const plaqueIcons = (columns: number) => {
-  const right = plaqueSpan(columns).x1 - plaqueEnd(columns)
-  return (['portal', 'settings', 'bag'] as const).map((icon, i) => ({ icon, x: right - 4 - i * 7 }))
-}
-/** Where the plaque's words run: from its first end, short of its first button's socket. */
-const plaqueLine = (columns: number) => ({ x: plaqueSpan(columns).x0 + plaqueEnd(columns), end: Math.min(...plaqueIcons(columns).map(i => i.x)) - 3 })
+/** Where the plaque's words run: between its two ends. */
+const plaqueLine = (columns: number) => ({ x: plaqueSpan(columns).x0 + plaqueEnd(columns), end: plaqueSpan(columns).x1 - plaqueEnd(columns) + 1 })
 
 /** A mark's width, and the cell between a mark and its word. */
 const MARK_W = 5
@@ -238,19 +243,28 @@ const plaqueStone = (x: number, y: number, x0: number, x1: number) => {
   return x === x1 ? STONE : PLAQUE_FACE
 }
 
-/** A button's socket, cut into the plaque's face a pixel round its icon: dark, its bottom and right lips catching the
+/** A button's socket, cut into the stone a pixel round its icon at x, y: dark, its bottom and right lips catching the
  * light from the top left. */
-const socketAround = (x: number): Pixel[] => {
+const socketAround = (x: number, y0: number): Pixel[] => {
   const out: Pixel[] = []
-  for (let y = MARK_Y - 1; y <= MARK_Y + 5; y += 1) for (let dx = -1; dx <= 5; dx += 1) {
-    const isLip = y === MARK_Y + 5 || dx === 5
+  for (let y = y0 - 1; y <= y0 + 5; y += 1) for (let dx = -1; dx <= 5; dx += 1) {
+    const isLip = y === y0 + 5 || dx === 5
     out.push({ x: x + dx, y, ink: isLip ? STONE : STONE_EDGE })
   }
   return out
 }
 
+/** The dash's buttons in their sockets, the portal dark while a foe lives. */
+const buttonPixels = (g: Game, columns: number): Pixel[] => {
+  const isShut = g.where !== 'town' && g.foe !== null
+  return dashButtons(columns).flatMap(({ icon, x }) => {
+    const { rows, ink } = ICON[icon]
+    return [...socketAround(x, BUTTON_Y), ...sprite(rows, x, BUTTON_Y, icon === 'portal' && isShut ? { c: PORTAL_SHUT, C: PORTAL_SHUT, b: STONE_EDGE } : ink)]
+  })
+}
+
 /** The plaque: its carved stone, a rivet at each end, horns curling up from its top corners, a skull at each end on
- * a wide pane, its marks, and its buttons in their sockets. */
+ * a wide pane, and its marks. */
 const plaquePixels = (g: Game, columns: number): Pixel[] => {
   const { x0, x1 } = plaqueSpan(columns)
   const out: Pixel[] = []
@@ -263,11 +277,6 @@ const plaquePixels = (g: Game, columns: number): Pixel[] => {
   out.push(...sprite(HORN, x0 - 2, hornY, INK), ...sprite(HORN.map(r => [...r].reverse().join('')), x1 - 1, hornY, INK))
   if (columns >= SKULL_COLUMNS) out.push(...sprite(SKULL, x0 + 2, MARK_Y, INK), ...sprite(SKULL, x1 - 1 - SKULL[0]!.length, MARK_Y, INK))
   for (const m of plaqueParts(g, plaqueLine(columns)).marks) out.push(...sprite(m.rows, m.x, MARK_Y, MARK_INK))
-  const isShut = g.where !== 'town' && g.foe !== null
-  for (const { icon, x } of plaqueIcons(columns)) {
-    const { rows, ink } = ICON[icon]
-    out.push(...socketAround(x), ...sprite(rows, x, MARK_Y, icon === 'portal' && isShut ? { c: PORTAL_SHUT, C: PORTAL_SHUT, b: STONE_EDGE } : ink))
-  }
   return out
 }
 
@@ -283,6 +292,7 @@ const bandInk = (x: number, y: number) => {
 /** Every pixel the dash sets, the plaque and the crests over the map among them, the orbs' ripple at `phase`. */
 const dashPixels = (g: Game, columns: number, phase: number): Pixel[] => [
   ...plaquePixels(g, columns),
+  ...buttonPixels(g, columns),
   ...orbPixels(0, hpShare(g), phase, HP_INKS),
   ...orbPixels(xpBoxX(columns), xpShare(g), phase, XP_INKS),
 ]
@@ -291,7 +301,7 @@ const dashPixels = (g: Game, columns: number, phase: number): Pixel[] => [
 export const dashStrip = (g: Game, columns: number, phase = 0): Canvas => {
   const c = canvas(columns, DASH_H)
   for (let y = 0; y < DASH_H; y += 1) for (let x = 0; x < columns; x += 1) put(c, x, y, bandInk(x, y))
-  g.belt.forEach((slot, i) => beltSlot(c, slot, dashBeltX(i), BELT_Y))
+  g.belt.forEach((slot, i) => beltSlot(c, slot, dashBeltX(columns, i), BELT_Y))
   for (const p of dashPixels(g, columns, phase)) if (p.y >= 0 && p.y < DASH_H) put(c, p.x, p.y, p.ink)
   return c
 }
@@ -311,36 +321,36 @@ const fitted = (n: number, of: number) => {
   return full.length <= GLASS - 4 ? full : `${Math.floor((100 * n) / of)}%`
 }
 
-/** A line of text centred on the orb whose box starts at `bx`, on the dash's text row 2 or 3, each character on the
- * glass's two pixels under it as near as one ground shows them, in the ink that reads there. */
+/** A line of text centred on the orb whose box starts at `bx`, on its text row 0 or 1 over the map, in the cells of
+ * the dash's layer there; each character on the glass's two pixels under it as near as one ground shows them, in the
+ * ink that reads there. */
 const orbLabel = (text: string, bx: number, row: 0 | 1, share: number, inks: OrbInks): OverlayBox<'label'> => {
   const x0 = Math.floor((GLASS - text.length) / 2)
-  const y = STILL_TOP + 2 * row
+  const y = ORB_TEXT_Y - GLASS_TOP + 2 * row
   const runs = [...text].map((ch, i) => {
     const [top, bottom] = [y, y + 1].map(py => glassPixel(x0 + i, py, share, 0, inks) ?? BG) as [string, string]
     const ground = top === bottom ? top : mix(top, bottom, 0.5)
     return { text: ch, color: inkOn(ground), bg: ground, bold: true }
   })
-  return { role: 'label', x: bx + SOCKET + x0 - 1, y: 2 + row - 1, w: text.length + 2, h: 3, border: runs[0]!.bg, bg: runs[0]!.bg, pad: 0, lines: [runs] }
+  return { role: 'label', x: bx + SOCKET + x0 - 1, y: (ORB_TEXT_Y + DASH_OVER) / 2 + row - 1, w: text.length + 2, h: 3, border: runs[0]!.bg, bg: runs[0]!.bg, pad: 0, lines: [runs] }
 }
 
-/** The dash's text, in its cells: each orb's numbers (the HP over HP; the XP over the level, a + while points wait)
- * and the belt's counts. The plaque's words are the map's (`plaqueBlocks`). */
-export const dashLabels = (g: Game, columns: number): OverlayBox<'label'>[] => [
-  orbLabel(fitted(Math.max(0, g.hp), g.maxHp), 0, 0, hpShare(g), HP_INKS),
-  orbLabel('HP', 0, 1, hpShare(g), HP_INKS),
-  orbLabel(fitted(g.xp, xpToLevel(g.level)), xpBoxX(columns), 0, xpShare(g), XP_INKS),
-  orbLabel(`LV${g.level}${g.points > 0 ? '+' : ''}`, xpBoxX(columns), 1, xpShare(g), XP_INKS),
-  ...beltCounts(g, dashBeltX, BELT_Y),
-]
+/** The dash's text on its own rows, in its cells: the belt's counts. The orbs' numbers and the plaque's words stand
+ * over the map (`overLabels`). */
+export const dashLabels = (g: Game, columns: number): OverlayBox<'label'>[] => beltCounts(g, i => dashBeltX(columns, i), BELT_Y)
 
 /** The rows of cells the dash stands over the map, which its own click layer covers there. */
 export const OVER_ROWS = DASH_OVER / 2
 
-/** The plaque's words as text in the dash's layer over the map, in its cells (row 0 the first the dash stands over),
- * each on the plaque's face. */
-export const plaqueLabels = (g: Game, columns: number): OverlayBox<'label'>[] =>
-  plaqueParts(g, plaqueLine(columns)).words.map(w => artLabel(w.text, w.x, PLAQUE_TEXT_Y + DASH_OVER, w.ink, PLAQUE_FACE))
+/** The dash's text over the map, in the cells of its layer there (row 0 the first the dash stands over): each orb's
+ * numbers (the HP over HP; the XP over the level, a + while points wait), then the plaque's words on its face. */
+export const overLabels = (g: Game, columns: number): OverlayBox<'label'>[] => [
+  orbLabel(fitted(Math.max(0, g.hp), g.maxHp), 0, 0, hpShare(g), HP_INKS),
+  orbLabel('HP', 0, 1, hpShare(g), HP_INKS),
+  orbLabel(fitted(g.xp, xpToLevel(g.level)), xpBoxX(columns), 0, xpShare(g), XP_INKS),
+  orbLabel(`LV${g.level}${g.points > 0 ? '+' : ''}`, xpBoxX(columns), 1, xpShare(g), XP_INKS),
+  ...plaqueParts(g, plaqueLine(columns)).words.map(w => artLabel(w.text, w.x, PLAQUE_TEXT_Y + DASH_OVER, w.ink, PLAQUE_FACE)),
+]
 
 /** A gesture on the dash's layer over the map (its cells): an orb or its crest for the sheet, a plaque button, the
  * plaque's words for the log; a drag or a right-click, nothing. */
@@ -357,9 +367,9 @@ export const dashOverGesture = (gesture: Gesture, columns: number): { actions: A
 export type DashAction = { kind: 'panel'; panel: 'bag' | 'sheet' | 'settings' } | { kind: 'use'; slot: number } | { kind: 'portal' } | 'log' | undefined
 export const dashHit = (columns: number, x: number, y: number): DashAction => {
   const inside = (rx: number, ry: number, w: number, h: number) => x >= rx && x < rx + w && y >= ry && y < ry + h
-  if ([0, xpBoxX(columns)].some(bx => inside(bx, CREST_Y, ORB_BOX, DASH_H - CREST_Y))) return { kind: 'panel', panel: 'sheet' }
-  for (let slot = 0; slot < 5; slot += 1) if (inside(dashBeltX(slot), BELT_Y, BELT_SLOT_W, SLOT)) return { kind: 'use', slot }
-  const icon = plaqueIcons(columns).find(i => inside(i.x, MARK_Y, 5, 5))?.icon
+  if ([0, xpBoxX(columns)].some(bx => inside(bx, CREST_Y, ORB_BOX, BOX_TOP + ORB_BOX - CREST_Y))) return { kind: 'panel', panel: 'sheet' }
+  for (let slot = 0; slot < 5; slot += 1) if (inside(dashBeltX(columns, slot), BELT_Y, BELT_SLOT_W, SLOT)) return { kind: 'use', slot }
+  const icon = dashButtons(columns).find(i => inside(i.x - 1, BUTTON_Y - 1, 7, 7))?.icon
   if (icon === 'portal') return { kind: 'portal' }
   if (icon !== undefined) return { kind: 'panel', panel: icon }
   const line = plaqueLine(columns)
@@ -369,8 +379,9 @@ export const dashHit = (columns: number, x: number, y: number): DashAction => {
 /** What a click on the dash's strip rows acts on, in its pixels: the orbs' lower parts and each belt slot holding
  * something; what an open belt menu (among `boxes`) covers is left out. */
 export const dashHot = (g: Game, columns: number) => [
-  ...[0, xpBoxX(columns)].map(x => ({ x, y: 0, w: ORB_BOX, h: DASH_H })),
-  ...g.belt.flatMap((s, i) => (s === null ? [] : [{ x: dashBeltX(i), y: BELT_Y, w: BELT_SLOT_W, h: SLOT }])),
+  ...[0, xpBoxX(columns)].map(x => ({ x, y: 0, w: ORB_BOX, h: BOX_TOP + ORB_BOX })),
+  ...dashButtons(columns).filter(b => b.icon !== 'portal' || g.foe === null || g.where === 'town').map(b => ({ x: b.x - 1, y: BUTTON_Y - 1, w: 7, h: 7 })),
+  ...g.belt.flatMap((s, i) => (s === null ? [] : [{ x: dashBeltX(columns, i), y: BELT_Y, w: BELT_SLOT_W, h: SLOT }])),
 ]
 
 /** The tiers a slot holds, strongest first: what its menu lists. */
@@ -387,7 +398,7 @@ export const dashBeltMenu = (g: Game, slot: number, columns: number): OverlayBox
   if (s === null || s === undefined || tiers.length === 0) return undefined
   const active = activeTier(s)
   const box = boxShape('belt', tiers.map(t => [t === active ? { text: '> ', color: CURSOR, bold: true } : { text: '  ' }, { text: nameOf(s.kind, t), bold: t === active }, { text: ` x${s.tiers[t - 1]}`, dim: true }]), CURSOR)
-  return { ...box, x: Math.max(0, Math.min(dashBeltX(slot), columns - box.w)), y: 0 }
+  return { ...box, x: Math.max(0, Math.min(dashBeltX(columns, slot), columns - box.w)), y: 0 }
 }
 
 /** A gesture on the dash's strip rows (cells of the strip): the belt menu as it now is, the game actions, and whether

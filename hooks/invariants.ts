@@ -76,7 +76,7 @@ const RULES: Readonly<Record<string, Rule>> = {
   'orders among their choices': g => {
     const o = g.orders
     if (o === undefined) return undefined
-    return [0, 25, 50].includes(o.drink) && typeof o.smoke === 'boolean' && ['common', 'uncommon', 'rare'].includes(o.leave) ? undefined : `orders ${JSON.stringify(o)}`
+    return [0, 25, 50].includes(o.drink) && typeof o.smoke === 'boolean' && ['common', 'uncommon', 'rare', 'all'].includes(o.leave) ? undefined : `orders ${JSON.stringify(o)}`
   },
   'codex counts whole, each entry once, never behind the hero': g => {
     const c = g.codex

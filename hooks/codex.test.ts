@@ -88,6 +88,12 @@ describe('what the codex records', () => {
     const c: Codex = { ...EMPTY_CODEX, uniques: ['bones'], kills: 120, deepest: 12 }
     expect(apply({ ...plainHero(3), codex: c }, { kind: 'restart', cls: 'mage' }).codex).toEqual(c)
   })
+
+  test('the heroes retired stay counted through every action after', async () => {
+    const g = { ...plainHero(3), codex: { ...EMPTY_CODEX, retired: 2 } }
+    expect(apply(g, hit).codex?.retired).toBe(2)
+    expect(apply(apply(g, hit), hit).codex?.retired).toBe(2)
+  })
 })
 
 describe('a save kept before the codex', () => {

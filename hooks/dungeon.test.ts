@@ -14,7 +14,7 @@ import type { Game } from '../types'
 import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
-import { BELT_BELOW_Y, INSET, LINE2_Y, SIDE_LINE_X, SIDE_LINE_Y, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
+import { BELT_BELOW_Y, INSET, ORB_STEP_MS, orbSize, orbTop, sideLineAt, stripLeft, beltSlotX, hudLayout, portalSlotX, settingsSlotX } from './hud'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
@@ -240,6 +240,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
 }
 
 const WIDE = { ...PANE, props: { ...PANE.props, bodyColumns: 110 } } as const
+/** The wide pane's strip: its content's width, where its portrait is clicked, and its orbs' middle. */
+const STRIP_W = WIDE.props.bodyColumns - 2 * INSET
+const PORTRAIT_AT = stripLeft(STRIP_W) + 5
+const ORB_MID = { x: orbSize(STRIP_W) / 2, y: orbTop(orbSize(STRIP_W)) + orbSize(STRIP_W) / 2 }
 
 /** Every toast the pane raises, in order. */
 const toasts = (on: On) => {
@@ -274,7 +278,7 @@ const cellsIn = (g: Game, _columns: number, _rows: number) =>
 test('on a wide terminal pane the bag opens as the pixel inventory with the item card under it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeUndefined()
-  await clickStrip(ui, 5, 5)
+  await clickStrip(ui, PORTRAIT_AT, 5)
   const bag = await ui.find({ type: 'Raster', key: 'bag' })
   expect(bag?.props.columns).toBe(INV_W)
   expect(bag?.props.rows).toBe((INV_TOP + INV_H) / 2)
@@ -339,7 +343,7 @@ test('on a wide pane the start screen is a pixel window over the map; a hero cho
 
 test('on a wide pane the strip\'s XP line opens the character sheet as a pixel window, which closes back to the map', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 20, LINE2_Y + 2)
+  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
   expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeDefined()
   expect(await ui.find({ type: 'Client', key: 'sheet-clicks' })).toBeDefined()
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeUndefined()
@@ -351,7 +355,7 @@ test('on a wide pane the strip\'s XP line opens the character sheet as a pixel w
 
 test('the sheet\'s Codex opens the codex as a pixel window; its close box closes it back to the map', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 20, LINE2_Y + 2)
+  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
   await ui.press({ key: 'sheet-codex' })
   expect(await ui.find({ type: 'Raster', key: 'codex' })).toBeDefined()
   expect(await ui.find({ type: 'Raster', key: 'sheet' })).toBeUndefined()
@@ -403,7 +407,7 @@ test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet'
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 20, LINE2_Y + 2)
+  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
   await ui.press({ key: 'sheet-retire' })
   expect(await ui.find({ type: 'Raster', key: 'retire' })).toBeDefined()
   const back = retireButtons({ ...saved, panel: 'retire' }, { slot: null }).back
@@ -501,7 +505,7 @@ test('on a wide pane a talent\'s number key chooses its card, as on the start sc
 
 test('a click on the strip\'s gold and depth line opens the log over the map; its close box closes it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
-  await clickStrip(ui, SIDE_LINE_X + 2, SIDE_LINE_Y + 2)
+  await clickStrip(ui, sideLineAt(STRIP_W).x + 2, sideLineAt(STRIP_W).y + 2)
   expect(await ui.find({ type: 'Raster', key: 'log' })).toBeDefined()
   const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
   await ui.pointer({ type: 'down', ...close, button: 'left', in: 'log-clicks' } as never)
@@ -562,7 +566,7 @@ test('on a wide pane a mark card, clicked, chooses that mark', async ($, on) => 
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 20, LINE2_Y + 2)
+  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
   await ui.press({ key: 'sheet-deep' })
   const card = deepCards({ ...saved, panel: 'deep' })[1]!
   const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 3) / 2) }
@@ -794,7 +798,7 @@ test('a foe summoned by a tool call is toasted with its threat; the narrow pane 
 
 test('clicking the level line opens the character sheet, and its Close button shuts it', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 40, LINE2_Y + 2)
+  await clickStrip(ui, ORB_MID.x, ORB_MID.y)
   expect(await ui.find({ type: 'Button', key: 'train-might' })).toBeDefined()
   await ui.press({ key: 'sheet-close' })
   expect(await ui.find({ type: 'Button', key: 'train-might' })).toBeUndefined()
@@ -1047,7 +1051,7 @@ test('on a pane of 80 to 104 columns the compact inventory takes the pane, and c
 test('on a wide terminal the inventory takes the whole pane while it is open, and closes back to the map', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeDefined()
-  await clickStrip(ui, 5, 5)
+  await clickStrip(ui, PORTRAIT_AT, 5)
   expect(await ui.find({ type: 'Raster', key: 'map' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'hud' })).toBeUndefined()
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
@@ -1062,7 +1066,7 @@ test('on a wide terminal the inventory takes the whole pane while it is open, an
 test('with the mouse: gear is taken off, dragged back on, and a bag item destroyed from its menu after a second click', async ($, on) => {
   const said = toasts(on)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickStrip(ui, 5, 5)
+  await clickStrip(ui, PORTRAIT_AT, 5)
   // A cell (x, y) of the click layer is the screen pixels x and 2y, 2y + 1; a pointer there lands on 2y + 1.
   const at = (px: number, py: number) => ({ x: px, y: Math.floor(py / 2) })
   const tap = async (p: { x: number; y: number }, button: 'left' | 'right' = 'left') => {
@@ -1097,8 +1101,8 @@ test('with the mouse: gear is taken off, dragged back on, and a bag item destroy
 test('clicking the portrait in the strip opens the inventory', async $ => {
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   expect(await ui.find({ type: 'Client', key: 'hud-clicks' })).toBeDefined()
-  await ui.pointer({ type: 'down', x: 5, y: 2, button: 'left', in: 'hud-clicks' })
-  await ui.pointer({ type: 'up', x: 5, y: 2, button: 'left', in: 'hud-clicks' })
+  await ui.pointer({ type: 'down', x: INSET + PORTRAIT_AT, y: 2, button: 'left', in: 'hud-clicks' })
+  await ui.pointer({ type: 'up', x: INSET + PORTRAIT_AT, y: 2, button: 'left', in: 'hud-clicks' })
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
   await ui.unmount()
 })
@@ -1107,7 +1111,7 @@ test('a step plays as a walk: the hero is drawn at his starting tile first, at h
   const clock = mock.clock(on)
   const frames: string[] = []
   on('ui.blit', (_$, e) => {
-    if ('cells' in e) frames.push(e.cells)
+    if ('cells' in e && e.key === 'map') frames.push(e.cells)
     return { value: {} }
   })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
@@ -1135,7 +1139,7 @@ test('clicking a foe: its bar stays full while the hero walks up, and drops once
   const clock = mock.clock(on)
   const frames: string[] = []
   on('ui.blit', (_$, e) => {
-    if ('cells' in e) frames.push(e.cells)
+    if ('cells' in e && e.key === 'map') frames.push(e.cells)
     return { value: {} }
   })
   on('tool.call', () => ({ result: { stdout: '', stderr: 'boom' } as never, isError: true }))
@@ -1217,7 +1221,7 @@ test('no frame around the game: neither the map nor the inventory screen draws a
   // Pixel view: the larger-pixel map, then the inventory screen.
   expect(await bordered()).toBe(0)
   expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.columns).toBe(WIDE.props.bodyColumns)
-  await clickStrip(ui, 5, 5)
+  await clickStrip(ui, PORTRAIT_AT, 5)
   expect(await bordered()).toBe(0)
   await ui.unmount()
 })
@@ -1290,7 +1294,7 @@ test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dun
   const clock = mock.clock(on)
   const frames: string[] = []
   on('ui.blit', (_$, e) => {
-    if ('cells' in e) frames.push(e.cells)
+    if ('cells' in e && e.key === 'map') frames.push(e.cells)
     return { value: {} }
   })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
@@ -1373,8 +1377,9 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const clock = mock.clock(on)
     const said = toasts(on)
     let blits = 0
-    on('ui.blit', () => {
-      blits += 1
+    on('ui.blit', (_$, e) => {
+      // The map's: the orbs' ripple repaints the strip on its own.
+      if (e.key === 'map') blits += 1
       return { value: {} }
     })
     const ui = await $.ui.mount(TALL)
@@ -1403,8 +1408,9 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const clock = mock.clock(on)
     const said = toasts(on)
     let blits = 0
-    on('ui.blit', () => {
-      blits += 1
+    on('ui.blit', (_$, e) => {
+      // The map's: the orbs' ripple repaints the strip on its own.
+      if (e.key === 'map') blits += 1
       return { value: {} }
     })
     // A hero four tiles of known floor from the stairs, every tile seen.
@@ -1484,7 +1490,7 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const clock = mock.clock(on)
     const frames: string[] = []
     on('ui.blit', (_$, e) => {
-      if ('cells' in e) frames.push(e.cells)
+      if ('cells' in e && e.key === 'map') frames.push(e.cells)
       return { value: {} }
     })
     on('tool.call', () => ({ result: { content: 'done' } as never }))
@@ -1526,8 +1532,9 @@ describe('a click is carried out when the hero gets there, not when it is made',
   test('a tool call that leaves the hero where he is lets the walk play out in full', async ($, on) => {
     const clock = mock.clock(on)
     let blits = 0
-    on('ui.blit', () => {
-      blits += 1
+    on('ui.blit', (_$, e) => {
+      // The map's: the orbs' ripple repaints the strip on its own.
+      if (e.key === 'map') blits += 1
       return { value: {} }
     })
     on('tool.call', () => ({ result: { stdout: '', stderr: 'boom' } as never, isError: true }))
@@ -1662,7 +1669,7 @@ test('in a pane too narrow for its window the smith offers to temper each worn i
 /** The worn sword taken off into the bag through the inventory, then the hero walked to the stash in a wide pane. */
 const swordToTheStash = async ($: Engine, on: On) =>
   atTheSpot($, on, 'stash', async ui => {
-    await clickStrip(ui, 5, 5)
+    await clickStrip(ui, PORTRAIT_AT, 5)
     const [x, y, w, h] = WORN_SLOTS.weapon
     const slot = { x: x + Math.floor(w / 2), y: Math.floor((INV_TOP + y + Math.floor(h / 2)) / 2) }
     await ui.pointer({ type: 'down', ...slot, button: 'left', in: 'bag-clicks' })
@@ -1706,6 +1713,8 @@ test('a killing blow plays its walk, its hit frames and 4 held frames more, send
   let blits = 0
   let sent: string[] = []
   on('ui.blit', (_$, e) => {
+    // The map's: the orbs' ripple repaints the strip on its own.
+    if (e.key !== 'map') return { value: {} }
     blits += 1
     sent.push(String((e as { cells: unknown }).cells))
     return { value: {} }
@@ -1796,7 +1805,7 @@ test('a blow plays as hit frames: the number over the foe for 18 frames, then th
   const clock = mock.clock(on)
   const frames: string[] = []
   on('ui.blit', (_$, e) => {
-    if ('cells' in e) frames.push(e.cells)
+    if ('cells' in e && e.key === 'map') frames.push(e.cells)
     return { value: {} }
   })
   // An edit that succeeds: it summons a foe and strikes it at once.
@@ -1818,7 +1827,7 @@ test('a kill\'s number does not stay on the map: once its frames end the last fr
   const clock = mock.clock(on)
   const frames: string[] = []
   on('ui.blit', (_$, e) => {
-    if ('cells' in e) frames.push(e.cells)
+    if ('cells' in e && e.key === 'map') frames.push(e.cells)
     return { value: {} }
   })
   // A foe beside the hero with 1 HP: the next edit's blow slays it.
@@ -1854,11 +1863,38 @@ describe('idle motion in the pane', () => {
     expect(ambientAt(SHIMMER, SHIMMER, false).shimmer).toBe(false)
   })
 
+  test('with orbs the strip alone repaints as the ripple moves, a phase every ORB_STEP_MS; with bars it holds still', async ($, on) => {
+    const clock = mock.clock(on)
+    const painted: { key: string; cells: string }[] = []
+    on('ui.blit', (_$, e) => {
+      if ('cells' in e) painted.push({ key: e.key, cells: e.cells })
+      return { value: {} }
+    })
+    on('tool.call', () => ({ result: {} as never }))
+    const orbs = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, bodyColumns: 140 }, surface: 'terminal' })
+    expect(await orbs.find({ type: 'Raster', key: 'hud' })).toBeDefined()
+    // A tool that moves nothing on the map starts the idle timer, as the session's start does.
+    await $.tool.call({ tool: 'Agent', description: 'x', prompt: 'x' })
+    painted.length = 0
+    await clock.advance(ORB_STEP_MS * 5)
+    const strips = painted.filter(p => p.key === 'hud')
+    expect(strips.length).toBeGreaterThanOrEqual(4)
+    expect(new Set(strips.map(p => p.cells)).size).toBe(strips.length)
+    expect(painted.filter(p => p.key !== 'hud')).toEqual([])
+    await orbs.unmount()
+    const bars = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, bodyColumns: 100 }, surface: 'terminal' })
+    painted.length = 0
+    await clock.advance(ORB_STEP_MS * 4 + 50)
+    expect(painted.filter(p => p.key === 'hud')).toEqual([])
+    await bars.unmount()
+  })
+
   test('standing idle 10 s the pane paints the hero lifted, then back down 12 frames later', async ($, on) => {
     const clock = mock.clock(on)
     const frames: string[] = []
     on('ui.blit', (_$, e) => {
-      if ('cells' in e) frames.push(e.cells)
+      // The map's frames: the orbs' ripple repaints the strip on its own.
+      if ('cells' in e && e.key === 'map') frames.push(e.cells)
       return { value: {} }
     })
     on('tool.call', () => ({ result: {} as never }))
@@ -2191,7 +2227,7 @@ describe('the inventory during a walk', () => {
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
     await $.tool.call({ tool: 'Read', file_path: '/a.ts' })
     await clock.advance(FRAME_MS)
-    await clickStrip(ui, 5, 5)
+    await clickStrip(ui, PORTRAIT_AT, 5)
     expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
     await clock.advance(5000)
     expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
@@ -2203,8 +2239,9 @@ describe('a walk cut short', () => {
   test('a second click cuts the walk where the hero is drawn: only the tiles he has walked count, and the new walk starts there', async ($, on) => {
     const clock = mock.clock(on)
     let blits = 0
-    on('ui.blit', () => {
-      blits += 1
+    on('ui.blit', (_$, e) => {
+      // The map's: the orbs' ripple repaints the strip on its own.
+      if (e.key === 'map') blits += 1
       return { value: {} }
     })
     const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })

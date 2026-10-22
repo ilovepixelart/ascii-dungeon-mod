@@ -8,7 +8,7 @@ import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
-import { beltMenuBox, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels } from './hud'
+import { INSET, beltMenuBox, hasOrbs, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels, orbPhase } from './hud'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
@@ -142,9 +142,14 @@ const onHover = ($: EngineInterface, element: string, at: Pos | null) => {
   if (!sameRect(before, litIn(key))) $.ui.invalidate('ui.render')
 }
 
-/** The strip as Raster cells, what the pointer is over lit. */
+/** The strip as last drawn, for the orbs' ripple to repaint: its size and the boxes over it; none without the strip. */
+let stripShown: { columns: number; rows: number; boxes: readonly OverlayBox[] } | null = null
+/** The orbs' ripple as last painted. */
+let ripple = 0
+
+/** The strip as Raster cells, the orbs at the ripple's phase, what the pointer is over lit. */
 const stripCells = (g: Game, width: number, boxes: readonly OverlayBox[]) => {
-  const c = hudPixels(g, width, boxes)
+  const c = hudPixels(g, width, boxes, ripple)
   return canvasCells({ ...c, px: litWindow('hud', c.px, hudHot(g, width, boxes), width, false) })
 }
 
@@ -592,12 +597,34 @@ const ambientTick = async ($: EngineInterface) => {
     return
   }
   const g = normalize(await read($, game))
+  rippleTick($, g, now)
   const next = ambientAt(now, lastActive, g.where === 'town')
   if (next.bob === shown.bob && next.shimmer === shown.shimmer) return
   shown = next
   const size = mapSize
   const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
   await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit), size)
+}
+
+/** A ripple's repaint on its way to the host: one at a time, so a slow host is never sent a queue of them. */
+let isRippling = false
+
+/** Repaints the strip when the orbs' ripple moves on a phase: the strip alone, its numbers still where they were, sent
+ * without holding up the idle timer. A strip the host will not take (a window over it, the pane resized) holds still
+ * till the pane draws it again. */
+const rippleTick = ($: EngineInterface, g: Game, now: number) => {
+  const strip = stripShown
+  if (strip === null || isRippling || !hasOrbs(strip.columns - 2 * INSET) || orbPhase(now) === ripple) return
+  ripple = orbPhase(now)
+  isRippling = true
+  void $.ui.blit({ requestId: PANE, key: 'hud', cells: stripCells(g, strip.columns, strip.boxes), columns: strip.columns, rows: strip.rows })
+    .catch(() => ({ deny: 'failed' }))
+    .then(painted => {
+      if (painted.deny !== undefined) stripShown = null
+    })
+    .finally(() => {
+      isRippling = false
+    })
 }
 
 /** The time, for the idle motion's bookkeeping; a host without a clock leaves the last known time standing. */
@@ -690,6 +717,7 @@ const pause = async ($: EngineInterface) => {
   isFalling = false
   ambientTimer?.cancel()
   ambientTimer = null
+  stripShown = null
 }
 
 /** A clip to play: the game's own or one it mixed, its name, and its gain in the mix. */
@@ -2044,6 +2072,7 @@ const mapView = (p: Pane, l: Layout) => {
 /** Under the map: the pixel strip with its click layer, or the status and the foe as text. */
 const stripView = (p: Pane, l: Layout) => {
   const { e, g, Box, Raster, Client } = p
+  stripShown = l.hasHud && Raster !== undefined ? { columns: e.props.bodyColumns, rows: l.hudRows, boxes: l.menuBoxes } : null
   if (!l.hasHud || Raster === undefined) {
     return (
       <Box flexDirection="column">

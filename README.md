@@ -50,7 +50,7 @@ fullscreen layout (`/tui fullscreen`).
 | 49 rows or taller | every window whole with its keys; a shorter pane scrolls, and says by how much on its top row |
 
 With the mouse: click the map to walk there (a foe, to charge it), and on the strip click the portrait for the
-inventory, the HP and XP bars for the character sheet, the gear for settings, the portal to go to town, a belt slot to
+inventory, the HP and XP bars (or orbs) for the character sheet, the gear for settings, the portal to go to town, a belt slot to
 drink, and the gold and depth line for the log. Every window lists its keys under it, and `c` closes it.
 
 As text, the keys are `i` inventory, `c` character, `a` attack, `p` potion, `w` explore, `d` descend, `t` portal,

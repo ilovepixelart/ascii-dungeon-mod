@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { INSET } from './hud'
+import { INSET, stripLeft } from './hud'
 
 const PANE = { plugin: 'ascii-dungeon', component: 'Pane', requestId: 'dungeon', props: { title: 'Dungeon', isFocused: true, bodyColumns: 110, placement: 'dock', scroll: { offset: 0, bodyRows: 80 }, view: {} } } as const
 
@@ -22,7 +22,7 @@ test('a blow whose map is refused leaves the idle motion running once the window
   await $.tool.call({ tool: 'Edit', file_path: '/src/a.ts', old_string: 'a', new_string: 'b' })
   await clock.advance(3000)
   // The bag opened from the strip's portrait, a failing call's blow landing under it, then the bag closed.
-  const portrait = { x: INSET + 5, y: Math.floor((INSET + 5) / 2) }
+  const portrait = { x: INSET + stripLeft(PANE.props.bodyColumns - 2 * INSET) + 5, y: Math.floor((INSET + 5) / 2) }
   await ui.pointer({ type: 'down', ...portrait, button: 'left', in: 'hud-clicks' })
   await ui.pointer({ type: 'up', ...portrait, button: 'left', in: 'hud-clicks' })
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()

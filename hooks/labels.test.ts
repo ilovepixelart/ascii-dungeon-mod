@@ -55,7 +55,8 @@ describe('the windows\' labels', () => {
   test('the strip says its gold, its depth and its belt\'s counts as text', async () => {
     const g = { ...newGame(4), gold: 214, depth: 7, belt: [{ kind: 'health' as const, tiers: [3, 0, 0] as [number, number, number] }, null, null, null, null] }
     const words = hudBoxes(g, 111, []).filter(b => b.role === 'label').map(b => b.lines[0]!.map(r => r.text).join(''))
-    expect(words.slice(2)).toEqual(['3', '214', '7'])
+    // After the HP and the level, on bars or orbs: the slot's count, the gold and the depth.
+    expect(words.slice(-3)).toEqual(['3', '214', '7'])
   })
 })
 

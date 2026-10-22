@@ -104,9 +104,6 @@ export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number
   if (slot === null || slot === undefined || tier === undefined) return
   art(c, consumableIcon(slot.kind, tier), x + 1, y + 1)
   for (let p = 1; p < tier; p += 1) put(c, x + 1 + 2 * (p - 1), y + 1, TIER_INK)
-  // The count's badge: the slot's ground under its text, cut into the icon's corner.
-  const count = String(slot.tiers[tier - 1])
-  fill(c, x + BELT_SLOT_W - 1 - count.length, onCell(y + 6), count.length, 2, SLOT_BG)
 }
 
 /** The belt at x, y: a slot a kind, as `beltSlot` draws it. */
@@ -127,7 +124,18 @@ export const beltCounts = (g: Game, slotX: (i: number) => number, y: number): Ov
     const tier = activeTier(slot)
     if (slot === null || slot === undefined || tier === undefined) return []
     const text = String(slot.tiers[tier - 1])
-    return [artLabel(text, slotX(i) + BELT_SLOT_W - 1 - text.length, onCell(y + 6), INK.white, SLOT_BG)]
+    const x = slotX(i) + BELT_SLOT_W - 1 - text.length
+    const row = onCell(y + 6)
+    // Clear of the icon: each digit's cell on the icon's own two pixels under it, as near as one ground shows them; its
+    // ink dark or light by them all, so the number reads over a pale icon or a dark one.
+    const icon = consumableIcon(slot.kind, tier)
+    const pixel = (px: number, py: number) => {
+      const k = icon[py - y - 1]?.[px - slotX(i) - 1]
+      return k === undefined || k === '.' ? SLOT_BG : (PAL[k] ?? SLOT_BG)
+    }
+    const grounds = [...text].map((_, d) => mix(pixel(x + d, row), pixel(x + d, row + 1), 0.5))
+    const ink = inkOn(grounds.reduce((a, b) => mix(a, b, 0.5)))
+    return [{ ...artLabel(text, x, row, ink, grounds[0]!), lines: [[...text].map((ch, d) => ({ text: ch, color: ink, bg: grounds[d]!, bold: true }))] }]
   })
 export const beltCountsAt = (g: Game, x0: number, y: number) => beltCounts(g, i => x0 + i * BELT_STEP, y)
 

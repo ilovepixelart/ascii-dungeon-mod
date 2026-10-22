@@ -69,10 +69,10 @@ describe('each rule speaks up when broken', () => {
   test('a stash over its size, and a stashed item that is also in the bag', async () => {
     const item = { ...g.gear.weapon!, id: 900 }
     const ten = Array.from({ length: 10 }, (_, i) => ({ ...item, id: 900 + i }))
-    expect(broke({ ...g, stashed: ten })).not.toContain('stash within its size')
-    expect(broke({ ...g, stashed: [...ten, { ...item, id: 950 }] })).toContain('stash within its size')
-    expect(broke({ ...g, stashed: [item] })).not.toContain('unique item ids')
-    expect(broke({ ...g, bag: [item], stashed: [item] })).toContain('unique item ids')
+    expect(broke({ ...g, stashed: [ten] })).not.toContain('stash within its size')
+    expect(broke({ ...g, stashed: [[...ten, { ...item, id: 950 }]] })).toContain('stash within its size')
+    expect(broke({ ...g, stashed: [[item]] })).not.toContain('unique item ids')
+    expect(broke({ ...g, bag: [item], stashed: [[item]] })).toContain('unique item ids')
   })
 
   test("an opening played against a foe by a class that has none", async () => {
@@ -131,7 +131,7 @@ describe('each rule speaks up when broken', () => {
     const item = { ...g.gear.weapon!, id: 778, x: 0, y: 0 }
     expect(broke({ ...g, bag: [{ ...item, locked: true }] })).not.toContain('nothing both locked and junk')
     expect(broke({ ...g, bag: [{ ...item, locked: true, junk: true }] })).toContain('nothing both locked and junk')
-    expect(broke({ ...g, stashed: [{ ...item, locked: true, junk: true }] })).toContain('nothing both locked and junk')
+    expect(broke({ ...g, stashed: [[{ ...item, locked: true, junk: true }]] })).toContain('nothing both locked and junk')
   })
 
   test('uniques slain only in bands reached', async () => {
@@ -232,20 +232,20 @@ describe('each rule speaks up when broken', () => {
   test('a set piece not Epic, with a trigger, or not one of its set', async () => {
     const rule = 'set pieces Epic, untriggered, each of its set by base and name'
     const piece = (over: Partial<ReturnType<typeof plainItem>> = {}) => ({ ...plainItem(g, 'plate', 'epic'), name: 'Oathbound Plate', set: 'oathbound' as const, ...over })
-    expect(broke({ ...g, stashed: [piece()] })).not.toContain(rule)
-    expect(broke({ ...g, stashed: [piece({ rarity: 'rare' })] })).toContain(rule)
-    expect(broke({ ...g, stashed: [piece({ trigger: 'thorns' })] })).toContain(rule)
-    expect(broke({ ...g, stashed: [piece({ name: 'Oathbound Helm' })] })).toContain(rule)
-    expect(broke({ ...g, stashed: [piece({ set: 'archivist' })] })).toContain(rule)
+    expect(broke({ ...g, stashed: [[piece()]] })).not.toContain(rule)
+    expect(broke({ ...g, stashed: [[piece({ rarity: 'rare' })]] })).toContain(rule)
+    expect(broke({ ...g, stashed: [[piece({ trigger: 'thorns' })]] })).toContain(rule)
+    expect(broke({ ...g, stashed: [[piece({ name: 'Oathbound Helm' })]] })).toContain(rule)
+    expect(broke({ ...g, stashed: [[piece({ set: 'archivist' })]] })).toContain(rule)
     expect(broke({ ...g, heirloom: piece({ rarity: 'rare' }) })).toContain(rule)
   })
 
   test('a trigger on a tier that rolls none, or one unknown', async () => {
     const rule = 'triggers only on Rares and Epics, each a known one'
     const item = (rarity: 'rare' | 'epic' | 'uncommon' | 'legendary', trigger: string) => ({ ...plainItem(g, 'sword', rarity), trigger: trigger as never })
-    expect(broke({ ...g, bag: [item('rare', 'thorns')], stashed: [item('epic', 'bulwark')] })).not.toContain(rule)
+    expect(broke({ ...g, bag: [item('rare', 'thorns')], stashed: [[item('epic', 'bulwark')]] })).not.toContain(rule)
     expect(broke({ ...g, bag: [item('uncommon', 'thorns')] })).toContain(rule)
-    expect(broke({ ...g, stashed: [item('legendary', 'thorns')] })).toContain(rule)
+    expect(broke({ ...g, stashed: [[item('legendary', 'thorns')]] })).toContain(rule)
     expect(broke({ ...g, gear: { ...g.gear, weapon: item('epic', 'wings') } })).toContain(rule)
     expect(broke({ ...g, heirloom: item('uncommon', 'leeching') })).toContain(rule)
   })

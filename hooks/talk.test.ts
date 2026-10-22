@@ -58,10 +58,10 @@ describe('what each says, from how the hero stands', () => {
     const item = { ...newGame(1).gear.weapon!, x: 0, y: 0 }
     const q = { kind: 'slay' as const, depth: 4, need: 8, have: 0 }
     expect(first(hero(), 'villager')).toMatch(/stash/)
-    expect(first(hero({ stashed: [item] }), 'villager')).toMatch(/elder/)
-    expect(first(hero({ stashed: [item], quest: q }), 'villager')).toMatch(/smith/)
-    expect(first(hero({ stashed: [item], quest: q, reforges: 1 }), 'villager')).toMatch(/mystic/)
-    expect(first(hero({ stashed: [item], quest: q, reforges: 1, fortune: { kind: 'luck', depth: 4 } }), 'villager')).toBe('"A pack from the road, sealed. Care to try your luck?"')
+    expect(first(hero({ stashed: [[item]] }), 'villager')).toMatch(/elder/)
+    expect(first(hero({ stashed: [[item]], quest: q }), 'villager')).toMatch(/smith/)
+    expect(first(hero({ stashed: [[item]], quest: q, reforges: 1 }), 'villager')).toMatch(/mystic/)
+    expect(first(hero({ stashed: [[item]], quest: q, reforges: 1, fortune: { kind: 'luck', depth: 4 } }), 'villager')).toBe('"A pack from the road, sealed. Care to try your luck?"')
   })
 
   test('the dog, by how often it has been petted', async () => {

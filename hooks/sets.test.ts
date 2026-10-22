@@ -37,9 +37,9 @@ describe('the pieces', () => {
   test('a piece the hero has nowhere comes first; with all three owned, any', async () => {
     const g = plainHero(3)
     const [blade, plate] = [piece(g, 'oathbound', 0), piece(g, 'oathbound', 1)]
-    expect(setPiece({ ...g, bag: [{ ...blade, x: 0, y: 0 }], stashed: [plate] }, 'oathbound').name).toBe('Oathbound Helm')
+    expect(setPiece({ ...g, bag: [{ ...blade, x: 0, y: 0 }], stashed: [[plate]] }, 'oathbound').name).toBe('Oathbound Helm')
     const helm = piece(g, 'oathbound', 2)
-    const all = { ...g, gear: { ...g.gear, helm }, bag: [{ ...blade, x: 0, y: 0 }], stashed: [plate] }
+    const all = { ...g, gear: { ...g.gear, helm }, bag: [{ ...blade, x: 0, y: 0 }], stashed: [[plate]] }
     const names = new Set(Array.from({ length: 40 }, (_, depth) => setPiece({ ...all, depth: depth + 1 }, 'oathbound').name))
     expect(names.size).toBeGreaterThan(1)
   })

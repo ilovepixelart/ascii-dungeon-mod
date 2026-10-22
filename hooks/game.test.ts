@@ -1293,20 +1293,20 @@ describe('the stash', () => {
     const [sword, helm] = g.bag
     const stored = apply(g, { kind: 'store' })
     expect(stored.bag.map(i => i.id)).toEqual([helm!.id])
-    expect(stored.stashed.map(i => i.id)).toEqual([sword!.id])
+    expect(stored.stashed.map(t => t.map(i => i.id))).toEqual([[sword!.id]])
     expect(stored.log.at(-1)).toBe('You store the Short Sword in your stash.')
     const back = apply(stored, { kind: 'retrieve', id: sword!.id })
-    expect(back.stashed).toEqual([])
+    expect(back.stashed).toEqual([[]])
     expect(back.bag.map(i => i.id).sort()).toEqual([sword!.id, helm!.id].sort())
     expect(back.log.at(-1)).toBe('You take the Short Sword from your stash.')
   })
 
   test('holds ten items at most; without a selection, or outside town, it stores nothing', async () => {
     const g = inTown()
-    const full = { ...g, stashed: Array.from({ length: 10 }, () => plainItem(g, 'boots')) }
+    const full = { ...g, stashed: [Array.from({ length: 10 }, () => plainItem(g, 'boots'))] }
     const refused = apply(full, { kind: 'store' })
-    expect([refused.bag.length, refused.stashed.length]).toEqual([2, 10])
-    expect(refused.log.at(-1)).toBe('Your stash is full: 10 items.')
+    expect([refused.bag.length, refused.stashed[0]!.length]).toEqual([2, 10])
+    expect(refused.log.at(-1)).toBe('Your stash is full.')
     expect(apply({ ...g, cursor: null }, { kind: 'store' }).log.at(-1)).toBe('Select an item in your bag to store.')
     const away = apply({ ...newGame(4), cursor: newGame(4).bag[0]?.id ?? null }, { kind: 'store' })
     expect(away.log.at(-1)).toBe('Your stash is in town.')
@@ -1314,11 +1314,11 @@ describe('the stash', () => {
 
   test('an item with no room in the bag stays in the stash', async () => {
     const stored = apply(inTown(), { kind: 'store' })
-    const swordId = stored.stashed[0]!.id
+    const swordId = stored.stashed[0]![0]!.id
     // Twelve 2 by 2 boots tile the 8 by 6 bag.
     const full = Array.from({ length: 12 }, (_, i) => ({ ...plainItem(stored, 'boots'), x: (i % 4) * 2, y: Math.floor(i / 4) * 2 }))
     const kept = apply({ ...stored, bag: full }, { kind: 'retrieve', id: swordId })
-    expect(kept.stashed.map(i => i.id)).toEqual([swordId])
+    expect(kept.stashed.map(t => t.map(i => i.id))).toEqual([[swordId]])
     expect(kept.bag).toHaveLength(12)
     expect(kept.log.at(-1)).toBe('No room in your bag for the Short Sword.')
   })
@@ -1332,7 +1332,7 @@ describe('the stash', () => {
     const stored = apply(inTown(), { kind: 'store' })
     expect(normalize(JSON.parse(JSON.stringify(stored))).stashed).toEqual(stored.stashed)
     const { stashed: _, ...older } = stored
-    expect(normalize(older as Game).stashed).toEqual([])
+    expect(normalize(older as Game).stashed).toEqual([[]])
   })
 })
 

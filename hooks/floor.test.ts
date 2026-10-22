@@ -62,19 +62,19 @@ describe('a prize with the bag full', () => {
   test('a unique\'s goes to the stash in town, said; with the stash full too, it lies where it fell', async () => {
     const unique = { glyph: 'D', name: 'Emberjaw', unique: 'ember' as const, champion: undefined }
     const toStash = slay(facing(unique))
-    expect([toStash.stashed.length, toStash.floor ?? []]).toEqual([1, []])
+    expect([toStash.stashed[0]!.length, toStash.floor ?? []]).toEqual([1, []])
     expect(toStash.log.some(l => l.endsWith('Your bag is full: it waits in your stash in town.'))).toBe(true)
     const crowded = facing(unique)
-    const stashFull = { ...crowded, stashed: Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring')) }
+    const stashFull = { ...crowded, stashed: [Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring'))] }
     const toFloor = slay(stashFull)
-    expect([toFloor.stashed.length, toFloor.floor?.length]).toEqual([STASH_SIZE, 1])
+    expect([toFloor.stashed[0]!.length, toFloor.floor?.length]).toEqual([STASH_SIZE, 1])
     expect(toFloor.log.some(l => l.endsWith('Your bag and your stash are full: it lies where it fell.'))).toBe(true)
   })
 
   test('work\'s cache, a push\'s, goes to the stash too: work is never paid with nothing', async () => {
     const g = { ...plainHero(5), depth: 7, deepest: 7, bag: fullBag() }
     const after = apply(g, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' })
-    expect(after.stashed).toHaveLength(1)
+    expect(after.stashed[0]).toHaveLength(1)
     expect(after.bag).toHaveLength(BAG_W)
   })
 })
@@ -82,7 +82,7 @@ describe('a prize with the bag full', () => {
 describe('the floor, at its edges', () => {
   test('a cache earned in town with the bag and the stash full waits by the portal on the depth below, on its floor', async () => {
     const down = { ...plainHero(5), ...arrive(5, 4), depth: 4, deepest: 4 }
-    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring')) }
+    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: [Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring'))] }
     const after = apply(inTown, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' })
     expect(after.floor).toHaveLength(1)
     const lying = after.floor![0]!
@@ -93,7 +93,7 @@ describe('the floor, at its edges', () => {
 
   test('that cache, room made, is picked up stepping back through the portal, and by an answer finished in town', async () => {
     const down = { ...plainHero(5), ...arrive(5, 4), depth: 4, deepest: 4 }
-    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring')) }
+    const inTown = { ...apply(down, { kind: 'portal' }), bag: fullBag(), stashed: [Array.from({ length: STASH_SIZE }, (_, i) => plainItem({ nextId: 4000 + i }, 'ring'))] }
     const earned = { ...apply(inTown, { kind: 'outcome', ok: true, what: 'Bash', work: 'push' }), bag: [] }
     const cache = earned.floor![0]!.item
     const back = apply(earned, { kind: 'portal' })

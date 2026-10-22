@@ -99,6 +99,9 @@ const toVersion12 = (boons: unknown): Game['boons'] =>
     ? undefined
     : Object.fromEntries(Object.entries(boons).flatMap(([work, depth]) => (typeof depth === 'number' ? [[work, [depth]]] : [])))
 
+/** Version 13: the stash has tabs; what one list held is its first. */
+const toVersion13 = (stashed: unknown): Game['stashed'] => [Array.isArray(stashed) ? (stashed as Item[]) : []]
+
 /** The save's fields brought to the current shape, each migration it is behind on run, stamped current. */
 const reshaped = (game: Game, version: number): Game => {
   let g: Game = { ...newGame(game.seed), ...game }
@@ -107,6 +110,7 @@ const reshaped = (game: Game, version: number): Game => {
   if (version < 3) g = toVersion3({ ...g, gear: game.gear ?? {}, bag: game.bag ?? [] })
   if (version < 7) g = { ...g, belt: toVersion7(g.belt as (LegacySlot | BeltSlot | null)[]) }
   if (version < 12) g = { ...g, boons: toVersion12(g.boons as unknown) }
+  if (version < 13) g = { ...g, stashed: toVersion13(game.stashed as unknown) }
   // Version 4 added the town (`where`, `portal`): the new-game defaults spread above put an older save in the dungeon.
   // A view that no longer exists (4 was briefly a pixel view) opens on the pixel view.
   if (![1, 2, 3].includes(g.zoom)) g = { ...g, zoom: 3 }

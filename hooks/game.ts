@@ -12,6 +12,8 @@ import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed } from './talents'
 import { MARKS, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
+import { STASH_SIZE, putIn, stashRoom, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
+import type { StashTab } from './stash'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
 import type { TownPerson, TownSpot } from './town'
@@ -49,7 +51,9 @@ export type Action =
   | { kind: 'buy'; ware: Ware }
   | { kind: 'reforge'; slot: Slot }
   | { kind: 'temper'; slot: Slot }
-  | { kind: 'store' }
+  /** The selected bag item into the stash: its own special tab when it has one, else plain tab `tab` (the first unless said) or the first with room. */
+  | { kind: 'store'; tab?: number }
+  | { kind: 'buyTab'; tab: StashTab }
   | { kind: 'fortune' }
   | { kind: 'gamble' }
   | { kind: 'tradeIn' }
@@ -653,9 +657,10 @@ const stashOrLeave = (g: Game, item: Item, at: Pos) => {
  * stash in town while it has room, else onto the floor at `at`. Said by `said` with the item named, then where it went. */
 const keepPrize = (g: Game, item: Item, at: Pos, said: (named: string) => string) => {
   const told = said(`${item.name} (${RARITY_NAME[item.rarity]})`)
+  const tab = whereToStore(g, item)
   if (stash(g, item)) say(g, told)
-  else if (g.stashed.length < STASH_SIZE) {
-    g.stashed = [...g.stashed, item]
+  else if (tab !== undefined) {
+    putIn(g, item, tab)
     say(g, `${told} Your bag is full: it waits in your stash in town.`)
   } else if (g.where === 'town') {
     // Found in town: it waits on the floor of the depth the portal leads back to, by the portal's tile.
@@ -1348,6 +1353,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   keepOld: g => say(g, 'The smith is in town.'),
   temper: g => say(g, 'The smith is in town.'),
   store: g => say(g, 'Your stash is in town.'),
+  buyTab: g => say(g, 'Your stash is in town.'),
   fortune: g => say(g, 'The mystic is in town.'),
   gamble: g => say(g, 'The villager is in town.'),
   tradeIn: g => say(g, 'The guard is in town.'),
@@ -1565,30 +1571,44 @@ const tradeIn = (g: Game) => {
   say(g, `The guard takes your ${three.map(i => i.name).join(', ')} and hands you ${item.name} (${RARITY_NAME[item.rarity]}).`)
 }
 
-/** How many items the town stash holds. */
-export const STASH_SIZE = 10
+export { STASH_SIZE }
 
-/** Moves the selected bag item into the stash, room allowing. */
-const store = (g: Game) => {
+/** Moves the selected bag item into the stash (`whereToStore`), room allowing; said with the tab when not `preferred`. */
+const store = (g: Game, preferred = 0) => {
   const item = selected(g)
+  const tab = item === undefined ? undefined : whereToStore(g, item, preferred)
   if (item === undefined) say(g, 'Select an item in your bag to store.')
-  else if (g.stashed.length >= STASH_SIZE) say(g, `Your stash is full: ${STASH_SIZE} items.`)
+  else if (tab === undefined) say(g, 'Your stash is full.')
   else {
     take(g, item.id)
-    g.stashed = [...g.stashed, item]
-    say(g, `You store the ${item.name} in your stash.`)
+    putIn(g, item, tab)
+    say(g, `You store the ${item.name} in your stash${tab === preferred ? '' : `, on ${tabName(tab)}`}.`)
   }
 }
 
 /** Moves a stashed item back into the bag, where it fits. */
 const retrieve = (g: Game, id: number) => {
-  const item = g.stashed.find(i => i.id === id)
+  const item = stashedItems(g).find(i => i.id === id)
   if (item === undefined) return
   if (!stash(g, item)) say(g, `No room in your bag for the ${item.name}.`)
   else {
-    g.stashed = g.stashed.filter(i => i.id !== id)
+    takeOut(g, id)
     say(g, `You take the ${item.name} from your stash.`)
   }
+}
+
+/** Buys a tab of the stash, `whyNotBuy` allowing; said either way. */
+const buyTab = (g: Game, tab: StashTab) => {
+  const why = whyNotBuy(g, tab)
+  if (why !== undefined) {
+    say(g, why === 'bought' ? `You have ${tabName(tab)} already.` : g.gold < tabPrice(tab) && why.endsWith(' gold') ? `${capitalized(tabName(tab))} costs ${tabPrice(tab)} gold.` : `${capitalized(why)}.`)
+    return
+  }
+  g.gold -= tabPrice(tab)
+  if (tab === 'sets') g.stashSets = []
+  else if (tab === 'legends') g.stashLegends = []
+  else g.stashed = [...g.stashed, []]
+  say(g, `You buy ${tabName(tab)} of your stash for ${tabPrice(tab)} gold.`)
 }
 
 
@@ -1690,7 +1710,7 @@ const visit = (g: Game, spot: TownSpot) => {
     say(g, g.fortune !== null ? 'The mystic: "Your fortune holds until you change depth."' : `The mystic gazes into the crystal. "A fortune costs ${fortuneCost(g)} gold."`)
   } else if (spot === 'stash') {
     g.panel = 'stash'
-    say(g, `Your stash holds ${g.stashed.length} of ${STASH_SIZE} items.`)
+    say(g, `Your stash holds ${stashedItems(g).length} of ${stashRoom(g)} items.`)
   } else {
     g.panel = spot
     say(g, TOWN_TALK[spot])
@@ -1739,7 +1759,8 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   reforge: (g, a) => reforge(g, a.slot),
   keepOld: g => keepOld(g),
   temper: (g, a) => temper(g, a.slot),
-  store: g => store(g),
+  store: (g, a) => store(g, a.tab),
+  buyTab: (g, a) => buyTab(g, a.tab),
   fortune: g => mystic(g),
   gamble: g => gamble(g),
   tradeIn: g => tradeIn(g),
@@ -1872,15 +1893,31 @@ export const whyNotRetire = (g: Game, slot: Slot) => {
   return g.gear[slot] === undefined ? 'Choose a piece you wear to pass down.' : undefined
 }
 
-/** The hero retired: counted in the codex, the piece in `slot` the heirloom, and a new hero to choose on the start screen. */
+/** The town's stash of `game`, its tabs and what they hold, as a new game keeps it. */
+const townStash = (game: Game): Pick<Game, 'stashed' | 'stashSets' | 'stashLegends'> => ({ stashed: game.stashed, stashSets: game.stashSets, stashLegends: game.stashLegends })
+
+/** The hero retired: counted in the codex, the piece in `slot` the heirloom, the stash kept, and a new hero to choose on the start screen. */
 const retiredFrom = (g: Game, slot: Slot): Game => {
   const codex = g.codex ?? firstCodex(g)
-  return { ...newGame(g.seed, g.cls), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
+  return { ...newGame(g.seed, g.cls), ...townStash(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
 }
 
-/** A new hero for the save of `game`: its codex and heirloom kept, the heirloom worn when the class can, else in the bag. */
+/** The stash's items given ids of the new game `g`, from its next on: the old hero's ids are not the new one's. */
+const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegends'>) => {
+  const fresh = (items: readonly Item[]) =>
+    items.map(item => {
+      g.nextId += 1
+      return { ...item, id: g.nextId - 1 }
+    })
+  g.stashed = kept.stashed.map(fresh)
+  if (kept.stashSets !== undefined) g.stashSets = fresh(kept.stashSets)
+  if (kept.stashLegends !== undefined) g.stashLegends = fresh(kept.stashLegends)
+}
+
+/** A new hero for the save of `game`: its codex, stash and heirloom kept, the heirloom worn when the class can, else in the bag. */
 const newHero = (game: Game, cls: HeroClass): Game => {
   const g: Game = { ...newGame(game.seed, cls), codex: game.codex ?? firstCodex(normalize(game)) }
+  restash(g, normalize(game))
   if (game.heirloom === undefined) return g
   const item = { ...game.heirloom, id: g.nextId }
   g.heirloom = game.heirloom

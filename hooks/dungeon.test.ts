@@ -1542,9 +1542,9 @@ test('in the merchant\'s window a clicked ware shows its card, a second click it
   await ui.unmount()
 })
 
-/** A window's own text boxes in its click layer: the title bar's (its title, tabs and gold) and the labels on its art
- * (prices, counts) left out. */
-const ownBoxes = <B extends { role?: string }>(boxes: readonly B[]) => boxes.filter(b => b.role !== 'title' && b.role !== 'gold' && b.role !== 'label')
+/** A window's own text boxes in its click layer: the title bar's (its title, tabs and gold), its pages' tabs and the
+ * labels on its art (prices, counts) left out. */
+const ownBoxes = <B extends { role?: string }>(boxes: readonly B[]) => boxes.filter(b => b.role !== 'title' && b.role !== 'gold' && b.role !== 'tabs' && b.role !== 'label')
 /** The text of a pixel window's own boxes, by the window's click layer: each box a list of its lines. */
 const boxTexts = async (ui: PaneUi, key: string) =>
   ownBoxes(((await ui.find({ type: 'Client', key }))?.props.props as { boxes: { role?: string; lines: { text: string }[][] }[] }).boxes).map(b => b.lines.map(l => l.map(r => r.text).join('')))

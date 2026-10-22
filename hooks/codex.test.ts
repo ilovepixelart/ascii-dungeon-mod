@@ -41,10 +41,10 @@ describe('what the codex records', () => {
     const g = plainHero(3)
     const held = { ...g, bag: [duck(950)] }
     expect(recorded(EMPTY_CODEX, g, held).legendaries).toEqual([LEGENDARIES[1]!.name])
-    expect(recorded(EMPTY_CODEX, held, { ...held, bag: [], stashed: [duck(950)] }).legendaries).toEqual([])
+    expect(recorded(EMPTY_CODEX, held, { ...held, bag: [], stashed: [[duck(950)]] }).legendaries).toEqual([])
     expect(recorded(EMPTY_CODEX, held, { ...held, bag: [], gear: { ...held.gear, amulet: duck(950) } }).legendaries).toEqual([])
-    const kept = { ...g, stashed: [duck(950)] }
-    expect(recorded(EMPTY_CODEX, kept, { ...kept, stashed: [], bag: [duck(950)] }).legendaries).toEqual([])
+    const kept = { ...g, stashed: [[duck(950)]] }
+    expect(recorded(EMPTY_CODEX, kept, { ...kept, stashed: [[]], bag: [duck(950)] }).legendaries).toEqual([])
     expect(recorded(EMPTY_CODEX, g, { ...g, bag: [{ ...plainItem({ nextId: 951 }, 'amulet', 'epic'), name: 'Rubber Duck of Insight' }] }).legendaries).toEqual([])
   })
 
@@ -92,7 +92,7 @@ describe('what the codex records', () => {
 
 describe('a save kept before the codex', () => {
   test('begins it from what the hero did: uniques by band, every big boss up to the deepest boss slain, Legendaries owned, depth, level and falls', async () => {
-    const g: Game = { ...plainHero(3), uniquesSlain: [0, 2, 5], bossSlain: 25, deepest: 27, level: 19, deaths: 6, bag: [duck(953)], stashed: [duck(954)] }
+    const g: Game = { ...plainHero(3), uniquesSlain: [0, 2, 5], bossSlain: 25, deepest: 27, level: 19, deaths: 6, bag: [duck(953)], stashed: [[duck(954)]] }
     expect(firstCodex(g)).toEqual({
       uniques: ['bones', 'rot'],
       bigs: ['queen', 'lich'],
@@ -142,7 +142,7 @@ describe('sets made whole', () => {
     const after = apply(facing(UNIQUE, 23, FOUR, full), hit)
     const paid = after.log.find(l => l.startsWith('Every unique is slain. The codex pays: '))
     expect(paid?.endsWith('Your bag is full: it waits in your stash in town.')).toBe(true)
-    expect(after.stashed.some(i => paid!.includes(i.name))).toBe(true)
+    expect(after.stashed[0]!.some(i => paid!.includes(i.name))).toBe(true)
   })
 })
 

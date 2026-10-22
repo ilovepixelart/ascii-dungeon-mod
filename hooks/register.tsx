@@ -39,8 +39,9 @@ import { heroTabsHot } from './herotabs'
 import { canvasCells } from './canvas'
 import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeHot, forgeOverlay, forgePixels, nextWorn, whyNotReforge, whyNotTemper } from './forge'
 import type { ForgeUi } from './forge'
-import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, nextStored, whyNotStore, whyNotTake } from './chest'
+import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, idleOn, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
+import { stashRoom, stashedItems, tabItems, whyNotBuy } from './stash'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
@@ -1585,24 +1586,30 @@ const forgeWindow = (p: Pane) => {
 const stashWindow = (p: Pane) => {
   const { redraw, run, g, Button, press } = p
   const boxes = chestOverlay(g, chestUi)
-  const stored = g.stashed.find(i => i.id === chestUi.stored)
+  const stored = stashedItems(g).find(i => i.id === chestUi.stored)
   const take = async () => {
     if (stored === undefined) return
-    chestUi = CHEST_UI_IDLE
+    chestUi = idleOn(chestUi)
     await run({ kind: 'retrieve', id: stored.id }, true)
   }
   const onBag = (action: Action) => async () => {
-    chestUi = CHEST_UI_IDLE
+    chestUi = idleOn(chestUi)
     await run(action, true)
   }
+  const forSale = tabItems(g, chestUi.tab) === undefined
   return pixelWindow(p, 'chest', CHEST_H, chestPixels(g, chestUi, boxes), boxes, [
-    <Button key="chest-store" label="Store" hotkey="s" plain dimColor={g.cursor === null || chestUi.stored !== null || whyNotStore(g) !== undefined} onPress={onBag({ kind: 'store' })} />,
+    <Button key="chest-store" label="Store" hotkey="s" plain dimColor={g.cursor === null || chestUi.stored !== null || whyNotStore(g, g.bag.find(i => i.id === g.cursor)!, chestUi.tab) !== undefined} onPress={onBag(storeOn(chestUi))} />,
     <Button key="chest-take" label="Take" hotkey="t" plain dimColor={stored === undefined || whyNotTake(g, stored) !== undefined} onPress={take} />,
     <Button key="chest-next" label="Next in the chest" hotkey="w" plain onPress={() => {
       chestUi = nextStored(g, chestUi)
       redraw()
     }} />,
     <Button key="chest-bag" label="Next item" hotkey="n" plain onPress={onBag({ kind: 'cycle' })} />,
+    <Button key="chest-tab" label="Next tab" hotkey="p" plain onPress={() => {
+      chestUi = nextTab(chestUi)
+      redraw()
+    }} />,
+    ...(forSale ? [<Button key="chest-buy" label="Buy tab" hotkey="b" plain dimColor={whyNotBuy(g, chestUi.tab) !== undefined} onPress={() => run({ kind: 'buyTab', tab: chestUi.tab }, true)} />] : []),
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
   ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi), !chestUi.menu)
 }
@@ -1839,17 +1846,17 @@ const textStash = ({ g, Box, Text, Button, press }: Pane) => {
     <Box flexDirection="column">
       <Text>
         <Text bold>Your stash</Text>
-        <Text dimColor>{`  ${g.stashed.length} of ${STASH_SIZE} items, kept in town`}</Text>
+        <Text dimColor>{`  ${stashedItems(g).length} of ${stashRoom(g)} items, kept in town`}</Text>
       </Text>
       <Box flexDirection="row">
         {picked === undefined
           ? <Text dimColor>Your bag is empty.</Text>
-          : <Button key="store" plain dimColor={g.stashed.length >= STASH_SIZE} onPress={press({ kind: 'store' })}>{'Store '}<Text color={RARITY_COLOR[picked.rarity]}>{picked.name}</Text></Button>}
+          : <Button key="store" plain dimColor={whyNotStore(g, picked) !== undefined} onPress={press({ kind: 'store' })}>{'Store '}<Text color={RARITY_COLOR[picked.rarity]}>{picked.name}</Text></Button>}
         {g.bag.length > 1 && <Text>{'  '}</Text>}
         {g.bag.length > 1 && <Button key="stash-next" label="Next bag item" plain onPress={press({ kind: 'cycle' })} />}
       </Box>
-      {g.stashed.length === 0 && <Text dimColor>Nothing stored yet.</Text>}
-      {g.stashed.map(item => (
+      {stashedItems(g).length === 0 && <Text dimColor>Nothing stored yet.</Text>}
+      {stashedItems(g).map(item => (
         <Button key={`retrieve-${item.id}`} plain onPress={press({ kind: 'retrieve', id: item.id })}>
           {'Take '}
           <Text color={RARITY_COLOR[item.rarity]}>{item.name}</Text>

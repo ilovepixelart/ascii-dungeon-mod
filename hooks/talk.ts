@@ -14,6 +14,7 @@ import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, 
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { BG, canvas } from './canvas'
 import { RARITY_NAME, SLOTS } from './items'
+import { stashedItems } from './stash'
 import { INK, SURFACE } from './ui/tokens'
 
 /** Whoever has a window of talk: the townsfolk but the merchant, the smith and the stash. */
@@ -84,7 +85,7 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
   },
   villager: g => {
     const pack = aside(`A sealed pack: ${gambleCost(g)} gold for an item of Uncommon or better, rarely an Epic or a Legendary.`)
-    return g.stashed.length === 0 ? [said('"Your stash by the square keeps things safe between trips."'), pack]
+    return stashedItems(g).length === 0 ? [said('"Your stash by the square keeps things safe between trips."'), pack]
       : g.quest === null && g.questsDone === 0 ? [said('"The elder pays well for a job done. Go and ask."'), pack]
       : !hasWorked(g) ? [said('"The smith can temper what you wear. Worth the gold."'), pack]
       : g.fortune === null ? [said('"The mystic in blue reads fortunes: luck, riches or insight."'), pack]

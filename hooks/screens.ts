@@ -1,6 +1,7 @@
 // Every interface the game draws, in many states: each window for every class and rarity, the strip, the shop, the
 // smith, the stash, settings, the start screen, the codex, retiring, every talent and mark, the recap and every
-// townsperson, each with the text boxes over it. Pure, for the assets audit, the pane size and the window previews.
+// townsperson, each with the text boxes over it. Pure, for the assets audit and the pane size; `kitted` is the hero
+// tools/shots/scenes.ts plays them with too.
 import type { Game, HeroClass, Rarity, Talent } from '../types'
 import { LOG_KEPT, apply, newGame } from './game'
 import { hudPixels } from './hud'
@@ -39,7 +40,7 @@ export type Shot = { name: string; px: string[][]; boxes: readonly OverlayBox[] 
 const shot = (name: string, px: string[][], boxes: readonly OverlayBox[] = []): Shot => ({ name, px, boxes: [...chromeBoxes(px), ...boxes] })
 
 /** A hero carrying one of every base of their class's pool, in each rarity in turn, the belt full. */
-const kitted = (cls: HeroClass, rarity: Rarity): Game => {
+export const kitted = (cls: HeroClass, rarity: Rarity): Game => {
   const g = { ...newGame(7, cls), gold: 999, points: 2, xp: 12 }
   const pool = BASES.filter(b => b.cls === undefined || b.cls === cls)
   let x = 0

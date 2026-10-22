@@ -78,8 +78,7 @@ Options in the plugin's config: `sound` (effects) and `music` (the town's tune),
 | `claude plugin validate .` | what the engine would refuse |
 | `bun tools/simulate.ts <out> --games 100 --steps 1000` | plays games through the rules, every invariant checked each step, and reports balance |
 | `bun tools/feel.ts 100 1000` | danger, pace and variety per class: deaths and close calls per 100 tool calls, quiet stretches, foe kinds |
-| `bun tools/windows.ts <out> [name...]` | every window of `hooks/screens.ts` as a PNG, its text boxes written in, for review |
-| `bun tools/ui.ts <out>` | the interface kit's tokens and pieces on one sheet |
+| `uv run --with pillow python tools/shots/shoot.py <out> [name...]` | every window as a real Claude Code session draws it: a copy of the mod in a private tmux, each scene of `tools/shots/scenes.ts` opened, captured cell for cell and painted as Ghostty shows it, into `<out>/gallery.html` |
 | `bun tools/readme.ts` | the README's pictures, into `docs/img/` |
 | `python3 tools/sounds.py` | builds the sound clips into `sounds/` and `hooks/clips.ts` |
 | `python3 tools/measure.py` | frames as a real terminal receives them, during `/dungeon-bench` |

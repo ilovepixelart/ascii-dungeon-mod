@@ -8,7 +8,7 @@ import {
   BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudHot, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
 import type { Gesture } from './window'
-import { BELT_SLOT_W, GRID, SLOT } from './canvas'
+import { BELT_SLOT_W, GRID, SLOT, SLOT_BG } from './canvas'
 import { MAP_W } from './map'
 import { INK } from './ui/tokens'
 import { CONSUMABLE_ICONS } from './icons'
@@ -511,10 +511,23 @@ test('a pixel stands between the portrait and the marks', async () => {
   expect(HEART_X - PORTRAIT).toBe(1)
 })
 
+test('a slot\'s count lies clear over its icon: the icon drawn whole under it, the count\'s cells on its pixels', async () => {
+  const width = 111 - 2 * INSET
+  const g = hero({ belt: [{ kind: 'health', tiers: [12, 0, 0] }, null, null, null, null] })
+  const c = hudContent(g, width)
+  const icon = CONSUMABLE_ICONS.health
+  // The icon's every pixel where its art has one, the count's corner included: no badge cut into it.
+  icon.forEach((row, y) => [...row].forEach((k, x) => {
+    if (k !== '.') expect(c.px[BELT_BELOW_Y + 1 + y]![beltSlotX(width, 0) + 1 + x]).toBe(PAL[k])
+  }))
+  const count = hudLabels(g, width + 2 * INSET).find(b => b.lines[0]!.map(r => r.text).join('') === '12')!
+  expect(count.lines[0]!.some(r => r.bg !== SLOT_BG)).toBe(true)
+})
+
 test('a slot counts the tier it uses next, as its icon and pips show it; the other tiers are not counted', async () => {
   const count = (tiers: [number, number, number]) => {
     const g = hero({ belt: [null, null, { kind: 'fury', tiers }, null, null] })
-    return hudLabels(g, 111).filter(b => b.y === 9).map(b => ({ text: b.lines[0]![0]!.text, x: b.x + 1 }))
+    return hudLabels(g, 111).filter(b => b.y === 9).map(b => ({ text: b.lines[0]!.map(r => r.text).join(''), x: b.x + 1 }))
   }
   // On the icon's bottom right, against the slot's frame; on the strip's row 20, the last whole cell inside the slot.
   const right = INSET + beltSlotX(111, 2) + BELT_SLOT_W - 1

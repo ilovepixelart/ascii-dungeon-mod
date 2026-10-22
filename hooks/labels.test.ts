@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { artLabel } from './pieces'
+import { artLabel, mix } from './pieces'
 import { shots } from './screens'
 import { hudBoxes } from './hud'
 import { newGame } from './world'
@@ -22,16 +22,22 @@ describe('the windows\' labels', () => {
   const all = shots()
   const said = (name: string) => all.find(s => s.name === name)!.boxes.filter(b => b.role === 'label').map(b => b.lines[0]!.map(r => r.text).join(''))
 
-  test('on every window, each label lies on a whole cell on plain ground, no pixel letters under it', async () => {
+  test('on every window, each label lies on a whole cell on the ground under it, no pixel letters under it', async () => {
     let seen = 0
     for (const s of all) {
       for (const b of s.boxes.filter(x => x.role === 'label' && x.bg !== undefined)) {
         seen += 1
         expect([s.name, Number.isInteger(b.y)]).toEqual([s.name, true])
         const row = (b.y + 1) * 2
-        // Each character's cell, the ground it is written on: its own (a bar's number, over fill and track) or the box's.
+        // Each character's cell, the ground it is written on: its own (a bar's number, over fill and track; a count, over
+        // its icon) or the box's. A text cell shows one ground for the two pixels it covers: theirs when they are one
+        // color, else halfway between them; so no pixel letters can hide under it.
         const grounds = b.lines[0]!.flatMap(r => [...r.text].map(() => r.bg ?? b.bg))
-        for (const y of [row, row + 1]) expect([s.name, y, s.px[y]!.slice(b.x + 1, b.x + 1 + grounds.length)]).toEqual([s.name, y, grounds])
+        const under = grounds.map((_, j) => {
+          const [top, bottom] = [s.px[row]![b.x + 1 + j]!, s.px[row + 1]![b.x + 1 + j]!]
+          return top === bottom ? top : mix(top, bottom, 0.5)
+        })
+        expect([s.name, under]).toEqual([s.name, grounds])
       }
     }
     expect(seen).toBeGreaterThan(100)

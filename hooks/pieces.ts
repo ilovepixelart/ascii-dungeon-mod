@@ -278,6 +278,11 @@ export const buttonBox = (label: string, x: number, y: number, state: ButtonStat
   return { role: 'button', x, y: y / 2, w: buttonW(label, cost), h: 3, border: bg, bg, pad: 1, lines: [runs] }
 }
 
+/** A button's words centred on a face `w` wide, for a button wider than its words (`buttonFace`); the odd cell of
+ * room goes on the right. */
+export const wideButtonBox = (label: string, x: number, y: number, w: number, state: ButtonState): OverlayBox<'button'> =>
+  ({ ...buttonBox(label, x, y, state), w, pad: Math.floor((w - 2 - label.length) / 2) })
+
 /** A portrait's size: an 8 by 8 sprite at three times its size, inside a two pixel frame. */
 export const PORTRAIT = PX * 3 + 4
 const PORTRAIT_BG = SURFACE.backdrop

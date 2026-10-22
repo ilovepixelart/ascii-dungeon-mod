@@ -7,7 +7,7 @@ import type { Action, Run } from './game'
 import { DEEP_FROM, MARKS, TIER_DEPTHS, forkTier, markOf, pairOf, roman, tierOf, tierStart } from './deep'
 import { canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
-import { BUTTON_H, buttonFace, buttonGround } from './pieces'
+import { BUTTON_H, buttonFace, wideButtonBox } from './pieces'
 import type { ButtonState } from './pieces'
 import { INK, SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
@@ -62,10 +62,10 @@ const tierLine = (g: Game, tier: number): Run[] => {
 
 const cardState = (c: Card): ButtonState => (c.isChosen ? 'armed' : 'ready')
 
-/** A choice's words on its face: its mark's name in the mark's ink. */
+/** A choice's words centred on its face, as a wide button's: its mark's name in the mark's ink. */
 const cardBox = (c: Card): OverlayBox<'button'> => {
-  const ground = buttonGround(cardState(c))
-  return { role: 'button', x: c.rect.x, y: c.rect.y / 2, w: c.rect.w, h: 3, border: ground, bg: ground, pad: 1, lines: [[{ text: MARKS[c.mark].name.toUpperCase(), color: inkOf(c.mark), bold: true }]] }
+  const name = MARKS[c.mark].name.toUpperCase()
+  return { ...wideButtonBox(name, c.rect.x, c.rect.y, c.rect.w, cardState(c)), lines: [[{ text: name, color: inkOf(c.mark), bold: true }]] }
 }
 
 /** The note under the cards: how the fork is chosen, or with none waiting where the next opens. */

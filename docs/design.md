@@ -53,8 +53,9 @@ names below point at it.
   ctrl+x tab (a click on a window does not give it the focus). The keys' row under a window says so first, then lists
   them.
 - A choice is a button (`BUTTON_H`, 6 px): its label, framed white when armed or chosen, grey and
-  sunken when it cannot act. A choice wider than its words (the deep's marks) is the same face, wider
-  (`buttonFace`).
+  sunken when it cannot act. A choice wider than its words (the deep's marks, the settings, the smith's jobs) is the
+  same face, wider (`buttonFace`), its words centred (`wideButtonBox`); buttons stacked in a column share the widest's
+  width.
 - Popovers (cards, menus, the belt's tiers) stand on what they are about, never over it.
 
 ## Sprites

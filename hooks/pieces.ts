@@ -95,15 +95,18 @@ export const beltSlotRect = (x0: number, y: number, i: number): Rect => ({ x: x0
 
 export const TIER_INK = INK.gold
 
-/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`) and under it a pip a tier
- * above the first. How many of that tier it holds is `beltCounts`'s. */
+/** A belt slot at x, y: its frame; filled, the icon of the tier it uses next (`activeTier`) and along its top a pip a
+ * tier above the first. How many of that tier it holds is `beltCounts`'s, on the icon's bottom right. */
 export const beltSlot = (c: Canvas, slot: BeltSlot | null | undefined, x: number, y: number) => {
   frame(c, x, y, BELT_SLOT_W, SLOT, GRID)
   fill(c, x + 1, y + 1, BELT_SLOT_W - 2, PX, SLOT_BG)
   const tier = activeTier(slot)
   if (slot === null || slot === undefined || tier === undefined) return
   art(c, consumableIcon(slot.kind, tier), x + 1, y + 1)
-  for (let p = 1; p < tier; p += 1) put(c, x + BELT_SLOT_W - 2 - 2 * (p - 1), y + PX, TIER_INK)
+  for (let p = 1; p < tier; p += 1) put(c, x + 1 + 2 * (p - 1), y + 1, TIER_INK)
+  // The count's badge: the slot's ground under its text, cut into the icon's corner.
+  const count = String(slot.tiers[tier - 1])
+  fill(c, x + BELT_SLOT_W - 1 - count.length, onCell(y + 6), count.length, 2, SLOT_BG)
 }
 
 /** The belt at x, y: a slot a kind, as `beltSlot` draws it. */
@@ -116,14 +119,15 @@ export const belt = (c: Canvas, g: Game, x0: number, y: number) => g.belt.forEac
 export const artLabel = (text: string, x: number, y: number, ink: string, ground: string, bold = true): OverlayBox<'label'> =>
   ({ role: 'label', x: x - 1, y: y / 2 - 1, w: text.length + 2, h: 3, border: ground, bg: ground, pad: 0, lines: [[{ text, color: ink, bold }]] })
 
-/** How many of the tier each belt slot uses next, for a belt whose slot i is at slotX(i), y in window pixels: against
- * the slot's right edge, on the first whole cell from its middle. `beltCountsAt` for the bag's belt, BELT_STEP apart. */
+/** How many of the tier each belt slot uses next, for a belt whose slot i is at slotX(i), y in window pixels: on its
+ * icon's bottom right corner, the last whole cell inside its frame, as a stack's count is. `beltCountsAt` for the bag's
+ * belt, BELT_STEP apart. */
 export const beltCounts = (g: Game, slotX: (i: number) => number, y: number): OverlayBox<'label'>[] =>
   g.belt.flatMap((slot, i) => {
     const tier = activeTier(slot)
     if (slot === null || slot === undefined || tier === undefined) return []
     const text = String(slot.tiers[tier - 1])
-    return [artLabel(text, slotX(i) + BELT_SLOT_W - 1 - text.length, onCell(y + 3), INK.white, SLOT_BG)]
+    return [artLabel(text, slotX(i) + BELT_SLOT_W - 1 - text.length, onCell(y + 6), INK.white, SLOT_BG)]
   })
 export const beltCountsAt = (g: Game, x0: number, y: number) => beltCounts(g, i => x0 + i * BELT_STEP, y)
 
@@ -131,6 +135,9 @@ export const beltCountsAt = (g: Game, x0: number, y: number) => beltCounts(g, i 
 export const overlaps = (a: OverlayBox, b: OverlayBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
 /** The labels no box of `over` covers: a card or a menu over a label hides it. */
 export const clearOf = <L extends OverlayBox>(labels: readonly L[], over: readonly OverlayBox[]): L[] => labels.filter(l => !over.some(b => overlaps(l, b)))
+/** The boxes a click lands on: all but the labels on art (a price, a count), which a click goes through to what they
+ * label, and which the hover lights through. */
+export const clickable = <B extends OverlayBox>(boxes: readonly B[]): B[] => boxes.filter(b => b.role !== 'label')
 
 /** A small coin, four pixels square, its top-left at x, y; grey when what it prices cannot be paid. */
 export const coin = (c: Canvas, x: number, y: number, canPay = true) => {

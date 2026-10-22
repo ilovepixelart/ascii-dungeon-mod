@@ -60,8 +60,8 @@ describe('clicks', () => {
 
   test('a belt slot is used; the close box closes the inventory', async () => {
     for (let i = 0; i < 5; i += 1) expect(click(knight(), BAG_UI_IDLE, { x: BELT_X + i * BELT_STEP + 7, y: INV_TOP + BELT_Y + 7 }).actions).toEqual([{ kind: 'use', slot: i }])
-    // A slot answers over all it draws, 15 by 10: its last column and its last row too.
-    for (let i = 0; i < 5; i += 1) expect(click(knight(), BAG_UI_IDLE, { x: BELT_X + i * BELT_STEP + 14, y: INV_TOP + BELT_Y + 9 }).actions).toEqual([{ kind: 'use', slot: i }])
+    // A slot answers over all it draws, 10 by 10: its last column and its last row too.
+    for (let i = 0; i < 5; i += 1) expect(click(knight(), BAG_UI_IDLE, { x: BELT_X + i * BELT_STEP + 9, y: INV_TOP + BELT_Y + 9 }).actions).toEqual([{ kind: 'use', slot: i }])
     const [cx, cy, cw, ch] = CLOSE_BOX
     expect(click(knight(), BAG_UI_IDLE, { x: cx + Math.floor(cw / 2), y: cy + Math.floor(ch / 2) }).actions).toEqual([{ kind: 'panel', panel: 'bag' }])
   })

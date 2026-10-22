@@ -11,7 +11,8 @@ export const GRID = SURFACE.line
 /** An icon slot: a PX by PX icon inside a 1 px frame. */
 export const SLOT = PX + 2
 /** A belt slot: the icon on the left, its count (or key) beside it, so nothing is drawn over the icon. */
-export const BELT_SLOT_W = SLOT + 5
+/** A belt slot is a slot as any other: its count is text on its icon's corner. */
+export const BELT_SLOT_W = SLOT
 
 export const canvas = (w: number, h: number): Canvas => ({ w, h, px: Array.from({ length: h }, () => Array<string>(w).fill(BG)) })
 

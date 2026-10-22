@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- The strip is a row shorter: the gold, depth and effects sit beside the belt, the gold written in full with its
+  thousands set apart. Belt slots are 10 by 10 like every slot, their counts on the icon's corner, in the bag, the
+  compact bag and the merchant too.
 - The stash has tabs and is the town's, kept from hero to hero: four plain tabs of ten, the first free and the rest
   bought in turn for 1,000, 2,500 and 5,000 gold, and a sets' tab and a Legendaries' tab of a place each, 3,000 gold
   each. Its window shows the tabs over its list, a tab's price and Buy where it is not bought, and the two boards place
@@ -37,6 +40,8 @@ release may change behaviour.
 
 ### Fixed
 
+- A click on a belt slot's count, or on a ware's price, did nothing: the window took the label for a card and kept
+  the click. A click on a label goes through to what it labels.
 - Hovering a pile of more than five items blanked the whole pane: the row counting the rest gave the map's click layer
   an id that was undefined, and the engine refuses a tree holding one. That row has no id now.
 - A vampiric champion healed by all it dealt, so one hitting harder than the hero healed more each round than it lost,

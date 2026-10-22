@@ -10,7 +10,7 @@ import { CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar } fr
 import { TIERS, activeTier, nameOf } from './consumables'
 import type { Tier } from './consumables'
 import type { Action } from './game'
-import { boxShape, drawBox, uncovered } from './window'
+import { boxShape, drawBox, goldText, uncovered } from './window'
 import type { Gesture, OverlayBox } from './window'
 import { PAL, PX, TOWN_THING_ART, heroArt } from './pixelart'
 
@@ -30,10 +30,12 @@ export const XP_Y = STAR_Y
 /** Where the belt's row starts, under the top row. */
 /** The belt's row: a pixel under the top row, whose star reaches a pixel below the portrait. */
 export const BELT_BELOW_Y = SLOT + 2
-/** Gold, depth and the effects, on a line under the belt. */
-export const SIDE_LINE_Y = BELT_BELOW_Y + SLOT + 1
 /** Belt slots share their frame lines. */
 export const SLOT_STEP = BELT_SLOT_W - 1
+/** Gold, depth and the effects, on the belt's row past it: their 5 px marks on the slots' middle, so that their text's
+ * row is a whole cell of the framed strip (its content INSET from the top). */
+export const SIDE_LINE_Y = BELT_BELOW_Y + 3
+export const SIDE_LINE_X = 5 * SLOT_STEP + 1 + 3
 
 /** Each tone set is a bar's lit top, base and shaded bottom. Healthy above 70%, hurt down to 40%, critical below. */
 export const HP_TONES = {
@@ -80,9 +82,9 @@ export const mark = (c: Canvas, rows: readonly string[], x: number, y: number) =
 /** The belt's five slots, sharing their frame lines. */
 export const BELT_W = 5 * SLOT_STEP + 1
 
-/** The strip's height at any width: the top row, the belt, the side line. */
-/** The strip's height: the side line its last 5 px, a pixel of room and the metal under it. */
-export const contentLayout = (_width: number) => ({ height: SIDE_LINE_Y + 5 })
+/** The strip's height: the top row, then the belt and the side line beside it, two pixels of room under them, so the
+ * framed strip is a whole number of cells. */
+export const contentLayout = (_width: number) => ({ height: BELT_BELOW_Y + SLOT + 2 })
 
 /** The portal slot: flush right in the top row. */
 export const portalSlotX = (width: number) => width - SLOT
@@ -135,9 +137,9 @@ const SIDE_TEXT_Y = SIDE_LINE_Y + 1
 const MARK_W = 5
 const MARK_GAP = 1
 
-/** The side line, left to right in the content's pixels `w` wide: each mark, and each number as text a cell a
- * character. Gold and depth from the left; the running effects from the right, each left out once it would reach the
- * depth. */
+/** The side line, left to right in the content's pixels `w` wide, from SIDE_LINE_X past the belt: each mark, and each
+ * number as text a cell a character. Gold (in full, thousands set apart, as the title bar writes it) and depth from the
+ * left; the running effects from the right, each left out once it would reach the depth. */
 const sideLineParts = (g: Game, w: number) => {
   const marks: { rows: readonly string[]; x: number }[] = []
   const words: { text: string; x: number; ink: string }[] = []
@@ -146,7 +148,7 @@ const sideLineParts = (g: Game, w: number) => {
     words.push({ text, x: x + MARK_W + MARK_GAP, ink })
     return x + MARK_W + MARK_GAP + text.length
   }
-  const goldEnd = markThen(MARK.coin, 0, String(g.gold), GOLD_INK)
+  const goldEnd = markThen(MARK.coin, SIDE_LINE_X, goldText(g.gold), GOLD_INK)
   let depthEnd = markThen(MARK.stairs, goldEnd + 3, g.where === 'town' ? 'TOWN' : String(g.depth), NUM_INK)
   // The depth's twist, if it has one, right after its number.
   const mod = g.where === 'dungeon' ? depthMod(g.world, g.depth) : undefined
@@ -272,7 +274,7 @@ export const hudHot = (g: Game, width: number, boxes: readonly OverlayBox[] = []
     at(settingsSlotX(w), 0, SLOT, SLOT),
     ...(g.foe === null ? [at(portalSlotX(w), 0, SLOT, SLOT)] : []),
     ...g.belt.flatMap((s, i) => (s === null ? [] : [at(beltSlotX(w, i), BELT_BELOW_Y, BELT_SLOT_W, SLOT)])),
-    at(0, SIDE_LINE_Y, w, SIDE_LINE_H),
+    at(SIDE_LINE_X, SIDE_LINE_Y, w - SIDE_LINE_X, SIDE_LINE_H),
   ], boxes.filter(b => b.role === 'belt'))
 }
 
@@ -316,7 +318,7 @@ const SIDE_LINE_H = 5
 const isOnSideLine = (width: number, click: { x: number; y: number }) => {
   const px = Math.floor(click.x) - INSET
   const py = Math.floor(click.y * 2) - INSET
-  return px >= 0 && px < width - 2 * INSET && py >= SIDE_LINE_Y && py < SIDE_LINE_Y + SIDE_LINE_H
+  return px >= SIDE_LINE_X && px < width - 2 * INSET && py >= SIDE_LINE_Y && py < SIDE_LINE_Y + SIDE_LINE_H
 }
 
 /** A gesture on the strip: the belt menu as it now is, the game actions, and whether the log is asked for (the side line). */

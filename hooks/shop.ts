@@ -11,7 +11,7 @@ import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './item
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H, beltHot } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
+import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, clickable, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -136,7 +136,7 @@ const itemMenuClick = (g: Game, ui: ShopUi, item: Item, row: number): Outcome =>
 const click = (g: Game, ui: ShopUi, at: Pos, button: string): Outcome => {
   if (ui.menu) return menuClick(g, ui, at)
   // A click on a card lands on the card, not on what it covers.
-  if (shopOverlay(g, ui).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
+  if (clickable(shopOverlay(g, ui)).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
   const h = hit(g, pixel(at))
   if (h?.kind === 'ware') {
     const again = ui.ware === h.ware
@@ -169,4 +169,4 @@ export const nextWare = (ui: ShopUi): ShopUi => ({ ware: WARES[(ui.ware === null
  * the belt. With a menu open, nothing: a click anywhere but on the menu only closes it.
  */
 export const shopHot = (g: Game, ui: ShopUi): Rect[] =>
-  ui.menu ? [] : uncovered([...WARES.map((_, i) => wareRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)), ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y)], shopOverlay(g, ui))
+  ui.menu ? [] : uncovered([...WARES.map((_, i) => wareRect(i)), ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)), ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y)], clickable(shopOverlay(g, ui)))

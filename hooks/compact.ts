@@ -11,7 +11,7 @@ import { CELL } from './icons'
 import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
-import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, itemGrid, itemOutline } from './pieces'
+import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, clickable, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -132,7 +132,7 @@ export const compactGesture = (g: Game, ui: BagUi, gesture: Gesture): Outcome =>
   if (gesture.type === 'drag') return { ui, actions: [] }
   if (moved) return { ui: BAG_UI_IDLE, actions: grabbed?.kind === 'bag' ? dropAt(g, grabbed.item, from, at) : [] }
   if (ui.menu !== null) return menuClick(g, ui, gesture.at)
-  if (compactOverlay(g, ui).some(b => b.role !== 'worn' && isInside(gesture.at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
+  if (clickable(compactOverlay(g, ui)).some(b => b.role !== 'worn' && isInside(gesture.at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
   return clickOn(g, ui, hit(g, at, gesture.at), gesture.type === 'release' && gesture.button === 'right')
 }
 
@@ -165,5 +165,5 @@ export const compactHot = (g: Game, ui: BagUi): Rect[] => {
     ...SLOTS.flatMap((s, i) => (off.gear[s] === undefined ? [] : [wornRow(i)])),
     ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y),
   ]
-  return uncovered(hot, compactOverlay(g, ui).filter(b => b.role !== 'worn'))
+  return uncovered(hot, clickable(compactOverlay(g, ui)).filter(b => b.role !== 'worn'))
 }

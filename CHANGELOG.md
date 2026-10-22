@@ -19,8 +19,8 @@ release may change behaviour.
 - Settings' buttons line up in columns: a column's buttons are one width, its widest's.
 - Buttons are written in terminal text on a face 6 pixels tall, where their key and label were the pixel font on one
   11 tall; the windows are shorter for it. The hero sheet's attributes are written the same way.
-- The codex draws each unique at its size on the map, half a big boss's each way and standing on the same floor,
-  where it was doubled to a big boss's size.
+- The codex draws each unique at its size on the map, half a big boss's each way, in a slot as the bag's centred
+  over its big boss's column, where it was doubled to a big boss's size.
 
 ### Fixed
 

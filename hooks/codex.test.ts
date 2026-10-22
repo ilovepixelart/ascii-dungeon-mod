@@ -189,20 +189,19 @@ describe('the codex window', () => {
     for (const ui of [FOES, FINDS]) expect(inks(codexPixels(shown(full), ui))).toBeGreaterThan(inks(codexPixels(shown(EMPTY_CODEX), ui)) + 10)
   })
 
-  test('a unique is drawn at its size on the map, a dot a pixel, standing on its box\'s floor', async () => {
-    // The uniques' boxes: 19 pixels square, one every 20 from x 3, the first row under the page tabs; a big boss's feet
-    // are on the box's row 16, a pixel over its frame.
+  test('a unique is drawn at its size on the map, a dot a pixel, in a slot as the bag\'s, centred over its column', async () => {
+    // A column every 20 from x 3, 19 wide for a big boss; a unique's slot 10 square, 4 in, the first row under the page
+    // tabs; its 8 by 8 inside the slot's frame.
     const top = WINDOW_TOP + TABS_H + 2
     const lit = codexPixels(shown({ ...EMPTY_CODEX, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'] }), FOES)
     const dark = codexPixels(shown(EMPTY_CODEX), FOES)
     for (const [i, key] of (['bones', 'mire', 'rot', 'rime', 'ember'] as const).entries()) {
-      const left = 3 + i * 20
+      const left = 3 + i * 20 + 4
       const drawn: [number, number][] = []
-      for (let y = top + 1; y < top + 18; y++) for (let x = left + 1; x < left + 18; x++) if (lit[y]![x] !== dark[y]![x]) drawn.push([x, y])
-      const dots = UNIQUE_ART[key].join('').replace(/\./g, '').length
-      const ys = drawn.map(([, y]) => y)
-      expect([drawn.length, Math.max(...ys)]).toEqual([dots, top + 16])
-      expect(Math.max(...drawn.map(([x]) => x)) - Math.min(...drawn.map(([x]) => x))).toBeLessThan(8)
+      for (let y = top + 1; y < top + 9; y++) for (let x = left + 1; x < left + 9; x++) if (lit[y]![x] !== dark[y]![x]) drawn.push([x, y])
+      expect(drawn.length).toBe(UNIQUE_ART[key].join('').replace(/\./g, '').length)
+      // The slot's frame round it: lit, it is not the dark one's.
+      expect([lit[top]![left] !== dark[top]![left], lit[top + 9]![left + 9] !== dark[top + 9]![left + 9]]).toEqual([true, true])
     }
   })
 

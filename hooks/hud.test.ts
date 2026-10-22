@@ -2,21 +2,24 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { foeAhead } from './fixtures'
+import { xpToLevel } from './balance'
 import { depthMod, isBossDepth, newGame } from './game'
 import {
+  ORB, ORB_PHASES, ORB_SIDE_Y, ORB_WIDTH_MIN, XP_EMPTY, XP_LIGHT, hasOrbs, orbSize, orbTop, sideLineAt, stripLeft, xpOrbX,
   BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_X, SIDE_LINE_Y, XP_FILL, XP_Y,
   BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudHot, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
 import type { Gesture } from './window'
-import { BELT_SLOT_W, GRID, SLOT, SLOT_BG } from './canvas'
+import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG } from './canvas'
 import { MAP_W } from './map'
 import { INK } from './ui/tokens'
 import { CONSUMABLE_ICONS } from './icons'
-import { TIER_INK } from './pieces'
+import { TIER_INK, mix } from './pieces'
 import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
 import { CHAMPION_MARK, FOE_BAR_EMPTY, FOE_BAR_FILL, FOE_BAR_W, frameOf, hexToInt, viewOrigin } from './pixels'
 
-const W = 111
+/** A strip of 100 columns: the bars, under the orbs' 105. */
+const W = 100
 const hero = (over: Partial<Game> = {}): Game => ({ ...newGame(4, 'knight'), ...over })
 /**
  * A strip whose bars are exactly 25 pixels long, worked by hand: the bars start 17 in, then the bar, 1 px, the 10 px
@@ -287,8 +290,8 @@ describe("a champion's mark on the map", () => {
 })
 
 describe('the strip at any pane width', () => {
-  test('nothing ever lands on the HP bar, and it keeps 10 px or more, from 80 to 140 columns', async () => {
-    for (let columns = 80; columns <= 140; columns += 1) {
+  test('nothing ever lands on the HP bar, and it keeps 10 px or more, from 80 to 104 columns', async () => {
+    for (let columns = 80; columns < 105; columns += 1) {
       const width = columns - 2 * INSET
       const g = hero({ hp: 27, maxHp: 105 })
       const { barW } = barsLayout(g, width)
@@ -305,7 +308,7 @@ describe('the strip at any pane width', () => {
 
 describe('clicks on the strip', () => {
   test('the portrait opens the inventory, the level line the sheet; a belt slot uses that slot; the portal opens; the rest does nothing', async () => {
-    for (const width of [80, 111]) {
+    for (const width of [80, W]) {
       // A click in the content's pixels, as it lands on the framed strip: INSET in, rows two pixels a cell.
       const hit = (x: number, y: number) => hudHit(width, { x: INSET + x, y: (INSET + y) / 2 })
       const inner = width - 2 * INSET
@@ -335,7 +338,7 @@ describe('clicks on the strip', () => {
 })
 
 describe('a belt slot\'s menu', () => {
-  const width = 111
+  const width = W
   const inner = width - 2 * INSET
   const at = (x: number, y: number) => ({ x: x + 0.5, y: y + 0.25 })
   const click = (p: { x: number; y: number }, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: p, at: p, button })
@@ -366,7 +369,7 @@ describe('a belt slot\'s menu', () => {
   })
 
   test('with it open, nothing under it is lit: a click there lands on the menu', async () => {
-    for (const w of [80, 111, 200]) {
+    for (const w of [80, W, 200]) {
       for (const slot of [0, 4]) {
         const box = beltMenuBox(potions, slot, w)!
         const under = hudHot(potions, w, [box]).filter(r => {
@@ -382,7 +385,7 @@ describe('a belt slot\'s menu', () => {
 
   test('stands on its slot: just above the belt, its left edge on the slot\'s, inside the strip', async () => {
     const beltTop = Math.floor((INSET + BELT_BELOW_Y) / 2)
-    for (const w of [80, 111, 200]) {
+    for (const w of [80, W, 200]) {
       for (const slot of [0, 4]) {
         const box = beltMenuBox(potions, slot, w)!
         expect(box.y + box.h).toBe(beltTop)
@@ -413,7 +416,7 @@ test('the HP bar is four rows of one flat color, its mark\'s height', async () =
 
 describe('the iron frame', () => {
   test('surrounds the strip: a metal band, rivets along it, and the contents INSET in, unchanged', async () => {
-    const width = 110
+    const width = W
     const g = hero({ hp: 50, maxHp: 100 })
     const framed = hudPixels(g, width)
     const inner = hudContent(g, width - 2 * INSET)
@@ -454,17 +457,17 @@ describe("a boss's crown", () => {
 
 test('a belt menu open over the strip hides the numbers it covers, and leaves those it does not', async () => {
   const g = hero({ hp: 87, maxHp: 105, level: 7, belt: [{ kind: 'health', tiers: [4, 0, 1] }, null, null, null, null] })
-  const menu = beltMenuBox(g, 0, 111)!
-  const shown = hudBoxes(g, 111, [menu])
+  const menu = beltMenuBox(g, 0, W)!
+  const shown = hudBoxes(g, W, [menu])
   const covers = (b: (typeof shown)[number]) => b.x < menu.x + menu.w && menu.x < b.x + b.w && b.y < menu.y + menu.h && menu.y < b.y + b.h
   expect(shown.filter(b => b.role === 'label').some(covers)).toBe(false)
   expect(shown.at(-1)).toBe(menu)
   // With none open: the HP and the level on their bars, the slot's count, the gold and the depth.
-  expect(hudBoxes(g, 111, []).filter(b => b.role === 'label')).toHaveLength(5)
+  expect(hudBoxes(g, W, []).filter(b => b.role === 'label')).toHaveLength(5)
 })
 
 test('the shut portal is the open one\'s size: its outline stays dark, only its inside goes grey', async () => {
-  const width = 111 - 2 * INSET
+  const width = W - 2 * INSET
   const g = hero()
   const open = hudContent(g, width)
   const shut = hudContent({ ...g, foe: foeAhead(g, 2) }, width)
@@ -484,12 +487,12 @@ test('the heart and the star are the same size: five pixels across, four down, a
 })
 
 test('a pixel stands between the settings slot and the portal', async () => {
-  const width = 111 - 2 * INSET
+  const width = W - 2 * INSET
   expect(portalSlotX(width) - (settingsSlotX(width) + SLOT)).toBe(1)
 })
 
 test('each bar stands beside its mark on the same four rows, on an odd row of the strip', async () => {
-  const c = hudContent(hero(), 111 - 2 * INSET)
+  const c = hudContent(hero(), W - 2 * INSET)
   const rowsOf = (ink: string) => c.px.flatMap((row, y) => (row.slice(HEART_X, HEART_X + 5).includes(ink) ? [y] : []))
   const heart = rowsOf(MARK_INK.r!)
   const star = rowsOf(MARK_INK.x!)
@@ -499,7 +502,7 @@ test('each bar stands beside its mark on the same four rows, on an odd row of th
 })
 
 test('a pixel stands between the bars and the settings slot', async () => {
-  const width = 111 - 2 * INSET
+  const width = W - 2 * INSET
   expect(settingsSlotX(width) - (BAR_X + barsLayout(hero(), width).barW)).toBe(1)
 })
 
@@ -512,7 +515,7 @@ test('a pixel stands between the portrait and the marks', async () => {
 })
 
 test('a slot\'s count lies clear over its icon: the icon drawn whole under it, the count\'s cells on its pixels', async () => {
-  const width = 111 - 2 * INSET
+  const width = W - 2 * INSET
   const g = hero({ belt: [{ kind: 'health', tiers: [12, 0, 0] }, null, null, null, null] })
   const c = hudContent(g, width)
   const icon = CONSUMABLE_ICONS.health
@@ -527,10 +530,10 @@ test('a slot\'s count lies clear over its icon: the icon drawn whole under it, t
 test('a slot counts the tier it uses next, as its icon and pips show it; the other tiers are not counted', async () => {
   const count = (tiers: [number, number, number]) => {
     const g = hero({ belt: [null, null, { kind: 'fury', tiers }, null, null] })
-    return hudLabels(g, 111).filter(b => b.y === 9).map(b => ({ text: b.lines[0]!.map(r => r.text).join(''), x: b.x + 1 }))
+    return hudLabels(g, W).filter(b => b.y === 9).map(b => ({ text: b.lines[0]!.map(r => r.text).join(''), x: b.x + 1 }))
   }
   // On the icon's bottom right, against the slot's frame; on the strip's row 20, the last whole cell inside the slot.
-  const right = INSET + beltSlotX(111, 2) + BELT_SLOT_W - 1
+  const right = INSET + beltSlotX(W, 2) + BELT_SLOT_W - 1
   expect(count([3, 0, 0])).toEqual([{ text: '3', x: right - 1 }])
   expect(count([2, 1, 0])).toEqual([{ text: '1', x: right - 1 }])
   // 99 of each tier: the 99 Scrolls of the Berserker, two digits, where all 297 would cover the icon.
@@ -546,7 +549,7 @@ test('a pixel under the star; the side line\'s marks on the belt\'s middle; two 
 })
 
 test('the iron frame is the riveted metal band alone, one pixel: no dark edge, no inner line', async () => {
-  const width = 110
+  const width = W
   const framed = hudPixels(hero(), width)
   expect(FRAME).toBe(1)
   const ring = new Set([...framed.px[0]!, ...framed.px[framed.h - 1]!, ...framed.px.map(r => r[0]!), ...framed.px.map(r => r[width - 1]!)])
@@ -568,4 +571,109 @@ test('the side line lights over just the rows a click on it opens the log from',
 test('the strip\'s text inks are the interface\'s: its numbers, its level line and its gold', async () => {
   // The strip is pixel art outside the colors gate; these three are copies of tokens, held to them here.
   expect([NUM_INK, LEVEL_INK, GOLD_INK]).toEqual([INK.text, INK.dim, INK.gold])
+})
+
+describe('the orbs, from 105 columns', () => {
+  /** A strip of 140 columns, its content 136 px: the largest orbs. */
+  const WIDE = 140
+  const IN = WIDE - 2 * INSET
+  const ORB_Y = orbTop(ORB)
+
+  test('take over from the bars at 105 columns, 16 px across, growing by two to 22 px from 117 columns', async () => {
+    // Between them at the fullest: 69 px; so 69 + 2 * 16 = 101 px of content, a 105-column pane.
+    expect([ORB_WIDTH_MIN, hasOrbs(105 - 2 * INSET), hasOrbs(104 - 2 * INSET)]).toEqual([101, true, false])
+    expect([101, 104, 105, 108, 112, 113, 136].map(orbSize)).toEqual([16, 16, 18, 18, 20, 22, 22])
+    // Centred down the 24 px strip.
+    expect([16, 18, 20, 22].map(orbTop)).toEqual([4, 3, 2, 1])
+    // The HP orb's 22 px and a pixel of room, then the portrait and the belt; the portal a pixel short of the XP orb.
+    expect([stripLeft(IN), beltSlotX(IN, 0), xpOrbX(IN), portalSlotX(IN) + SLOT]).toEqual([23, 23, IN - 22, IN - 23])
+    expect([stripLeft(101), xpOrbX(101)]).toEqual([17, 85])
+    expect([stripLeft(107), beltSlotX(100, 0)]).toEqual([19, 0])
+  })
+
+  test('are round, 22 px across a pixel under the top, their square\'s corners the strip\'s ground', async () => {
+    const c = hudContent(hero(), IN)
+    for (const x0 of [0, xpOrbX(IN)]) {
+      expect([c.px[ORB_Y]![x0], c.px[ORB_Y]![x0 + ORB - 1], c.px[ORB_Y + ORB - 1]![x0]]).toEqual([BG, BG, BG])
+      expect(c.px[ORB_Y + 11]![x0 + 11]).not.toBe(BG)
+    }
+    expect([c.px[0]![11], c.px[ORB_Y + ORB]![11]]).toEqual([BG, BG])
+  })
+
+  test('fill the HP orb to the HP\'s share, its surface lit, in the HP\'s tone: green above 70%, amber to 40%, red below', async () => {
+    // Down its middle on the rows the ripple leaves still (9 to 12): the surface on row 1 + (1 - share) * 20, rounded.
+    const column = (hp: number) => [9, 10, 11, 12].map(y => hudContent(hero({ hp, maxHp: 100 }), IN, 3).px[ORB_Y + y]![11])
+    expect(column(100)).toEqual(Array(4).fill(HP_TONES.healthy[1]))
+    // 60%: row 9. 50%: row 11. 35%: row 14, under them all.
+    expect(column(60)).toEqual([HP_TONES.hurt[0], HP_TONES.hurt[1], HP_TONES.hurt[1], HP_TONES.hurt[1]])
+    expect(column(50)).toEqual(['#1e2420', '#1e2420', HP_TONES.hurt[0], HP_TONES.hurt[1]])
+    expect(column(35)).toEqual(Array(4).fill('#1e2420'))
+    expect(column(0)).toEqual(Array(4).fill('#1e2420'))
+  })
+
+  test('fill the XP orb by the share of the way to the next level, in gold', async () => {
+    // Level 1 needs 20: 10 is half, its surface on row 11.
+    const column = [9, 10, 11, 12].map(y => hudContent(hero({ xp: 10, level: 1 }), IN).px[ORB_Y + y]![xpOrbX(IN) + 11])
+    expect(column).toEqual([XP_EMPTY, XP_EMPTY, XP_LIGHT, XP_FILL])
+  })
+
+  test('ripple: the phases differ under the number\'s rows and hold still on them; nothing else moves', async () => {
+    const g = hero({ hp: 30, maxHp: 100 })
+    const frames = Array.from({ length: ORB_PHASES }, (_, phase) => hudContent(g, IN, phase).px)
+    const orb = (px: string[][], rows: number[]) => rows.map(y => px[ORB_Y + y]!.slice(0, ORB).join()).join('|')
+    expect(new Set(frames.map(px => orb(px, [13, 14, 15, 16, 17]))).size).toBeGreaterThan(1)
+    expect(new Set(frames.map(px => orb(px, [9, 10, 11, 12]))).size).toBe(1)
+    const between = (px: string[][]) => px.map(row => row.slice(ORB, xpOrbX(IN)).join()).join('|')
+    expect(new Set(frames.map(between)).size).toBe(1)
+  })
+
+  test('write each orb\'s numbers centred on it, two rows, each character on the orb\'s colors under it', async () => {
+    const g = hero({ hp: 86, maxHp: 100, xp: 12, level: 1 })
+    const text = (b: { lines: { text: string }[][] }) => b.lines[0]!.map(r => r.text).join('')
+    const orbs = hudLabels(g, WIDE).filter(b => ['86/100', 'HP', '12/20', 'LV1'].includes(text(b)))
+    expect(orbs.map(text)).toEqual(['86/100', 'HP', '12/20', 'LV1'])
+    expect(hudLabels({ ...g, points: 2 }, WIDE).some(b => text(b) === 'LV1+')).toBe(true)
+    // Centred: 86/100 has 16 of 22 columns to spare, 8 before it; HP 10; 12/20 8; LV1 9. Each box a cell before its
+    // text; their rows are cells 6 and 7.
+    const xp = INSET + xpOrbX(IN)
+    expect(orbs.map(b => [b.x + 1, b.y + 1])).toEqual([[INSET + 8, 6], [INSET + 10, 7], [xp + 8, 6], [xp + 9, 7]])
+    const px = hudPixels(g, WIDE).px
+    for (const b of orbs) b.lines[0]!.forEach((r, i) => {
+      const x = b.x + 1 + i
+      const [top, bottom] = [px[(b.y + 1) * 2]![x]!, px[(b.y + 1) * 2 + 1]![x]!]
+      expect(r.bg).toBe(top === bottom ? top : mix(top, bottom, 0.5))
+    })
+  })
+
+  test('put the gold, the depth and the effects in the top row, between the portrait and settings', async () => {
+    const line = sideLineAt(IN)
+    expect([line.x, line.y, line.end]).toEqual([23 + 10 + 3, ORB_SIDE_Y, settingsSlotX(IN) - 1])
+    // Their text on a whole cell of the framed strip.
+    expect((INSET + line.y + 1) % 2).toBe(0)
+    // The longest a player will see: six figures of gold, depth 100 and its twist, at the narrowest width with orbs.
+    const rich = hero({ gold: 999999, depth: 100, deepest: 100, world: 1 })
+    const words = hudLabels(rich, 105).filter(b => b.y + 1 === (INSET + sideLineAt(101).y + 1) / 2)
+    expect(words.map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['999,999', '100'])
+    expect(Math.max(...words.map(b => b.x + b.w - 1))).toBeLessThanOrEqual(INSET + settingsSlotX(101))
+  })
+
+  test('open the sheet from either orb; the portrait, the belt and the side line act as on the bars\' strip', async () => {
+    const hit = (x: number, y: number) => hudHit(WIDE, { x: INSET + x, y: (INSET + y) / 2 })
+    for (const x0 of [0, xpOrbX(IN)]) expect(hit(x0 + 11, ORB_Y + 11)).toEqual({ kind: 'panel', panel: 'sheet' })
+    expect(hit(stripLeft(IN) + 5, 3)).toEqual({ kind: 'panel', panel: 'bag' })
+    for (let i = 0; i < 5; i += 1) expect(hit(beltSlotX(IN, i) + 6, BELT_BELOW_Y + 6)).toEqual({ kind: 'use', slot: i })
+    expect(hit(portalSlotX(IN) + 6, 6)).toEqual({ kind: 'portal' })
+    expect(hudGesture(hero(), null, { type: 'release', from: { x: INSET + sideLineAt(IN).x + 2, y: (INSET + ORB_SIDE_Y + 2) / 2 }, at: { x: INSET + sideLineAt(IN).x + 2, y: (INSET + ORB_SIDE_Y + 2) / 2 }, button: 'left' }, WIDE).isLog).toBe(true)
+  })
+
+  test('at the narrowest, 16 px orbs: their numbers on their middle rows, an XP count too long for one as a percent', async () => {
+    const g = hero({ hp: 105, maxHp: 105, xp: 123456, level: 500 })
+    const text = (b: { lines: { text: string }[][] }) => b.lines[0]!.map(r => r.text).join('')
+    const labels = hudLabels(g, 105)
+    // 123456/223607, level 500's need, is 13 characters: past the 12 a 16 px orb holds, so a percent of it.
+    const xp = labels.filter(b => b.x + 1 >= INSET + xpOrbX(101) && b.y + 1 >= 6 && b.y + 1 <= 7)
+    expect(xpToLevel(500)).toBe(223607)
+    expect(xp.map(text)).toEqual(['55%', 'LV500'])
+    expect(labels.filter(b => b.x + 1 < INSET + 16 && b.y + 1 >= 6).map(text)).toEqual(['105/105', 'HP'])
+  })
 })

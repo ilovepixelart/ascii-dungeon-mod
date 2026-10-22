@@ -2116,11 +2116,12 @@ describe('a pane short of the size the game plays best in', () => {
     on('session.start', (_$, e) => ({ cwd: e.cwd }))
     await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
     const cut = await $.ui.mount(sized(110, 30))
-    expect((await cut.find({ type: 'Raster', key: 'settings' }))?.props.rows).toBe(35)
-    // Settings is 35 rows, with 5 under it and this line: 41.
-    expect(await cut.find({ type: 'Text', text: 'This window needs 41 rows to show whole; the pane has 30. Make it taller, or scroll down.' })).toBeDefined()
+    expect((await cut.find({ type: 'Raster', key: 'settings' }))?.props.rows).toBe(26)
+    // Settings is 26 rows (its body from row 14, three rows of buttons a cell apart: 52 pixels), with 5 under it and
+    // this line: 32.
+    expect(await cut.find({ type: 'Text', text: 'This window needs 32 rows to show whole; the pane has 30. Make it taller, or scroll down.' })).toBeDefined()
     await cut.unmount()
-    const whole = await $.ui.mount(sized(110, 41))
+    const whole = await $.ui.mount(sized(110, 32))
     expect(await whole.find({ type: 'Text', text: /^This window needs/ })).toBeUndefined()
     await whole.unmount()
   })

@@ -6,14 +6,15 @@ import type { Game } from '../types'
 import type { Action, Run } from './game'
 import { attackBonus, canRetire, critChance, defense, xpToLevel } from './game'
 import { CLASS_NAME } from './items'
-import { canvas, digits, fill, frame } from './canvas'
+import { canvas, fill, frame } from './canvas'
 import { ATTRIBUTES } from './panels'
 import { PX, heroArt } from './pixelart'
-import { BUTTON_H, barLabel, button, buttonW, flatBar, portrait } from './pieces'
+import { BUTTON_H, barLabel, button, buttonBox, buttonW, flatBar, onCell, portrait } from './pieces'
+import type { ButtonState } from './pieces'
 import { MARK, NUM_INK, mark } from './hud'
 import { heroChrome, heroTabAt } from './herotabs'
 import { INK, SPACE, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'HERO' }
@@ -25,8 +26,8 @@ const SIDE_X = PAD + FACE + 3
 const XP_TONES = [INK.xpLight, INK.xp, INK.xpShade] as const
 const XP_EMPTY = SURFACE.xpEmpty
 const NAMES = ['MIGHT', 'FOCUS', 'VIGOR', 'INSIGHT'] as const
-/** The attributes two to a row under the portrait, each a framed row as tall as its + button. */
-const ROWS_Y = top + 2 + FACE + 3
+/** The attributes two to a row under the portrait, each a framed row as tall as its + button, a cell apart. */
+const ROWS_Y = onCell(top + 2 + FACE + 3)
 const ROW_W = Math.floor((WINDOW_W - 2 * PAD - SPACE.gap) / 2)
 
 /** Each attribute's place, two to a row, and its + button's at its right end, in window pixels. */
@@ -39,10 +40,10 @@ export const plusRect = (i: number): Rect => {
 
 /** The Retire button, centered under the attributes: lit once the hero has slain a big boss, when it opens the retire window. */
 export const RETIRE_KEY = { key: 'R', label: 'RETIRE' }
-export const RETIRE_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(RETIRE_KEY.key, RETIRE_KEY.label)) / 2), y: rowRect(3).y + BUTTON_H + 3, w: buttonW(RETIRE_KEY.key, RETIRE_KEY.label), h: BUTTON_H }
+export const RETIRE_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(RETIRE_KEY.key, RETIRE_KEY.label)) / 2), y: rowRect(3).y + BUTTON_H + 2, w: buttonW(RETIRE_KEY.key, RETIRE_KEY.label), h: BUTTON_H }
 
 /** The window's height in pixels. */
-export const SHEET_H = Math.ceil((RETIRE_RECT.y + RETIRE_RECT.h + 3) / 2) * 2
+export const SHEET_H = RETIRE_RECT.y + RETIRE_RECT.h + 2
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
@@ -61,13 +62,27 @@ const xpBar = (g: Game) => {
   return { markY: headEnd + 2, x: SIDE_X + 7, y: Math.floor((headEnd + 2) / 2) * 2 + 1, w: WINDOW_W - SIDE_X - 7 - PAD }
 }
 
-/** The boxes over the window: who the hero is, and the XP on its bar. */
+/** An attribute's row in words, on its face up to its + button: its name, its value at the right. */
+const attributeBox = (g: Game, i: number): OverlayBox<'attribute'> => {
+  const r = rowRect(i)
+  const w = plusRect(i).x - r.x
+  const value = String(g.stats[ATTRIBUTES[i]!.stat])
+  const room = w - 4 - NAMES[i]!.length - value.length
+  return { role: 'attribute', x: r.x, y: r.y / 2, w, h: 3, border: SURFACE.card, bg: SURFACE.card, pad: 1, lines: [[{ text: `${NAMES[i]}${' '.repeat(room)}`, color: INK.text }, { text: value, color: NUM_INK, bold: true }]] }
+}
+
+const plusState = (g: Game): ButtonState => (g.points > 0 ? 'ready' : 'off')
+const retireState = (g: Game): ButtonState => (canRetire(g) ? 'ready' : 'off')
+
+/** The boxes over the window: who the hero is, the XP on its bar, the attributes, and the buttons' words. */
 export const sheetOverlay = (g: Game): OverlayBox[] => {
   const head = headLines(g)
   const xp = xpBar(g)
   return [
     { role: 'head', x: SIDE_X, y: (top + 2) / 2, w: WINDOW_W - SIDE_X - 2, h: head.length + 2, border: SURFACE.frame, lines: head },
     barLabel(xp.x, xp.y, xp.w, g.xp / xpToLevel(g.level), XP_TONES[1], XP_EMPTY, `${g.xp}/${xpToLevel(g.level)}`),
+    ...ATTRIBUTES.flatMap((_, i) => [attributeBox(g, i), buttonBox('+', '', plusRect(i).x, plusRect(i).y, plusState(g))]),
+    buttonBox(RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y, retireState(g)),
   ]
 }
 
@@ -79,19 +94,17 @@ export const sheetPixels = (g: Game): string[][] => {
   const xp = xpBar(g)
   mark(body, MARK.xp, SIDE_X, xp.y - top - 1)
   flatBar(body, xp.x, xp.y - top, xp.w, g.xp / xpToLevel(g.level), XP_TONES[1], XP_EMPTY)
-  ATTRIBUTES.forEach((a, i) => {
+  ATTRIBUTES.forEach((_, i) => {
     const r = rowRect(i)
     const p = plusRect(i)
     fill(body, r.x, r.y - top, r.w, r.h, SURFACE.card)
     frame(body, r.x, r.y - top, r.w, r.h, SURFACE.cardEdge)
-    word(body, NAMES[i]!, r.x + 3, r.y - top + 3, INK.text)
-    digits(body, String(g.stats[a.stat]), p.x - 2, r.y - top + 8, NUM_INK)
-    button(body, '+', '', p.x, p.y - top, g.points > 0 ? 'ready' : 'off')
+    button(body, '+', '', p.x, p.y - top, plusState(g))
   })
-  button(body, RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, canRetire(g) ? 'ready' : 'off')
+  button(body, RETIRE_KEY.key, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, retireState(g))
   const c = windowPixels(heroChrome(g, 'sheet'), body.px)
-  // A bar's numbers lie on the bar: no frame of their own.
-  for (const b of sheetOverlay(g)) if (b.role !== 'label') drawBox(c, b)
+  // The head box alone has a frame of its own: the bar's numbers lie on the bar, the rest on their faces.
+  for (const b of sheetOverlay(g)) if (b.role === 'head') drawBox(c, b)
   return c.px
 }
 

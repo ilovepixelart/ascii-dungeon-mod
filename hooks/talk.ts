@@ -8,7 +8,7 @@ import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
 import type { Theme } from './map'
-import { BUTTON_H, PORTRAIT, barLabel, button, buttonW, flatBar, portrait } from './pieces'
+import { BUTTON_H, PORTRAIT, barLabel, button, buttonBox, buttonW, flatBar, onCell, portrait } from './pieces'
 import type { ButtonState } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -150,7 +150,7 @@ const layout = (g: Game, who: Speaker) => {
   const statusY = (box.y + box.h) * 2 + 3
   const hasStatus = who === 'healer' || who === 'dog' || (who === 'elder' && g.quest !== null)
   const act = ACT[who](g)
-  const buttonY = statusY + (hasStatus ? 8 : 0)
+  const buttonY = onCell(statusY + (hasStatus ? 8 : 0))
   const buttonRect: Rect | undefined = act === undefined ? undefined : { x: SIDE_X, y: buttonY, w: buttonW(act.key, act.label, act.cost), h: BUTTON_H }
   const sideEnd = buttonRect !== undefined ? buttonRect.y + BUTTON_H : hasStatus ? statusY + 6 : (box.y + box.h) * 2
   const end = Math.max(top + 2 + PORTRAIT, sideEnd)
@@ -177,13 +177,16 @@ const barOf = (g: Game, who: Speaker): { share: number; color: string; empty: st
 const QUEST_FILL = INK.xp
 const QUEST_EMPTY = SURFACE.xpEmpty
 
-/** The text boxes over the window: what they say, and the numbers on their bar. */
+/** The text boxes over the window: what they say, the numbers on their bar, the button's words. */
 export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => {
   const l = layout(g, who)
   const b = barOf(g, who)
-  if (b === undefined) return [l.box]
   const at = statusBar(l.statusY)
-  return [l.box, barLabel(at.x, at.y, at.w, b.share, b.color, b.empty, b.text)]
+  return [
+    l.box,
+    ...(b === undefined ? [] : [barLabel(at.x, at.y, at.w, b.share, b.color, b.empty, b.text)]),
+    ...(l.act === undefined || l.buttonRect === undefined ? [] : [buttonBox(l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y, l.act.state, l.act.cost, l.act.canPay)]),
+  ]
 }
 
 const STATUS: Readonly<Record<Speaker, (c: ReturnType<typeof canvas>, g: Game, y: number) => void>> = {
@@ -210,7 +213,7 @@ export const talkPixels = (g: Game, who: Speaker): string[][] => {
     mark(body, who === 'healer' ? MARK.heart : MARK.xp, SIDE_X, at.y - l.top)
     flatBar(body, at.x, at.y - l.top, at.w, b.share, b.color, b.empty)
   }
-  if (l.act !== undefined && l.buttonRect !== undefined) button(body, l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y - l.top, l.act.state, l.act.cost, l.act.canPay)
+  if (l.act !== undefined && l.buttonRect !== undefined) button(body, l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y - l.top, l.act.state, l.act.cost)
   const c = windowPixels(CHROME[who](g), body.px)
   drawBox(c, l.box)
   return c.px

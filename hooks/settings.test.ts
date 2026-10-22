@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { GOLD_INK } from './pieces'
+import { buttonsIn } from './fixtures'
 import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, settingsGesture, settingsOverlay, settingsPixels, settingsRect, soundFrom } from './settings'
 import type { SettingsUi, SoundSettings } from './settings'
 import { CLOSE_BOX, WINDOW_TOP, WINDOW_W } from './window'
@@ -49,16 +49,15 @@ describe('the settings window', () => {
     // In terminal text from column 2 under the title bar: GAME on columns 2 to 7, ORDERS on 9 to 16.
     expect(settingsGesture(hero(), ON, GAME, tap(12, WINDOW_TOP + 4)).ui).toEqual(ORDERS)
     expect(settingsGesture(hero(), ON, ORDERS, tap(4, WINDOW_TOP + 4)).ui).toEqual(GAME)
-    expect(settingsOverlay(ORDERS).map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['GAME', 'ORDERS'])
+    expect(settingsOverlay(hero(), ON, ORDERS).filter(b => b.role === 'tabs').map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['GAME', 'ORDERS'])
   })
 
   test('each order button says the order as it stands', async () => {
-    const px = (orders: Game['orders']) => settingsPixels(hero({ orders }), ON, ORDERS)
+    const said = (orders: Game['orders']) => buttonsIn(settingsOverlay(hero({ orders }), ON, ORDERS)).map(b => b.text)
     const base = { drink: 25, smoke: false, leave: 'common' } as const
-    expect(px(base)).toEqual(px(undefined))
-    expect(px(base)).not.toEqual(px({ ...base, drink: 50 }))
-    expect(px(base)).not.toEqual(px({ ...base, smoke: true }))
-    expect(px(base)).not.toEqual(px({ ...base, leave: 'rare' }))
+    expect(said(undefined)).toEqual(['D DRINK AT QUARTER HP', 'F SMOKE NEVER', 'K TAKE ALL LOOT'])
+    expect(said(base)).toEqual(said(undefined))
+    expect(said({ drink: 50, smoke: true, leave: 'rare' })).toEqual(['D DRINK AT HALF HP', 'F SMOKE WHEN LOW', 'K LEAVE BELOW RARE'])
   })
 
   test('the volume steps a quarter up, from full back round to a quarter; effects and music flip and flip back', async () => {
@@ -69,15 +68,14 @@ describe('the settings window', () => {
   })
 
   test('each sound button says how the sound is set', async () => {
-    const px = (s: SoundSettings) => settingsPixels(hero(), s)
-    expect(px(ON)).not.toEqual(px({ ...ON, effects: false }))
-    expect(px(ON)).not.toEqual(px({ ...ON, music: false }))
-    expect(px(ON)).not.toEqual(px({ ...ON, volume: 2 }))
+    const said = (s: SoundSettings) => buttonsIn(settingsOverlay(hero(), s)).map(b => b.text).filter(t => /^[EML] /.test(t))
+    expect(said(ON)).toEqual(['E SOUND ON', 'M MUSIC ON', `L VOL ${(100 * ON.volume) / VOLUME_STEPS}`])
+    expect(said({ ...ON, effects: false, music: false, volume: 2 })).toEqual(['E SOUND OFF', 'M MUSIC OFF', 'L VOL 50'])
   })
 
   test('Help draws its key in gold where it stands', async () => {
     const r = settingsRect(hero(), ON, GAME, 'help')!
-    expect(settingsPixels(hero(), ON).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + r.w).includes(GOLD_INK))).toBe(true)
+    expect(buttonsIn(settingsOverlay(hero(), ON)).find(b => b.x === r.x && b.y === r.y)).toMatchObject({ text: 'H HELP', isLit: true })
   })
 
   test('the close box closes it; a drag or a click on nothing does nothing', async () => {

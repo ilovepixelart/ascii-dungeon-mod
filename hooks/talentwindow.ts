@@ -5,7 +5,7 @@
 import type { Game, Talent } from '../types'
 import type { Action, Run } from './game'
 import { TALENTS, TALENT_EVERY, offer } from './talents'
-import { button, buttonW } from './pieces'
+import { BUTTON_H, button, buttonBox, buttonW, onCell } from './pieces'
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
 import { asIs, bevelCard, gem, recede, ribbon, sparkles } from './ui/kit'
@@ -47,22 +47,26 @@ const rowX = Math.floor((WINDOW_W - (3 * CARD_W + 2 * GAP)) / 2)
 export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y: top + CARD_Y - LIFT, w: CARD_W, h: CARD_H + LIFT })
 /** A card's face as drawn, the chosen one lifted: where a click on it acts and the hover lights it. */
 const faceRect = (i: number, chosen: number): Rect => ({ ...cardRect(i), y: top + CARD_Y - (i === chosen ? LIFT : 0), h: CARD_H })
-const BUTTONS_Y = CARD_Y + CARD_H + 5
+const BUTTONS_Y = onCell(CARD_Y + CARD_H + 5)
 export const takeRect = (): Rect => {
   const w = buttonW('T', 'TAKE')
-  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('L', 'LATER')) / 2), y: top + BUTTONS_Y, w, h: 11 }
+  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('L', 'LATER')) / 2), y: top + BUTTONS_Y, w, h: BUTTON_H }
 }
 export const laterRect = (): Rect => {
   const t = takeRect()
-  return { x: t.x + t.w + 4, y: t.y, w: buttonW('L', 'LATER'), h: 11 }
+  return { x: t.x + t.w + 4, y: t.y, w: buttonW('L', 'LATER'), h: BUTTON_H }
 }
-/** The box under the buttons, in cells: the chosen talent's line. */
+/** The box under the buttons, in cells: the chosen talent's line; then Take's and Later's words. */
 export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
   const offered = offer(g)
   if (offered.length === 0) return [takenBox(g)]
   const t = offered[chosenOf(g, ui)]!
   const lines: Run[][] = [[{ text: `${TALENTS[t].name}: `, bold: true }, { text: TALENTS[t].does }]]
-  return [{ role: 'about', x: 2, y: Math.floor((takeRect().y + 11 + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
+  return [
+    { role: 'about', x: 2, y: Math.floor((takeRect().y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
+    buttonBox('T', 'TAKE', takeRect().x, takeRect().y, 'armed'),
+    buttonBox('L', 'LATER', laterRect().x, laterRect().y, 'ready'),
+  ]
 }
 const offerHeight = (g: Game, ui: TalentUi) => {
   const box = talentOverlay(g, ui)[0]!
@@ -103,7 +107,7 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
   button(body, 'T', 'TAKE', takeRect().x, takeRect().y - top, 'armed')
   button(body, 'L', 'LATER', laterRect().x, laterRect().y - top, 'ready')
   const c = windowPixels(heroChrome(g, 'talent'), body.px)
-  for (const b of talentOverlay(g, ui)) drawBox(c, b)
+  for (const b of talentOverlay(g, ui)) if (b.role !== 'button') drawBox(c, b)
   return c.px
 }
 /** With none owed, the box under the tabs, in cells: when the next talent comes, then each talent taken and what it

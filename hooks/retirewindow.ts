@@ -7,7 +7,8 @@ import { whyNotRetire } from './game'
 import { BIG_EVERY } from './map'
 import { CLASS_NAME, RARITY_COLOR, SLOTS } from './items'
 import { ICONS } from './icons'
-import { BUTTON_H, button, buttonW, tierBox } from './pieces'
+import { BUTTON_H, button, buttonBox, buttonW, onCell, tierBox } from './pieces'
+import type { ButtonState } from './pieces'
 import { art, canvas, fill, frame } from './canvas'
 import { chosenSlot } from './forge'
 import type { ForgeUi } from './forge'
@@ -40,15 +41,16 @@ const layout = (g: Game, ui: RetireUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
   const boxes = worn(g).map((s, i) => ({ slot: s, x: PAD + i * BOX_STEP, y: top + BOXES_Y }))
-  const buttonsY = top + BOXES_Y + BOX_H + 4
+  const buttonsY = onCell(top + BOXES_Y + BOX_H + 4)
   const [rw, bw] = [buttonW(RETIRE.key, RETIRE.label), buttonW(BACK.key, BACK.label)]
   const retire: Rect = { x: Math.floor((WINDOW_W - rw - 4 - bw) / 2), y: buttonsY, w: rw, h: BUTTON_H }
   const back: Rect = { x: retire.x + retire.w + 4, y: buttonsY, w: bw, h: BUTTON_H }
-  return { slot, item, boxes, retire, back }
+  const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
+  return { slot, item, boxes, retire, back, retireState }
 }
 
 /** The box under the buttons, in cells: what it asks with the chosen piece's name in its tier's color, what passing
- * it down means, who the hero was. */
+ * it down means, who the hero was. Then the buttons' words. */
 export const retireOverlay = (g: Game, ui: RetireUi): OverlayBox[] => {
   const l = layout(g, ui)
   const who = `Level ${g.level} ${CLASS_NAME[g.cls]}, deepest ${g.deepest}, ${many(Math.floor(g.bossSlain / BIG_EVERY), 'big boss', 'big bosses')}.`
@@ -57,7 +59,11 @@ export const retireOverlay = (g: Game, ui: RetireUi): OverlayBox[] => {
     [{ text: TELL }],
     [{ text: who, dim: true }],
   ]
-  return [{ role: 'about', x: 2, y: Math.ceil((l.retire.y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
+  return [
+    { role: 'about', x: 2, y: Math.ceil((l.retire.y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
+    buttonBox(RETIRE.key, RETIRE.label, l.retire.x, l.retire.y, l.retireState),
+    buttonBox(BACK.key, BACK.label, l.back.x, l.back.y, 'ready'),
+  ]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -90,10 +96,10 @@ export const retirePixels = (g: Game, ui: RetireUi): string[][] => {
   const l = layout(g, ui)
   const body = canvas(WINDOW_W, retireHeight(g, ui) - top)
   for (const b of l.boxes) pieceBox(body, g.gear[b.slot]!, b.x, b.y - top, b.slot === l.slot)
-  button(body, RETIRE.key, RETIRE.label, l.retire.x, l.retire.y - top, l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? 'armed' : 'off')
+  button(body, RETIRE.key, RETIRE.label, l.retire.x, l.retire.y - top, l.retireState)
   button(body, BACK.key, BACK.label, l.back.x, l.back.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)
-  for (const b of retireOverlay(g, ui)) drawBox(c, b)
+  for (const b of retireOverlay(g, ui)) if (b.role !== 'button') drawBox(c, b)
   return c.px
 }
 

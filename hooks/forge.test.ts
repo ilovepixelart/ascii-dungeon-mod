@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Rarity, Slot } from '../types'
-import { CURSOR, GOLD_INK } from './pieces'
+import { CURSOR } from './pieces'
+import { buttonsIn } from './fixtures'
 import { WORN_SLOTS } from './inventory'
 import { makeItem, plainItem, setOf, setPiece } from './items'
 import { WINDOW_TOP, CLOSE_BOX } from './window'
@@ -18,15 +19,8 @@ const onSlot = (slot: Slot) => {
   return tap(x + Math.floor(w / 2), WINDOW_TOP + y + Math.floor(h / 2))
 }
 const card = (g: Game, slot: Slot | null) => forgeOverlay(g, { slot })[0]!.lines.map(l => l.map(r => r.text).join(''))
-/** The gold key letters on the work side, top to bottom: one a ready button. */
-const readyKeys = (g: Game, slot: Slot | null) => {
-  const px = forgePixels(g, { slot })
-  // Each letter's first row: a gold row with no gold row right above it.
-  const gold = (y: number) => px[y]?.slice(47, 54).includes(GOLD_INK) === true
-  const rows: number[] = []
-  for (let y = WINDOW_TOP; y < px.length; y += 1) if (gold(y) && !gold(y - 1)) rows.push(y)
-  return rows
-}
+/** The tops of the buttons whose keys are lit, in window pixels. */
+const readyKeys = (g: Game, slot: Slot | null) => buttonsIn(forgeOverlay(g, { slot })).filter(b => b.isLit).map(b => b.y)
 
 describe('the piece chosen', () => {
   test('is the first worn until another is clicked; a piece no longer worn gives way to the first', async () => {

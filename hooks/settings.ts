@@ -6,7 +6,7 @@ import type { Game, Orders } from '../types'
 import type { Action } from './game'
 import { ordersOf } from './game'
 import { BG, canvas, fill } from './canvas'
-import { BUTTON_H, button, buttonW } from './pieces'
+import { BUTTON_H, button, buttonBox, buttonW } from './pieces'
 import { SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -45,11 +45,13 @@ const rowsOf = (g: Game, sound: SoundSettings, ui: SettingsUi): Key[][] => ui.pa
 /** The rows' top, under the pages' tabs and their rule. */
 const ROWS_Y = top + TABS_H + 4
 const ROWS = 3
-/** Each button of the page and its place, in window pixels: its row's left to right, SPACE.gap apart. */
+const ROW_STEP = BUTTON_H + 2
+/** Each button of the page and its place, in window pixels: its row's left to right, SPACE.gap apart; a row a cell under
+ * the one above, so every row starts on a whole cell. */
 const placed = (g: Game, sound: SoundSettings, ui: SettingsUi) => rowsOf(g, sound, ui).flatMap((row, r) => {
   let x = PAD
   return row.map(k => {
-    const rect = { x, y: ROWS_Y + r * (BUTTON_H + SPACE.gap), w: buttonW(k.key, k.label), h: BUTTON_H }
+    const rect = { x, y: ROWS_Y + r * ROW_STEP, w: buttonW(k.key, k.label), h: BUTTON_H }
     x += rect.w + SPACE.gap
     return { ...k, rect }
   })
@@ -76,8 +78,8 @@ export const soundFrom = (saved: unknown, defaults: SoundSettings): SoundSetting
 export const nextSound = (s: SoundSettings, does: 'effects' | 'music' | 'volume'): SoundSettings =>
   does === 'effects' ? { ...s, effects: !s.effects } : does === 'music' ? { ...s, music: !s.music } : { ...s, volume: (s.volume % VOLUME_STEPS) + 1 }
 
-/** The window's height in pixels: three rows of buttons on either page and a pixel of room, a whole number of cells. */
-export const SETTINGS_H = Math.ceil((ROWS_Y + ROWS * (BUTTON_H + SPACE.gap)) / 2) * 2
+/** The window's height in pixels: three rows of buttons on either page and a cell of room under them. */
+export const SETTINGS_H = ROWS_Y + ROWS * ROW_STEP
 
 /** Where a button is on its page, in window pixels, by what it does. */
 export const settingsRect = (g: Game, sound: SoundSettings, ui: SettingsUi, does: Does): Rect | undefined => placed(g, sound, ui).find(k => k.does === does)?.rect
@@ -91,8 +93,11 @@ export const settingsPixels = (g: Game, sound: SoundSettings, ui: SettingsUi = S
   return windowPixels(CHROME, body.px).px
 }
 
-/** The text over the window: its pages' tab labels. */
-export const settingsOverlay = (ui: SettingsUi = SETTINGS_UI): OverlayBox[] => textTabBoxes(PAGES, ui.page === 'game' ? 0 : 1, top, BG)
+/** The text over the window: its pages' tab labels, its buttons' words. */
+export const settingsOverlay = (g: Game, sound: SoundSettings, ui: SettingsUi = SETTINGS_UI): OverlayBox[] => [
+  ...textTabBoxes(PAGES, ui.page === 'game' ? 0 : 1, top, BG),
+  ...placed(g, sound, ui).map(k => buttonBox(k.key, k.label, k.rect.x, k.rect.y, 'ready')),
+]
 
 /** What a gesture does: the page shown, game actions, and the sound as it now is. */
 export type SettingsOutcome = { ui: SettingsUi; actions: Action[]; sound: SoundSettings; isHelp?: true }

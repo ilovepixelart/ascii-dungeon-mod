@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
-import { textMask } from './pixelart'
+import { buttonsIn } from './fixtures'
 import { RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
 import type { Gesture } from './window'
@@ -54,32 +54,27 @@ describe('the character sheet', () => {
 
   test('Retire opens the retire window once a big boss is slain, lit; before, it is dark and does nothing', async () => {
     const r = RETIRE_RECT
-    const lit = (g: Game) => sheetPixels(g).slice(r.y, r.y + r.h).some(row => row.slice(r.x, r.x + 8).includes(GOLD_INK))
+    const lit = (g: Game) => buttonsIn(sheetOverlay(g)).find(b => b.text === 'R RETIRE')!.isLit
     expect(sheetGesture(hero({ bossSlain: 10 }), tap(r.x + 2, r.y + 4))).toEqual([{ kind: 'panel', panel: 'retire' }])
     expect(lit(hero({ bossSlain: 10 }))).toBe(true)
     expect(sheetGesture(hero({ bossSlain: 5 }), tap(r.x + 2, r.y + 4))).toEqual([])
     expect(lit(hero({ bossSlain: 5 }))).toBe(false)
-    expect([r.y > plusRect(3).y + 11, r.x + r.w <= WINDOW_W, r.y + r.h <= SHEET_H]).toEqual([true, true, true])
+    expect([r.y > plusRect(3).y + plusRect(3).h, r.x + r.w <= WINDOW_W, r.y + r.h <= SHEET_H]).toEqual([true, true, true])
   })
 
-  test('each + key is the plus alone, centered, no digit beside it', async () => {
-    const plus = textMask('+')
+  test('each + key is the plus alone, a cell of room each side, beside its attribute\'s name and value', async () => {
     const g = hero({ points: 1 })
-    const px = sheetPixels(g)
-    for (let i = 0; i < 4; i += 1) {
-      const r = plusRect(i)
-      expect(r.w).toBe(3 + plus[0]!.length + 3)
-      const gold = new Set<string>()
-      for (let y = r.y; y < r.y + r.h; y += 1) for (let x = r.x; x < r.x + r.w; x += 1) if (px[y]![x] === GOLD_INK) gold.add(`${x - r.x},${y - r.y}`)
-      const want = new Set(plus.flatMap((row, dy) => [...row].flatMap((k, dx) => (k === '#' ? [`${3 + dx},${3 + dy}`] : []))))
-      expect([...gold].sort()).toEqual([...want].sort())
-    }
+    const buttons = buttonsIn(sheetOverlay(g)).filter(b => b.text === '+')
+    expect(buttons.map(b => [b.x, b.y, b.w])).toEqual([0, 1, 2, 3].map(i => [plusRect(i).x, plusRect(i).y, 5]))
+    // Each row's words up to its +: the name at the left, the value against the right.
+    const rows = sheetOverlay(g).filter(b => b.role === 'attribute').map(b => b.lines[0]!.map(r => r.text).join('').replace(/ +/, ' '))
+    expect(rows).toEqual([`MIGHT ${g.stats.might}`, `FOCUS ${g.stats.focus}`, `VIGOR ${g.stats.vigor}`, `INSIGHT ${g.stats.insight}`])
   })
 
   test('the + keys are lit only with points to spend', async () => {
-    const key = (g: Game) => sheetPixels(g).slice(plusRect(0).y, plusRect(0).y + 11).some(row => row.slice(plusRect(0).x, plusRect(0).x + 8).includes(GOLD_INK))
-    expect(key(hero({ points: 1 }))).toBe(true)
-    expect(key(hero({ points: 0 }))).toBe(false)
+    const keys = (g: Game) => buttonsIn(sheetOverlay(g)).filter(b => b.text === '+').map(b => b.isLit)
+    expect(keys(hero({ points: 1 }))).toEqual([true, true, true, true])
+    expect(keys(hero({ points: 0 }))).toEqual([false, false, false, false])
   })
 
   test('says who the hero is, how they stand, what Vigor and Insight give, and what they have to spend', async () => {

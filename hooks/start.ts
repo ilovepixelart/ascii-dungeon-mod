@@ -7,7 +7,7 @@ import { classAbout } from './game'
 import { canWear } from './items'
 import { canvas } from './canvas'
 import { PX, heroArt } from './pixelart'
-import { BUTTON_H, button, buttonW, portrait } from './pieces'
+import { BUTTON_H, button, buttonBox, buttonW, portrait } from './pieces'
 import { flatCard, textW } from './ui/kit'
 import { INK, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
@@ -29,7 +29,7 @@ const CARD_H = 3 + FACE + 3 + 5 + 3
 const CARD_Y = 3
 const BUTTON_Y = CARD_Y + CARD_H + 3
 /** The body over the box: the cards and the buttons, the box's top on a whole cell. */
-const BODY_H = BUTTON_Y + BUTTON_H + 3
+const BODY_H = BUTTON_Y + BUTTON_H + 2
 
 /** A game under way, worth going back to: anything won since a new game. */
 export const isUnderWay = (g: Game) => g.level > 1 || g.xp > 0 || g.deepest > 1 || g.deaths > 0 || g.gold > 0
@@ -57,6 +57,11 @@ const buttonRects = (g: Game): Rect[] => {
     return rect
   })
 }
+/** The buttons with their places and states: Start framed white, and Help beside it on a first game. */
+const buttonsOf = (g: Game) => {
+  const rects = buttonRects(g)
+  return buttonKeys(g).map(([key, label], i) => ({ key, label, rect: rects[i]!, state: key === 'S' || (key === 'H' && isFirstGame(g)) ? 'armed' as const : 'ready' as const }))
+}
 
 /** The screen's height in pixels: the body, then the chosen hero's line in its box. */
 export const startHeight = (g: Game, ui: StartUi) => top + BODY_H + 2 * (aboutLines(g, ui).length + 2) + 2
@@ -79,7 +84,10 @@ const aboutLines = (g: Game, ui: StartUi): Run[][] => {
 
 export const startOverlay = (g: Game, ui: StartUi): OverlayBox[] => {
   const lines = aboutLines(g, ui)
-  return [{ role: 'about', x: 2, y: (top + BODY_H) / 2, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }]
+  return [
+    { role: 'about', x: 2, y: (top + BODY_H) / 2, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
+    ...buttonsOf(g).map(b => buttonBox(b.key, b.label, b.rect.x, b.rect.y, b.state)),
+  ]
 }
 
 const card = (c: ReturnType<typeof canvas>, cls: HeroClass, i: number, isOn: boolean) => {
@@ -95,10 +103,9 @@ const card = (c: ReturnType<typeof canvas>, cls: HeroClass, i: number, isOn: boo
 export const startPixels = (g: Game, ui: StartUi): string[][] => {
   const body = canvas(WINDOW_W, startHeight(g, ui) - top)
   CLASSES.forEach((cls, i) => card(body, cls, i, cls === ui.cls))
-  const rects = buttonRects(g)
-  buttonKeys(g).forEach(([key, label], i) => button(body, key, label, rects[i]!.x, BUTTON_Y, key === 'S' || (key === 'H' && isFirstGame(g)) ? 'armed' : 'ready'))
+  for (const b of buttonsOf(g)) button(body, b.key, b.label, b.rect.x, b.rect.y - top, b.state)
   const c = windowPixels(CHROME, body.px)
-  for (const b of startOverlay(g, ui)) drawBox(c, b)
+  for (const b of startOverlay(g, ui)) if (b.role !== 'button') drawBox(c, b)
   return c.px
 }
 

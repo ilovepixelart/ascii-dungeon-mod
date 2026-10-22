@@ -147,17 +147,17 @@ describe('the death window', () => {
   })
 
   test('it says who, where, the toll and where the hero wakes', async () => {
-    const text = deathOverlay(after).flatMap(b => b.lines.map(l => l.map(r => r.text).join('')))
+    const text = deathOverlay(after).filter(b => b.role !== 'button').flatMap(b => b.lines.map(l => l.map(r => r.text).join('')))
     expect(text).toEqual(['Slain by', 'the rat of x', 'on depth 14.', `Level ${after.level}, deaths 1. Lost 16 gold.`, 'You wake on depth 11.'])
   })
 
   test('Wake and the close box close it; a click elsewhere does nothing', async () => {
     const at = (p: { x: number; y: number }) => deathGesture(after, { type: 'release', from: p, at: p, button: 'left' })
     const h = deathHeight(after)
-    // Wake sits centered under the boxes.
-    expect(at({ x: WINDOW_W / 2, y: (h - 9) / 2 })).toEqual([{ kind: 'panel', panel: 'death' }])
+    // Wake sits centered under the boxes, its last row 2 pixels over the window's end.
+    expect(at({ x: WINDOW_W / 2, y: (h - 5) / 2 })).toEqual([{ kind: 'panel', panel: 'death' }])
     expect(at(top({ x: CLOSE_BOX[0], y: CLOSE_BOX[1] }))).toEqual([{ kind: 'panel', panel: 'death' }])
-    expect(at({ x: 6, y: (h - 9) / 2 })).toEqual([])
+    expect(at({ x: 6, y: (h - 5) / 2 })).toEqual([])
   })
 })
 

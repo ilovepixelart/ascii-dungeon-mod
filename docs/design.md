@@ -42,8 +42,8 @@ names below point at it.
   any screen is a failing test (`hooks/assets.test.ts`).
 - Light comes in 8 steps a tile, colors snapped to the host's 17-step grid (`lightStep`, `lightInt`); a frame stays
   well under the 1024 color pairs the host paints exactly.
-- Meaning has one color each: gold `#ffd34d` for gold and keys, green for health and the go-ahead, red for harm and
-  closing, blue `c` for magic and the portal, the rarity tiers their own (`RARITY_COLOR`).
+- Meaning has one color each: gold `#ffd34d` for gold and keys, green for the go-ahead, red for HP (`HP_TONES`, at
+  every share, as Diablo's life globe), harm and closing, blue `c` for magic and the portal, the rarity tiers their own (`RARITY_COLOR`).
 
 ## Windows
 

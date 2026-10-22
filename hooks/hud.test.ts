@@ -6,7 +6,7 @@ import { xpToLevel } from './balance'
 import { depthMod, isBossDepth, newGame } from './game'
 import {
   ORB, ORB_PHASES, ORB_SIDE_Y, ORB_WIDTH_MIN, XP_LIGHT, hasOrbs, orbSize, orbTop, sideLineAt, stripLeft, xpOrbX,
-  BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_TONES, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_X, SIDE_LINE_Y, XP_FILL, XP_Y,
+  BAR_X, BELT_BELOW_Y, PORTRAIT, FRAME, GOLD_INK, HEART_X, HP_H, HP_Y, INSET, LEVEL_INK, LINE2_Y, MARK, MARK_INK, NUM_INK, POINTS_INK, SIDE_LINE_X, SIDE_LINE_Y, XP_FILL, XP_Y,
   BELT_W, barsLayout, beltMenuBox, hudBoxes, beltSlotX, contentLayout, hudContent, hudGesture, hudHit, hudHot, hudLayout, hudPixels, portalSlotX, settingsSlotX, hudLabels,
 } from './hud'
 import type { Gesture } from './window'
@@ -20,6 +20,8 @@ import { CHAMPION_MARK, FOE_BAR_EMPTY, FOE_BAR_FILL, FOE_BAR_W, frameOf, hexToIn
 
 /** A strip of 100 columns: the bars, under the orbs' 105. */
 const W = 100
+/** HP's red at every share, as Diablo's life globe: lit, body, shade. */
+const RED = ['#f06a5a', '#c0392b', '#8a231a'] as const
 const hero = (over: Partial<Game> = {}): Game => ({ ...newGame(4, 'knight'), ...over })
 /**
  * A strip whose bars are exactly 25 pixels long, worked by hand: the bars start 17 in, then the bar, 1 px, the 10 px
@@ -85,16 +87,15 @@ describe('the strip', () => {
     expect(star[7]).toBe('#fff2a8')
   })
 
-  test('fills the HP bar in proportion, green above 70%, amber to 40%, red below', async () => {
+  test('fills the HP bar in proportion, red at every share', async () => {
     const filledAt = (hp: number) => {
       const row = hudContent(hero({ hp, maxHp: 100 }), BAR25).px[HP_Y + 1] ?? []
-      const fill = new Set<string>([...HP_TONES.healthy, ...HP_TONES.hurt, ...HP_TONES.critical])
-      return { filled: row.slice(BAR_X, BAR_X + 25).filter(p => fill.has(p)).length, tone: row[BAR_X] }
+      return { filled: row.slice(BAR_X, BAR_X + 25).filter(p => (RED as readonly string[]).includes(p)).length, tone: row[BAR_X] }
     }
-    expect(filledAt(100)).toEqual({ filled: 25, tone: HP_TONES.healthy[1] })
-    expect(filledAt(71)).toEqual({ filled: 18, tone: HP_TONES.healthy[1] })
-    expect(filledAt(70)).toEqual({ filled: 18, tone: HP_TONES.hurt[1] })
-    expect(filledAt(40)).toEqual({ filled: 10, tone: HP_TONES.critical[1] })
+    expect(filledAt(100)).toEqual({ filled: 25, tone: RED[1] })
+    expect(filledAt(71)).toEqual({ filled: 18, tone: RED[1] })
+    expect(filledAt(70)).toEqual({ filled: 18, tone: RED[1] })
+    expect(filledAt(40)).toEqual({ filled: 10, tone: RED[1] })
     expect(filledAt(0).filled).toBe(0)
   })
 
@@ -118,8 +119,8 @@ describe('the strip', () => {
     // Each on its bar's middle two rows: one text row, a bar row above it and one below.
     expect((hp!.y + 1) * 2).toBe(INSET + HP_Y + 1)
     expect((lv!.y + 1) * 2).toBe(INSET + XP_Y + 1)
-    // 86% of 25 is 22 px filled: the text's cells from 9 to 14 are all on the fill, in the bar's own green.
-    expect(hp!.lines[0]!.every(r => r.bg === HP_TONES.healthy[1])).toBe(true)
+    // 86% of 25 is 22 px filled: the text's cells from 9 to 14 are all on the fill, in the bar's own red.
+    expect(hp!.lines[0]!.every(r => r.bg === RED[1])).toBe(true)
     // At 20% only 5 px are filled: the text is on the empty bar.
     expect(hudLabels({ ...g, hp: 20 }, BAR25 + 2 * INSET)[0]!.lines[0]!.every(r => r.bg === '#1e2420')).toBe(true)
   })
@@ -296,7 +297,7 @@ describe('the strip at any pane width', () => {
       const g = hero({ hp: 27, maxHp: 105 })
       const { barW } = barsLayout(g, width)
       const row = hudContent(g, width).px[HP_Y + 1] ?? []
-      const tones = new Set<string>([...HP_TONES.critical, '#1e2420'])
+      const tones = new Set<string>([...RED, '#1e2420'])
       expect(row.slice(BAR_X, BAR_X + barW).every(p => tones.has(p)) ? 'clear' : `${columns}: something drawn over the bar`).toBe('clear')
       expect(barW).toBeGreaterThanOrEqual(10)
       // "105/105" as text, a cell a character, lies on the bar.
@@ -600,17 +601,17 @@ describe('the orbs, from 105 columns', () => {
     expect([c.px[0]![11], c.px[ORB_Y + ORB]![11]]).toEqual([BG, BG])
   })
 
-  test('fill the HP orb to the HP\'s share, its surface lit, in the HP\'s tone: green above 70%, amber to 40%, red below', async () => {
+  test('fill the HP orb to the HP\'s share, its surface lit, red at every share', async () => {
     // Down its middle on the rows the ripple leaves still (9 to 12): the surface on row 1 + (1 - share) * 20, rounded.
     const column = (hp: number) => [9, 10, 11, 12].map(y => hudContent(hero({ hp, maxHp: 100 }), IN, 3).px[ORB_Y + y]![11])
     // The empty glass is the strip's ground seen through it, tinted a seventh by the liquid.
     const glass = (tone: string) => mix(BG, tone, 0.14)
-    expect(column(100)).toEqual(Array(4).fill(HP_TONES.healthy[1]))
+    expect(column(100)).toEqual(Array(4).fill(RED[1]))
     // 60%: row 9. 50%: row 11. 35%: row 14, under them all.
-    expect(column(60)).toEqual([HP_TONES.hurt[0], HP_TONES.hurt[1], HP_TONES.hurt[1], HP_TONES.hurt[1]])
-    expect(column(50)).toEqual([glass(HP_TONES.hurt[1]), glass(HP_TONES.hurt[1]), HP_TONES.hurt[0], HP_TONES.hurt[1]])
-    expect(column(35)).toEqual(Array(4).fill(glass(HP_TONES.critical[1])))
-    expect(column(0)).toEqual(Array(4).fill(glass(HP_TONES.critical[1])))
+    expect(column(60)).toEqual([RED[0], RED[1], RED[1], RED[1]])
+    expect(column(50)).toEqual([glass(RED[1]), glass(RED[1]), RED[0], RED[1]])
+    expect(column(35)).toEqual(Array(4).fill(glass(RED[1])))
+    expect(column(0)).toEqual(Array(4).fill(glass(RED[1])))
   })
 
   test('fill the XP orb by the share of the way to the next level, in gold', async () => {

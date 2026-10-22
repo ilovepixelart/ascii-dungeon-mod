@@ -4,7 +4,7 @@
 import type { Game, Rarity } from '../types'
 import type { Action, Run } from './game'
 import { ASK, BOSS_EVERY, FORTUNE_SAID, STANDING, apply, fortuneCost, gambleCost, questReward, tradeInOf } from './game'
-import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
+import { MARK, HP_TONES, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
 import type { Theme } from './map'
@@ -170,7 +170,7 @@ const statusBar = (statusY: number) => ({ x: SIDE_X + 7, y: Math.floor((statusY 
 const barOf = (g: Game, who: Speaker): { share: number; color: string; empty: string; text: string } | undefined => {
   if (who === 'healer') {
     const share = Math.max(0, g.hp) / g.maxHp
-    return { share, color: hpTones(share)[1], empty: HP_EMPTY, text: `${Math.max(0, g.hp)}/${g.maxHp}` }
+    return { share, color: HP_TONES[1], empty: HP_EMPTY, text: `${Math.max(0, g.hp)}/${g.maxHp}` }
   }
   if (who === 'elder' && g.quest !== null) return { share: g.quest.have / g.quest.need, color: QUEST_FILL, empty: QUEST_EMPTY, text: `${g.quest.have}/${g.quest.need}` }
   return undefined

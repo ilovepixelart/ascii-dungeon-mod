@@ -8,7 +8,7 @@ import { TALENTS, TALENT_EVERY, offer } from './talents'
 import { BUTTON_H, button, buttonBox, buttonW, onCell } from './pieces'
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
-import { asIs, bevelCard, gem, recede, ribbon, sparkles } from './ui/kit'
+import { asIs, bevelCard, gem, recede, ribbon, ribbonLabel, sparkles } from './ui/kit'
 import type { Tone } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 import type { FamilyName } from './ui/tokens'
@@ -36,6 +36,8 @@ const CARD_W = 26
 const CARD_H = 34
 const CARD_Y = 6
 const LIFT = 2
+/** The ribbon's top, down a card's face. */
+const RIBBON_Y = 4
 /** The icon at its own size inside a pixel of backdrop and a frame. */
 const ART = 14
 
@@ -56,7 +58,8 @@ export const laterRect = (): Rect => {
   const t = takeRect()
   return { x: t.x + t.w + 4, y: t.y, w: buttonW('L', 'LATER'), h: BUTTON_H }
 }
-/** The box under the buttons, in cells: the chosen talent's line; then Take's and Later's words. */
+/** The box under the buttons, in cells: the chosen talent's line; then Take's and Later's words, and each card's
+ * ribbon's. */
 export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
   const offered = offer(g)
   if (offered.length === 0) return [takenBox(g)]
@@ -66,6 +69,10 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
     { role: 'about', x: 2, y: Math.floor((takeRect().y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
     buttonBox('T', 'TAKE', takeRect().x, takeRect().y, 'armed'),
     buttonBox('L', 'LATER', laterRect().x, laterRect().y, 'ready'),
+    ...offered.map((o, i) => {
+      const isOn = i === chosenOf(g, ui)
+      return ribbonLabel(FAMILIES[FAMILY_OF[o]], cardRect(i).x, CARD_W, top + CARD_Y - (isOn ? LIFT : 0) + RIBBON_Y, isOn ? asIs : recede)
+    }),
   ]
 }
 const offerHeight = (g: Game, ui: TalentUi) => {
@@ -91,7 +98,7 @@ const drawCard = (body: Canvas, t: Talent, i: number, isOn: boolean) => {
   const x = cardRect(i).x
   const y = CARD_Y - (isOn ? LIFT : 0)
   bevelCard(body, { x, y: CARD_Y, w: CARD_W, h: CARD_H }, f, isOn, LIFT, tone)
-  ribbon(body, f, x, CARD_W, y + 4, tone)
+  ribbon(body, f, x, CARD_W, y + RIBBON_Y, tone)
   drawArt(body, t, x, y + 13, tone)
   gem(body, f, x + Math.floor(CARD_W / 2), y + CARD_H - 4, isOn, tone)
   if (isOn) sparkles(body, { x, y, w: CARD_W, h: CARD_H })
@@ -107,7 +114,7 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
   button(body, 'T', 'TAKE', takeRect().x, takeRect().y - top, 'armed')
   button(body, 'L', 'LATER', laterRect().x, laterRect().y - top, 'ready')
   const c = windowPixels(heroChrome(g, 'talent'), body.px)
-  for (const b of talentOverlay(g, ui)) if (b.role !== 'button') drawBox(c, b)
+  for (const b of talentOverlay(g, ui)) if (b.role === 'about') drawBox(c, b)
   return c.px
 }
 /** With none owed, the box under the tabs, in cells: when the next talent comes, then each talent taken and what it

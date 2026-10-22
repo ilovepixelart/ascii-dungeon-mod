@@ -8,6 +8,8 @@ import { SLOTS, plainItem } from './items'
 import { WINDOW_TOP, closeBoxOf } from './window'
 import type { Gesture } from './window'
 import { newGame } from './world'
+/** The window's cards and menus, the labels on its art left out. */
+const cards = (...args: Parameters<typeof compactOverlay>) => compactOverlay(...args).filter(b => b.role !== 'label')
 
 const knight = (): Game => ({ ...newGame(1, 'knight'), bag: [] })
 const put = (g: Game, base: string, x: number, y: number): Item => {
@@ -22,7 +24,7 @@ const onItem = (item: Item) => tap(1 + item.x * CELL + 4.5, (WINDOW_TOP + 2 + it
 describe('the compact inventory', () => {
   test('lists what is worn, a slot to two rows: its name, then the item or a dash', async () => {
     const g = knight()
-    const list = compactOverlay(g, BAG_UI_IDLE)[0]!.lines.map(l => l.map(r => r.text).join(''))
+    const list = cards(g, BAG_UI_IDLE)[0]!.lines.map(l => l.map(r => r.text).join(''))
     expect(list.length).toBe(SLOTS.length * 2)
     expect(list.slice(0, 2)).toEqual(['Weapon', 'Short Sword'])
     expect(list[list.indexOf('Ring') + 1]).toBe('-')
@@ -33,7 +35,7 @@ describe('the compact inventory', () => {
     const boots = { ...plainItem(g, 'boots', 'rare'), name: 'Refactored Leather Boots of Fast Feedback' }
     const ring = { ...plainItem(g, 'ring', 'legendary'), name: 'Band of the Endless Loop' }
     const worn = { ...g, gear: { ...g.gear, boots, ring } }
-    const list = compactOverlay(worn, BAG_UI_IDLE)[0]!
+    const list = cards(worn, BAG_UI_IDLE)[0]!
     const rows = list.lines.map(l => l.map(r => r.text).join(''))
     const of = (slot: (typeof SLOTS)[number]) => rows.slice(SLOTS.indexOf(slot) * 2, SLOTS.indexOf(slot) * 2 + 2)
     expect([of('weapon'), of('boots'), of('ring')]).toEqual([['Weapon', 'Short Sword'], ['Boots', 'Leather Boots'], ['Band of the', 'Endless Loop']])
@@ -42,7 +44,7 @@ describe('the compact inventory', () => {
 
   test('a click on a worn row takes that piece off; on an empty slot\'s, nothing', async () => {
     const g = knight()
-    const list = compactOverlay(g, BAG_UI_IDLE)[0]!
+    const list = cards(g, BAG_UI_IDLE)[0]!
     SLOTS.forEach((slot, i) => {
       const out = compactGesture(g, BAG_UI_IDLE, tap(list.x + 3.5, list.y + 1 + 2 * i + 1.5))
       expect(out.actions).toEqual(g.gear[slot] === undefined ? (g.cursor === null ? [] : [{ kind: 'deselect' }]) : [{ kind: 'unequip', slot }])
@@ -56,7 +58,7 @@ describe('the compact inventory', () => {
     const chosen = { ...g, cursor: ring.id }
     const open = compactGesture(chosen, BAG_UI_IDLE, onItem(ring)).ui
     expect(open.menu).toEqual({ id: ring.id, confirm: false })
-    const menu = compactOverlay(chosen, open).find(b => b.role === 'menu')!
+    const menu = cards(chosen, open).find(b => b.role === 'menu')!
     expect(compactGesture(chosen, open, tap(menu.x + 2.5, menu.y + 1.5)).actions).toEqual([{ kind: 'equip' }])
   })
 
@@ -85,7 +87,7 @@ describe('the compact inventory', () => {
     expect(px.length).toBe(COMPACT_H)
     for (const row of px) expect(row.length).toBe(COMPACT_W)
     const own = { x: 1 + ring.x * CELL, y: WINDOW_TOP + 2 + ring.y * CELL, w: CELL, h: CELL }
-    for (const b of compactOverlay(chosen, { ...BAG_UI_IDLE, menu: { id: ring.id, confirm: false } }).filter(b => b.role !== 'worn')) {
+    for (const b of cards(chosen, { ...BAG_UI_IDLE, menu: { id: ring.id, confirm: false } }).filter(b => b.role !== 'worn')) {
       expect(b.x >= 0 && b.x + b.w <= COMPACT_W && (b.y + b.h) * 2 <= COMPACT_H).toBe(true)
       const covers = own.x < b.x + b.w && b.x < own.x + own.w && own.y < (b.y + b.h) * 2 && b.y * 2 < own.y + own.h
       expect(covers).toBe(false)

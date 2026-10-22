@@ -3,9 +3,7 @@
 // outline of the clickable place under the pointer. Pure.
 import type { Canvas } from '../canvas'
 import { fill, frame, put } from '../canvas'
-import { textMask } from '../pixelart'
-import { mix } from '../pieces'
-import { word } from '../window'
+import { artLabel, mix, onCell } from '../pieces'
 import type { Rect } from '../window'
 import { INK, SURFACE } from './tokens'
 import { GLOW } from './glow'
@@ -17,7 +15,6 @@ export const asIs: Tone = ink => ink
 /** What is not chosen: a quarter of the way into the dark. */
 export const recede: Tone = ink => mix(ink, SURFACE.veil, 0.28)
 
-export const textW = (text: string) => textMask(text)[0]?.length ?? 0
 
 /** A flat card: its face, framed white when chosen. */
 export const flatCard = (c: Canvas, r: Rect, isOn: boolean) => {
@@ -41,13 +38,17 @@ export const bevelCard = (c: Canvas, r: Rect, f: Family, isOn: boolean, lift: nu
   frame(c, r.x + 1, y + 1, r.w - 2, r.h - 2, SURFACE.inset)
 }
 
-/** The family's ribbon across a card from x, `w` wide, at y: its ends notched, its word on it. */
+/** The family's ribbon across a card from x, `w` wide, at y: its ends notched; its word is `ribbonLabel`'s. */
 export const ribbon = (c: Canvas, f: Family, x: number, w: number, y: number, tone: Tone) => {
   fill(c, x + 2, y, w - 4, 7, tone(f.ink))
   fill(c, x + 2, y + 6, w - 4, 1, tone(f.dark))
   for (const nx of [x + 2, x + w - 3]) for (const ny of [y + 2, y + 3, y + 4]) put(c, nx, ny, tone(f.top))
-  word(c, f.label, x + Math.floor((w - textW(f.label)) / 2), y + 1, INK.onRibbon)
 }
+
+/** A ribbon's word, for the ribbon `ribbon` draws at x, y (window pixels), `w` wide: centred, on the first whole cell
+ * two pixels down, on the ribbon's own ink. */
+export const ribbonLabel = (f: Family, x: number, w: number, y: number, tone: Tone) =>
+  artLabel(f.label, x + Math.floor((w - f.label.length) / 2), onCell(y + 2), INK.onRibbon, tone(f.ink))
 
 /** A diamond gem centered at x, y in the family's colors, its heart white when chosen. */
 export const gem = (c: Canvas, f: Family, x: number, y: number, isOn: boolean, tone: Tone) => {

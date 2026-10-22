@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { BG, canvas } from './canvas'
 import type { Canvas } from './canvas'
-import { bevelCard, flatCard, gem, hoveredRect, lightUp, recede, ribbon, sparkles } from './ui/kit'
+import { bevelCard, flatCard, gem, hoveredRect, lightUp, recede, ribbon, ribbonLabel, sparkles } from './ui/kit'
 import { FAMILIES, INK, SURFACE } from './ui/tokens'
 
 const at = (c: Canvas, x: number, y: number) => c.px[y]![x]
@@ -40,14 +40,22 @@ describe('cards', () => {
     expect([at(on, 2, 2), at(on, 2, 1), at(off, 2, 2), at(off, 2, 1)]).toEqual([INK.focus, f.ink, f.ink, f.dark])
   })
 
-  test('a ribbon in its family\'s ink, its ends notched in the face\'s tint, its word on it', async () => {
+  test('a ribbon in its family\'s ink, its ends notched in the face\'s tint', async () => {
     const f = FAMILIES.road
     const c = canvas(30, 10)
     ribbon(c, f, 0, 30, 1, ink => ink)
     // Notched on its middle three rows, the second to the fourth below its top.
     expect([at(c, 2, 2), at(c, 2, 3), at(c, 2, 5), at(c, 2, 6), at(c, 27, 4)]).toEqual([f.ink, f.top, f.top, f.ink, f.top])
     expect([at(c, 3, 1), at(c, 3, 7)]).toEqual([f.ink, f.dark])
-    expect(c.px.flat()).toContain(INK.onRibbon)
+    // No letters in pixels: its word is text.
+    expect(c.px.flat()).not.toContain(INK.onRibbon)
+  })
+
+  test('a ribbon\'s word is text centred on it, on the first whole cell two rows down, on the ribbon\'s ink as toned', async () => {
+    const f = FAMILIES.road
+    // ROAD on a 30 wide ribbon from 0: 4 letters from 13; the ribbon at row 1, its word on row 4.
+    expect(ribbonLabel(f, 0, 30, 1, ink => ink)).toEqual({ role: 'label', x: 12, y: 1, w: 6, h: 3, border: f.ink, bg: f.ink, pad: 0, lines: [[{ text: f.label, color: INK.onRibbon, bold: true }]] })
+    expect(ribbonLabel(f, 0, 30, 2, recede).bg).toBe(recede(f.ink))
   })
 
   test('the chosen card\'s sparkles sit clear of it, white and gold at each top corner', async () => {

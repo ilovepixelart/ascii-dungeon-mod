@@ -144,62 +144,60 @@ describe('the strip', () => {
   })
 })
 
+/** The side line's words in a strip of content `w` wide: each its text and its first cell, in content pixels. */
+const sideWords = (g: Game, w = W) =>
+  hudLabels(g, w + 2 * INSET).filter(b => b.y === (INSET + SIDE_LINE_Y + 1) / 2 - 1).map(b => ({ text: b.lines[0]!.map(r => r.text).join(''), x: b.x + 1 - INSET, color: b.lines[0]![0]!.color }))
+
 describe('the side line', () => {
-  test('gives the gold and the depth, or the town', async () => {
-    const c = hudContent(hero({ gold: 214, depth: 7 }), W)
-    expect(hasText(c, '214', 7, SIDE_LINE_Y, GOLD_INK)).toBe(true)
-    // After the gold (11 px) and 5 px, the steps' mark and 2 px.
-    expect(hasText(c, '7', 7 + 11 + 5 + 7, SIDE_LINE_Y, NUM_INK)).toBe(true)
-    const town = hudContent(hero({ gold: 214, where: 'town' }), W)
-    expect(hasText(town, 'TOWN', 30, SIDE_LINE_Y, NUM_INK)).toBe(true)
+  test('gives the gold and the depth, or the town, as text after their marks', async () => {
+    // The coin's 5 px, a cell, the gold; 3 cells; the steps' 5 px, a cell, the depth.
+    expect(sideWords(hero({ gold: 214, depth: 7 }))).toEqual([{ text: '214', x: 6, color: GOLD_INK }, { text: '7', x: 18, color: NUM_INK }])
+    expect(sideWords(hero({ gold: 214, where: 'town' }))[1]).toEqual({ text: 'TOWN', x: 18, color: NUM_INK })
+    // Its row is the whole cell on the marks' middle rows.
+    expect(hudLabels(hero(), W + 2 * INSET).some(b => b.y * 2 + 2 === INSET + SIDE_LINE_Y + 1)).toBe(true)
   })
 
   test('shows an effect only while it runs, with what is left, flush right', async () => {
     const line = (g: Game) => new Set(ink(hudContent(g, W), 0, SIDE_LINE_Y, W, 5))
     const none = line(hero())
     for (const color of [MARK_INK.g, MARK_INK.b, MARK_INK.f]) expect(none.has(color!)).toBe(false)
-    const c = hudContent(hero({ effects: { regen: 3, ward: 0, fury: 5 } }), W)
-    // Fury last: its mark 6 px plus "5" (3 px) ends at the right edge; regen 4 px before it.
-    expect(hasText(c, '5', W - 3, SIDE_LINE_Y, NUM_INK)).toBe(true)
-    expect(hasText(c, '3', W - 9 - 4 - 3, SIDE_LINE_Y, NUM_INK)).toBe(true)
+    // Fury last: its mark, a cell and "5" end at the right edge; regen 3 cells before it.
+    const words = sideWords(hero({ effects: { regen: 3, ward: 0, fury: 5 } })).slice(2)
+    expect(words.map(w => [w.text, w.x])).toEqual([['5', W - 1], ['3', W - 11]])
     expect(line(hero({ effects: { regen: 3, ward: 0, fury: 5 } })).has(MARK_INK.b!)).toBe(false)
   })
 
   test('shows the fortune in force flush right, a crystal ball and its initial, the effects to its left', async () => {
     const line = (g: Game) => new Set(ink(hudContent(g, W), 0, SIDE_LINE_Y, W, 5))
     expect(line(hero()).has(MARK_INK.c!)).toBe(false)
-    const c = hudContent(hero({ fortune: { kind: 'riches', depth: 1 }, effects: { regen: 0, ward: 0, fury: 5 } }), W)
     expect(line(hero({ fortune: { kind: 'riches', depth: 1 } })).has(MARK_INK.c!)).toBe(true)
-    // "R" (3 px) ends at the right edge after the ball's 6; fury's "5" ends 4 px before the ball.
-    expect(hasText(c, 'R', W - 3, SIDE_LINE_Y, NUM_INK)).toBe(true)
-    expect(hasText(c, '5', W - 9 - 4 - 3, SIDE_LINE_Y, NUM_INK)).toBe(true)
+    const words = sideWords(hero({ fortune: { kind: 'riches', depth: 1 }, effects: { regen: 0, ward: 0, fury: 5 } })).slice(2)
+    expect(words.map(w => [w.text, w.x])).toEqual([['R', W - 1], ['5', W - 11]])
   })
 
-  test('leaves out the fortune when it would come within 4 px of the depth', async () => {
-    // 12840 gold on depth 12 ends the depth at 45. "L" and the ball take 9 px from the right edge: at 72 px they start
-    // at 63 and show; at 57 at 48, 3 px off the depth, and are left out.
+  test('leaves out the fortune when it would come within 3 cells of the depth', async () => {
+    // 12840 gold on depth 12: the gold from 6 to 10, the depth from 20 to 21, ending at 22. The ball and "L" take 7
+    // from the right edge: at 32 they start at 25 and show; at 31 at 24, and are left out.
     const line = (w: number) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, fortune: { kind: 'luck', depth: 12 } }), w), 0, SIDE_LINE_Y, w, 5))
-    expect(line(72).has(MARK_INK.c!)).toBe(true)
-    expect(line(58).has(MARK_INK.c!)).toBe(true)
-    expect(line(57).has(MARK_INK.c!)).toBe(false)
+    expect(line(32).has(MARK_INK.c!)).toBe(true)
+    expect(line(31).has(MARK_INK.c!)).toBe(false)
   })
 
   test('leaves out an effect that would run into the depth, never clipping one', async () => {
-    // At 72 px with 12840 gold on depth 12, worked by hand: fury from 63, ward from 50, regen would start at 37,
-    // before the depth ends at 49.
-    const c = hudContent(hero({ gold: 12840, depth: 12, effects: { regen: 3, ward: 2, fury: 5 } }), 72)
-    const line = new Set(ink(c, 0, SIDE_LINE_Y, 72, 5))
-    expect(line.has(MARK_INK.f!)).toBe(true)
-    expect(line.has(MARK_INK.b!)).toBe(true)
-    expect(line.has(MARK_INK.g!)).toBe(false)
-    expect(hasText(c, '2', 56, SIDE_LINE_Y, NUM_INK)).toBe(true)
+    // At 42 with 12840 gold on depth 12, worked by hand: fury from 35, ward from 25, 3 clear of the depth's end at 22;
+    // regen would start at 15.
+    const g = hero({ gold: 12840, depth: 12, effects: { regen: 3, ward: 2, fury: 5 } })
+    const line = new Set(ink(hudContent(g, 42), 0, SIDE_LINE_Y, 42, 5))
+    expect([line.has(MARK_INK.f!), line.has(MARK_INK.b!), line.has(MARK_INK.g!)]).toEqual([true, true, false])
+    expect(sideWords(g, 42).slice(2).map(w => [w.text, w.x])).toEqual([['5', 41], ['2', 31]])
+    // A cell narrower, the ward would start 2 clear: left out.
+    expect(new Set(ink(hudContent(g, 41), 0, SIDE_LINE_Y, 41, 5)).has(MARK_INK.b!)).toBe(false)
   })
 
-  test('keeps 4 px between the depth and an effect', async () => {
-    // At 72 px, depth 12 ends at 45: fury "5" from 63; regen "10" would start at 46, 1 px clear of it, so it is left out.
-    const line = (g: Partial<Game>) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, ...g }), 72), 0, SIDE_LINE_Y, 72, 5))
+  test('keeps 3 cells between the depth and an effect', async () => {
+    // At 40, fury from 33; regen "10" would start at 22, on the depth's end, so it is left out; alone it starts at 32.
+    const line = (g: Partial<Game>) => new Set(ink(hudContent(hero({ gold: 12840, depth: 12, ...g }), 40), 0, SIDE_LINE_Y, 40, 5))
     expect(line({ effects: { regen: 10, ward: 0, fury: 5 } }).has(MARK_INK.g!)).toBe(false)
-    // With regen alone it starts at 59, and shows.
     expect(line({ effects: { regen: 10, ward: 0, fury: 0 } }).has(MARK_INK.g!)).toBe(true)
   })
 })
@@ -223,11 +221,12 @@ describe("the depth's twist on the side line", () => {
     expect(line(hero({ depth: twisted('horde') })).has(MARK_INK.h!)).toBe(true)
   })
 
-  test('the mark takes room from the effects: one that clears a plain depth by 4 px is left out beside a twist', async () => {
-    // At 60 px with 12840 gold: the depth's two digits end at 45, its mark at 52; regen "3" starts at 51.
+  test('the mark takes room from the effects: one that clears a plain depth by 3 cells is left out beside a twist', async () => {
+    // At 37 with 12840 gold and a two-digit depth: the depth ends at 22, a twist's mark from 24 to 28; regen "3"
+    // starts at 30, 8 clear of a plain depth and 1 of the mark.
     const g = (depth: number) => hero({ gold: 12840, depth, effects: { regen: 3, ward: 0, fury: 0 } })
-    expect(line(g(plain()), 60).has(MARK_INK.g!)).toBe(true)
-    expect(line(g(twisted('horde')), 60).has(MARK_INK.g!)).toBe(false)
+    expect(line(g(plain()), 37).has(MARK_INK.g!)).toBe(true)
+    expect(line(g(twisted('horde')), 37).has(MARK_INK.g!)).toBe(false)
   })
 })
 
@@ -456,7 +455,8 @@ test('a belt menu open over the strip hides the numbers it covers, and leaves th
   const covers = (b: (typeof shown)[number]) => b.x < menu.x + menu.w && menu.x < b.x + b.w && b.y < menu.y + menu.h && menu.y < b.y + b.h
   expect(shown.filter(b => b.role === 'label').some(covers)).toBe(false)
   expect(shown.at(-1)).toBe(menu)
-  expect(hudBoxes(g, 111, []).filter(b => b.role === 'label')).toHaveLength(2)
+  // With none open: the HP and the level on their bars, the slot's count, the gold and the depth.
+  expect(hudBoxes(g, 111, []).filter(b => b.role === 'label')).toHaveLength(5)
 })
 
 test('the shut portal is the open one\'s size: its outline stays dark, only its inside goes grey', async () => {
@@ -508,17 +508,16 @@ test('a pixel stands between the portrait and the marks', async () => {
 })
 
 test('a slot counts the tier it uses next, as its icon and pips show it; the other tiers are not counted', async () => {
-  const width = 111 - 2 * INSET
-  const g = hero({ belt: [null, null, { kind: 'fury', tiers: [2, 1, 0] }, null, null] })
-  const c = hudContent(g, width)
-  const x = beltSlotX(width, 2)
-  const digitsAt = (n: number) => hasText(hudContent(hero({ belt: [null, null, { kind: 'fury', tiers: [n, 0, 0] }, null, null] }), width), String(n), x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')
-  expect(digitsAt(3)).toBe(true)
-  expect(hasText(c, '1', x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(true)
-  expect(hasText(c, '3', x + BELT_SLOT_W - 2 - 3, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(false)
-  // A full slot, 99 of each tier: the 99 Scrolls of the Berserker, two digits, where all 297 would cover the icon.
-  const full = hudContent(hero({ belt: [null, null, { kind: 'fury', tiers: [99, 99, 99] }, null, null] }), width)
-  expect(hasText(full, '99', x + BELT_SLOT_W - 2 - 7, BELT_BELOW_Y + SLOT / 2 + 2 - 5, '#ffffff')).toBe(true)
+  const count = (tiers: [number, number, number]) => {
+    const g = hero({ belt: [null, null, { kind: 'fury', tiers }, null, null] })
+    return hudLabels(g, 111).filter(b => b.y === 8).map(b => ({ text: b.lines[0]![0]!.text, x: b.x + 1 }))
+  }
+  // Against the slot's right edge, the frame's column before it; on the strip's row 18, its middle's whole cell.
+  const right = INSET + beltSlotX(111, 2) + BELT_SLOT_W - 1
+  expect(count([3, 0, 0])).toEqual([{ text: '3', x: right - 1 }])
+  expect(count([2, 1, 0])).toEqual([{ text: '1', x: right - 1 }])
+  // 99 of each tier: the 99 Scrolls of the Berserker, two digits, where all 297 would cover the icon.
+  expect(count([99, 99, 99])).toEqual([{ text: '99', x: right - 2 }])
 })
 
 test('a pixel stands under the star, above and below the side line, and between the content and the metal', async () => {

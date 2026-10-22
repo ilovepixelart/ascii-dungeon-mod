@@ -11,7 +11,7 @@ import { CELL } from './icons'
 import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
-import { CURSOR, OFF_CLASS, belt, beltSlotRect, cellBox, itemGrid, itemOutline } from './pieces'
+import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -72,9 +72,11 @@ const shown = (g: Game): Weighted[] => [
 export const compactOverlay = (g: Game, ui: BagUi): OverlayBox[] => {
   const list: OverlayBox = { role: 'worn', ...LIST, border: SURFACE.frame, lines: listLines(g) }
   const item = g.bag.find(i => i.id === g.cursor)
-  if (item === undefined || ui.drag !== null) return [list]
+  const counts = beltCountsAt(g, BELT_X, WINDOW_TOP + BELT_Y)
+  if (item === undefined || ui.drag !== null) return [...counts, list]
   const menu = ui.menu?.id === item.id ? boxShape('menu', menuLines(g, item, ui.menu.confirm), CURSOR) : undefined
-  return [list, ...cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), menu, COMPACT_W)]
+  const over = cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), menu, COMPACT_W)
+  return [...clearOf(counts, over), list, ...over]
 }
 
 /** The screen's pixels: title and gold, the bag, the belt, and the frames of the boxes over them. */
@@ -83,7 +85,7 @@ export const compactPixels = (g: Game, boxes: readonly OverlayBox[] = []): strin
   itemGrid(body, g, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
   belt(body, g, BELT_X, BELT_Y)
   const c = windowPixels({ title: 'INVENTORY', gold: g.gold }, body.px, COMPACT_W)
-  for (const b of boxes) drawBox(c, b)
+  for (const b of boxes) if (b.role !== 'label') drawBox(c, b)
   return c.px
 }
 

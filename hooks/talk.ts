@@ -8,11 +8,11 @@ import { MARK, hpTones, HP_EMPTY, NUM_INK, mark } from './hud'
 import { NPC_ART } from './pixelart'
 import { themeOf } from './map'
 import type { Theme } from './map'
-import { BUTTON_H, PORTRAIT, barLabel, button, buttonBox, buttonW, flatBar, onCell, portrait } from './pieces'
+import { BUTTON_H, PORTRAIT, artLabel, barLabel, button, buttonBox, buttonW, flatBar, onCell, portrait } from './pieces'
 import type { ButtonState } from './pieces'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
-import { canvas, digits } from './canvas'
+import { BG, canvas } from './canvas'
 import { RARITY_NAME, SLOTS } from './items'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -185,6 +185,8 @@ export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => {
   return [
     l.box,
     ...(b === undefined ? [] : [barLabel(at.x, at.y, at.w, b.share, b.color, b.empty, b.text)]),
+    // The dog's pets beside its heart, on the mark's middle rows.
+    ...(who === 'dog' ? [artLabel(`x ${g.petted}`, SIDE_X + 7, onCell(l.statusY + 1), NUM_INK, BG)] : []),
     ...(l.act === undefined || l.buttonRect === undefined ? [] : [buttonBox(l.act.key, l.act.label, l.buttonRect.x, l.buttonRect.y, l.act.state, l.act.cost, l.act.canPay)]),
   ]
 }
@@ -195,10 +197,7 @@ const STATUS: Readonly<Record<Speaker, (c: ReturnType<typeof canvas>, g: Game, y
   mystic: () => undefined,
   guard: () => undefined,
   villager: () => undefined,
-  dog: (c, g, y) => {
-    mark(c, MARK.heart, SIDE_X, y)
-    word(c, `X ${g.petted}`, SIDE_X + 7, y, NUM_INK)
-  },
+  dog: (c, _g, y) => mark(c, MARK.heart, SIDE_X, y),
 }
 
 /** The window's pixels: title bar, portrait, status, button, and the words' frame. */

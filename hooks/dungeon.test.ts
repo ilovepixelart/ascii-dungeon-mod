@@ -563,7 +563,7 @@ test('on a wide pane a mark card, clicked, chooses that mark', async ($, on) => 
   await clickStrip(ui, 20, LINE2_Y + 2)
   await ui.press({ key: 'sheet-deep' })
   const card = deepCards({ ...saved, panel: 'deep' })[1]!
-  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 6) / 2) }
+  const at = { x: card.rect.x + 20, y: Math.floor((card.rect.y + 3) / 2) }
   await ui.pointer({ type: 'down', ...at, button: 'left', in: 'deep-clicks' } as never)
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'deep-clicks' } as never)
   expect((kept.get('save') as Game).marks).toEqual({ 2: card.mark })
@@ -1477,9 +1477,10 @@ test('in the merchant\'s window a clicked ware shows its card, a second click it
   await ui.unmount()
 })
 
-/** The text of a pixel window's boxes, by the window's click layer: each box a list of its lines. */
-/** A window's own text boxes in its click layer, the title bar's (its title, tabs and gold) left out. */
-const ownBoxes = <B extends { role?: string }>(boxes: readonly B[]) => boxes.filter(b => b.role !== 'title' && b.role !== 'gold')
+/** A window's own text boxes in its click layer: the title bar's (its title, tabs and gold) and the labels on its art
+ * (prices, counts) left out. */
+const ownBoxes = <B extends { role?: string }>(boxes: readonly B[]) => boxes.filter(b => b.role !== 'title' && b.role !== 'gold' && b.role !== 'label')
+/** The text of a pixel window's own boxes, by the window's click layer: each box a list of its lines. */
 const boxTexts = async (ui: PaneUi, key: string) =>
   ownBoxes(((await ui.find({ type: 'Client', key }))?.props.props as { boxes: { role?: string; lines: { text: string }[][] }[] }).boxes).map(b => b.lines.map(l => l.map(r => r.text).join('')))
 
@@ -1765,7 +1766,8 @@ describe('pickups on a walk', () => {
     on('session.start', (_$, e) => ({ cwd: e.cwd }))
     await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
     const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-    const hud = async () => (await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells as string
+    // The strip as drawn: its pixels and the text over them (the gold and the belt's counts are text).
+    const hud = async () => JSON.stringify([(await ui.find({ type: 'Raster', key: 'hud' }))?.props.cells, ((await ui.find({ type: 'Client', key: 'hud-clicks' }))?.props.props as { boxes?: unknown } | undefined)?.boxes])
     // The same game beside the pane's, read by read, until a read's walk takes something up.
     let g = newGame(world)
     for (let call = 0; call < READS; call += 1) {

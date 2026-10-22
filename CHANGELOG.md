@@ -13,6 +13,9 @@ release may change behaviour.
 - The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,
   so a click moves between them. The tabs' labels are written in terminal text, which fits all five beside the bag's
   gold.
+- The last words and numbers drawn in the pixel font are terminal text: the shop's prices, the belt's counts in the
+  bag, the compact bag, the shop and the strip, the strip's gold, depth and effects, the start screen's class names,
+  the talent cards' ribbons and the dog's pets. The deep's two marks are buttons.
 - Buttons are written in terminal text on a face 6 pixels tall, where their key and label were the pixel font on one
   11 tall; the windows are shorter for it. The hero sheet's attributes are written the same way.
 - The codex draws each unique at its size on the map, half a big boss's each way and standing on the same floor,

@@ -9,7 +9,7 @@ import { POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, 
 import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
-import { beltSlotRect, itemOutline } from './pieces'
+import { beltCountsAt, beltSlotRect, clearOf, itemOutline } from './pieces'
 import { CLICK_SLOP, WINDOW_TOP, WINDOW_W, boxShape, coverage as coverageOf, isInside, pixel, place, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
@@ -21,7 +21,7 @@ export type BagUi = { menu: { id: number; confirm: boolean } | null; drag: Drag 
 export const BAG_UI_IDLE: BagUi = { menu: null, drag: null }
 
 /** A framed text box over the panel, in cells from the panel's top-left. */
-export type OverlayBox = Box<'worn' | 'item' | 'menu'>
+export type OverlayBox = Box<'worn' | 'item' | 'menu' | 'label'>
 
 const SLOT_WORD: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 const WORN_BORDER = SURFACE.frame
@@ -107,12 +107,18 @@ export const coverage = (g: Game, keep: readonly Rect[]) => coverageOf(ROWS, [
   ...keep.map(rect => ({ rect, weight: KEEP })),
 ])
 
-/**
- * The boxes over the panel while an item is selected: what is worn in its slot, titled Equipped, near that slot; the
- * item's card near the item; and its menu, when open, near the card. Each goes where it hides the least, never on
- * the item or on what it is compared with.
- */
+/** The boxes over the panel: the belt's counts that no card covers, then the cards. */
 export const bagOverlay = (g: Game, ui: BagUi): OverlayBox[] => {
+  const boxes = cardsOver(g, ui)
+  return [...clearOf(beltCountsAt(g, BELT_X, INV_TOP + BELT_Y), boxes), ...boxes]
+}
+
+/**
+ * The cards while an item is selected: what is worn in its slot, titled Equipped, near that slot; the item's card near
+ * the item; and its menu, when open, near the card. Each goes where it hides the least, never on the item or on what
+ * it is compared with.
+ */
+const cardsOver = (g: Game, ui: BagUi): OverlayBox[] => {
   const item = g.bag.find(i => i.id === g.cursor)
   if (item === undefined || ui.drag !== null) return []
   const own: Rect = { x: BAG_X + item.x * CELL, y: INV_TOP + BAG_Y + item.y * CELL, w: item.w * CELL, h: item.h * CELL }

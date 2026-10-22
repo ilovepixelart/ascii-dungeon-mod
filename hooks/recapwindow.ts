@@ -2,7 +2,7 @@
 // Play on. Pure: the click layer reports whole gestures, this decides the game actions they make.
 import type { Game, Recap } from '../types'
 import type { Action, Run } from './game'
-import { PX, heroArt, textMask } from './pixelart'
+import { PX, heroArt } from './pixelart'
 import { BUTTON_H, button, buttonBox, buttonW, drawItem, onCell, portrait } from './pieces'
 import { RARITY_COLOR } from './items'
 import { INK, SURFACE } from './ui/tokens'
@@ -23,26 +23,9 @@ const SLAIN = INK.danger
 const PLAY = { key: 'P', label: 'PLAY ON' }
 const FIND_Y = top + 2 + FACE + 3
 
-const textW = (text: string) => textMask(text)[0]?.length ?? 0
 const many = (n: number, one: string, more = `${one}s`) => `${n} ${n === 1 ? one : more}`
 const fromTo = (what: string, from: number, to: number) => (from === to ? `${what} ${to}` : `${what} ${from} to ${to}`)
 
-/** Words wrapped greedily to lines no wider than `width` pixels. */
-const greedy = (text: string, width: number) =>
-  text.split(' ').reduce<string[]>((lines, w) => {
-    const last = lines.at(-1)
-    if (last !== undefined && textW(`${last} ${w}`) <= width) lines[lines.length - 1] = `${last} ${w}`
-    else lines.push(w)
-    return lines
-  }, [])
-
-/** Words wrapped to as few lines as fit `width` pixels, as even as those lines can be: the narrowest width that needs no more of them. */
-export const wrap = (text: string, width: number) => {
-  const count = greedy(text, width).length
-  let w = width
-  while (w > 1 && greedy(text, w - 1).length === count) w -= 1
-  return greedy(text, w)
-}
 
 /** The work done, on one line: green test runs, commits, pushes and pull requests; none, no line. */
 const workLine = (r: Recap): Run[][] => {

@@ -1,5 +1,5 @@
-// A small pixel canvas the interface panels draw on: '#rrggbb' cells, and the frames, fills, art and digits they share.
-import { PAL, POPUP_OUTLINE, PX, textMask } from './pixelart'
+// A small pixel canvas the interface panels draw on: '#rrggbb' cells, and the frames, fills and art they share.
+import { PAL, PX } from './pixelart'
 import { hexToInt, rasterCells } from './pixels'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -38,19 +38,6 @@ export const frame = (c: Canvas, x: number, y: number, w: number, h: number, col
 /** Sprite rows over the canvas; '.' leaves what is below, `ink` paints every pixel one color (a ghost). */
 export const art = (c: Canvas, rows: readonly string[], x: number, y: number, ink?: string) =>
   rows.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, x + dx, y + dy, ink ?? PAL[k] ?? INK.missing)))
-
-/** Outlined digits in the pixel font, their bottom-right corner at `right`, `bottom`. */
-export const digits = (c: Canvas, text: string, right: number, bottom: number, ink: string = INK.white) => {
-  const mask = textMask(text)
-  const x0 = right - (mask[0]?.length ?? 0)
-  const y0 = bottom - mask.length
-  const on = (x: number, y: number) => mask[y]?.[x] === '#'
-  mask.forEach((row, y) => [...row].forEach((_, x) => {
-    if (!on(x, y)) return
-    for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) if (!on(x + ox, y + oy)) put(c, x0 + x + ox, y0 + y + oy, POPUP_OUTLINE)
-  }))
-  mask.forEach((row, y) => [...row].forEach((ch, x) => ch === '#' && put(c, x0 + x, y0 + y, ink)))
-}
 
 /** The canvas as Raster cells, a half block a cell: c.w columns by c.h / 2 rows. */
 export const canvasCells = (c: Canvas) => {

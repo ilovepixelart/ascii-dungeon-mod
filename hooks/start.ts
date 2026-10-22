@@ -7,10 +7,10 @@ import { classAbout } from './game'
 import { canWear } from './items'
 import { canvas } from './canvas'
 import { PX, heroArt } from './pixelart'
-import { BUTTON_H, button, buttonBox, buttonW, portrait } from './pieces'
-import { flatCard, textW } from './ui/kit'
+import { BUTTON_H, artLabel, button, buttonBox, buttonW, portrait } from './pieces'
+import { flatCard } from './ui/kit'
 import { INK, SURFACE } from './ui/tokens'
-import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels, word } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { newGame } from './world'
 
@@ -21,11 +21,12 @@ const NAME: Readonly<Record<HeroClass, string>> = { knight: 'KNIGHT', mage: 'MAG
 export type StartUi = { cls: HeroClass }
 
 const CHROME: Chrome = { title: 'ASCII DUNGEON' }
-/** A card: the portrait at twice the sprite's size, the name under it. */
+/** A card: the portrait at twice the sprite's size, the name under it on a whole cell. */
 const FACE = PX * 2 + 4
 const CARD_W = 30
 const CARD_GAP = 4
-const CARD_H = 3 + FACE + 3 + 5 + 3
+const NAME_Y = 3 + FACE + 2
+const CARD_H = NAME_Y + 2 + 3
 const CARD_Y = 3
 const BUTTON_Y = CARD_Y + CARD_H + 3
 /** The body over the box: the cards and the buttons, the box's top on a whole cell. */
@@ -87,6 +88,7 @@ export const startOverlay = (g: Game, ui: StartUi): OverlayBox[] => {
   return [
     { role: 'about', x: 2, y: (top + BODY_H) / 2, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
     ...buttonsOf(g).map(b => buttonBox(b.key, b.label, b.rect.x, b.rect.y, b.state)),
+    ...nameBoxes(ui),
   ]
 }
 
@@ -95,8 +97,11 @@ const card = (c: ReturnType<typeof canvas>, cls: HeroClass, i: number, isOn: boo
   const y = CARD_Y
   flatCard(c, { x, y, w: CARD_W, h: CARD_H }, isOn)
   portrait(c, heroArt(newGame(1, cls)), x + Math.floor((CARD_W - FACE) / 2), y + 3, FACE)
-  word(c, NAME[cls], x + Math.floor((CARD_W - textW(NAME[cls])) / 2), y + 3 + FACE + 3, isOn ? INK.gold : INK.text)
 }
+
+/** Each card's name under its portrait, centred: the chosen hero's in gold. */
+const nameBoxes = (ui: StartUi) => CLASSES.map((cls, i) =>
+  artLabel(NAME[cls], cardRect(i).x + Math.floor((CARD_W - NAME[cls].length) / 2), cardRect(i).y + NAME_Y, cls === ui.cls ? INK.gold : INK.text, SURFACE.card))
 
 /** The screen's pixels: title bar, the three cards, the buttons, and the box. Help is framed white on a first game,
  * beside Start. */
@@ -105,7 +110,7 @@ export const startPixels = (g: Game, ui: StartUi): string[][] => {
   CLASSES.forEach((cls, i) => card(body, cls, i, cls === ui.cls))
   for (const b of buttonsOf(g)) button(body, b.key, b.label, b.rect.x, b.rect.y - top, b.state)
   const c = windowPixels(CHROME, body.px)
-  for (const b of startOverlay(g, ui)) if (b.role !== 'button') drawBox(c, b)
+  for (const b of startOverlay(g, ui)) if (b.role === 'about') drawBox(c, b)
   return c.px
 }
 

@@ -240,7 +240,7 @@ describe('the deep window', () => {
     expect(CARD_KEYS).toEqual(['A', 'B'])
     const [a, b] = pairOf(atFork.world, 6).map(m => MARKS[m])
     expect(said(atFork).slice(-3)).toEqual([`A ${a!.name}: ${a!.does}`, `B ${b!.name}: ${b!.does}`, 'Choose tier VI: none chosen means A.'])
-    expect(deepGesture(atFork, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 6 }))).toEqual([{ kind: 'mark', mark: cards[1]!.mark }])
+    expect(deepGesture(atFork, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 3 }))).toEqual([{ kind: 'mark', mark: cards[1]!.mark }])
   })
 
   test('the chosen card is framed white, and the note says a click changes it', async () => {

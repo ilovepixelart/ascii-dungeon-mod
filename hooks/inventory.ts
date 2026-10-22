@@ -111,7 +111,7 @@ const drawDrag = (c: Canvas, g: Game, drag: Drag) => {
 }
 
 /** A popover's place in cells (one pixel across, two down) and its frame's color. */
-export type PopoverFrame = { x: number; y: number; w: number; h: number; border: string }
+export type PopoverFrame = { role?: string; x: number; y: number; w: number; h: number; border: string }
 
 /**
  * The whole inventory screen: title bar with the hero's tabs, gold and the close box, the panel, any drag, and
@@ -120,7 +120,7 @@ export type PopoverFrame = { x: number; y: number; w: number; h: number; border:
 export const inventoryScreenPixels = (g: Game, drag?: Drag, popovers: readonly PopoverFrame[] = []): string[][] => {
   const c = windowPixels({ ...heroChrome(g, 'bag'), gold: g.gold }, inventoryPixels(g))
   if (drag !== undefined) drawDrag(c, g, drag)
-  for (const b of popovers) drawBox(c, b)
+  for (const b of popovers) if (b.role !== 'label') drawBox(c, b)
   return c.px
 }
 

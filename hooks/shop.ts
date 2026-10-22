@@ -11,7 +11,7 @@ import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './item
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H, beltHot } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltSlotRect, cellBox, itemGrid, itemOutline, wareTag } from './pieces'
+import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -51,7 +51,7 @@ export const shopPixels = (g: Game, ui: ShopUi, boxes: readonly OverlayBox[] = [
   itemGrid(body, ui.ware === null ? g : { ...g, cursor: null }, g.bag, BAG_X, BAG_Y, BAG_W, BAG_H)
   belt(body, g, BELT_X, BELT_Y)
   const c = windowPixels({ title: 'MERCHANT', gold: g.gold }, body.px)
-  for (const b of boxes) drawBox(c, b)
+  for (const b of boxes) if (b.role !== 'label') drawBox(c, b)
   return c.px
 }
 
@@ -79,8 +79,16 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
   ]
 }
 
-/** The boxes over the window: the chosen ware's or bag item's card near it, and its menu under the card when open. */
-export const shopOverlay = (g: Game, ui: ShopUi): OverlayBox<'card' | 'menu'>[] => {
+/** The boxes over the window: the wares' prices and the belt's counts that nothing covers, then the chosen ware's or
+ * item's card and its menu when open. */
+export const shopOverlay = (g: Game, ui: ShopUi): OverlayBox[] => {
+  const over = cardsOver(g, ui)
+  const prices = WARES.map((ware, i) => warePrice(priceOfWare(ware, g), wareRect(i).x, wareRect(i).y, g.gold >= priceOfWare(ware, g)))
+  return [...clearOf([...prices, ...beltCountsAt(g, BELT_X, WINDOW_TOP + BELT_Y)], over), ...over]
+}
+
+/** The chosen ware's or bag item's card near it, and its menu under the card when open. */
+const cardsOver = (g: Game, ui: ShopUi): OverlayBox<'card' | 'menu'>[] => {
   if (ui.ware !== null) {
     const near = wareRect(WARES.indexOf(ui.ware))
     return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), RARITY_COLOR.common), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)

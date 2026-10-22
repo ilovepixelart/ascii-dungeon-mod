@@ -1646,7 +1646,7 @@ const stashWindow = (p: Pane) => {
     }} />,
     ...(forSale ? [<Button key="chest-buy" label="Buy tab" hotkey="b" plain dimColor={whyNotBuy(g, chestUi.tab) !== undefined} onPress={() => run({ kind: 'buyTab', tab: chestUi.tab }, true)} />] : []),
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again (or right-click) to move it.', chestHot(g, chestUi), !chestUi.menu)
+  ], 'Click a chest row or a bag item to see it, again for its menu; right-click to move it.', chestHot(g, chestUi), !chestUi.menu)
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */

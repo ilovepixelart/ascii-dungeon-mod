@@ -874,7 +874,8 @@ const labelFor = (g: Game, tile: Pos, size: { columns: number; rows: number }, v
   if (lying.length === 0) return null
   const { lines } = lyingLabel(lying)
   const at = mapLabelAt(tileToCell(g, tile, size, view), lines.map(l => l.text), size)
-  return { x: at.x, y: at.y, tile, lines: at.lines.map((text, i) => ({ text, color: lines[i]!.color ?? INK.dim, id: lines[i]!.id })) }
+  // The row counting the rest has no item: no id at all, as the pane refuses a prop that is undefined and draws nothing.
+  return { x: at.x, y: at.y, tile, lines: at.lines.map((text, i) => ({ text, color: lines[i]!.color ?? INK.dim, ...(lines[i]!.id === undefined ? {} : { id: lines[i]!.id }) })) }
 }
 
 /** What the map's click layer writes for the hover: the label with each cell's ground from the map drawn under it, the

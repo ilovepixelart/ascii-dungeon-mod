@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 import type { On } from 'claude-code'
+import { INK } from './ui/tokens'
 import type { Engine } from 'claude-code/testing'
 
 import { CLIP_MS, TUNE_MS } from './clips'
@@ -867,6 +868,30 @@ test('the pointer over items lying on the map names them there, a row each in it
   expect((await label())?.lines).toEqual([{ text: 'Boots of the Long Walk', color: RARITY_COLOR.epic, id: boots.id }, { text: 'Band of the Lost Find', color: RARITY_COLOR.rare, id: item.id }])
   await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'map-clicks' } as never)
   expect(await label()).toBeNull()
+  await ui.unmount()
+})
+
+test('a pile past five on a tile still draws its names, the row counting the rest with no item to pick', async ($, on) => {
+  const g0 = newGame()
+  const level = levelOf(g0)
+  const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ x: g0.x + dx!, y: g0.y + dy! })).find(t => level.tiles[t.y]?.[t.x] === '.')!
+  const seven = Array.from({ length: 7 }, (_, i) => ({ ...beside, item: { ...plainItem({ nextId: g0.nextId + i }, 'ring'), name: `Ring ${i + 1}` } }))
+  storeIn(on, new Map<string, unknown>([['save', { ...g0, nextId: g0.nextId + 7, floor: seven }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const map = await ui.find({ type: 'Raster', key: 'map' })
+  const columns = map?.props.columns as number
+  const rows = map?.props.rows as number
+  const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
+  const over = cells.find(c => same(clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows)), beside))!
+  await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
+  // The pane drew its own tree, the engine not refusing it: the label is there, its last row the count alone.
+  const label = ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { label?: { lines: Record<string, unknown>[] } | null }).label
+  expect(label?.lines.at(-1)).toEqual({ text: '+3 more', color: INK.dim })
+  expect(await ui.drawn()).toBeDefined()
   await ui.unmount()
 })
 

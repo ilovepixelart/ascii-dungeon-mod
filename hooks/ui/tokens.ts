@@ -76,8 +76,8 @@ export const SPACE = { gap: 3 } as const
 /** A family a card belongs to: its ribbon's word, its ink, the light and dark of its bevel, its face top to bottom. */
 export type Family = { label: string; ink: string; light: string; dark: string; top: string; bottom: string }
 export const FAMILIES = {
-  work: { label: 'WORK', ink: '#5ccf6a', light: '#a8f0b0', dark: '#2c6a36', top: '#1a2a20', bottom: '#0f1612' },
-  fight: { label: 'FIGHT', ink: '#f06a5a', light: '#ffb0a6', dark: '#7a2a24', top: '#2c1820', bottom: '#160d11' },
-  road: { label: 'ROAD', ink: '#ffd34d', light: '#fff0b0', dark: '#8a6a1a', top: '#2a2416', bottom: '#15120b' },
+  work: { label: 'CRAFT', ink: '#5ccf6a', light: '#a8f0b0', dark: '#2c6a36', top: '#1a2a20', bottom: '#0f1612' },
+  fight: { label: 'COMBAT', ink: '#f06a5a', light: '#ffb0a6', dark: '#7a2a24', top: '#2c1820', bottom: '#160d11' },
+  road: { label: 'SURVIVAL', ink: '#ffd34d', light: '#fff0b0', dark: '#8a6a1a', top: '#2a2416', bottom: '#15120b' },
 } as const satisfies Record<string, Family>
 export type FamilyName = keyof typeof FAMILIES

@@ -8,6 +8,7 @@ release may change behaviour.
 
 ### Changed behaviour
 
+- The talent families are named Craft, Combat and Survival, where they were Work, Fight and Road.
 - Buttons say what they do, without a key letter: a key reaches the pane only after ctrl+x tab, the prompt having the
   keyboard otherwise, so a key on a button promised what a press there would not do. The keys' row under a window
   now has "ctrl+x tab for keys:" on a line over it, so the pane plays best 49 rows tall (48 before).

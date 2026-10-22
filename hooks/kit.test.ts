@@ -53,8 +53,8 @@ describe('cards', () => {
 
   test('a ribbon\'s word is text centred on it, on the first whole cell two rows down, on the ribbon\'s ink as toned', async () => {
     const f = FAMILIES.road
-    // ROAD on a 30 wide ribbon from 0: 4 letters from 13; the ribbon at row 1, its word on row 4.
-    expect(ribbonLabel(f, 0, 30, 1, ink => ink)).toEqual({ role: 'label', x: 12, y: 1, w: 6, h: 3, border: f.ink, bg: f.ink, pad: 0, lines: [[{ text: f.label, color: INK.onRibbon, bold: true }]] })
+    // SURVIVAL on a 30 wide ribbon from 0: 8 letters from 11; the ribbon at row 1, its word on row 4.
+    expect(ribbonLabel(f, 0, 30, 1, ink => ink)).toEqual({ role: 'label', x: 10, y: 1, w: 10, h: 3, border: f.ink, bg: f.ink, pad: 0, lines: [[{ text: 'SURVIVAL', color: INK.onRibbon, bold: true }]] })
     expect(ribbonLabel(f, 0, 30, 2, recede).bg).toBe(recede(f.ink))
   })
 

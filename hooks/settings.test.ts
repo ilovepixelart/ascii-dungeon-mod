@@ -17,13 +17,13 @@ const middle = (r: Rect) => tap(r.x + Math.floor(r.w / 2), r.y + 4)
 const click = (g: Game, ui: SettingsUi, does: Parameters<typeof settingsRect>[3], sound = ON) => settingsGesture(g, sound, ui, middle(settingsRect(g, sound, ui, does)!))
 
 describe('the settings window', () => {
-  test('Game: New game, Help, the sound, the music, the view and the volume, each doing its own', async () => {
+  test('Game: New game, Help, the sound, the music and the volume, each doing its own; no view to step', async () => {
     const g = hero()
     expect(click(g, GAME, 'new')).toEqual({ ui: GAME, actions: [{ kind: 'panel', panel: 'start' }], sound: ON })
     expect(click(g, GAME, 'help')).toEqual({ ui: GAME, actions: [], sound: ON, isHelp: true })
     expect(click(g, GAME, 'effects')).toEqual({ ui: GAME, actions: [], sound: { ...ON, effects: false } })
     expect(click(g, GAME, 'music')).toEqual({ ui: GAME, actions: [], sound: { ...ON, music: false } })
-    expect(click(g, GAME, 'view')).toEqual({ ui: GAME, actions: [{ kind: 'zoom' }], sound: ON })
+    expect(settingsRect(g, ON, GAME, 'view' as never)).toBeUndefined()
     expect(click(g, GAME, 'volume')).toEqual({ ui: GAME, actions: [], sound: { ...ON, volume: 1 } })
     expect(settingsRect(g, ON, GAME, 'drink')).toBeUndefined()
   })
@@ -38,9 +38,11 @@ describe('the settings window', () => {
     const g = hero({ zoom: 3 })
     const loud = { ...ON, effects: false, music: false }
     const r = (ui: SettingsUi, does: Parameters<typeof settingsRect>[3]) => settingsRect(g, loud, ui, does)!
-    for (const [a, b] of [['new', 'help'], ['effects', 'music'], ['view', 'volume']] as const) {
+    for (const [a, b] of [['new', 'help'], ['effects', 'music']] as const) {
       expect([r(GAME, a).y === r(GAME, b).y, r(GAME, a).x + r(GAME, a).w < r(GAME, b).x, r(GAME, b).x + r(GAME, b).w <= WINDOW_W - 3]).toEqual([true, true, true])
     }
+    // The volume alone on the third row, under the first column.
+    expect([r(GAME, 'volume').y > r(GAME, 'effects').y, r(GAME, 'volume').x]).toEqual([true, r(GAME, 'new').x])
     expect(r(ORDERS, 'smoke').y).toBeGreaterThan(r(ORDERS, 'drink').y)
     expect(r(ORDERS, 'leave').y).toBeGreaterThan(r(ORDERS, 'smoke').y)
   })

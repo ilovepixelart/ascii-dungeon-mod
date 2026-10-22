@@ -50,8 +50,8 @@ fullscreen layout (`/tui fullscreen`).
 | 49 rows or taller | every window whole with its keys; a shorter pane scrolls, and says by how much on its top row |
 
 With the mouse: click the map to walk there (a foe, to charge it). On a pane of 105 columns or more the dash under
-it has an HP orb and an XP orb (either opens the character sheet), the belt (a slot drinks), and a plaque of depth and
-gold (the log) with buttons for the bag, settings and the portal to town; narrower, the strip's portrait opens the
+it has an HP orb and an XP orb (either opens the character sheet), the belt (a slot drinks), buttons in its corners for
+the bag, settings and the portal to town, and a plaque of depth and gold over the map (the log); narrower, the strip's portrait opens the
 inventory, the HP and XP bars the sheet, and the gear and the portal their own. Every window lists its keys under it, and `c` closes it.
 
 As text, the keys are `i` inventory, `c` character, `a` attack, `p` potion, `w` explore, `d` descend, `t` portal,

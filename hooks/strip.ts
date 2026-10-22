@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import type { Action } from './game'
 import type { Canvas } from './canvas'
 import { clearOf } from './pieces'
-import { DASH_H, OVER_ROWS, dashBeltMenu, dashGesture, dashHot, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, orbPhase, plaqueLabels } from './dash'
+import { DASH_H, OVER_ROWS, dashBeltMenu, dashGesture, dashHot, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, orbPhase, overLabels } from './dash'
 import { beltMenuBox, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels } from './hud'
 import { drawBox, uncovered } from './window'
 import type { Gesture, OverlayBox } from './window'
@@ -41,8 +41,8 @@ export const stripBeltMenu = (g: Game, slot: number, columns: number) => (isDash
  * the strip of bars. */
 export const stripOverMap = (g: Game, columns: number, phase: number) => (isDash(columns) ? dashOverMap(g, columns, phase) : undefined)
 
-/** The dash's words over the map, for its layer there: the plaque's. */
-export const overMapBoxes = (g: Game, columns: number) => plaqueLabels(g, columns)
+/** The dash's words over the map, for its layer there: the orbs' numbers and the plaque's words. */
+export const overMapBoxes = (g: Game, columns: number) => overLabels(g, columns)
 
 /** A gesture on the dash's layer over the map. */
 export const overMapGesture = dashOverGesture

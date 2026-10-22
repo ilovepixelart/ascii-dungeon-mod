@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { DASH_OVER, plaqueIcons } from './dash'
+import { BUTTON_Y, dashButtons } from './dash'
 
 const PANE = { plugin: 'ascii-dungeon', component: 'Pane', requestId: 'dungeon', props: { title: 'Dungeon', isFocused: true, bodyColumns: 110, placement: 'dock', scroll: { offset: 0, bodyRows: 80 }, view: {} } } as const
 
@@ -21,11 +21,11 @@ test('a blow whose map is refused leaves the idle motion running once the window
   isMapUp = async () => (await ui.find({ type: 'Raster', key: 'map' })) !== undefined
   await $.tool.call({ tool: 'Edit', file_path: '/src/a.ts', old_string: 'a', new_string: 'b' })
   await clock.advance(3000)
-  // The bag opened from the dash's bag button over the map's bottom, a failing call's blow landing under it, then the
-  // bag closed.
-  const bag = { x: plaqueIcons(PANE.props.bodyColumns).find(i => i.icon === 'bag')!.x + 2.5, y: (DASH_OVER - 5) / 2 + 0.25 }
-  await ui.pointer({ type: 'down', ...bag, button: 'left', in: 'dash-clicks' })
-  await ui.pointer({ type: 'up', ...bag, button: 'left', in: 'dash-clicks' })
+  // The bag opened from the dash's bag button under the HP orb, a failing call's blow landing under it, then the bag
+  // closed.
+  const bag = { x: dashButtons(PANE.props.bodyColumns).find(i => i.icon === 'bag')!.x + 2.5, y: (BUTTON_Y + 2) / 2 + 0.25 }
+  await ui.pointer({ type: 'down', ...bag, button: 'left', in: 'hud-clicks' })
+  await ui.pointer({ type: 'up', ...bag, button: 'left', in: 'hud-clicks' })
   expect(await ui.find({ type: 'Raster', key: 'bag' })).toBeDefined()
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
   await clock.advance(2000)

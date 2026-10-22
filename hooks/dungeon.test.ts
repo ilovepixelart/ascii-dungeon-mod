@@ -15,7 +15,7 @@ import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
 import { INSET } from './hud'
-import { BELT_Y, DASH_OVER, ORB_STEP_MS, dashBeltX, plaqueIcons } from './dash'
+import { BELT_Y, BUTTON_Y, DASH_OVER, ORB_STEP_MS, dashBeltX, dashButtons } from './dash'
 import { stripHeight, stripOverMap } from './strip'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
@@ -249,9 +249,9 @@ const paneMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: 
   pixelMap(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, undefined, stripOverMap(g, columns, 0))
 /** Where the wide pane's dash is clicked, in its pixels (a row above 0 over the map): the HP orb for the sheet, a
  * plaque button, the plaque's words for the log. */
-const SHEET_AT = { x: 13, y: 8 }
-const iconAt = (icon: 'bag' | 'settings' | 'portal') => ({ x: plaqueIcons(WIDE.props.bodyColumns).find(i => i.icon === icon)!.x + 2, y: -5 })
-const LOG_AT = { x: 30, y: -5 }
+const SHEET_AT = { x: 13, y: 2 }
+const iconAt = (icon: 'bag' | 'settings' | 'portal') => ({ x: dashButtons(WIDE.props.bodyColumns).find(i => i.icon === icon)!.x + 2, y: BUTTON_Y + 2 })
+const LOG_AT = { x: 33, y: -5 }
 
 /** Every toast the pane raises, in order. */
 const toasts = (on: On) => {
@@ -791,8 +791,8 @@ test('a wide terminal pane of the best size draws the pixel strip alone under th
 test('what a click comes to shows as a toast: a belt slot drinks, and the empty slot says so', async ($, on) => {
   const said = toasts(on)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
-  await clickDash(ui, { x: dashBeltX(0) + 5, y: BELT_Y + 5 })
-  await clickDash(ui, { x: dashBeltX(0) + 5, y: BELT_Y + 5 })
+  await clickDash(ui, { x: dashBeltX(WIDE.props.bodyColumns, 0) + 5, y: BELT_Y + 5 })
+  await clickDash(ui, { x: dashBeltX(WIDE.props.bodyColumns, 0) + 5, y: BELT_Y + 5 })
   expect(said).toEqual(['You drink a Health Potion. +0 HP', 'Belt slot 1 is empty.'])
   await ui.unmount()
 })
@@ -1885,8 +1885,8 @@ describe('idle motion in the pane', () => {
       return { value: {} }
     })
     on('tool.call', () => ({ result: {} as never }))
-    // A hero at a fifth of their HP: the surface low in the orb, in the dash's own rows, where it ripples.
-    storeIn(on, new Map<string, unknown>([['save', { ...newGame(), hp: 6 }]]))
+    // A hero at 2 of 30 HP: the surface low in the orb, in the dash's own rows, where it ripples.
+    storeIn(on, new Map<string, unknown>([['save', { ...newGame(), hp: 2 }]]))
     on('command.register', () => ({ value: undefined }) as never)
     on('ui.open', () => ({ value: { isPlaced: true } }) as never)
     on('session.start', (_$, e) => ({ cwd: e.cwd }))

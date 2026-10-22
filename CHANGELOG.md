@@ -37,6 +37,8 @@ release may change behaviour.
 
 ### Fixed
 
+- Hovering a pile of more than five items blanked the whole pane: the row counting the rest gave the map's click layer
+  an id that was undefined, and the engine refuses a tree holding one. That row has no id now.
 - A vampiric champion healed by all it dealt, so one hitting harder than the hero healed more each round than it lost,
   while the hero's potions kept the hero up: the fight never ended. It now heals by at most half of what it took since
   its last blow.

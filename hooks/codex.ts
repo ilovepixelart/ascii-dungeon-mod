@@ -28,6 +28,7 @@ export const recorded = (c: Codex, before: Game, after: Game): Codex => {
   // A sale is gold paid for what the hero had, not found: bought back, it would count again.
   const isSale = after.lastSold !== null && after.lastSold !== before.lastSold
   return {
+    ...c,
     uniques: [...added(c.uniques, foe?.unique)],
     bigs: [...added(c.bigs, foe?.big)],
     legendaries: [...foundLegendaries(c, before, after)],

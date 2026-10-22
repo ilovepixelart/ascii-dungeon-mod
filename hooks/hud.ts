@@ -61,13 +61,8 @@ export const xpOrbX = (width: number) => width - orbSize(width)
 /** With orbs, the side line's marks in the top row past the portrait, their text on a whole cell. */
 export const ORB_SIDE_Y = 3
 
-/** Each tone set is a bar's lit top, base and shaded bottom. Healthy above 70%, hurt down to 40%, critical below. */
-export const HP_TONES = {
-  healthy: ['#5ccf6a', '#2e9a3e', '#1f6e2b'],
-  hurt: ['#f0c04a', '#c9971e', '#8e6a12'],
-  critical: ['#f06a5a', '#c0392b', '#8a231a'],
-} as const
-export const hpTones = (share: number) => (share <= 0.4 ? HP_TONES.critical : share <= 0.7 ? HP_TONES.hurt : HP_TONES.healthy)
+/** HP's red, the same at every share as Diablo's life globe: its lit top, its body and its shade. */
+export const HP_TONES = ['#f06a5a', '#c0392b', '#8a231a'] as const
 export const HP_EMPTY = '#1e2420'
 export const XP_FILL = '#e0b84a'
 export const XP_EMPTY = '#2a2618'
@@ -156,7 +151,7 @@ const bars = (c: Canvas, g: Game, width: number) => {
   mark(c, MARK.xp, HEART_X, STAR_Y)
   const share = Math.max(0, g.hp) / g.maxHp
   // One flat color, the tone's body: no lit top or shaded bottom.
-  flatBar(c, BAR_X, HP_Y, barW, share, hpTones(share)[1], HP_EMPTY)
+  flatBar(c, BAR_X, HP_Y, barW, share, HP_TONES[1], HP_EMPTY)
   flatBar(c, BAR_X, XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY)
 }
 
@@ -182,10 +177,7 @@ type OrbInks = { liquid: string; surface: string; shade: string; glass: string }
 const hpShare = (g: Game) => Math.max(0, g.hp) / g.maxHp
 const xpShare = (g: Game) => g.xp / xpToLevel(g.level)
 const seenThrough = (liquid: string) => mix(BG, liquid, 0.14)
-const hpInks = (g: Game): OrbInks => {
-  const [surface, liquid, shade] = hpTones(hpShare(g))
-  return { liquid, surface, shade, glass: seenThrough(liquid) }
-}
+const HP_INKS: OrbInks = { liquid: HP_TONES[1], surface: HP_TONES[0], shade: HP_TONES[2], glass: seenThrough(HP_TONES[1]) }
 const XP_INKS: OrbInks = { liquid: XP_FILL, surface: XP_LIGHT, shade: XP_SHADE, glass: seenThrough(XP_FILL) }
 
 /** Where on the round a pixel is: its distance from the middle, the wall's radius, and its angle, 0 pointing right and
@@ -268,8 +260,8 @@ const orbLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
   const size = orbSize(width)
   const xpX = xpOrbX(width)
   return [
-    orbLabel(fitted(Math.max(0, g.hp), g.maxHp, size), size, 0, 0, hpShare(g), hpInks(g)),
-    orbLabel('HP', size, 0, 1, hpShare(g), hpInks(g)),
+    orbLabel(fitted(Math.max(0, g.hp), g.maxHp, size), size, 0, 0, hpShare(g), HP_INKS),
+    orbLabel('HP', size, 0, 1, hpShare(g), HP_INKS),
     orbLabel(fitted(g.xp, xpToLevel(g.level), size), size, xpX, 0, xpShare(g), XP_INKS),
     orbLabel(`LV${g.level}${g.points > 0 ? '+' : ''}`, size, xpX, 1, xpShare(g), XP_INKS),
   ]
@@ -326,7 +318,7 @@ export const hudContent = (g: Game, width: number, phase = 0): Canvas => {
   frame(c, left, 0, PORTRAIT, PORTRAIT, GRID)
   art(c, heroArt(g), left + 1, 1)
   if (hasOrbs(width)) {
-    orb(c, orbSize(width), 0, hpShare(g), phase, hpInks(g))
+    orb(c, orbSize(width), 0, hpShare(g), phase, HP_INKS)
     orb(c, orbSize(width), xpOrbX(width), xpShare(g), phase, XP_INKS)
   } else bars(c, g, width)
   const top = BELT_BELOW_Y
@@ -510,7 +502,7 @@ const barLabels = (g: Game, width: number): OverlayBox<'label'>[] => {
   const share = Math.max(0, g.hp) / g.maxHp
   const level = `LV${g.level}${g.points > 0 ? '+' : ''}`
   return [
-    barLabel(INSET + BAR_X, INSET + HP_Y, barW, share, hpTones(share)[1], HP_EMPTY, `${Math.max(0, g.hp)}/${g.maxHp}`),
+    barLabel(INSET + BAR_X, INSET + HP_Y, barW, share, HP_TONES[1], HP_EMPTY, `${Math.max(0, g.hp)}/${g.maxHp}`),
     barLabel(INSET + BAR_X, INSET + XP_Y, barW, g.xp / xpToLevel(g.level), XP_FILL, XP_EMPTY, level),
   ]
 }

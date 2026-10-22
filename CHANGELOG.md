@@ -14,6 +14,8 @@ release may change behaviour.
   now has "ctrl+x tab for keys:" on a line over it, so the pane plays best 49 rows tall (48 before).
 - Window titles, the gold in a title bar and the codex's and settings' page tabs are written in terminal text, where
   they were in the pixel font.
+- The pointer over several items lying on one tile names them a row each, each in its tier's color, the rarest
+  first, where one line joined them all in the rarest one's color; past five rows, the last says how many more.
 - The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,
   so a click moves between them. The tabs' labels are written in terminal text, which fits all five beside the bag's
   gold.

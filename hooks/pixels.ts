@@ -1091,13 +1091,14 @@ export const tileToCell = (g: Located, tile: Pos, size: { columns: number; rows:
 }
 
 /**
- * Where a floor item's label goes on a map `size` cells, its tile's top-left at `at`: the row over the tile (under it
- * on the top row), held inside the map; the text cut to fit with an ellipsis, a label being four cells wider than its
- * text (a cell of room and a frame each side).
+ * Where a floor label's rows go on a map `size` cells, its tile's top-left at `at`: stacked over the tile, the last
+ * row just above it (under the tile where the rows above are too few), held inside the map; each cut to fit with an
+ * ellipsis, a label being four cells wider than its longest row (a cell of room and a frame each side).
  */
-export const mapLabelAt = (at: Pos, name: string, size: { columns: number; rows: number }): { x: number; y: number; text: string } => {
+export const mapLabelAt = (at: Pos, names: readonly string[], size: { columns: number; rows: number }): { x: number; y: number; lines: string[] } => {
   const room = Math.max(1, size.columns - 4)
-  const text = name.length <= room ? name : `${name.slice(0, room - 1)}…`
-  const y = at.y > 0 ? at.y - 1 : at.y + PX / 2
-  return { x: Math.max(0, Math.min(at.x, size.columns - text.length - 4)), y: Math.min(y, size.rows - 1), text }
+  const lines = names.map(name => (name.length <= room ? name : `${name.slice(0, room - 1)}…`))
+  const widest = Math.max(...lines.map(l => l.length))
+  const y = at.y >= lines.length ? at.y - lines.length : at.y + PX / 2
+  return { x: Math.max(0, Math.min(at.x, size.columns - widest - 4)), y: Math.max(0, Math.min(y, size.rows - lines.length)), lines }
 }

@@ -5,6 +5,8 @@ import { inventoryScreenPixels } from './inventory'
 import { newGame } from './world'
 import { HEAD_H } from './window'
 import { canvas } from './canvas'
+import { glow } from './ui/kit'
+import { heroTabsHot } from './herotabs'
 import { shots } from './screens'
 
 const textOf = (b: { lines: { text: string }[][] }) => b.lines.map(l => l.map(r => r.text).join(''))
@@ -41,15 +43,31 @@ describe('the title bar in terminal text', () => {
     expect(chromeBoxes(canvas(WINDOW_W, 10).px)).toEqual([])
   })
 
+  test('a hovered tab is lit by a tint alone, no outline; a button keeps its outline', async () => {
+    const c = { w: 6, h: 4, px: Array.from({ length: 4 }, () => Array<string>(6).fill('#000000')) }
+    glow(c, { x: 0, y: 0, w: 6, h: 4, look: 'fill' }, '#ffffff')
+    // 15% of the way to white, every pixel alike: 38.25, #262626.
+    expect([...new Set(c.px.flat())]).toEqual(['#262626'])
+    const framed = { w: 6, h: 4, px: Array.from({ length: 4 }, () => Array<string>(6).fill('#000000')) }
+    glow(framed, { x: 0, y: 0, w: 6, h: 4 }, '#ffffff')
+    expect([framed.px[0]![0], framed.px[1]![1]]).toEqual(['#808080', '#1a1a1a'])
+    // Tabs hand in places with no frame of their own; a window's buttons do not.
+    expect(heroTabsHot(newGame(1, 'knight'), 'sheet').every(r => r.look === 'fill')).toBe(true)
+  })
+
   test('a color as the Raster paints it, each channel the nearest multiple of 17', async () => {
     // The title bar's and a tab's grounds, as a screenshot of the pane measured them (#111121 and #222232, give or take one).
     expect([painted('#15131b'), painted('#24212c'), painted('#000000'), painted('#ffffff'), painted('#0e0d13')]).toEqual(['#111122', '#222233', '#000000', '#ffffff', '#111111'])
   })
 
-  test('text over pixels is on the ground the pixels are painted; a hovered tab\'s label on the glow\'s inside, as measured', async () => {
-    const tabs = onPixels(chromeBoxes(inventoryScreenPixels(newGame(1, 'knight'))).filter(b => b.role === 'title'), { x: 2, y: 0, w: 6, h: 10 })
-    // HERO hovered: the glow's inside a screenshot measured, #333333; BAG, the tab shown; the rest, the bar.
-    expect(tabs.map(b => b.bg)).toEqual(['#333333', '#222233', '#111122', '#111122', '#111122'])
+  test('text over pixels is on the ground the pixels are painted; a hovered tab\'s label bright on its tint', async () => {
+    const g = newGame(1, 'knight')
+    const hero = heroTabsHot(g, 'bag')[0]!
+    const tabs = onPixels(chromeBoxes(inventoryScreenPixels(g)).filter(b => b.role === 'title'), hero)
+    // HERO hovered: the bar's #15131b 15% of the way to white, each channel to the 17-step grid: #333344. BAG, the tab
+    // shown; the rest, the bar.
+    expect(tabs.map(b => b.bg)).toEqual(['#333344', '#222233', '#111122', '#111122', '#111122'])
+    expect(tabs.map(b => b.lines[0]![0]!.color === TITLE_INK)).toEqual([true, true, false, false, false])
     // A box with no ground of its own takes a text box's fill, as painted.
     expect(onPixels([{ role: 'card', x: 40, y: 10, w: 10, h: 3, border: '#ffffff', lines: [[{ text: 'x' }]] }])[0]!.bg).toBe('#111111')
   })

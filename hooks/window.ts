@@ -34,8 +34,9 @@ const CLOSE_EDGE = SURFACE.frame
 /** A text box's fill: the click layer writes its text on the same color, inside the frame. */
 export const POPOVER_BG = SURFACE.popover
 
-/** A rectangle in window pixels. */
-export type Rect = { x: number; y: number; w: number; h: number }
+/** A rectangle in window pixels; `look` how a hover lights it: by default an outline and a tint, `fill` a tint alone,
+ * for a place with no frame of its own (a tab). */
+export type Rect = { x: number; y: number; w: number; h: number; look?: 'fill' }
 /** A tab in a window's title bar: its label, and a gold mark beside it while what it opens waits on the player. */
 export type Tab = { label: string; isMarked?: boolean }
 /** What a window shows around its body: its title (or, with tabs, the tabs in its place, `chosen` the one shown, their
@@ -54,7 +55,7 @@ export const TABS_H = HEAD_H - 1
 export const textTabRects = (tabs: readonly Tab[], y = 0): Rect[] => {
   let x = TITLE_X - 1
   return tabs.map(t => {
-    const r = { x, y, w: t.label.length + 2, h: TABS_H }
+    const r = { x, y, w: t.label.length + 2, h: TABS_H, look: 'fill' as const }
     x += r.w + 1
     return r
   })
@@ -126,8 +127,10 @@ export const painted = (hex: string) =>
 export const onPixels = (boxes: readonly OverlayBox[], lit?: Rect): OverlayBox[] =>
   boxes.map(b => {
     const isLit = lit !== undefined && b.x + 1 >= lit.x && b.x + b.w - 1 <= lit.x + lit.w && (b.y + 1) * 2 >= lit.y && (b.y + b.h - 1) * 2 <= lit.y + lit.h
-    const ground = (hex: string) => painted(isLit ? mix(hex, INK.focus, GLOW.inside) : hex)
-    return { ...b, bg: ground(b.bg ?? POPOVER_BG), lines: b.lines.map(l => l.map(r => (r.bg === undefined ? r : { ...r, bg: ground(r.bg) }))) }
+    const ground = (hex: string) => painted(isLit ? mix(hex, INK.focus, lit.look === 'fill' ? GLOW.fill : GLOW.inside) : hex)
+    // A lit tab's label is written bright, as the chosen one's.
+    const ink = (r: Run) => (isLit && lit.look === 'fill' ? { ...r, color: TITLE_INK } : r)
+    return { ...b, bg: ground(b.bg ?? POPOVER_BG), lines: b.lines.map(l => l.map(r => ink(r.bg === undefined ? r : { ...r, bg: ground(r.bg) }))) }
   })
 
 /** Words in the pixel font, their top-left at x, y. */

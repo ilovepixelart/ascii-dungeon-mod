@@ -48,12 +48,11 @@ describe('wares', () => {
     expect(shopGesture(g, SHOP_UI_IDLE, onWare(0)).actions).toEqual([{ kind: 'deselect' }])
   })
 
-  test('clicked again, or right-clicked, its menu opens; Buy buys and the menu stays open for the next', async () => {
+  test('clicked again, its menu opens; Buy buys and the menu stays open for the next', async () => {
     const g = knight(100)
     const once = shopGesture(g, SHOP_UI_IDLE, onWare(0)).ui
     const twice = shopGesture(g, once, onWare(0)).ui
     expect(twice).toEqual({ ware: WARES[0], menu: true })
-    expect(shopGesture(g, SHOP_UI_IDLE, onWare(0, 'right')).ui).toEqual({ ware: WARES[0], menu: true })
     expect(text(g, twice, 'menu')).toEqual(['b Buy for 25'])
     const bought = shopGesture(g, twice, onRow(g, twice, 0))
     expect(bought.actions).toEqual([{ kind: 'buy', ware: 'health1' }])
@@ -70,6 +69,25 @@ describe('wares', () => {
     expect(whyNot(full, 'health1')).toBe('no room on your belt')
     expect(whyNot(full, 'regen1')).toBeUndefined()
     expect(whyNot(knight(25), 'health1')).toBeUndefined()
+  })
+
+  test('a right-click buys a ware at once, its card shown for the next; one that cannot be bought opens the menu saying why', async () => {
+    const g = knight(100)
+    expect(shopGesture(g, SHOP_UI_IDLE, onWare(0, 'right'))).toEqual({ ui: { ware: WARES[0], menu: false }, actions: [{ kind: 'buy', ware: WARES[0] }] })
+    const poor = knight(24)
+    const refused = shopGesture(poor, SHOP_UI_IDLE, onWare(0, 'right'))
+    expect(refused).toEqual({ ui: { ware: WARES[0], menu: true }, actions: [] })
+    expect(text(poor, refused.ui, 'menu')).toEqual(['b Buy for 25  not enough gold'])
+  })
+
+  test('a right-click sells a bag item at once; a locked one opens the menu saying why', async () => {
+    const g = knight(0)
+    const ring = put(g, 'ring', 'common', 1, 1)
+    expect(shopGesture(g, SHOP_UI_IDLE, onItem(ring, 'right'))).toEqual({ ui: SHOP_UI_IDLE, actions: [{ kind: 'select', id: ring.id }, { kind: 'sell' }] })
+    const kept = put(g, 'ring', 'rare', 3, 1, { locked: true })
+    const refused = shopGesture(g, SHOP_UI_IDLE, onItem(kept, 'right'))
+    expect(refused).toEqual({ ui: { ware: null, menu: true }, actions: [{ kind: 'select', id: kept.id }] })
+    expect(text({ ...g, cursor: kept.id }, refused.ui, 'menu')?.[0]).toMatch(/^s Sell for \d+  locked$/)
   })
 
   test('a click anywhere but the menu closes it and buys nothing', async () => {

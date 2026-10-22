@@ -22,7 +22,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 ## The merchant
 
 - The wares on a shelf on the left, three to a row, each price under its icon; a price that cannot be paid is grey. The bag and the belt sit where the inventory has them.
-- A click chooses a ware or a bag item and shows its card; a second click (or a right-click) opens its menu. A ware's menu is Buy, and stays open after a buy so each further one is a click; a bag item's is Sell and Equip. What cannot be done says why in the menu (`whyNot`: not enough gold, no room on the belt; the class that can wear it) and does nothing.
+- A click chooses a ware or a bag item and shows its card; a second click opens its menu. A right-click buys a ware, or sells a bag item, at once (Undo sale takes a sale back); when it cannot (the gold short, the belt full, the item locked), it opens the menu, which says why. A ware's menu is Buy, and stays open after a buy so each further one is a click; a bag item's is Sell and Equip. What cannot be done says why in the menu (`whyNot`: not enough gold, no room on the belt; the class that can wear it) and does nothing.
 - Choosing a ware lets go of the chosen bag item, and the other way round: one card at a time.
 - Every action has a key under the window; Sell junk shows how many items are marked before it is pressed.
 - Cards go where they hide the least of what the window shows (`cardWithMenu`) and never on what they are about.
@@ -31,6 +31,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 Every window keeps these; review them with `tools/windows.ts`, which draws each window of `hooks/screens.ts` with its text boxes written in.
 
+- A right-click moves an item between a window's two sides at once: the stash stores and takes, the merchant buys and sells. Where there is no other side (the bag), it opens the item's menu.
 - Colors by role from `hooks/ui/tokens.ts`, never a code of a window's own: `scripts/check-colors.mjs`, a gate, fails on a raw color (any quotes, three, four, six or eight digits) in any module that draws a window, takes the tokens or draws the pane's text (a `.tsx`); a click layer, which cannot import the tokens, may hold only a copy of a token's value. The strip (`hooks/hud.ts`) is pixel art outside the gate; its text inks are copies of `INK.text`, `INK.dim` and `INK.gold`, held to them by a test.
 - At most 41 rows (`BEST_ROWS` in `hooks/panesize.ts`, pinned by a test over every window drawn), so a pane of 49 shows any window whole with its keys and how to reach them, its hint and the log under it, and no button is scrolled out of reach.
 - A title bar with the close box, and the body right under it. Its words are terminal text, a column a letter where the pixel font takes four: the title, or the hero's tabs (`hooks/herotabs.ts`, all five beside the gold), and the gold in full after its pixel coin. The pane and the previews write them over every window from `chromeBoxes`, so no window lists them among its own boxes. A window with pages shows them as tabs at the top of its body, in terminal text too.

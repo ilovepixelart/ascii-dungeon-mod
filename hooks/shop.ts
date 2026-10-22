@@ -1,5 +1,6 @@
 // The merchant's window: the wares on a shelf on the left, the bag and belt as in the inventory. A ware or a bag item
-// is chosen with a click and shows its card; a second click (or a right-click) opens its menu: buy, or sell and equip.
+// is chosen with a click and shows its card; a second click opens its menu: buy, or sell and equip. A right-click buys
+// or sells at once.
 // Pure: the click layer reports whole gestures, this decides the window's next state and the game actions to apply.
 import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
@@ -133,19 +134,27 @@ const itemMenuClick = (g: Game, ui: ShopUi, item: Item, row: number): Outcome =>
   return { ui: closed, actions: [] }
 }
 
+/** A click on a ware: chosen, again its menu; a right-click buys it at once, or opens the menu saying why not. */
+const wareClick = (g: Game, ui: ShopUi, ware: Ware, button: string): Outcome => {
+  const letGo: Action[] = g.cursor === null ? [] : [{ kind: 'deselect' }]
+  if (button === 'right' && whyNot(g, ware) === undefined) return { ui: { ware, menu: false }, actions: [...letGo, { kind: 'buy', ware }] }
+  return { ui: { ware, menu: ui.ware === ware || button === 'right' }, actions: letGo }
+}
+
+/** A click on a bag item: chosen, again its menu; a right-click sells it at once, or opens the menu saying why not. */
+const itemClick = (g: Game, ui: ShopUi, item: Item, button: string): Outcome => {
+  if (button === 'right' && item.locked !== true) return { ui: SHOP_UI_IDLE, actions: [{ kind: 'select', id: item.id }, { kind: 'sell' }] }
+  const again = ui.ware === null && g.cursor === item.id
+  return { ui: { ware: null, menu: again || button === 'right' }, actions: again ? [] : [{ kind: 'select', id: item.id }] }
+}
+
 const click = (g: Game, ui: ShopUi, at: Pos, button: string): Outcome => {
   if (ui.menu) return menuClick(g, ui, at)
   // A click on a card lands on the card, not on what it covers.
   if (clickable(shopOverlay(g, ui)).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
   const h = hit(g, pixel(at))
-  if (h?.kind === 'ware') {
-    const again = ui.ware === h.ware
-    return { ui: { ware: h.ware, menu: again || button === 'right' }, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
-  }
-  if (h?.kind === 'item') {
-    const again = ui.ware === null && g.cursor === h.item.id
-    return { ui: { ware: null, menu: again || button === 'right' }, actions: again ? [] : [{ kind: 'select', id: h.item.id }] }
-  }
+  if (h?.kind === 'ware') return wareClick(g, ui, h.ware, button)
+  if (h?.kind === 'item') return itemClick(g, ui, h.item, button)
   if (h?.kind === 'belt') return { ui, actions: [{ kind: 'use', slot: h.slot }] }
   if (h?.kind === 'close') return { ui: SHOP_UI_IDLE, actions: [{ kind: 'panel', panel: 'shop' }] }
   // Empty space lets go of what is chosen.

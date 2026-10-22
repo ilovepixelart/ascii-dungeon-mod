@@ -85,6 +85,19 @@ describe('the panel', () => {
     }
   })
 
+  test('keeps the selected item framed all round when the items beside and under it are drawn after it', async () => {
+    const g = knight()
+    const ring = put(g, 'ring', 'rare', 0, 0)
+    put(g, 'ring', 'common', 1, 0)
+    put(g, 'ring', 'common', 0, 1)
+    g.cursor = ring.id
+    const b = box(ring)
+    const px = inventoryPixels(g)
+    const right = Array.from({ length: b.h + 4 }, (_, i) => px[b.y - 2 + i]?.[b.x + b.w + 1])
+    const below = Array.from({ length: b.w + 4 }, (_, i) => px[b.y + b.h + 1]?.[b.x - 2 + i])
+    expect([...right, ...below].every(p => p === CURSOR)).toBe(true)
+  })
+
   test('frames the worn slot the selected item goes to: white when it can be worn, red when not; the others stay plain', async () => {
     const g = knight()
     const helm = put(g, 'steelHelm', 'common', 4, 0)

@@ -88,6 +88,12 @@ export const itemGrid = (c: Canvas, g: Game, items: readonly Item[], x: number, 
     const b = cellBox(item, x, y)
     drawItem(c, g, item, b.x, b.y, b.w, b.h)
   }
+  // The ring reaches into the next cells, so the items drawn after the selected one would cover it.
+  const picked = items.find(i => i.id === g.cursor)
+  if (picked) {
+    const b = cellBox(picked, x, y)
+    cursor(c, b.x - 1, b.y - 1, b.w + 2, b.h + 2)
+  }
 }
 
 /** A belt slot's place when the belt starts at x0, y: as drawn, BELT_SLOT_W by SLOT. */

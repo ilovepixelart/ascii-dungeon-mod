@@ -19,7 +19,8 @@ import { INK, SURFACE } from './ui/tokens'
 export type ForgeUi = { slot: Slot | null }
 export const FORGE_UI_IDLE: ForgeUi = { slot: null }
 
-const WORK_X = 47
+/** Where the side beside the worn slots begins, here and in the retire window. */
+export const WORK_X = 47
 const WORK_W = WINDOW_W - WORK_X - 1
 const PIP_ON = INK.xp
 const PIP_OFF = SURFACE.cardEdge

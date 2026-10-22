@@ -1,79 +1,76 @@
-// The retire window: the pieces the hero wears to choose the heirloom from, Retire and Back, and in the box under them
-// what it asks with the chosen piece's name, what passing it down means and who the hero was. Pure: the click layer
-// reports whole gestures, this decides the window's next state and the game actions they make.
-import type { Game, Item, Slot } from '../types'
+// The retire window, laid out as the smith's: what the hero wears on the left, as in the inventory, to choose the
+// heirloom from; on the right the box of what it asks with the chosen piece's name, what passing it down means and who
+// the hero was, and Retire and Back under it. Pure: the click layer reports whole gestures, this decides the window's
+// next state and the game actions they make.
+import type { Game, Slot } from '../types'
 import type { Action, Run } from './game'
 import { whyNotRetire } from './game'
 import { BIG_EVERY } from './map'
 import { CLASS_NAME, RARITY_COLOR, SLOTS } from './items'
-import { ICONS } from './icons'
-import { BUTTON_H, button, buttonBox, buttonW, onCell, tierBox } from './pieces'
+import { WORN_SLOTS, wornSlots } from './inventory'
+import { BUTTON_H, CURSOR, button, buttonBox, buttonW } from './pieces'
 import type { ButtonState } from './pieces'
-import { art, canvas, fill, frame } from './canvas'
-import { chosenSlot } from './forge'
+import { GRID, canvas, frame } from './canvas'
+import { WORK_X, chosenSlot } from './forge'
 import type { ForgeUi } from './forge'
-import { INK, SURFACE } from './ui/tokens'
+import { SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'RETIRE THE HERO' }
 const top = WINDOW_TOP
-const PAD = 3
-const BOX_BG = SURFACE.sunken
-/** A worn piece's box, and the step from one to the next. */
-const BOX_W = 13
-const BOX_H = 23
-const BOX_STEP = 14
-const BOXES_Y = 3
 const RETIRE = { key: 'R', label: 'RETIRE' }
 const BACK = { key: 'B', label: 'BACK' }
 const ASK = 'Choose an heirloom'
-const TELL = 'Every new hero starts wearing it, its power kept and its stats plain.'
+const TELL = ['Every new hero starts wearing it,', 'its power kept and its stats plain.']
 
 /** The piece the window has chosen: the one picked, else the first worn. */
 export type RetireUi = ForgeUi
 
 const many = (n: number, one: string, more = `${one}s`) => `${n} ${n === 1 ? one : more}`
 const worn = (g: Game) => SLOTS.filter(s => g.gear[s] !== undefined)
-
-/** Where everything goes, in window pixels: the worn pieces, the buttons centered under them. */
-const layout = (g: Game, ui: RetireUi) => {
-  const slot = chosenSlot(g, ui)
-  const item = slot === undefined ? undefined : g.gear[slot]
-  const boxes = worn(g).map((s, i) => ({ slot: s, x: PAD + i * BOX_STEP, y: top + BOXES_Y }))
-  const buttonsY = onCell(top + BOXES_Y + BOX_H + 4)
-  const [rw, bw] = [buttonW(RETIRE.label), buttonW(BACK.label)]
-  const retire: Rect = { x: Math.floor((WINDOW_W - rw - 4 - bw) / 2), y: buttonsY, w: rw, h: BUTTON_H }
-  const back: Rect = { x: retire.x + retire.w + 4, y: buttonsY, w: bw, h: BUTTON_H }
-  const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
-  return { slot, item, boxes, retire, back, retireState }
+/** A worn slot in window pixels. */
+const slotRect = (slot: Slot): Rect => {
+  const [x, y, w, h] = WORN_SLOTS[slot]
+  return { x, y: top + y, w, h }
 }
 
-/** The box under the buttons, in cells: what it asks with the chosen piece's name in its tier's color, what passing
- * it down means, who the hero was. Then the buttons' words. */
-export const retireOverlay = (g: Game, ui: RetireUi): OverlayBox[] => {
-  const l = layout(g, ui)
+/** What it asks with the chosen piece's name in its tier's color, on a line of its own, what passing it down means,
+ * who the hero was. */
+const aboutLines = (g: Game, slot: Slot | undefined): Run[][] => {
+  const item = slot === undefined ? undefined : g.gear[slot]
   const who = `Level ${g.level} ${CLASS_NAME[g.cls]}, deepest ${g.deepest}, ${many(Math.floor(g.bossSlain / BIG_EVERY), 'big boss', 'big bosses')}.`
-  const lines: Run[][] = [
-    l.item === undefined ? [{ text: `${ASK}.` }] : [{ text: `${ASK}: ` }, { text: l.item.name, bold: true, color: RARITY_COLOR[l.item.rarity] }],
-    [{ text: TELL }],
+  return [
+    [{ text: item === undefined ? `${ASK}.` : `${ASK}:` }],
+    ...(item === undefined ? [] : [[{ text: item.name, bold: true, color: RARITY_COLOR[item.rarity] }]]),
+    ...TELL.map(text => [{ text }]),
     [{ text: who, dim: true }],
   ]
-  return [
-    { role: 'about', x: 2, y: Math.ceil((l.retire.y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
-    buttonBox(RETIRE.label, l.retire.x, l.retire.y, l.retireState),
-    buttonBox(BACK.label, l.back.x, l.back.y, 'ready'),
-  ]
+}
+
+/** Where everything goes, in window pixels: the box beside the worn slots, Retire and Back under it. */
+const layout = (g: Game, ui: RetireUi) => {
+  const slot = chosenSlot(g, ui)
+  const lines = aboutLines(g, slot)
+  const box: OverlayBox = { role: 'about', x: WORK_X, y: (top + 2) / 2, w: WINDOW_W - WORK_X - 1, h: lines.length + 2, border: SURFACE.frame, lines }
+  const retire: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 2, w: buttonW(RETIRE.label), h: BUTTON_H }
+  const back: Rect = { x: retire.x + retire.w + 4, y: retire.y, w: buttonW(BACK.label), h: BUTTON_H }
+  const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
+  const end = Math.max(top + 58, retire.y + BUTTON_H)
+  return { slot, box, retire, back, retireState, height: Math.ceil((end + 3) / 2) * 2 }
+}
+
+/** The box beside the worn slots, in cells, then the buttons' words. */
+export const retireOverlay = (g: Game, ui: RetireUi): OverlayBox[] => {
+  const l = layout(g, ui)
+  return [l.box, buttonBox(RETIRE.label, l.retire.x, l.retire.y, l.retireState), buttonBox(BACK.label, l.back.x, l.back.y, 'ready')]
 }
 
 /** The window's height in pixels, title bar and all. */
-export const retireHeight = (g: Game, ui: RetireUi) => {
-  const box = retireOverlay(g, ui)[0]!
-  return 2 * (box.y + box.h) + 2
-}
+export const retireHeight = (g: Game, ui: RetireUi) => layout(g, ui).height
 
-/** Where each worn piece's box is, in window pixels. */
-export const retireBoxes = (g: Game, ui: RetireUi): { slot: Slot; x: number; y: number }[] => layout(g, ui).boxes
+/** Where each worn piece's slot is, in window pixels. */
+export const retireBoxes = (g: Game): ({ slot: Slot } & Rect)[] => worn(g).map(slot => ({ slot, ...slotRect(slot) }))
 
 /** Where Retire and Back are, in window pixels. */
 export const retireButtons = (g: Game, ui: RetireUi) => {
@@ -81,21 +78,15 @@ export const retireButtons = (g: Game, ui: RetireUi) => {
   return { retire: l.retire, back: l.back }
 }
 
-const pieceBox = (c: ReturnType<typeof canvas>, item: Item, x: number, y: number, isChosen: boolean) => {
-  if (item.rarity === 'common') {
-    fill(c, x, y, BOX_W, BOX_H, BOX_BG)
-    frame(c, x, y, BOX_W, BOX_H, SURFACE.line)
-  } else tierBox(c, x + 1, y + 1, BOX_W - 2, BOX_H - 2, item.rarity)
-  const icon = ICONS[item.base]?.art ?? []
-  art(c, icon, x + Math.floor((BOX_W - (icon[0]?.length ?? 0)) / 2), y + Math.floor((BOX_H - icon.length) / 2))
-  if (isChosen) frame(c, x - 1, y - 1, BOX_W + 2, BOX_H + 2, INK.focus)
-}
-
-/** The window's pixels: title bar, what it asks, the worn pieces with the chosen one framed, the buttons, the box. */
+/** The window's pixels: title bar, the worn slots with the chosen one framed white as the smith's, the buttons, the box. */
 export const retirePixels = (g: Game, ui: RetireUi): string[][] => {
   const l = layout(g, ui)
-  const body = canvas(WINDOW_W, retireHeight(g, ui) - top)
-  for (const b of l.boxes) pieceBox(body, g.gear[b.slot]!, b.x, b.y - top, b.slot === l.slot)
+  const body = canvas(WINDOW_W, l.height - top)
+  wornSlots(body, g, () => GRID)
+  if (l.slot !== undefined) {
+    const [x, y, w, h] = WORN_SLOTS[l.slot]
+    frame(body, x - 2, y - 2, w + 4, h + 4, CURSOR)
+  }
   button(body, RETIRE.label, l.retire.x, l.retire.y - top, l.retireState)
   button(body, BACK.label, l.back.x, l.back.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)
@@ -112,7 +103,7 @@ export const retireGesture = (g: Game, ui: RetireUi, gesture: Gesture): { ui: Re
   if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return none
   const l = layout(g, ui)
   const r = (b: Rect) => isInside(at, b.x, b.y, b.w, b.h)
-  const picked = l.boxes.find(b => r({ x: b.x, y: b.y, w: BOX_W, h: BOX_H }))
+  const picked = retireBoxes(g).find(r)
   if (picked !== undefined) return { ui: { slot: picked.slot }, actions: [] }
   if (r(l.retire)) return l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? { ui, actions: [{ kind: 'retire', slot: l.slot }] } : none
   if (r(l.back)) return { ui, actions: [{ kind: 'panel', panel: 'sheet' }] }
@@ -122,5 +113,5 @@ export const retireGesture = (g: Game, ui: RetireUi, gesture: Gesture): { ui: Re
 /** What a click acts on, in window pixels: the worn pieces not chosen, Retire once it can, and Back. */
 export const retireHot = (g: Game, ui: RetireUi): Rect[] => {
   const l = layout(g, ui)
-  return [...l.boxes.filter(b => b.slot !== l.slot).map(b => ({ x: b.x, y: b.y, w: BOX_W, h: BOX_H })), ...(l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? [l.retire] : []), l.back]
+  return [...worn(g).filter(s => s !== l.slot).map(slotRect), ...(l.slot !== undefined && whyNotRetire(g, l.slot) === undefined ? [l.retire] : []), l.back]
 }

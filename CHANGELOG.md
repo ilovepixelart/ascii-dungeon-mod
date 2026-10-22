@@ -16,6 +16,9 @@ release may change behaviour.
   they were in the pixel font.
 - The pointer over several items lying on one tile names them a row each, each in its tier's color, the rarest
   first, where one line joined them all in the rarest one's color; past five rows, the last says how many more.
+- The names over a tile are written on the map under them, darkened, where they sat on a black box. Moved from the
+  tile onto them, the pointer keeps them there and lights the row it is on; a click on a row picks that item, first of
+  what lies there, so with room for one it is the one taken.
 - The bag is one of the hero's tabs: Hero, Bag, Talent, Deep and Codex share the title bar of each of those windows,
   so a click moves between them. The tabs' labels are written in terminal text, which fits all five beside the bag's
   gold.

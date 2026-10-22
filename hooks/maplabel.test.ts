@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { mapLabelAt } from './pixels'
+import { labelGrounds, labelRowAt, mapLabelAt } from './pixels'
 import { lyingLabel } from './panels'
 import { RARITY_COLOR, plainItem } from './items'
 
@@ -37,14 +37,31 @@ test('a tile with several items names each on its own row in its tier\'s color, 
   const ring = { ...plainItem({ nextId: 1 }, 'ring', 'rare'), name: 'Ring' }
   const boots = { ...plainItem({ nextId: 2 }, 'boots', 'epic'), name: 'Leather Boots' }
   const sword = { ...plainItem({ nextId: 3 }, 'sword', 'common'), name: 'Short Sword' }
-  expect(lyingLabel([ring])).toEqual({ lines: [{ text: 'Ring', color: RARITY_COLOR.rare }], color: RARITY_COLOR.rare })
+  expect(lyingLabel([ring])).toEqual({ lines: [{ text: 'Ring', color: RARITY_COLOR.rare, id: 1 }], color: RARITY_COLOR.rare })
   expect(lyingLabel([ring, boots, sword])).toEqual({
-    lines: [{ text: 'Leather Boots', color: RARITY_COLOR.epic }, { text: 'Ring', color: RARITY_COLOR.rare }, { text: 'Short Sword', color: RARITY_COLOR.common }],
+    lines: [{ text: 'Leather Boots', color: RARITY_COLOR.epic, id: 2 }, { text: 'Ring', color: RARITY_COLOR.rare, id: 1 }, { text: 'Short Sword', color: RARITY_COLOR.common, id: 3 }],
     color: RARITY_COLOR.epic,
   })
 })
 
 test('past five items, four are named and the rest counted', async () => {
   const seven = Array.from({ length: 7 }, (_, i) => ({ ...plainItem({ nextId: 10 + i }, 'ring'), name: `Ring ${i + 1}` }))
-  expect(lyingLabel(seven).lines).toEqual([...['Ring 1', 'Ring 2', 'Ring 3', 'Ring 4'].map(text => ({ text, color: RARITY_COLOR.common })), { text: '+3 more' }])
+  expect(lyingLabel(seven).lines).toEqual([...['Ring 1', 'Ring 2', 'Ring 3', 'Ring 4'].map((text, i) => ({ text, color: RARITY_COLOR.common, id: 10 + i })), { text: '+3 more' }])
+})
+
+test('a label\'s ground is the map under each cell, its two pixels averaged and darkened; the row the pointer is on lit', async () => {
+  // One row of one letter: three cells, the first a red pixel over a blue one, the rest black.
+  const frame = new Uint32Array(6)
+  frame[0] = 0xff0000
+  frame[3] = 0x0000ff
+  const label = { x: 0, y: 0, lines: ['X'] }
+  // The mean, 127.5 red and blue, at 40%: 51, on the 17-step grid #330033; lit a quarter toward white, 102 and 68.
+  expect(labelGrounds(frame, 3, label)).toEqual([['#330033', '#000000', '#000000']])
+  expect(labelGrounds(frame, 3, label, 0)[0]![0]).toBe('#664466')
+})
+
+test('the label\'s row under a cell: inside its block, padding and all; off it, none', async () => {
+  const label = { x: 4, y: 2, lines: ['Ring', 'Long Boots'] }
+  // 10 letters and a cell each side: columns 4 to 15, rows 2 and 3.
+  expect([labelRowAt(label, { x: 4, y: 2 }), labelRowAt(label, { x: 15, y: 3 }), labelRowAt(label, { x: 16, y: 3 }), labelRowAt(label, { x: 5, y: 4 })]).toEqual([0, 1, undefined, undefined])
 })

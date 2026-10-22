@@ -1062,10 +1062,45 @@ const lightRect = (frame: Uint32Array, width: number, height: number, r: PixelRe
 }
 
 /** The map's cells; `lit`, the tile under the pointer, lit for the hover over everything else. */
-export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect) => {
-  const frame = frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient })
-  return rasterCells(lit === undefined ? frame : lightRect(frame, columns, rows * 2, lit), columns, rows)
+export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect) =>
+  pixelMapFrame(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, lit).cells
+
+/** The map's Raster cells and the frame they pack, for what is written over it to take its ground from. */
+export const pixelMapFrame = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect) => {
+  const drawn = frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient })
+  const frame = lit === undefined ? drawn : lightRect(drawn, columns, rows * 2, lit)
+  return { cells: rasterCells(frame, columns, rows), frame }
 }
+
+/** A map label's place and rows, in the map's cells: each row padded a cell each side to the widest, one block. */
+export type LabelBlock = { x: number; y: number; lines: readonly string[] }
+export const labelWidth = (lines: readonly string[]) => Math.max(...lines.map(l => l.length)) + 2
+
+/** The label's row under a cell of the map, or undefined off the label. */
+export const labelRowAt = (label: LabelBlock, at: Pos): number | undefined =>
+  at.x >= label.x && at.x < label.x + labelWidth(label.lines) && at.y >= label.y && at.y < label.y + label.lines.length ? at.y - label.y : undefined
+
+/** How much darker than the map under it a label's ground is: enough for its names to read, the art still showing. */
+export const LABEL_SHADE = 0.6
+/** How far toward white the row the pointer is on is lit, over its ground. */
+export const LABEL_LIT = 0.25
+
+/** The ground under each cell of a label, row by row, from the map's frame `columns` wide: the cell's two pixels
+ * averaged and darkened by LABEL_SHADE, the row `lit` then LABEL_LIT toward white, on the Raster's 17-step grid as it
+ * paints them. */
+export const labelGrounds = (frame: Uint32Array, columns: number, label: LabelBlock, lit?: number): string[][] =>
+  label.lines.map((_, r) => Array.from({ length: labelWidth(label.lines) }, (__, i) => {
+    const x = label.x + i
+    const y = label.y + r
+    const top = frame[2 * y * columns + x] ?? 0
+    const bottom = frame[(2 * y + 1) * columns + x] ?? 0
+    const channel = (shift: number) => {
+      const shaded = ((((top >> shift) & 0xff) + ((bottom >> shift) & 0xff)) / 2) * (1 - LABEL_SHADE)
+      const toned = r === lit ? shaded + (255 - shaded) * LABEL_LIT : shaded
+      return Math.round(toned / 17) * 17
+    }
+    return `#${[16, 8, 0].map(s => channel(s).toString(16).padStart(2, '0')).join('')}`
+  }))
 
 /**
  * The map tile under a click on the pixel map: `x`, `y` in cells of the map's region (fractions where the terminal

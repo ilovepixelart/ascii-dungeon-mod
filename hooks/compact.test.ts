@@ -2,6 +2,8 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item } from '../types'
 import { BAG_UI_IDLE } from './bagui'
+import { shots } from './screens'
+import { BG } from './canvas'
 import { COMPACT_H, COMPACT_W, compactGesture, compactOverlay, compactPixels } from './compact'
 import { CELL } from './icons'
 import { SLOTS, plainItem } from './items'
@@ -19,7 +21,19 @@ const put = (g: Game, base: string, x: number, y: number): Item => {
 }
 const tap = (cx: number, cy: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x: cx, y: cy }, at: { x: cx, y: cy }, button })
 /** The middle of a bag item, in cells: the bag's grid starts a pixel in, two below the title bar's room. */
-const onItem = (item: Item) => tap(1 + item.x * CELL + 4.5, (WINDOW_TOP + 2 + item.y * CELL + 4) / 2 + 0.25)
+const onItem = (item: Item) => tap(2 + item.x * CELL + 4.5, (WINDOW_TOP + 2 + item.y * CELL + 4) / 2 + 0.25)
+
+describe('the compact screen\'s room', () => {
+  test('a pixel of room each side: a top-left item\'s brackets keep off the left edge, the worn list off the right', async () => {
+    for (const s of shots().filter(x => x.name.startsWith('compact-'))) {
+      // The body's outer columns are the window's ground alone.
+      const edges = s.px.slice(WINDOW_TOP).flatMap(row => [row[0], row[COMPACT_W - 1]])
+      expect([s.name, [...new Set(edges)]]).toEqual([s.name, [BG]])
+      const list = s.boxes.find(b => b.role === 'worn')!
+      expect([s.name, list.x + list.w]).toEqual([s.name, COMPACT_W - 1])
+    }
+  })
+})
 
 describe('the compact inventory', () => {
   test('lists what is worn, a slot to two rows: its name, then the item or a dash', async () => {

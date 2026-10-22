@@ -29,6 +29,9 @@ release may change behaviour.
 - A nemesis grew a fifth stronger with every win, without end. One that kept winning went deeper and grew again each
   time, until no hero could beat it (18 wins: four and a half times a champion's HP and attack). It now grows by its
   first three wins alone.
+- The bag's cards stood on empty worn slots, empty grid cells and the chosen item's white brackets; they go on open
+  ground first. The compact bag's brackets and worn list touched the window's edges; it has a pixel of room each side,
+  and needs a pane 82 columns wide (80 before).
 - Text over a window's pixels, the hero's tabs first, sat on a band of a slightly different shade: the terminal paints
   pixels at 4 bits a channel and text in full. Text grounds take the pixels' painted color, and a hovered tab's label
   the glow's, so the hover's outline is no longer cut by the label's row.

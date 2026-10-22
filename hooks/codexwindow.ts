@@ -9,7 +9,7 @@ import { LEGENDARIES } from './items'
 import { ICONS } from './icons'
 import { BOSS_ART, PAL, foeArtOf } from './pixelart'
 import { BUTTON_H, button, buttonBox, buttonW, onCell, tierBox } from './pieces'
-import { BG, art, canvas, fill, frame } from './canvas'
+import { BG, SLOT, art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { SURFACE } from './ui/tokens'
@@ -32,7 +32,9 @@ const LEG_STEP = 14
 /** The pages' tabs at the body's top; the first row of boxes under them, the second under that. */
 const PAGES = [{ label: 'FOES' }, { label: 'FINDS' }] as const
 const ROW1_Y = top + TABS_H + 2
-const ROW2_Y = ROW1_Y + FOE_BOX + 2
+/** A unique in a slot, as in the bag: its 8 by 8 a dot a pixel in a frame, centred over its big boss's column. */
+const UNIQUE_X = Math.floor((FOE_BOX - SLOT) / 2)
+const ROW2_Y = ROW1_Y + SLOT + 2
 
 /** The window's state beyond the game: the page shown. */
 export type CodexUi = { page: 'foes' | 'finds' }
@@ -99,9 +101,8 @@ export const codexLit = (g: Game) => {
 const drawFoes = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
   uniques.forEach(([theme, one], i) => {
     const x = PAD + i * FOE_STEP
-    box(body, x, ROW1_Y - top, FOE_BOX, FOE_BOX, lit.uniques[i]!)
-    // At its size on the map, half a big boss's each way: centred, its feet on the big bosses' floor.
-    scaled(body, foeArtOf({ glyph: one.glyph, unique: one.key }, theme), x + 5, ROW1_Y - top + 9, 1, lit.uniques[i] ? undefined : SHADE)
+    box(body, x + UNIQUE_X, ROW1_Y - top, SLOT, SLOT, lit.uniques[i]!)
+    scaled(body, foeArtOf({ glyph: one.glyph, unique: one.key }, theme), x + UNIQUE_X + 1, ROW1_Y - top + 1, 1, lit.uniques[i] ? undefined : SHADE)
   })
   bigs.forEach(([, one], i) => {
     const x = PAD + i * FOE_STEP

@@ -20,7 +20,7 @@ const CHROME: Chrome = { title: 'CODEX' }
 const top = WINDOW_TOP
 const PAD = 3
 const BOX_BG = SURFACE.sunken
-const EDGE = SURFACE.litEdge
+const EDGE = SURFACE.frame
 /** What is not yet slain or found: its shape alone, in one dark ink. */
 const SHADE = SURFACE.shade
 /** A foe's box, and the step from one to the next; a Legendary's narrower, taller box and step. */

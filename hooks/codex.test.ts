@@ -10,6 +10,7 @@ import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from '
 import type { CodexUi } from './codexwindow'
 import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
 import { UNIQUE_ART } from './pixelart'
+import { SURFACE } from './ui/tokens'
 
 const hit: Action = { kind: 'outcome', ok: true, what: 'Edit' }
 /** The hero at `depth` with a one-HP foe beside them, and the codex `codex`. */
@@ -209,6 +210,14 @@ describe('the codex window', () => {
       // The slot's frame round it: lit, it is not the dark one's.
       expect([lit[top]![left] !== dark[top]![left], lit[top + 9]![left + 9] !== dark[top + 9]![left + 9]]).toEqual([true, true])
     }
+  })
+
+  test('a found entry is framed as a portrait is, on the death screen and the townsfolk\'s; one not found in the rule\'s line', async () => {
+    const top = WINDOW_TOP + TABS_H + 2
+    const left = 3 + 4
+    const lit = codexPixels(shown({ ...EMPTY_CODEX, uniques: ['bones'] }), FOES)
+    const dark = codexPixels(shown(EMPTY_CODEX), FOES)
+    expect([lit[top]![left], lit[top + 9]![left + 9], dark[top]![left]]).toEqual([SURFACE.frame, SURFACE.frame, SURFACE.line])
   })
 
   test('each row lights on its own: its entries found, the rest of the codex empty, add their colours', async () => {

@@ -1473,7 +1473,7 @@ const pixelShop = (p: Pane) => {
         <Button key="shop-equip" label="Equip" hotkey="e" plain dimColor={g.cursor === null || chosen !== null} onPress={onItem({ kind: 'equip' })} />
         <Button key="shop-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'shop' })} />
       </Box>
-      <Text dimColor>Click a ware or an item to see it, again (or right-click) for its menu.</Text>
+      <Text dimColor>Click a ware or an item to see it, again for its menu; right-click to buy or sell it.</Text>
       {p.logTail()}
     </Box>
   )

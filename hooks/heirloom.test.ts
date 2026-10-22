@@ -5,7 +5,8 @@ import { apply, whyNotRetire } from './game'
 import { buttonsIn, plainHero } from './fixtures'
 import { BASES, LEGENDARIES, PREFIXES, RARITY_COLOR, SLOTS, SUFFIXES, heirloomOf, plainItem } from './items'
 import { retireBoxes, retireButtons, retireGesture, retireHeight, retireOverlay, retirePixels } from './retirewindow'
-import { CLOSE_BOX, WINDOW_W } from './window'
+import { CLOSE_BOX, WINDOW_TOP, WINDOW_W } from './window'
+import { WORK_X, forgePixels } from './forge'
 import type { Gesture } from './window'
 import { textMask } from './pixelart'
 import { EMPTY_CODEX } from './codex'
@@ -134,15 +135,15 @@ describe('the retire window', () => {
   const said = (x: Game, ui: { slot: Slot | null }) => retireOverlay(x, ui)[0]!.lines.map(l => l.map(r => r.text).join(''))
 
   test('asks for the heirloom; the box names the chosen piece, what passing it down means and who the hero was', async () => {
-    expect(said(g, { slot: 'helm' })).toEqual(['Choose an heirloom: Steel Helm of Fast Feedback', 'Every new hero starts wearing it, its power kept and its stats plain.', 'Level 14 Knight, deepest 12, 1 big boss.'])
-    expect(retireOverlay(g, { slot: 'helm' })[0]!.lines[0]![1]!).toMatchObject({ bold: true, color: RARITY_COLOR[helm.rarity] })
+    expect(said(g, { slot: 'helm' })).toEqual(['Choose an heirloom:', 'Steel Helm of Fast Feedback', 'Every new hero starts wearing it,', 'its power kept and its stats plain.', 'Level 14 Knight, deepest 12, 1 big boss.'])
+    expect(retireOverlay(g, { slot: 'helm' })[0]!.lines[1]![0]!).toMatchObject({ bold: true, color: RARITY_COLOR[helm.rarity] })
     expect(said({ ...g, bossSlain: 30 }, IDLE).at(-1)).toBe('Level 14 Knight, deepest 12, 3 big bosses.')
   })
 
-  test('a box a worn piece; a click on one chooses it, and the first worn is chosen before any', async () => {
-    const boxes = retireBoxes(g, IDLE)
+  test('a slot a worn piece; a click on one chooses it, and the first worn is chosen before any', async () => {
+    const boxes = retireBoxes(g)
     expect(boxes.map(b => b.slot)).toEqual(['weapon', 'helm'])
-    expect(said(g, IDLE)[0]).toBe(`Choose an heirloom: ${g.gear.weapon!.name}`)
+    expect(said(g, IDLE)[1]).toBe(g.gear.weapon!.name)
     expect(retireGesture(g, IDLE, tap({ x: boxes[1]!.x + 3, y: boxes[1]!.y + 4 }))).toEqual({ ui: { slot: 'helm' }, actions: [] })
   })
 
@@ -168,10 +169,14 @@ describe('the retire window', () => {
     const affixed = [PREFIXES, BASES, SUFFIXES].map(list => widest(list.map(x => x.name))).join(' ')
     const longest = widest([affixed, ...LEGENDARIES.map(l => l.name)])
     const full = { ...g, gear: Object.fromEntries(SLOTS.map((slot, i) => [slot, { ...piece('ring', { id: 800 + i, slot }), name: longest }])) }
-    expect(retireBoxes(full, IDLE).length).toBe(7)
+    expect(retireBoxes(full).length).toBe(7)
     expect(retireHeight(full, IDLE)).toBeLessThanOrEqual(80)
     expect(retirePixels(full, IDLE).length).toBe(retireHeight(full, IDLE))
-    const last = retireBoxes(full, IDLE).at(-1)!
-    expect(last.x + 13).toBeLessThanOrEqual(WINDOW_W)
+    expect(retireOverlay(full, IDLE)[0]!.lines.every(l => l.map(r => r.text).join('').length <= WINDOW_W - WORK_X - 3)).toBe(true)
+  })
+
+  test('shows what is worn as the smith does, the chosen piece framed the same', async () => {
+    const side = (px: string[][]) => px.slice(WINDOW_TOP, WINDOW_TOP + 58).map(row => row.slice(0, WORK_X - 1))
+    for (const slot of ['weapon', 'helm'] as const) expect(side(retirePixels(g, { slot }))).toEqual(side(forgePixels(g, { slot })))
   })
 })

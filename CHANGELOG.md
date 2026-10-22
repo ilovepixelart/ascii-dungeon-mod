@@ -30,6 +30,9 @@ release may change behaviour.
 - A nemesis grew a fifth stronger with every win, without end. One that kept winning went deeper and grew again each
   time, until no hero could beat it (18 wins: four and a half times a champion's HP and attack). It now grows by its
   first three wins alone.
+- How it plays drew its rules' icons where its text box's fill covered them, and a text box's blank rows took no
+  room, so the rules ran together over an empty bottom. The icons have a column of their own and every blank row keeps
+  its row.
 - The bag's cards stood on empty worn slots, empty grid cells and the chosen item's white brackets; they go on open
   ground first. The compact bag's brackets and worn list touched the window's edges; it has a pixel of room each side,
   and needs a pane 82 columns wide (80 before).

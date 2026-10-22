@@ -39,12 +39,14 @@ describe('the how it plays window', () => {
     expect(color('Every tool call')).toBeUndefined()
   })
 
-  test('each rule\'s icon beside its first line, left of the text', async () => {
+  test('each rule\'s icon beside its first line, in a column left of the text\'s box, where its fill does not reach', async () => {
     const px = helpPixels()
     const box = helpOverlay()[0]!
+    // The click layer fills a box's cells from box.x + 1: the icons, cells 5 to 9, are clear of it.
+    expect(box.x + 1).toBeGreaterThan(9)
     HELP_ROWS.forEach((_, i) => {
       const y = 2 * (box.y + 3 + 3 * i)
-      const inked = [0, 1, 2, 3, 4].some(dy => px[y + dy]!.slice(box.x + 1, box.x + 1 + 8).some(p => p !== POPOVER_BG))
+      const inked = [0, 1, 2, 3, 4].some(dy => px[y + dy]!.slice(5, 10).some(p => p !== POPOVER_BG))
       expect(inked).toBe(true)
     })
   })

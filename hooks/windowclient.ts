@@ -38,7 +38,8 @@ const windowLayer: ClientModule<Props, Held> = (props, surface) => {
         flexDirection: 'column',
         backgroundColor: b.bg ?? BOX_BG,
         paddingX: b.pad ?? 1,
-        children: b.lines.map(line => Text({ wrap: 'truncate-end', children: line.map(r => Text({ color: r.color, backgroundColor: r.bg, bold: r.bold, dimColor: r.dim, children: r.text })) })),
+        // An empty line is a space, so it keeps its row: with no text a line takes none, and the rows under it move up.
+        children: b.lines.map(line => Text({ wrap: 'truncate-end', children: line.length === 0 ? ' ' : line.map(r => Text({ color: r.color, backgroundColor: r.bg, bold: r.bold, dimColor: r.dim, children: r.text })) })),
       }),
     ),
   })

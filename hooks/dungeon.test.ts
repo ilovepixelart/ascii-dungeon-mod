@@ -672,6 +672,15 @@ test('How it plays opens from settings over it, and closes back to settings', as
   await ui.pointer({ type: 'down', ...at, button: 'left', in: 'settings-clicks' } as never)
   await ui.pointer({ type: 'up', ...at, button: 'left', in: 'settings-clicks' } as never)
   expect(await ui.find({ type: 'Raster', key: 'help' })).toBeDefined()
+  // The click layer writes every row of the rules' box, a blank row as a space (with no text a row takes none and the
+  // rows under it move up), and starts the box past the icons' column (cells 5 to 9), so its fill leaves them showing.
+  type Drawn = { props: { left?: number; height?: number }; children: (Drawn | string)[] }
+  const layer = (await ui.drawn({ in: 'help-clicks' } as never)) as unknown as Drawn
+  const rules = layer.children.find((b): b is Drawn => typeof b !== 'string' && b.props.height === 21)!
+  const rows = rules.children.map(r => JSON.stringify(r))
+  expect(rows).toHaveLength(21)
+  expect([1, 4, 7, 10, 13, 16, 19].map(i => (rules.children[i] as Drawn).children)).toEqual(Array(7).fill([' ']))
+  expect(rules.props.left).toBe(12)
   expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeUndefined()
   const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
   await ui.pointer({ type: 'down', ...close, button: 'left', in: 'help-clicks' } as never)

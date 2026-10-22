@@ -6,7 +6,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 |---|---|
 | `hooks/window.ts` | the frame (title or a row of tabs, gold when the window passes it, close box, the body below `WINDOW_TOP`); the title bar's words (title or tabs, gold) as terminal text over it (`chromeBoxes`, kept by the pixels `windowPixels` drew); tabs in terminal text, in the title bar or for a window's pages (`textTabRects`, `textTabsBox`, `tabGround`); text boxes (`boxShape`, `drawBox`); where they go (`coverage`, `place`); gestures (`Gesture`, `pixel`, `CLICK_SLOP`) |
 | `hooks/pieces.ts` | what windows are built from: an item in its tier box with its marks (`drawItem`), an item grid (`itemGrid`, `cellBox`), the belt |
-| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; the flat card and its family's ribbon; the hover (`hoveredRect`, `lightUp`). `tools/ui.ts` draws them all on one sheet, `tools/windows.ts` each window with its text boxes written in, for review |
+| `hooks/ui/tokens.ts`, `hooks/ui/kit.ts` | the interface kit: each color named once by its role, the spacing, the card families; the flat card and its family's ribbon; the hover (`hoveredRect`, `lightUp`). |
 | `hooks/windowclient.ts` | the click layer: writes the text boxes it is handed and reports whole gestures |
 | `hooks/inventory.ts`, `hooks/bagui.ts` | the inventory (see `inventory.md`) |
 | `hooks/shop.ts` | the merchant |
@@ -29,7 +29,7 @@ Every pixel menu is one window: the same width (`WINDOW_W`, so one pane width sh
 
 ## Conventions
 
-Every window keeps these; review them with `tools/windows.ts`, which draws each window of `hooks/screens.ts` with its text boxes written in.
+Every window keeps these; review them as a real session draws them with `tools/shots/shoot.py` (see `docs/design.md`).
 
 - A right-click moves an item between a window's two sides at once: the stash stores and takes, the merchant buys and sells. Where there is no other side (the bag), it opens the item's menu.
 - Colors by role from `hooks/ui/tokens.ts`, never a code of a window's own: `scripts/check-colors.mjs`, a gate, fails on a raw color (any quotes, three, four, six or eight digits) in any module that draws a window, takes the tokens or draws the pane's text (a `.tsx`); a click layer, which cannot import the tokens, may hold only a copy of a token's value. The strip (`hooks/hud.ts`) is pixel art outside the gate; its text inks are copies of `INK.text`, `INK.dim` and `INK.gold`, held to them by a test.

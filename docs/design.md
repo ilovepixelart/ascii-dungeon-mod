@@ -73,6 +73,11 @@ names below point at it.
 
 ## Checking
 
+- `uv run --with pillow python tools/shots/shoot.py <out> [name...]` shoots every window as a real Claude Code session
+  draws it, not a preview: a renamed copy of the mod (its own save) in a private tmux, each scene of
+  `tools/shots/scenes.ts` opened from a save, its keys pressed after ctrl+x tab, the cells captured and painted as
+  Ghostty on its defaults shows them, into `<out>/gallery.html` labelled with the commit. Run it from a folder Claude
+  Code trusts (`--cwd`); JetBrains Mono is found in the usual font folders or `SHOTS_FONT_DIR`.
 - `bun tools/assets.ts <out>` draws every window in every class and rarity and writes them out for review; its test
   fails on magenta or a missing glyph.
 - `bun tools/mock.ts <out> [draft]` renders the sprite cast and a scene; visual changes go through it first (see

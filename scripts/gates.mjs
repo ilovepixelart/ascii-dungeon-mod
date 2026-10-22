@@ -30,7 +30,7 @@ const gates = [
   ['test', 'claude', ['plugin', 'test', '.']],
   ['python tools: ruff', 'uvx', ['ruff', 'check', 'tools']],
   ['python tools: format', 'uvx', ['ruff', 'format', '--check', 'tools']],
-  ['python tools: tests', 'python3', ['-m', 'unittest', 'tools/test_measure.py']],
+  ['python tools: tests', 'python3', ['-m', 'unittest', 'tools/test_measure.py', 'tools/shots/test_cells.py']],
   ...(wantsTypecheck ? [['typecheck', 'npx', ['-y', '-p', 'typescript', 'tsc', '-p', '.']]] : []),
 ]
 

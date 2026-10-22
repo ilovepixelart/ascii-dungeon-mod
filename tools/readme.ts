@@ -1,5 +1,5 @@
 // The README's pictures, drawn by the game's own code: a depth mid-walk with the strip under it, and some windows as
-// tools/windows.ts previews them. Run it after a visual change and commit what it writes.
+// tools/preview.ts draws them, their text written in. Run it after a visual change and commit what it writes.
 // Usage: bun tools/readme.ts [out-dir]   writes dungeon.png and one PNG per window into docs/img by default
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'

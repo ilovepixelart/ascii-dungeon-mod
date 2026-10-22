@@ -1047,9 +1047,13 @@ const onHudClick = async ($: EngineInterface, data: unknown) => {
   $.ui.invalidate('ui.render')
 }
 
-/** A gesture on the dash's layer over the map: its orbs and crests, its plaque's buttons and words. */
+/** A gesture on the dash's layer over the map: its orbs and crests, its plaque's buttons and words; between them, the map. */
 const onDashClick = async ($: EngineInterface, data: unknown) => {
   const outcome = overMapGesture(data as Gesture, hudWidth)
+  if (outcome.toMap !== undefined && mapSize !== null) {
+    const { columns, rows } = mapSize
+    return onMapClick($, { x: outcome.toMap.x, y: outcome.toMap.y + rows - OVER_ROWS, columns, rows })
+  }
   if (outcome.isLog === true) isLogOpen = true
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')

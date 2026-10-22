@@ -163,4 +163,10 @@ describe('clicks on the dash', () => {
     expect(dashOverGesture(tap(13.5, (DASH_OVER - 7) / 2 + 0.25), W)).toEqual({ actions: [{ kind: 'panel', panel: 'sheet' }] })
     expect(dashOverGesture(tap(13.5, 5.75, 'right'), W)).toEqual({ actions: [] })
   })
+
+  test('hands a click on its layer that lands on none of it to the map under it, in the layer\'s cells', async () => {
+    // Cell 50, 1: 20 px up, x 50, between the crests' horns and over the plaque: the map.
+    expect(dashOverGesture(tap(50.5, 1.25), W)).toEqual({ actions: [], toMap: { x: 50.5, y: 1.25 } })
+    expect(dashOverGesture(tap(50.5, 1.25, 'right'), W)).toEqual({ actions: [] })
+  })
 })

@@ -212,7 +212,7 @@ const obey = (g: Game) => {
 }
 
 /** Each order's choices in the order a click steps through them. */
-const ORDER_STEPS: { [K in keyof Orders]: readonly Orders[K][] } = { drink: [25, 50, 0], smoke: [false, true], leave: ['common', 'uncommon', 'rare'] }
+const ORDER_STEPS: { [K in keyof Orders]: readonly Orders[K][] } = { drink: [25, 50, 0], smoke: [false, true], leave: ['common', 'uncommon', 'rare', 'all'] }
 
 const order = (g: Game, which: keyof Orders) => {
   const orders = ordersOf(g)
@@ -715,7 +715,8 @@ const loot = (g: Game, at: Pos, champion?: string) => {
   }
   const item = makeItem(g, isRareDue ? 'rare' : isChampion ? 'uncommon' : 'common', (isChampion ? 2 : 1) * (markHere(g) === 'ironclad' ? 2 : 1))
   if (item.rarity === 'common' || item.rarity === 'uncommon') g.sinceRare += 1
-  if (RARITY_RANK.indexOf(item.rarity) < RARITY_RANK.indexOf(ordersOf(g).leave)) {
+  const leave = ordersOf(g).leave
+  if (leave === 'all' || RARITY_RANK.indexOf(item.rarity) < RARITY_RANK.indexOf(leave)) {
     say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
     return
   }

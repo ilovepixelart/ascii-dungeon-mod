@@ -4,6 +4,7 @@ import type { Game, Orders } from '../types'
 import { DEFAULT_ORDERS, apply } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { countOf, slotOf } from './consumables'
+import { RARE_KILLS } from './items'
 
 /** The hero at `hp` of 20 with orders, struck by a goblin of `atk` that has met the knight's shield: a failed call. */
 const struck = (hp: number, atk: number, orders?: Partial<Orders>, over: Partial<Game> = {}) => {
@@ -93,11 +94,22 @@ describe('leave', () => {
     expect(left.bag.some(i => i.name === found.name && i.rarity === 'common')).toBe(false)
     expect(left.log).toContain(`You leave the ${found.name} (Common).`)
   })
+
+  test('leaving all loot, a kill\'s item is left whatever its rarity, said; a Rare due is left too', async () => {
+    const g = { ...plainHero(3), sinceRare: RARE_KILLS - 1 }
+    const kill = (orders: Orders) => apply({ ...g, orders, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, opened: true }) }, { kind: 'outcome', ok: true, what: 'Edit' })
+    const took = kill(DEFAULT_ORDERS)
+    const found = took.bag.find(i => !g.bag.some(b => b.id === i.id))!
+    expect(found.rarity).toBe('rare')
+    const left = kill({ ...DEFAULT_ORDERS, leave: 'all' })
+    expect(left.bag).toEqual(g.bag)
+    expect(left.log).toContain(`You leave the ${found.name} (Rare).`)
+  })
 })
 
 describe('changing orders', () => {
   const order = (g: Game, which: 'drink' | 'smoke' | 'leave') => apply(g, { kind: 'order', order: which })
-  test('drink steps quarter, half, never and round; smoke flips; leave steps take all, leave commons, leave below rare and round', async () => {
+  test('drink steps quarter, half, never and round; smoke flips; leave steps take all, leave commons, leave below rare, leave all and round', async () => {
     let g = plainHero(1)
     const drinks: number[] = []
     for (let i = 0; i < 3; i += 1) drinks.push((g = order(g, 'drink')).orders!.drink)
@@ -105,8 +117,8 @@ describe('changing orders', () => {
     expect(order(g, 'smoke').orders!.smoke).toBe(true)
     expect(order(order(g, 'smoke'), 'smoke').orders!.smoke).toBe(false)
     const leaves: string[] = []
-    for (let i = 0; i < 3; i += 1) leaves.push((g = order(g, 'leave')).orders!.leave)
-    expect(leaves).toEqual(['uncommon', 'rare', 'common'])
+    for (let i = 0; i < 4; i += 1) leaves.push((g = order(g, 'leave')).orders!.leave)
+    expect(leaves).toEqual(['uncommon', 'rare', 'all', 'common'])
   })
 
   test('in town as in the dungeon', async () => {

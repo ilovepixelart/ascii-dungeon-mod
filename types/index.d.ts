@@ -54,8 +54,8 @@ export type Fortune = { kind: 'luck' | 'riches' | 'insight'; depth: number }
 /** What tool calls did while the player looked away: counted from `depth` and `level`, the best find Rare or better. */
 export type Recap = { calls: number; depth: number; level: number; kills: number; champions: number; gold: number; deaths: number; tests: number; commits: number; pushes: number; prs: number; best?: Item }
 
-/** What the hero does on their own: drink a healing potion under `drink` percent of max HP (0, never); throw a smoke bomb when low with no healing left; leave a kill's items below `leave` on the floor. */
-export type Orders = { drink: 0 | 25 | 50; smoke: boolean; leave: Rarity }
+/** What the hero does on their own: drink a healing potion under `drink` percent of max HP (0, never); throw a smoke bomb when low with no healing left; leave a kill's items below `leave` behind, every one of them at `all`. */
+export type Orders = { drink: 0 | 25 | 50; smoke: boolean; leave: Rarity | 'all' }
 
 /** What every hero of this save has done, kept through a new game: the uniques and big bosses slain and the Legendaries found, by key and name, the records, and the heroes retired (absent, none). */
 export type Codex = { uniques: NonNullable<Foe['unique']>[]; bigs: NonNullable<Foe['big']>[]; legendaries: string[]; deepest: number; level: number; kills: number; bosses: number; deaths: number; gold: number; retired?: number }

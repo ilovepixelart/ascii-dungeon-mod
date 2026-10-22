@@ -24,7 +24,7 @@ export const volumeShare = (s: SoundSettings) => s.volume / VOLUME_STEPS
 type Does = 'new' | 'help' | 'effects' | 'music' | 'volume' | keyof Orders
 
 const DRINK_WORD: Readonly<Record<Orders['drink'], string>> = { 25: 'DRINK AT QUARTER HP', 50: 'DRINK AT HALF HP', 0: 'DRINK NEVER' }
-const LEAVE_WORD: Readonly<Partial<Record<Orders['leave'], string>>> = { common: 'TAKE ALL LOOT', uncommon: 'LEAVE COMMONS', rare: 'LEAVE BELOW RARE' }
+const LEAVE_WORD: Readonly<Partial<Record<Orders['leave'], string>>> = { common: 'TAKE ALL LOOT', uncommon: 'LEAVE COMMONS', rare: 'LEAVE BELOW RARE', all: 'LEAVE ALL LOOT' }
 
 /** The window's state beyond the game: the page shown. */
 export type SettingsUi = { page: 'game' | 'orders' }

@@ -353,12 +353,12 @@ export const overLabels = (g: Game, columns: number): OverlayBox<'label'>[] => [
 ]
 
 /** A gesture on the dash's layer over the map (its cells): an orb or its crest for the sheet, a plaque button, the
- * plaque's words for the log; a drag or a right-click, nothing. */
-export const dashOverGesture = (gesture: Gesture, columns: number): { actions: Action[]; isLog?: true } => {
+ * plaque's words for the log; a left click on none of it, to the map under it; a drag or a right-click, nothing. */
+export const dashOverGesture = (gesture: Gesture, columns: number): { actions: Action[]; isLog?: true; toMap?: { x: number; y: number } } => {
   if (gesture.type === 'drag' || gesture.button !== 'left') return { actions: [] }
   const hit = dashHit(columns, Math.floor(gesture.at.x), Math.floor(gesture.at.y * 2) - DASH_OVER)
   if (hit === 'log') return { actions: [], isLog: true }
-  return { actions: hit === undefined ? [] : [hit] }
+  return hit === undefined ? { actions: [], toMap: gesture.at } : { actions: [hit] }
 }
 
 /** What a click on the dash does, at x, y of its frame (y negative over the map): either orb, its socket or its crest,

@@ -15,7 +15,7 @@ import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
 import { INSET } from './hud'
-import { BELT_Y, BUTTON_Y, DASH_OVER, ORB_STEP_MS, dashBeltX, dashButtons } from './dash'
+import { BELT_Y, BUTTON_Y, DASH_OVER, ORB_STEP_MS, OVER_ROWS, dashBeltX, dashButtons, dashHit } from './dash'
 import { stripHeight, stripOverMap } from './strip'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
@@ -868,6 +868,29 @@ test('a click on the pixel map reaches the game through the click layer', async 
   await ui.pointer({ type: 'down', x: floor.x, y: floor.y, button: 'left', in: 'map-clicks' })
   await clock.advance(1000)
   expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.cells).not.toBe(before)
+  await ui.unmount()
+})
+
+test('a click on the dash\'s layer over the map between its parts reaches the map under it', async ($, on) => {
+  const said = toasts(on)
+  on('ui.blit', () => ({ value: {} }))
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const map = await ui.find({ type: 'Raster', key: 'map' })
+  const columns = map?.props.columns as number
+  const rows = map?.props.rows as number
+  const g = newGame()
+  const level = levelOf(g)
+  // A cell of the dash's layer that none of the dash covers, over ground no one can walk to.
+  const top = rows - OVER_ROWS
+  const cells = Array.from({ length: columns * OVER_ROWS }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
+  const gap = cells.find(c => {
+    if (dashHit(columns, c.x, c.y * 2 - DASH_OVER) !== undefined || dashHit(columns, c.x, c.y * 2 + 1 - DASH_OVER) !== undefined) return false
+    const t = clickToTile(g, { x: c.x + 0.5, y: top + c.y + 0.5, columns, rows }, viewOf(g, columns, rows))
+    return t.x >= 0 && t.y >= 0 && t.x < 64 && t.y < 18 && (g.seen[t.y * 64 + t.x] === '0' || level.tiles[t.y]?.[t.x] !== '.')
+  })!
+  await ui.pointer({ type: 'down', x: gap.x + 0.5, y: gap.y + 0.5, button: 'left', in: 'dash-clicks' } as never)
+  await ui.pointer({ type: 'up', x: gap.x + 0.5, y: gap.y + 0.5, button: 'left', in: 'dash-clicks' } as never)
+  expect(said).toEqual(["You can't get there."])
   await ui.unmount()
 })
 

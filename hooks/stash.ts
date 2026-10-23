@@ -49,11 +49,12 @@ export const whereToStore = (g: Stash, item: Item, preferred = 0): StashTab | un
   return free < 0 ? undefined : free
 }
 
-/** The item put on `tab`, which must be bought and, a plain one, have room for it: at its first free cell there. */
-export const putIn = (g: Game, item: Item, tab: StashTab) => {
+/** The item put on `tab`, which must be bought and, a plain one, have room for it: at cells `at`, else at its first
+ * free cell there. */
+export const putIn = (g: Game, item: Item, tab: StashTab, at?: { x: number; y: number }) => {
   if (tab === 'sets') g.stashSets = [...(g.stashSets ?? []), item]
   else if (tab === 'legends') g.stashLegends = [...(g.stashLegends ?? []), item]
-  else g.stashed = g.stashed.map((t, i) => (i === tab ? [...t, { ...item, ...spotOn(t, item)! }] : t))
+  else g.stashed = g.stashed.map((t, i) => (i === tab ? [...t, { ...item, ...(at ?? spotOn(t, item)!) }] : t))
 }
 
 /** Whether a plain tab's items each lie inside its grid, over no other. */

@@ -5,7 +5,7 @@
 import type { Game, Talent } from '../types'
 import type { Action, Run } from './game'
 import { TALENTS, TALENT_EVERY, offer } from './talents'
-import { BUTTON_H, button, buttonBox, buttonW, onCell } from './pieces'
+import { BUTTON_H, artLabel, button, buttonBox, buttonW, onCell } from './pieces'
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
 import { flatCard, ribbon, ribbonLabel } from './ui/kit'
@@ -32,12 +32,15 @@ export const familyOf = (t: Talent) => FAMILY_OF[t]
 
 const GAP = 6
 const CARD_W = 26
-const CARD_H = 31
+const CARD_H = 33
 const CARD_Y = 2
 /** The ribbon's top, down a card's face. */
 const RIBBON_Y = 4
-/** The icon at its own size inside a pixel of backdrop and a frame. */
+/** The icon at its own size inside a pixel of backdrop and a frame, its top down the card's face. */
 const ART = 14
+const ART_Y = 13
+/** The talent's name, a pixel under the icon, on a whole cell. */
+const NAME_Y = ART_Y + ART + 1
 
 const chosenOf = (g: Game, ui: TalentUi) => Math.min(Math.max(0, ui.chosen), Math.max(0, offer(g).length - 1))
 
@@ -66,6 +69,11 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
     buttonBox('TAKE', takeRect().x, takeRect().y, 'armed'),
     buttonBox('LATER', laterRect().x, laterRect().y, 'ready'),
     ...offered.map((o, i) => ribbonLabel(FAMILIES[FAMILY_OF[o]], cardRect(i).x, CARD_W, top + CARD_Y + RIBBON_Y)),
+    // Each card's name under its icon, centred, the chosen one's in gold, as the start screen names its heroes.
+    ...offered.map((o, i) => {
+      const name = TALENTS[o].name.toUpperCase()
+      return artLabel(name, cardRect(i).x + Math.floor((CARD_W - name.length) / 2), top + CARD_Y + NAME_Y, i === chosenOf(g, ui) ? INK.gold : INK.text, SURFACE.card)
+    }),
   ]
 }
 const offerHeight = (g: Game, ui: TalentUi) => {
@@ -89,7 +97,7 @@ const drawCard = (body: Canvas, t: Talent, i: number, isOn: boolean) => {
   const x = cardRect(i).x
   flatCard(body, { x, y: CARD_Y, w: CARD_W, h: CARD_H }, isOn)
   ribbon(body, FAMILIES[FAMILY_OF[t]], x, CARD_W, CARD_Y + RIBBON_Y)
-  drawArt(body, t, x, CARD_Y + 13)
+  drawArt(body, t, x, CARD_Y + ART_Y)
 }
 
 /** The offer as cards: the row, Take and Later, the box. */

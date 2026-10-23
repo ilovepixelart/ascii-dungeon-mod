@@ -13,6 +13,7 @@ import { CLOSE_BOX } from './window'
 import type { Gesture } from './window'
 import { MAP_H } from './map'
 import { PX } from './pixelart'
+import { INK } from './ui/tokens'
 
 const ALL = Object.keys(TALENTS) as Talent[]
 const knowing = (g: Game, ...talents: Talent[]): Game => ({ ...g, talents })
@@ -208,6 +209,21 @@ describe('the talent window', () => {
     expect(talentGesture(g, ui(1), tap(middle(laterRect()))).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
     expect(talentGesture(g, ui(0), tap({ x: CLOSE_BOX[0] + 1, y: CLOSE_BOX[1] + 1 })).actions).toEqual([{ kind: 'panel', panel: 'talent' }])
     expect(talentGesture(g, ui(0), tap({ x: 50, y: 15 }))).toEqual({ ui: ui(0), actions: [] })
+  })
+
+  test('each card names its talent under its icon, centred on a whole cell, the chosen one\'s in gold', async () => {
+    const cards = talentCards(g)
+    const labels = talentOverlay(g, ui(1)).filter(b => b.role === 'label')
+    cards.forEach((c, i) => {
+      const name = TALENTS[c.talent].name.toUpperCase()
+      const label = labels.find(b => b.lines[0]!.map(r => r.text).join('').trim() === name)
+      expect([c.talent, label !== undefined]).toEqual([c.talent, true])
+      // Centred on its card: as much room each side, the odd cell on the right.
+      const words = label!.x + 1
+      const room = [words - c.rect.x, c.rect.x + c.rect.w - (words + name.length)]
+      expect([c.talent, room[1]! - room[0]! === 0 || room[1]! - room[0]! === 1]).toEqual([c.talent, true])
+      expect(label!.lines[0]![0]!.color).toBe(i === 1 ? INK.gold : INK.text)
+    })
   })
 
   test('the box below says the chosen talent: its name and what it does', async () => {

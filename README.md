@@ -3,7 +3,7 @@
 A Claude Code mod: a pixel roguelike in a pane, played by your coding session. Each tool call moves the hero, a failure
 lets the foe hit back, and real work pays.
 
-![The hero in a room on depth 4, a goblin ahead, the strip with HP, level, belt, gold and depth below](docs/img/dungeon.png)
+![The knight in a lit room, the dash below: a red HP orb and a gold XP orb with gargoyle crests, the belt between them, and a plaque of depth and gold](docs/img/dungeon.png)
 
 ## What your coding does
 
@@ -30,7 +30,7 @@ three spare pieces for one better.
 That follows `main`. To stay on one release, add the repository at its tag, then install from it:
 
 ```
-/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.4.0
+/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.5.0
 /plugin install ascii-dungeon@ascii-dungeon-mod
 ```
 
@@ -65,6 +65,10 @@ As text, the keys are `i` inventory, `c` character, `a` attack, `p` potion, `w` 
   <tr>
     <td><img src="docs/img/deep-brittle-ironclad.png" alt="The deep window: a fork between two marks for the next tier"></td>
     <td><img src="docs/img/talk-mystic.png" alt="The mystic in town with her three fortunes"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/img/chest-knight.png" alt="The stash: a tab's grid over the bag's, its tabs and the gold in the title bar"></td>
+    <td><img src="docs/img/codex-foes.png" alt="The codex: the uniques and the big bosses, the slain ones drawn, the rest dark shapes"></td>
   </tr>
 </table>
 

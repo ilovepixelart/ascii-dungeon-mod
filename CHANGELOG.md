@@ -6,24 +6,63 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-23
+
+Saves from 0.4.0 load as they are, brought to save version 14: each stash tab, a list of ten, is laid out on a grid
+the bag's size, largest first; what a tab cannot hold goes to another tab with room, then onto a plain tab not yet
+bought, given, then into the bag, then onto the floor by the portal, so no item is lost. The pane plays best 62 rows
+tall (49 before): the stash's window is 54 rows. The view toggle is gone from settings: with the pixel strip or dash
+the map is always pixels. Nothing else needs doing.
+
+### Added
+
+- From 105 columns the strip is a dash in the manner of Diablo III's: an HP orb and an XP orb of glass, their liquid
+  filled to the share and rippling, their numbers on them, standing high over the map with a horned gargoyle crest
+  each; the belt between them; the bag, settings and the portal in sockets in its corners; and over the map between
+  the orbs a carved plaque of the depth, the gold and the effects. Either orb opens the character sheet and the
+  plaque the log; a click or the pointer between its parts reaches the map under it.
+- The stash's plain tabs are grids the bag's size, 8 by 6 cells: an item lies at its cells as in the bag, stored at
+  the first place it fits, and room is cells, not items. The sets' and the Legendaries' tabs are boards, a slot a
+  place, each its piece's size, an empty place its piece's shape. Items are dragged between and within the tab's grid
+  and the bag's, framed white where they fit and red where they do not; a right-click moves one at once.
+- A right-click buys or sells at the merchant at once.
+- Leave all loot, a fourth step of the loot order: a kill's item is left on the floor, said; a prize still comes.
+
 ### Changed behaviour
+
+- HP is red at every share, in the orb, the strip's bar and the healer's.
+- Every count and gold amount has its thousands set off by commas, in the windows, the log and the price tags.
+- The keys under a pixel window say its buttons' words, read alike in every window, Close among them.
+- Every window keeps its content 2 px clear of its sides, its title bar and its bottom; a portrait's box stands 3 px
+  from it; a row, stack or grid of buttons is centred under what it acts on or in the window.
+- The talent cards are flat, as the start screen's, and name their talent under its icon, the chosen one in gold.
+- The codex frames a found entry as a portrait is framed; each box is its art and a pixel of frame, each row centred,
+  a shape not yet found painted apart from its frame, a unique slain on the map's floor.
+- The retire window is laid out as the smith's.
+- The townsfolk's windows lay their parts out alike; the villager's shows the gold it takes, and a price on a button
+  is upper case ("GAMBLE 62 GOLD").
+- Settings say under their buttons what each does.
+- The title bar's gold has the strip's round coin; the sheet's XP star stands on its bar's rows; an empty worn
+  slot's shape shows; a trap has a portrait of its own on the death window; the recap frames its best find as wide as
+  the portrait.
+- The hero is outlined on the map, so a hood or a helm the colour of the floor stands out from it.
 
 - A belt slot's count sits clear over its icon, each digit on the icon's own colors, where a dark badge was cut
   into the icon's corner under it.
 - A pile's names show what beats what you wear first, with a green arrow; past five, four a page and a row
   (`< 1-4 of 13 >`) whose click shows the next; the row under the pointer shows its item's card beside them, as the
   bag compares it.
-- The strip is a row shorter: the gold, depth and effects sit beside the belt, the gold written in full with its
-  thousands set apart. Belt slots are 10 by 10 like every slot, their counts on the icon's corner, in the bag, the
+- Below 105 columns the strip is a row shorter: the gold, depth and effects sit beside the belt, the gold written in
+  full with its thousands set apart. Belt slots are 10 by 10 like every slot, their counts on the icon's corner, in the bag, the
   compact bag and the merchant too.
-- The stash has tabs and is the town's, kept from hero to hero: four plain tabs of ten, the first free and the rest
-  bought in turn for 1,000, 2,500 and 5,000 gold, and a sets' tab and a Legendaries' tab of a place each, 3,000 gold
-  each. Its window shows the tabs over its list, a tab's price and Buy where it is not bought, and the two boards place
-  by place. Saves of version 12 keep their stash as tab 1.
+- The stash has tabs and is the town's, kept from hero to hero: four plain tabs, the first free and the rest bought in
+  turn for 1,000, 2,500 and 5,000 gold, and a sets' tab and a Legendaries' tab of a place each, 3,000 gold each. Its
+  window has the tabs and the gold in its title bar, the tab shown over the bag, a tab's price and Buy where it is not
+  bought. Saves of version 12 keep their stash as tab 1.
 - The talent families are named Craft, Combat and Survival, where they were Work, Fight and Road.
 - Buttons say what they do, without a key letter: a key reaches the pane only after ctrl+x tab, the prompt having the
   keyboard otherwise, so a key on a button promised what a press there would not do. The keys' row under a window
-  now has "ctrl+x tab for keys:" on a line over it, so the pane plays best 49 rows tall (48 before).
+  now has "ctrl+x tab for keys:" on a line over it.
 - Window titles, the gold in a title bar and the codex's and settings' page tabs are written in terminal text, where
   they were in the pixel font.
 - The pointer over several items lying on one tile names them a row each, each in its tier's color, the rarest
@@ -44,6 +83,14 @@ release may change behaviour.
   over its big boss's column, where it was doubled to a big boss's size.
 
 ### Fixed
+
+- An item's card, the worn piece's beside it and a menu could stand on a slot's frame, the bag's grid, the window's
+  edge or one another; each keeps a pixel of bare ground round it. The stash's card has room under the tab.
+- The smith and the retire windows drew the chosen piece's white frame against the pane's edge, and a worn piece
+  still the bag's choice with the bag's brackets; the chosen slot's frame is white on the slot itself.
+- The chosen item's white frame was drawn before the rest of its grid, which cut it into an L.
+- The codex dropped the count of heroes retired after the next action.
+- A card's layout is made once for a window's state: the hover and the clicks no longer lay it out again each time.
 
 - A click on a belt slot's count, or on a ware's price, did nothing: the window took the label for a card and kept
   the click. A click on a label goes through to what it labels.

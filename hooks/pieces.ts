@@ -251,7 +251,8 @@ const BUTTON_EDGE = { ready: SURFACE.buttonEdge, off: SURFACE.tab, armed: CURSOR
 const BUTTON_LIT = SURFACE.buttonLit
 const OFF_INK = INK.off
 
-const costText = (cost: number) => `${countText(cost)} gold`
+/** A button's price, upper case as every label of the chrome. */
+const costText = (cost: number) => `${countText(cost)} GOLD`
 /** A button's width in cells: its label and, when it costs, its price; a cell of room each side in its frame. Its key
  * is not drawn on it: the pane has the keys only after ctrl+x tab, and the line under the window says them. */
 export const buttonW = (label: string, cost?: number) => 4 + label.length + (cost === undefined ? 0 : 1 + costText(cost).length)

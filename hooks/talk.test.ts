@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { buttonsIn } from './fixtures'
-import { CLOSE_BOX, WINDOW_W } from './window'
+import { CLOSE_BOX, WINDOW_W, chromeBoxes } from './window'
 import type { Gesture } from './window'
 import { SPEAKERS, talkAction, talkGesture, talkHeight, talkOverlay, talkPixels, wrap } from './talk'
 import type { Speaker } from './talk'
@@ -145,6 +145,36 @@ describe('the window', () => {
       for (const row of px) expect(row.length).toBe(WINDOW_W)
       const box = talkOverlay(g, who)[0]!
       expect((box.y + box.h) * 2).toBeLessThanOrEqual(px.length)
+    }
+  })
+
+  test('lays its parts out alike for everyone: a status row 3 under the words, the button 3 under it, else 2 under the words', async () => {
+    const g = hero({ quest: { kind: 'slay', depth: 4, need: 8, have: 3 }, gold: 500, hp: 5 })
+    for (const who of SPEAKERS) {
+      const boxes = talkOverlay(g, who)
+      const under = (boxes[0]!.y + boxes[0]!.h) * 2
+      const button = boxes.find(b => b.role === 'button')
+      // A status's words (the bar's numbers, the dog's pets) sit on its middle rows, a row into its 4: under + 3 + 1.
+      const status = boxes.find(b => b.role === 'label')
+      // A label's words are a cell under its box's top.
+      if (status !== undefined) expect([who, (status.y + 1) * 2 - under]).toEqual([who, 4])
+      if (button !== undefined) expect([who, button.y * 2 - under]).toEqual([who, status === undefined ? 2 : 3 + 4 + 3])
+    }
+  })
+
+  test('shows the hero\'s gold in its title bar where it takes gold: the mystic\'s and the villager\'s', async () => {
+    const g = hero({ gold: 1234 })
+    const gold = (who: Speaker) => chromeBoxes(talkPixels(g, who)).filter(b => b.role === 'gold').map(b => b.lines[0]!.map(r => r.text).join(''))
+    expect(SPEAKERS.map(who => [who, gold(who)])).toEqual(SPEAKERS.map(who => [who, who === 'mystic' || who === 'villager' ? ['1,234'] : []]))
+  })
+
+  test('writes a price on its button in upper case, as every label of the chrome', async () => {
+    const g = hero({ gold: 500 })
+    for (const who of ['mystic', 'villager'] as const) {
+      const button = talkOverlay(g, who).find(b => b.role === 'button')!
+      const words = button.lines[0]!.map(r => r.text).join('')
+      expect([who, words]).toEqual([who, words.toUpperCase()])
+      expect(words).toMatch(/ GOLD$/)
     }
   })
 })

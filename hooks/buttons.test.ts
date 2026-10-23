@@ -16,7 +16,7 @@ describe('a button', () => {
     // START: 5 cells; with the room and the frame, 9.
     expect(buttonW('START')).toBe(9)
     expect(buttonW('+')).toBe(5)
-    // BUY 120 gold: 12 cells.
+    // BUY 120 GOLD: 12 cells.
     expect(buttonW('BUY', 120)).toBe(16)
     const c = canvas(20, 8)
     expect(button(c, 'START', 1, 1, 'ready')).toBe(9)
@@ -33,8 +33,8 @@ describe('a button', () => {
 
   test('off, all in the off ink on the sunken face; a price it cannot pay in grey, one it can in gold', async () => {
     expect(buttonBox('RETIRE', 0, 0, 'off')).toMatchObject({ bg: SURFACE.sunken, lines: [[{ text: 'RETIRE', color: INK.off, bold: false }]] })
-    expect(buttonBox('FORTUNE', 0, 0, 'ready', 50, false).lines[0]![1]).toEqual({ text: ' 50 gold', color: INK.dim })
-    expect(buttonBox('FORTUNE', 0, 0, 'ready', 50, true).lines[0]![1]).toEqual({ text: ' 50 gold', color: INK.gold })
+    expect(buttonBox('FORTUNE', 0, 0, 'ready', 50, false).lines[0]![1]).toEqual({ text: ' 50 GOLD', color: INK.dim })
+    expect(buttonBox('FORTUNE', 0, 0, 'ready', 50, true).lines[0]![1]).toEqual({ text: ' 50 GOLD', color: INK.gold })
   })
 })
 

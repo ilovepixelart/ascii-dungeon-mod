@@ -29,7 +29,7 @@ const CHROME: Readonly<Record<Speaker, (g: Game) => Chrome>> = {
   elder: () => ({ title: TITLE.elder }),
   mystic: g => ({ title: TITLE.mystic, gold: g.gold }),
   guard: () => ({ title: TITLE.guard }),
-  villager: () => ({ title: TITLE.villager }),
+  villager: g => ({ title: TITLE.villager, gold: g.gold }),
   dog: () => ({ title: TITLE.dog }),
 }
 
@@ -149,12 +149,14 @@ const layout = (g: Game, who: Speaker) => {
   const top = WINDOW_TOP
   const lines = wrap(WORDS[who](g), WORDS_W - 4)
   const box: OverlayBox<'words'> = { role: 'words', x: SIDE_X, y: (top + 2) / 2, w: WORDS_W, h: lines.length + 2, border: SURFACE.frame, lines }
+  // The status row 3 under the words (an odd row: the box ends on a whole cell), its 4 rows, the button 3 under them;
+  // with no status, the button 2 under the words.
   const statusY = (box.y + box.h) * 2 + 3
   const hasStatus = who === 'healer' || who === 'dog' || (who === 'elder' && g.quest !== null)
   const act = ACT[who](g)
-  const buttonY = onCell(statusY + (hasStatus ? 8 : 0))
+  const buttonY = hasStatus ? statusY + 4 + 3 : (box.y + box.h) * 2 + 2
   const buttonRect: Rect | undefined = act === undefined ? undefined : { x: SIDE_X, y: buttonY, w: buttonW(act.label, act.cost), h: BUTTON_H }
-  const sideEnd = buttonRect !== undefined ? buttonRect.y + BUTTON_H : hasStatus ? statusY + 6 : (box.y + box.h) * 2
+  const sideEnd = buttonRect !== undefined ? buttonRect.y + BUTTON_H : hasStatus ? statusY + 4 : (box.y + box.h) * 2
   const end = Math.max(top + 2 + PORTRAIT, sideEnd)
   // Two rows of room under the last (end is the row past it), even, so the window ends on a whole cell.
   const height = Math.ceil((end + 2) / 2) * 2
@@ -165,7 +167,7 @@ const layout = (g: Game, who: Speaker) => {
 export const talkHeight = (g: Game, who: Speaker) => layout(g, who).height
 
 /** A status bar beside its mark, in window pixels: on an odd row, its number on its middle, as wide as the words' box less the mark. */
-const statusBar = (statusY: number) => ({ x: SIDE_X + 7, y: Math.floor((statusY + 2) / 2) * 2 + 1, w: WORDS_W - 7 })
+const statusBar = (statusY: number) => ({ x: SIDE_X + 7, y: statusY, w: WORDS_W - 7 })
 
 /** What a speaker's bar shows, if they have one: the healer the hero's HP, the elder the quest's progress. */
 const barOf = (g: Game, who: Speaker): { share: number; color: string; empty: string; text: string } | undefined => {
@@ -188,7 +190,7 @@ export const talkOverlay = (g: Game, who: Speaker): OverlayBox[] => {
     l.box,
     ...(b === undefined ? [] : [barLabel(at.x, at.y, at.w, b.share, b.color, b.empty, b.text)]),
     // The dog's pets beside its heart, on the mark's middle rows.
-    ...(who === 'dog' ? [artLabel(`x ${g.petted}`, SIDE_X + 7, onCell(l.statusY + 1), NUM_INK, BG)] : []),
+    ...(who === 'dog' ? [artLabel(`x ${g.petted}`, SIDE_X + 7, l.statusY + 1, NUM_INK, BG)] : []),
     ...(l.act === undefined || l.buttonRect === undefined ? [] : [buttonBox(l.act.label, l.buttonRect.x, l.buttonRect.y, l.act.state, l.act.cost, l.act.canPay)]),
   ]
 }

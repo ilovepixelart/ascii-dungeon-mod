@@ -19,7 +19,7 @@ import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'HERO' }
 const top = WINDOW_TOP
-const PAD = 3
+const PAD = 2
 /** The portrait at twice the sprite's size; the head box and the XP bar beside it. */
 const FACE = PX * 2 + 4
 const SIDE_X = PAD + FACE + 3

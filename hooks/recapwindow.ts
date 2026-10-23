@@ -14,7 +14,7 @@ import { begun } from './recap'
 
 const CHROME: Chrome = { title: 'WHILE YOU WORKED' }
 const top = WINDOW_TOP
-const PAD = 3
+const PAD = 2
 /** The portrait at twice the sprite's size, the find's box under it, as wide, its frame round the tallest item's art
  * (20 px); the text beside each. */
 const FACE = PX * 2 + 4

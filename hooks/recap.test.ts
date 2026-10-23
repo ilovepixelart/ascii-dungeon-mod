@@ -108,8 +108,8 @@ describe('the recap window', () => {
   })
 
   test('frames the best find as wide as the portrait over it, the find inside its frame, its box beside it level with its top', async () => {
-    // A Legendary sword, 20 px tall: the portrait 20 square at x 3, 2 under the title bar; the find's frame 20 wide at
-    // x 3, 22 tall (18 by 20 inside), 2 under the portrait, on a whole cell; the box beside it starts on that row.
+    // A Legendary sword, 20 px tall: the portrait 20 square at x 2, 2 under the title bar; the find's frame 20 wide at
+    // x 2, 22 tall (18 by 20 inside), 2 under the portrait, on a whole cell; the box beside it starts on that row.
     const sword = { ...plainItem({ nextId: 801 }, 'sword', 'legendary'), name: 'Sword' }
     const g = shown({ ...told, best: sword })
     const px = recapPixels(g)
@@ -117,9 +117,9 @@ describe('the recap window', () => {
     const findTop = face + 20 + 2
     // The frame's sides, in the Legendary's color, at the portrait's columns; bare ground past them.
     const mid = findTop + 10
-    expect([px[mid]![3], px[mid]![22], px[mid]![2], px[mid]![23]]).toEqual([RARITY_COLOR.legendary, RARITY_COLOR.legendary, BG, BG])
+    expect([px[mid]![2], px[mid]![21], px[mid]![1], px[mid]![22]]).toEqual([RARITY_COLOR.legendary, RARITY_COLOR.legendary, BG, BG])
     // The frame's top and bottom rows are the tier frame's inks alone: the sword's art stays inside.
-    const inks = new Set([...px[findTop]!.slice(4, 22), ...px[findTop + 21]!.slice(4, 22)])
+    const inks = new Set([...px[findTop]!.slice(3, 21), ...px[findTop + 21]!.slice(3, 21)])
     expect(inks.size).toBeLessThanOrEqual(2)
     expect(px[findTop - 1]![12]).toBe(BG)
     expect(findTop % 2).toBe(0)

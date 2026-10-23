@@ -13,7 +13,7 @@ import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const CHROME: Chrome = { title: 'SETTINGS' }
 const top = WINDOW_TOP
-const PAD = 3
+const PAD = 2
 
 /** The sound as set: effects and music each on or off, and the volume in quarters, 1 to VOLUME_STEPS. */
 export type SoundSettings = { effects: boolean; music: boolean; volume: number }

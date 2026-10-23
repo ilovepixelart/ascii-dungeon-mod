@@ -82,11 +82,7 @@ export const retireButtons = (g: Game, ui: RetireUi) => {
 export const retirePixels = (g: Game, ui: RetireUi): string[][] => {
   const l = layout(g, ui)
   const body = canvas(WINDOW_W, l.height - top)
-  wornSlots(body, g, () => GRID)
-  if (l.slot !== undefined) {
-    const [x, y, w, h] = WORN_SLOTS[l.slot]
-    frame(body, x - 2, y - 2, w + 4, h + 4, CURSOR)
-  }
+  wornSlots(body, g, slot => (slot === l.slot ? CURSOR : GRID))
   button(body, RETIRE.label, l.retire.x, l.retire.y - top, l.retireState)
   button(body, BACK.label, l.back.x, l.back.y - top, 'ready')
   const c = windowPixels(CHROME, body.px)

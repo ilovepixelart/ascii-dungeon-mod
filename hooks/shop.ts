@@ -12,7 +12,7 @@ import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './item
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H, beltHot } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, clickable, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
+import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -59,6 +59,7 @@ export const shopPixels = (g: Game, ui: ShopUi, boxes: readonly OverlayBox[] = [
 /** What a box over the window would hide: every ware, bag item and filled belt slot, and the title bar. */
 const shown = (g: Game): Weighted[] => [
   ...WARES.map((_, i) => ({ rect: wareRect(i), weight: 1 })),
+  { rect: gridBox(BAG_X, WINDOW_TOP + BAG_Y), weight: 1 },
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   ...g.belt.flatMap((b, i) => (b === null ? [] : [{ rect: beltRect(i), weight: 1 }])),
   { rect: { x: 0, y: 0, w: WINDOW_W, h: WINDOW_TOP }, weight: 1 },

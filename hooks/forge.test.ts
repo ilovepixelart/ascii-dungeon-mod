@@ -2,6 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Rarity, Slot } from '../types'
 import { CURSOR } from './pieces'
+import { BG } from './canvas'
 import { buttonsIn } from './fixtures'
 import { WORN_SLOTS } from './inventory'
 import { makeItem, plainItem, setOf, setPiece } from './items'
@@ -37,15 +38,15 @@ describe('the piece chosen', () => {
     expect(forgeGesture(g, { slot: 'armor' }, onSlot('ring')).ui).toEqual({ slot: 'armor' })
   })
 
-  test('is framed white just outside its frame; the others are not', async () => {
+  test('is framed white on its own frame, as the bag frames the slot it would fill, the ground outside it left bare; the others are not', async () => {
     const g = knight(0)
     const px = forgePixels(g, { slot: 'armor' })
-    const edge = (slot: Slot) => {
+    const at = (slot: Slot, out: number) => {
       const [x, y] = WORN_SLOTS[slot]
-      return px[WINDOW_TOP + y - 2]?.[x + 2]
+      return px[WINDOW_TOP + y - out]?.[x + 2]
     }
-    expect(edge('armor')).toBe(CURSOR)
-    expect(edge('weapon')).not.toBe(CURSOR)
+    expect([at('armor', 1), at('armor', 2)]).toEqual([CURSOR, BG])
+    expect(at('weapon', 1)).not.toBe(CURSOR)
   })
 
   test('the step key goes through the worn pieces in slot order and wraps', async () => {

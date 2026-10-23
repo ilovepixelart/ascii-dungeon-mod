@@ -4,7 +4,7 @@ import type { Game, Item, Rarity, Slot } from '../types'
 import { CELL, ICONS, consumableIcon } from './icons'
 import { activeTier } from './consumables'
 import type { BeltSlot } from '../types'
-import { RARITY_COLOR, canWear, isUpgrade } from './items'
+import { BAG_H, BAG_W, RARITY_COLOR, canWear, isUpgrade } from './items'
 import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
 import { PAL, PX } from './pixelart'
@@ -74,6 +74,9 @@ export const gridLines = (c: Canvas, x: number, y: number, cols: number, rows: n
 /** The inner box of an item lying in a grid at x, y. */
 export const cellBox = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect =>
   ({ x: x + item.x * CELL + 1, y: y + item.y * CELL + 1, w: item.w * CELL - 1, h: item.h * CELL - 1 })
+
+/** The bag's grid at x, y with its frame: what a card over the bag keeps off, filled or empty. */
+export const gridBox = (x: number, y: number): Rect => ({ x, y, w: BAG_W * CELL + 1, h: BAG_H * CELL + 1 })
 
 /** An item lying in a grid at x, y as the hover lights it: its box and the frame round it. */
 export const itemOutline = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect => {

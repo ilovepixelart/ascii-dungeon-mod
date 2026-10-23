@@ -195,9 +195,17 @@ export const coverage = (rows: number, weighted: readonly Weighted[], width = WI
   return (x: number, y: number, w: number, h: number) => at(x + w, y + h) - at(x, y + h) - at(x + w, y) + at(x, y)
 }
 
+/** What a card would hide or touch: each rectangle a pixel wider all round, and the window's edges, so a card clear of
+ * them keeps a pixel of bare ground between it and what it would touch. */
+export const clearance = (rows: number, weighted: readonly Weighted[], width = WINDOW_W) => {
+  const halo = (r: Rect) => ({ x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 })
+  const edges = [{ x: 0, y: 0, w: 1, h: rows * 2 }, { x: width - 1, y: 0, w: 1, h: rows * 2 }, { x: 0, y: rows * 2 - 1, w: width, h: 1 }]
+  return coverage(rows, [...weighted.map(x => ({ ...x, rect: halo(x.rect) })), ...edges.map(rect => ({ rect, weight: 1 }))], width)
+}
+
 /**
- * Where a box goes: of all the places it fits in the window's `rows` without overlapping `others`, the one hiding the
- * least, nearest `near` among those.
+ * Where a box goes: of all the places it fits in the window's `rows` without overlapping or touching `others`, the one
+ * hiding the least, nearest `near` among those.
  */
 export const place = (cost: ReturnType<typeof coverage>, rows: number, others: readonly OverlayBox[], near: Rect, w: number, h: number, width = WINDOW_W): Pos => {
   const cx = near.x + near.w / 2
@@ -205,7 +213,8 @@ export const place = (cost: ReturnType<typeof coverage>, rows: number, others: r
   let best: { x: number; y: number; score: number } | null = null
   for (let y = 0; y + h <= rows; y += 1) {
     for (let x = 0; x + w <= width; x += 1) {
-      if (others.some(o => x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + h)) continue
+      // A pixel apart from each box already placed: across a column, down a cell row.
+      if (others.some(o => x < o.x + o.w + 1 && o.x - 1 < x + w && y < o.y + o.h + 1 && o.y - 1 < y + h)) continue
       const away = Math.hypot(x + w / 2 - cx, (y + h / 2) * 2 - cy)
       const score = cost(x, y, w, h) * 1000 + away
       if (best === null || score < best.score) best = { x, y, score }
@@ -230,13 +239,17 @@ export const uncovered = (hot: readonly Rect[], boxes: readonly OverlayBox[]): R
 
 /** Covering what a card is about costs this much against one pixel of anything else: it is never worth it. */
 export const KEEP = 100000
+/** The room a chosen item's white brackets take outside it. */
+export const BRACKET = 2
+/** What a card keeps off of the item it is about: the item and its brackets. */
+export const bracketed = (r: Rect): Rect => ({ x: r.x - BRACKET, y: r.y - BRACKET, w: r.w + 2 * BRACKET, h: r.h + 2 * BRACKET })
 
 /**
  * A card near what it is about, never on it, where it hides the least of what the window shows (`shown`); its menu,
  * when open, under it the same way. `rows` is the window's height in cells.
  */
 export const cardWithMenu = <Role extends string>(rows: number, shown: readonly Weighted[], near: Rect, card: OverlayBox<Role>, menu?: OverlayBox<Role>, width = WINDOW_W, others: readonly OverlayBox[] = []): OverlayBox<Role>[] => {
-  const cost = coverage(rows, [...shown, { rect: near, weight: KEEP }], width)
+  const cost = clearance(rows, [...shown, { rect: bracketed(near), weight: KEEP }], width)
   const at = place(cost, rows, others, near, card.w, card.h, width)
   const placed = { ...card, x: at.x, y: at.y }
   if (menu === undefined) return [placed]

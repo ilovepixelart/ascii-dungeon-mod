@@ -24,12 +24,14 @@ const BOX_BG = SURFACE.sunken
 const EDGE = SURFACE.frame
 /** What is not yet slain or found: its shape alone, in one dark ink. */
 const SHADE = SURFACE.shade
-/** A foe's box, and the step from one to the next; a Legendary's narrower, taller box and step. */
-const FOE_BOX = 19
+/** A foe's box, its 16 px art and a pixel of frame round it, as the bag's slots; the step from one to the next; a
+ * Legendary's narrower, taller box and step. */
+const FOE_BOX = 18
 const FOE_STEP = 20
-const LEG_W = 13
-const LEG_H = 23
-const LEG_STEP = 14
+const LEG_H = 22
+const LEG_GAP = 4
+/** Where a row of `n` boxes `w` wide a `step` apart starts, centred in the window (the odd pixel on the right). */
+const rowX = (n: number, w: number, step: number) => Math.floor((WINDOW_W - ((n - 1) * step + w)) / 2)
 /** The pages' tabs at the body's top; the first row of boxes under them, the second under that. */
 const PAGES = [{ label: 'FOES' }, { label: 'FINDS' }] as const
 const ROW1_Y = top + TABS_H + 2
@@ -50,8 +52,8 @@ const scaled = (c: Canvas, rows: readonly string[], x: number, y: number, scale:
     }),
   )
 
-const box = (c: Canvas, x: number, y: number, w: number, h: number, isLit: boolean) => {
-  fill(c, x, y, w, h, BOX_BG)
+const box = (c: Canvas, x: number, y: number, w: number, h: number, isLit: boolean, ground: string = BOX_BG) => {
+  fill(c, x, y, w, h, ground)
   frame(c, x, y, w, h, isLit ? EDGE : SURFACE.line)
 }
 
@@ -100,28 +102,40 @@ export const codexLit = (g: Game) => {
 }
 
 const drawFoes = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
+  const x0 = rowX(bigs.length, FOE_BOX, FOE_STEP)
   uniques.forEach(([theme, one], i) => {
-    const x = PAD + i * FOE_STEP
-    box(body, x + UNIQUE_X, ROW1_Y - top, SLOT, SLOT, lit.uniques[i]!)
+    const x = x0 + i * FOE_STEP
+    // A unique slain on the map's floor, as it stands there, so its dark outline shows.
+    box(body, x + UNIQUE_X, ROW1_Y - top, SLOT, SLOT, lit.uniques[i]!, lit.uniques[i] ? SURFACE.floor : BOX_BG)
     scaled(body, foeArtOf({ glyph: one.glyph, unique: one.key }, theme), x + UNIQUE_X + 1, ROW1_Y - top + 1, 1, lit.uniques[i] ? undefined : SHADE)
   })
   bigs.forEach(([, one], i) => {
-    const x = PAD + i * FOE_STEP
+    const x = x0 + i * FOE_STEP
     box(body, x, ROW2_Y - top, FOE_BOX, FOE_BOX, lit.bigs[i]!)
     scaled(body, BOSS_ART[one.key], x + 1, ROW2_Y - top + 1, 1, lit.bigs[i] ? undefined : SHADE)
   })
 }
 
+/** Each Legendary's art, and its box: the art and a pixel of frame round it across, as in the bag, LEG_H down. */
+const legendaryBoxes = () => {
+  const icons = LEGENDARIES.map(one => ICONS[one.base]?.art ?? [])
+  const widths = icons.map(icon => (icon[0]?.length ?? 0) + 2)
+  const across = widths.reduce((n, w) => n + w, 0) + LEG_GAP * (widths.length - 1)
+  let x = Math.floor((WINDOW_W - across) / 2)
+  return icons.map((icon, i) => {
+    const at = { icon, x, w: widths[i]! }
+    x += widths[i]! + LEG_GAP
+    return at
+  })
+}
+
 const drawFinds = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
   const y = ROW1_Y - top
-  LEGENDARIES.forEach((one, i) => {
-    const x = PAD + i * LEG_STEP
+  legendaryBoxes().forEach(({ icon, x, w }, i) => {
     // A Legendary found sits in its tier's box, as in the bag; one not yet found is a shape in a plain one.
-    if (lit.legendaries[i]) tierBox(body, x + 1, y + 1, LEG_W - 2, LEG_H - 2, 'legendary')
-    else box(body, x, y, LEG_W, LEG_H, false)
-    const icon = ICONS[one.base]?.art ?? []
-    const w = icon[0]?.length ?? 0
-    art(body, icon, x + Math.floor((LEG_W - w) / 2), y + Math.floor((LEG_H - icon.length) / 2), lit.legendaries[i] ? undefined : SHADE)
+    if (lit.legendaries[i]) tierBox(body, x + 1, y + 1, w - 2, LEG_H - 2, 'legendary')
+    else box(body, x, y, w, LEG_H, false)
+    art(body, icon, x + 1, y + Math.floor((LEG_H - icon.length) / 2), lit.legendaries[i] ? undefined : SHADE)
   })
   button(body, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y - top, 'ready')
 }

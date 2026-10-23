@@ -11,7 +11,7 @@ import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit } from './items'
 import { BG, canvas, fill } from './canvas'
 import { BAG_X, BAG_Y, INV_H } from './inventory'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW, cellBox, gridBox, itemGrid, itemOutline, onCell } from './pieces'
+import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW, cellBox, gridBox, itemGrid, runX, itemOutline, onCell } from './pieces'
 import type { ButtonState } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, tabGround, textTabBoxes, textTabRects, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Tab, Weighted } from './window'
@@ -40,7 +40,7 @@ const LIST: Rect = { x: 1, y: (top + TABS_H + 2) / 2, w: BAG_X - 3, h: STASH_SIZ
 /** A tab not bought: its price in a box of two rows, the Buy button under it. */
 const OFFER_H = 4
 const BUY = 'BUY'
-const BUY_RECT: Rect = { x: LIST.x + 1, y: onCell((LIST.y + OFFER_H) * 2 + 2), w: buttonW(BUY), h: BUTTON_H }
+const BUY_RECT: Rect = { x: runX(buttonW(BUY), LIST.x, LIST.x + LIST.w), y: onCell((LIST.y + OFFER_H) * 2 + 2), w: buttonW(BUY), h: BUTTON_H }
 
 /** Why a bag item cannot be stored, or a stored one taken out, now; undefined when it can. */
 export const whyNotStore = (g: Game, item: Item, tab: StashTab = 0) => (whereToStore(g, item, typeof tab === 'number' ? tab : 0) === undefined ? 'the chest is full' : undefined)

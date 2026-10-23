@@ -8,7 +8,7 @@ import { whyNotRetire } from './game'
 import { BIG_EVERY } from './map'
 import { CLASS_NAME, RARITY_COLOR, SLOTS } from './items'
 import { WORN_SLOTS, wornSlots } from './inventory'
-import { BUTTON_H, CURSOR, button, buttonBox, buttonW } from './pieces'
+import { BUTTON_H, CURSOR, button, buttonBox, buttonW, runX } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, frame } from './canvas'
 import { WORK_X, chosenSlot } from './forge'
@@ -53,7 +53,9 @@ const layout = (g: Game, ui: RetireUi) => {
   const slot = chosenSlot(g, ui)
   const lines = aboutLines(g, slot)
   const box: OverlayBox = { role: 'about', x: WORK_X, y: (top + 2) / 2, w: WINDOW_W - WORK_X - 1, h: lines.length + 2, border: SURFACE.frame, lines }
-  const retire: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 2, w: buttonW(RETIRE.label), h: BUTTON_H }
+  // Retire and Back, a row centred under the box.
+  const row = buttonW(RETIRE.label) + 4 + buttonW(BACK.label)
+  const retire: Rect = { x: runX(row, box.x, box.x + box.w), y: (box.y + box.h) * 2 + 2, w: buttonW(RETIRE.label), h: BUTTON_H }
   const back: Rect = { x: retire.x + retire.w + 4, y: retire.y, w: buttonW(BACK.label), h: BUTTON_H }
   const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
   const end = Math.max(top + 58, retire.y + BUTTON_H)

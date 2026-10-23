@@ -90,13 +90,14 @@ describe('the jobs', () => {
 
   test('a click on a job that can be done does it on the chosen piece; one that cannot does nothing', async () => {
     const g = wear(knight(1000), 'helm', 'steelHelm', 'rare')
+    // The jobs' stack, 11 wide (REFORGE's), centred under the card (57 wide from x 47): from x 70.
     const [temperY, reforgeY] = readyKeys(g, 'helm')
-    expect(forgeGesture(g, { slot: 'helm' }, tap(50, temperY! + 2)).actions).toEqual([{ kind: 'temper', slot: 'helm' }])
-    expect(forgeGesture(g, { slot: 'helm' }, tap(50, reforgeY! + 2)).actions).toEqual([{ kind: 'reforge', slot: 'helm' }])
+    expect(forgeGesture(g, { slot: 'helm' }, tap(75, temperY! + 2)).actions).toEqual([{ kind: 'temper', slot: 'helm' }])
+    expect(forgeGesture(g, { slot: 'helm' }, tap(75, reforgeY! + 2)).actions).toEqual([{ kind: 'reforge', slot: 'helm' }])
     const poor = { ...g, gold: 0 }
     expect(readyKeys(poor, 'helm')).toEqual([])
-    expect(forgeGesture(poor, { slot: 'helm' }, tap(50, temperY! + 2)).actions).toEqual([])
-    expect(forgeGesture(poor, { slot: 'helm' }, tap(50, reforgeY! + 2)).actions).toEqual([])
+    expect(forgeGesture(poor, { slot: 'helm' }, tap(75, temperY! + 2)).actions).toEqual([])
+    expect(forgeGesture(poor, { slot: 'helm' }, tap(75, reforgeY! + 2)).actions).toEqual([])
   })
 
   test('the close box closes the window; a drag does nothing', async () => {

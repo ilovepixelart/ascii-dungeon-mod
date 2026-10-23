@@ -6,7 +6,7 @@ import type { Game, Orders } from '../types'
 import type { Action } from './game'
 import { ordersOf } from './game'
 import { BG, canvas, fill } from './canvas'
-import { BUTTON_H, buttonFace, buttonW, wideButtonBox } from './pieces'
+import { BUTTON_H, buttonFace, buttonW, runX, wideButtonBox } from './pieces'
 import { SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, isInside, pixel, tabGround, textTabRects, textTabBoxes, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -52,8 +52,10 @@ const placed = (g: Game, sound: SoundSettings, ui: SettingsUi) => {
   // Every column's width, its widest button's, over all the rows that reach it: a short row keeps the others'.
   const columns = Math.max(...rows.map(row => row.length))
   const widths = Array.from({ length: columns }, (_, i) => Math.max(...rows.map(row => (row[i] === undefined ? 0 : buttonW(row[i]!.label)))))
+  // The columns, a grid centred in the window.
+  const x0 = runX(widths.reduce((n, w) => n + w, 0) + SPACE.gap * (columns - 1), 0, WINDOW_W)
   return rows.flatMap((row, r) => {
-    let x = PAD
+    let x = x0
     return row.map((k, i) => {
       const rect = { x, y: ROWS_Y + r * ROW_STEP, w: widths[i]!, h: BUTTON_H }
       x += rect.w + SPACE.gap

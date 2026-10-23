@@ -7,7 +7,7 @@ import { keptChoice, reforgeCost } from './game'
 import { POWERS, RARITY_COLOR, SETS, SET_COLOR, SLOTS, TEMPER_MAX, TRIGGERS, describe, setWorn, temperCost, temperStat } from './items'
 import { WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, buttonFace, buttonW, wideButtonBox } from './pieces'
+import { BUTTON_H, CURSOR, OFF_CLASS, buttonFace, buttonW, runX, wideButtonBox } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, fill, frame } from './canvas'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
@@ -94,11 +94,12 @@ const layout = (g: Game, ui: ForgeUi) => {
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
   const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : RARITY_COLOR[item.rarity], lines }
-  // The jobs stand one under another, each as wide as the widest of them.
+  // The jobs stand one under another, each as wide as the widest of them, the stack centred under the card.
   const w = Math.max(...['TEMPER', 'REFORGE', ...(canKeepOld(g, slot) ? ['KEEP OLD'] : [])].map(l => buttonW(l)))
-  const temperAt: Rect = { x: WORK_X, y: (box.y + box.h) * 2 + 2, w, h: BUTTON_H }
-  const reforgeAt: Rect = { x: WORK_X, y: temperAt.y + BUTTON_H + 2, w, h: BUTTON_H }
-  const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x: WORK_X, y: reforgeAt.y + BUTTON_H + 2, w, h: BUTTON_H } : undefined
+  const x = runX(w, box.x, box.x + box.w)
+  const temperAt: Rect = { x, y: (box.y + box.h) * 2 + 2, w, h: BUTTON_H }
+  const reforgeAt: Rect = { x, y: temperAt.y + BUTTON_H + 2, w, h: BUTTON_H }
+  const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x, y: reforgeAt.y + BUTTON_H + 2, w, h: BUTTON_H } : undefined
   const end = Math.max(WINDOW_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
   const buttons = item === undefined ? [] : [
     { key: 'T', label: 'TEMPER', at: temperAt, state: stateOf(whyNotTemper(g, item)) },

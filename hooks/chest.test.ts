@@ -224,8 +224,8 @@ describe('the stash\'s tabs', () => {
   })
 
   test('Buy buys the tab shown, only when it can', async () => {
-    // Buy at x 2, from pixel row 36: its words' row, cell 19.
-    const onBuy = click(4.5, 19.5)
+    // Buy, 7 wide, centred under the price box (44 wide from x 1): from x 19; from pixel row 36, its words' row cell 19.
+    const onBuy = click(22.5, 19.5)
     expect(chestGesture({ ...hero(), gold: 1000 }, on(1), onBuy).actions).toEqual([{ kind: 'buyTab', tab: 1 }])
     expect(chestGesture(hero(), on(1), onBuy).actions).toEqual([])
     expect(chestGesture({ ...hero(), gold: 3000 }, on('sets'), onBuy).actions).toEqual([{ kind: 'buyTab', tab: 'sets' }])

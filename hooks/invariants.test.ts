@@ -68,9 +68,10 @@ describe('each rule speaks up when broken', () => {
 
   test('a stash over its size, and a stashed item that is also in the bag', async () => {
     const item = { ...g.gear.weapon!, id: 900 }
-    const ten = Array.from({ length: 10 }, (_, i) => ({ ...item, id: 900 + i }))
+    // Ten of the starting weapon laid out on the tab's grid, a column each, two rows of them; an eleventh over one.
+    const ten = Array.from({ length: 10 }, (_, i) => ({ ...item, id: 900 + i, x: i % 8, y: Math.floor(i / 8) * item.h }))
     expect(broke({ ...g, stashed: [ten] })).not.toContain('stash within its size')
-    expect(broke({ ...g, stashed: [[...ten, { ...item, id: 950 }]] })).toContain('stash within its size')
+    expect(broke({ ...g, stashed: [[...ten, { ...item, id: 950, x: 0, y: 0 }]] })).toContain('stash within its size')
     expect(broke({ ...g, stashed: [[item]] })).not.toContain('unique item ids')
     expect(broke({ ...g, bag: [item], stashed: [[item]] })).toContain('unique item ids')
   })

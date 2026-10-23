@@ -1285,7 +1285,7 @@ describe('the stash', () => {
   test('visiting it opens its panel and says how full it is', async () => {
     const g = apply(inTown(), { kind: 'goto', ...TOWN_SPOTS.stash })
     expect(g.panel).toBe('stash')
-    expect(g.log.at(-1)).toBe('Your stash holds 0 of 10 items.')
+    expect(g.log.at(-1)).toBe('Your stash holds 0 items.')
   })
 
   test('stores the selected bag item and gives it back, the bag the same as before', async () => {
@@ -1301,11 +1301,12 @@ describe('the stash', () => {
     expect(back.log.at(-1)).toBe('You take the Short Sword from your stash.')
   })
 
-  test('holds ten items at most; without a selection, or outside town, it stores nothing', async () => {
+  test('holds what its grid has room for; without a selection, or outside town, it stores nothing', async () => {
     const g = inTown()
-    const full = { ...g, stashed: [Array.from({ length: 10 }, () => plainItem(g, 'boots'))] }
+    // Twelve 2 by 2 boots tile the 8 by 6 tab: no room left.
+    const full = { ...g, stashed: [Array.from({ length: 12 }, (_, i) => ({ ...plainItem(g, 'boots'), id: 9300 + i, x: (i % 4) * 2, y: Math.floor(i / 4) * 2 }))] }
     const refused = apply(full, { kind: 'store' })
-    expect([refused.bag.length, refused.stashed[0]!.length]).toEqual([2, 10])
+    expect([refused.bag.length, refused.stashed[0]!.length]).toEqual([2, 12])
     expect(refused.log.at(-1)).toBe('Your stash is full.')
     expect(apply({ ...g, cursor: null }, { kind: 'store' }).log.at(-1)).toBe('Select an item in your bag to store.')
     const away = apply({ ...newGame(4), cursor: newGame(4).bag[0]?.id ?? null }, { kind: 'store' })

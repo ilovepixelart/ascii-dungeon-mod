@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK, isTownWalkable, townSpotAt } from './town'
-import { BIG_BOSSES, LOG_KEPT, STASH_SIZE, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
+import { BIG_BOSSES, LOG_KEPT, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -42,7 +42,7 @@ import { FORGE_UI_IDLE, chosenSlot, forgeGesture, forgeHeight, forgeHot, forgeOv
 import type { ForgeUi } from './forge'
 import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay, chestPixels, idleOn, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
 import type { ChestUi } from './chest'
-import { stashRoom, stashedItems, tabItems, whyNotBuy } from './stash'
+import { stashedItems, tabItems, whyNotBuy } from './stash'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
@@ -194,7 +194,9 @@ const tileCenter = (g: Game): Pos => ({ x: g.x * TILE_PX + TILE_PX / 2, y: g.y *
 /** The character sheet's rows: its title, a row per attribute, a blank, the new-game row and a line per class. */
 const SHEET_ROWS = 3 + ATTRIBUTES.length
 /** The rows a panel under the dashboard takes: its title, a row per ware or worn slot, and its close row. */
-const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, shop: 3 + WARES.length, forge: 2 + SLOTS.length, stash: 3 + STASH_SIZE, healer: 3, elder: 5, mystic: 4, guard: 3, villager: 3, dog: 4 }
+/** The rows the text stash keeps for its list. */
+const TEXT_STASH_ROWS = 10
+const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, shop: 3 + WARES.length, forge: 2 + SLOTS.length, stash: 3 + TEXT_STASH_ROWS, healer: 3, elder: 5, mystic: 4, guard: 3, villager: 3, dog: 4 }
 
 /** The how-it-plays window's rows as text: its head, a line a rule, where things are, the close key. */
 const HELP_TEXT_ROWS = HELP_ROWS.length + 3
@@ -1706,7 +1708,7 @@ const stashWindow = (p: Pane) => {
     }} />,
     ...(forSale ? [<Button key="chest-buy" label="Buy tab" hotkey="b" plain dimColor={whyNotBuy(g, chestUi.tab) !== undefined} onPress={() => run({ kind: 'buyTab', tab: chestUi.tab }, true)} />] : []),
     <Button key="stash-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'stash' })} />,
-  ], 'Click a chest row or a bag item to see it, again for its menu; right-click to move it.', chestHot(g, chestUi), !chestUi.menu)
+  ], 'Click a stored item or a bag item to see it, again for its menu; right-click to move it.', chestHot(g, chestUi), !chestUi.menu)
 }
 
 /** A townsperson's window takes the whole pane while it is open, like the merchant's. */
@@ -1941,7 +1943,7 @@ const textStash = ({ g, Box, Text, Button, press }: Pane) => {
     <Box flexDirection="column">
       <Text>
         <Text bold>Your stash</Text>
-        <Text dimColor>{`  ${stashedItems(g).length} of ${stashRoom(g)} items, kept in town`}</Text>
+        <Text dimColor>{`  ${countText(stashedItems(g).length)} ${stashedItems(g).length === 1 ? 'item' : 'items'}, kept in town`}</Text>
       </Text>
       <Box flexDirection="row">
         {picked === undefined

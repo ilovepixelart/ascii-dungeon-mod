@@ -61,7 +61,7 @@ names below point at it.
   same face, wider (`buttonFace`), its words centred (`wideButtonBox`); buttons stacked in a column share the widest's
   width.
 - A row of buttons, a stack or a grid of them stands centred (`runX`): under the box it acts on where it is beside the
-  worn slots or the stash's list (retire, the smith, Buy), else in the window. A grid keeps its columns, so a short row
+  worn slots (retire, the smith) or Buy under a stash tab's price, else in the window. A grid keeps its columns, so a short row
   stays under its own column.
 - Popovers (cards, menus, the belt's tiers) stand on what they are about, never over it.
 

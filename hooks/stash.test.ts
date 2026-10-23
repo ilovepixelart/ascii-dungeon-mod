@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item } from '../types'
 import { apply, normalize } from './game'
-import { plainHero } from './fixtures'
+import { fullTab, plainHero } from './fixtures'
 import { violations } from './invariants'
 import { plainItem } from './items'
 import { EMPTY_CODEX } from './codex'
@@ -20,7 +20,6 @@ const duck = (id: number) => item(id, 'amulet', { rarity: 'legendary', name: 'Ru
 const said = (g: Game) => g.log.at(-1)
 /** The rules the state breaks, by name. */
 const broken = (g: Game) => violations(g).map(v => v.slice(0, v.indexOf(': ')))
-const ten = (from: number) => Array.from({ length: 10 }, (_, i) => item(from + i))
 
 describe('buying the stash\'s tabs', () => {
   test('tab 2 costs 1,000 gold, tab 3 2,500 and tab 4 5,000, each after the one before', async () => {
@@ -60,14 +59,25 @@ describe('buying the stash\'s tabs', () => {
 })
 
 describe('storing', () => {
-  test('on the tab shown; with it full, on the first with room, said; with every tab full, nothing', async () => {
+  test('on the tab shown; with no room for it, on the first with room, said; with no tab with room, nothing', async () => {
     const ring = item(900)
-    const two = inTown(0, [ring], { stashed: [ten(100), []] })
+    const two = inTown(0, [ring], { stashed: [fullTab(100), []] })
     expect(apply(two, { kind: 'store', tab: 1 }).stashed[1]!.map(i => i.id)).toEqual([900])
     const moved = apply(two, { kind: 'store', tab: 0 })
     expect([moved.stashed[1]!.map(i => i.id), said(moved)]).toEqual([[900], 'You store the Band in your stash, on tab 2.'])
-    const full = apply(inTown(0, [ring], { stashed: [ten(100), ten(200)] }), { kind: 'store', tab: 1 })
+    const full = apply(inTown(0, [ring], { stashed: [fullTab(100), fullTab(200)] }), { kind: 'store', tab: 1 })
     expect([full.bag.length, said(full)]).toEqual([1, 'Your stash is full.'])
+  })
+
+  test('at the first place on the tab\'s grid it fits, column by column, as in the bag; room is cells, not items', async () => {
+    // A ring at the top left; armor, 2 by 3, fits first under it in the first column, at 0,1; a second ring at 0,4.
+    const g = inTown(0, [item(901), item(902, 'chain'), item(903)])
+    const stored = [0, 1, 2].reduce(x => apply(x, { kind: 'store', tab: 0 }), g).stashed[0]!
+    expect(stored.map(i => [i.id, i.x, i.y])).toEqual([[901, 0, 0], [902, 0, 1], [903, 0, 4]])
+    // Forty-seven rings leave one cell: a ring goes in, armor does not.
+    const nearly = fullTab(100).slice(1)
+    expect(apply(inTown(0, [item(904)], { stashed: [nearly] }), { kind: 'store' }).stashed[0]!.length).toBe(48)
+    expect(said(apply(inTown(0, [item(905, 'chain')], { stashed: [nearly] }), { kind: 'store' }))).toBe('Your stash is full.')
   })
 
   test('a set piece on the sets\' tab and a Legendary on the Legendaries\', once bought; a second of one place on a plain tab', async () => {
@@ -95,7 +105,7 @@ describe('the stash is the town\'s', () => {
     const helm = item(700, 'steelHelm', { rarity: 'rare' })
     return { ...g, bossSlain: 10, deepest: 12, depth: 12, level: 14, gear: { ...g.gear, helm }, codex: { ...EMPTY_CODEX, deepest: 12, level: 14 }, ...over }
   }
-  const kept = { stashed: [[item(500)], [item(501), item(502)]], stashSets: [blade(503)], stashLegends: [duck(504)] }
+  const kept = { stashed: [[item(500)], [item(501), item(502, 'ring', { y: 1 })]], stashSets: [blade(503)], stashLegends: [duck(504)] }
   const names = (g: Game) => [g.stashed.map(t => t.map(i => i.name)), g.stashSets?.map(i => i.name), g.stashLegends?.map(i => i.name)]
 
   test('a retired hero\'s successor has its tabs and what they hold, under ids of their own', async () => {
@@ -115,6 +125,32 @@ describe('the stash is the town\'s', () => {
 })
 
 describe('the stash in a save', () => {
+  const v13 = (stashed: Item[][], over: Partial<Game> = {}) => ({ ...newGame(4), version: 13, stashed, ...over }) as unknown as Game
+  const ids = (t: readonly Item[]) => t.map(i => i.id).sort((a, b) => a - b)
+
+  test('a version 13 save\'s tabs, lists of ten, are laid out on their grids, each item where no other is', async () => {
+    // Ten items with the bag's stale places, all at 0,0: rings, a chain, a sword.
+    const listed = [item(610, 'chain'), item(611, 'sword'), ...Array.from({ length: 8 }, (_, i) => item(612 + i))].map(i => ({ ...i, x: 0, y: 0 }))
+    const g = normalize(v13([listed]))
+    expect(ids(g.stashed[0]!)).toEqual(ids(listed))
+    expect(broken(g)).toEqual([])
+  })
+
+  test('what a tab cannot hold goes to another with room, then a tab not yet bought, then the bag, then the floor by the portal', async () => {
+    // Ten chains, 2 by 3: eight fill a tab, two are left.
+    const chains = (from: number) => Array.from({ length: 10 }, (_, i) => item(from + i, 'chain'))
+    const spilled = normalize(v13([chains(700), []]))
+    expect(spilled.stashed.map(t => t.length)).toEqual([8, 2])
+    const given = normalize(v13([chains(700)]))
+    expect(given.stashed.map(t => t.length)).toEqual([8, 2])
+    const every = [chains(700), chains(720), chains(740), chains(760)]
+    const bagged = normalize(v13(every, { bag: [] }))
+    expect([bagged.stashed.map(t => t.length), bagged.bag.length]).toEqual([[8, 8, 8, 8], 8])
+    const floored = normalize(v13(every, { bag: fullTab(900) }))
+    expect([floored.bag.length, floored.floor?.length]).toEqual([48, 8])
+    for (const g of [spilled, given, bagged, floored]) expect(broken(g)).toEqual([])
+  })
+
   test('a version 12 save\'s stash list is tab 1; one that is not a list, an empty tab 1', async () => {
     const old = { ...newGame(4), version: 12, stashed: [item(600), item(601)] } as unknown as Game
     expect(normalize(old).stashed.map(t => t.map(i => i.id))).toEqual([[600, 601]])
@@ -124,11 +160,12 @@ describe('the stash in a save', () => {
 
 describe('the stash\'s rules', () => {
   const g = newGame(4)
-  test('one to four plain tabs of at most ten each', async () => {
-    expect(broken({ ...g, stashed: [ten(100), ten(200), ten(300), ten(400)] })).toEqual([])
+  test('one to four plain tabs, each item inside its tab\'s grid and over no other', async () => {
+    expect(broken({ ...g, stashed: [fullTab(100), fullTab(200), fullTab(300), fullTab(400)] })).toEqual([])
     expect(broken({ ...g, stashed: [[], [], [], [], []] })).toContain('stash within its size')
     expect(broken({ ...g, stashed: [] })).toContain('stash within its size')
-    expect(broken({ ...g, stashed: [[], [...ten(100), item(150)]] })).toContain('stash within its size')
+    expect(broken({ ...g, stashed: [[], [item(150, 'ring', { x: 2, y: 2 }), item(151, 'ring', { x: 2, y: 2 })]] })).toContain('stash within its size')
+    expect(broken({ ...g, stashed: [[item(152, 'chain', { x: 7, y: 0 })]] })).toContain('stash within its size')
   })
 
   test('the special tabs hold their own items, one a place', async () => {

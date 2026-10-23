@@ -16,17 +16,17 @@ describe('a window taller than the pane', () => {
 })
 
 describe('the size the game plays best in', () => {
-  test('holds every window drawn, the tallest whole with its lines under it: no window over 41 rows', async () => {
+  test('holds every window drawn, the tallest whole with its lines under it: no window over 54 rows', async () => {
     for (const s of shots()) {
       expect(s.px[0]!.length <= BEST_COLUMNS || s.name.startsWith('strip')).toBe(true)
       expect(s.px.length / 2 + UNDER_WINDOW + HINT_ROWS + 1).toBeLessThanOrEqual(BEST_ROWS)
     }
     expect(Math.max(...shots().map(s => s.px.length / 2)) + UNDER_WINDOW + HINT_ROWS + 1).toBe(BEST_ROWS)
-    expect(BEST_ROWS - UNDER_WINDOW - HINT_ROWS - 1).toBe(41)
+    expect(BEST_ROWS - UNDER_WINDOW - HINT_ROWS - 1).toBe(54)
   })
 
   test('is said for a pane narrower or shorter than it, and not at it', async () => {
-    expect(sizeNote(96, 40)).toBe('ASCII Dungeon plays best in a pane at least 105 columns wide and 49 rows tall; this one is 96 by 40.')
+    expect(sizeNote(96, 40)).toBe('ASCII Dungeon plays best in a pane at least 105 columns wide and 62 rows tall; this one is 96 by 40.')
     expect(sizeNote(BEST_COLUMNS - 1, BEST_ROWS)).toBeDefined()
     expect(sizeNote(BEST_COLUMNS, BEST_ROWS - 1)).toBeDefined()
     expect(sizeNote(BEST_COLUMNS, BEST_ROWS)).toBeUndefined()

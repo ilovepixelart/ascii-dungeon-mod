@@ -12,7 +12,7 @@ import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed } from './talents'
 import { MARKS, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
-import { STASH_SIZE, putIn, stashRoom, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
+import { putIn, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
@@ -1572,7 +1572,6 @@ const tradeIn = (g: Game) => {
   say(g, `The guard takes your ${three.map(i => i.name).join(', ')} and hands you ${item.name} (${RARITY_NAME[item.rarity]}).`)
 }
 
-export { STASH_SIZE }
 
 /** Moves the selected bag item into the stash (`whereToStore`), room allowing; said with the tab when not `preferred`. */
 const store = (g: Game, preferred = 0) => {
@@ -1711,7 +1710,7 @@ const visit = (g: Game, spot: TownSpot) => {
     say(g, g.fortune !== null ? 'The mystic: "Your fortune holds until you change depth."' : `The mystic gazes into the crystal. "A fortune costs ${countText(fortuneCost(g))} gold."`)
   } else if (spot === 'stash') {
     g.panel = 'stash'
-    say(g, `Your stash holds ${stashedItems(g).length} of ${stashRoom(g)} items.`)
+    say(g, `Your stash holds ${countText(stashedItems(g).length)} ${stashedItems(g).length === 1 ? 'item' : 'items'}.`)
   } else {
     g.panel = spot
     say(g, TOWN_TALK[spot])

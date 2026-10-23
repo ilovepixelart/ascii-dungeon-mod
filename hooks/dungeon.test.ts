@@ -1316,11 +1316,11 @@ test('no frame around the game: neither the map nor the inventory screen draws a
 
 test('the map takes every row the strip leaves, nothing for text rows or a frame', async $ => {
   // Past the best size, so no note takes a row, and short of the whole map's 72 rows, so the map is not cut to them.
-  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 60 } }, surface: 'terminal' })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 70 } }, surface: 'terminal' })
   const strip = stripHeight(WIDE.props.bodyColumns) / 2
   // The dash: its lit top line, the belt's 10 px and its dark edge, 12 px, 6 rows.
   expect(strip).toBe(6)
-  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(60 - 6)
+  expect((await ui.find({ type: 'Raster', key: 'map' }))?.props.rows).toBe(70 - 6)
   await ui.unmount()
 })
 
@@ -1768,14 +1768,16 @@ const swordToTheStash = async ($: Engine, on: On) =>
 test('on a wide pane the stash opens a pixel window: the chosen bag item stored by its key, chosen in the chest and taken back', async ($, on) => {
   const ui = await swordToTheStash($, on)
   expect(await ui.find({ type: 'Raster', key: 'chest' })).toBeDefined()
-  const list = async () => (await boxTexts(ui, 'chest-clicks'))[0]!
-  expect((await list()).every(line => line === '  -')).toBe(true)
-  await ui.press({ key: 'chest-store' })
-  expect((await list())[0]?.trim()).toBe('Short Sword')
+  // The card of the stored item chosen: none while the tab holds nothing to step to.
+  const storedCard = async () => (await boxTexts(ui, 'chest-clicks')).find(lines => lines[0] === 'In your stash')
   await ui.press({ key: 'chest-next' })
-  expect((await list())[0]).toBe('> Short Sword')
+  expect(await storedCard()).toBeUndefined()
+  await ui.press({ key: 'chest-store' })
+  await ui.press({ key: 'chest-next' })
+  expect((await storedCard())?.[1]).toBe('Short Sword')
   await ui.press({ key: 'chest-take' })
-  expect((await list()).every(line => line === '  -')).toBe(true)
+  await ui.press({ key: 'chest-next' })
+  expect(await storedCard()).toBeUndefined()
   await ui.press({ key: 'stash-close' })
   expect(await ui.find({ type: 'Raster', key: 'chest' })).toBeUndefined()
   await ui.unmount()
@@ -2364,13 +2366,13 @@ describe('a pane short of the size the game plays best in', () => {
 
   test('says so on its top row, wide enough but short; narrow, the width note alone', async $ => {
     const short = await $.ui.mount(sized(110, 40))
-    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 49 rows tall; this one is 110 by 40.' })).toBeDefined()
+    expect(await short.find({ type: 'Text', text: 'ASCII Dungeon plays best in a pane at least 105 columns wide and 62 rows tall; this one is 110 by 40.' })).toBeDefined()
     await short.unmount()
     const narrow = await $.ui.mount(sized(90, 40))
     expect(await narrow.find({ type: 'Text', text: /^Widen the pane for the full pixel windows/ })).toBeDefined()
     expect(await narrow.find({ type: 'Text', text: /^ASCII Dungeon plays best/ })).toBeUndefined()
     await narrow.unmount()
-    const best = await $.ui.mount(sized(110, 49))
+    const best = await $.ui.mount(sized(110, 62))
     expect(await best.find({ type: 'Text', text: /^ASCII Dungeon plays best|^Widen the pane/ })).toBeUndefined()
     await best.unmount()
   })
@@ -2382,7 +2384,7 @@ describe('a pane short of the size the game plays best in', () => {
       await ui.unmount()
       return n
     }
-    expect((await rowsAt(49)) - (await rowsAt(48))).toBe(2)
+    expect((await rowsAt(62)) - (await rowsAt(61))).toBe(2)
   })
 
   test('a window it cannot show whole says on its top row the rows it needs; a pane that holds it says nothing', async ($, on) => {

@@ -13,7 +13,7 @@ import { BAG_X, BAG_Y, INV_H } from './inventory'
 import { card } from './bagui'
 import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW, cellBox, gridBox, itemGrid, runX, itemOutline, onCell } from './pieces'
 import type { ButtonState } from './pieces'
-import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, tabGround, textTabBoxes, textTabRects, windowPixels, uncovered } from './window'
+import { CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, remembered, tabGround, textTabBoxes, textTabRects, uncovered, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Tab, Weighted } from './window'
 import { INK, SURFACE } from './ui/tokens'
 import { countText } from './names'
@@ -101,7 +101,7 @@ const shown = (g: Game): Weighted[] => [
 
 /** The boxes over the window: the tabs' labels; the list (or a tab not bought, its price and Buy); the chosen item's
  * card with its menu when open. */
-export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
+export const chestOverlay = remembered((g: Game, ui: ChestUi): OverlayBox[] => {
   const tabs = textTabBoxes(TABS, tabIndex(ui), top, BG)
   if (!isBought(g, ui.tab)) {
     const offer: OverlayBox = { role: 'list', ...LIST, h: OFFER_H, border: SURFACE.frame, lines: offerLines(g, ui.tab) }
@@ -117,7 +117,7 @@ export const chestOverlay = (g: Game, ui: ChestUi): OverlayBox[] => {
   const item = chosenBag(g, ui)
   if (item === undefined) return [...tabs, list]
   return [...tabs, list, ...cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), ui.menu ? boxShape('menu', [entry('s', 'Store', whyNotStore(g, item, ui.tab))], CURSOR) : undefined, WINDOW_W, [list])]
-}
+})
 
 /** The title: the stash, and what the tab shown holds of its room; a tab not bought, no count. */
 export const chestTitle = (g: Game, ui: ChestUi) => {

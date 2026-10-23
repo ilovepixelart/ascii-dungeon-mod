@@ -10,7 +10,7 @@ import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
 import { beltCountsAt, beltSlotRect, clearOf, clickable, gridBox, itemOutline } from './pieces'
-import { CLICK_SLOP, KEEP, WINDOW_TOP, WINDOW_W, boxShape, bracketed, clearance, isInside, pixel, place, uncovered } from './window'
+import { CLICK_SLOP, KEEP, WINDOW_TOP, WINDOW_W, boxShape, bracketed, clearance, isInside, pixel, place, remembered, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
 import { countText } from './names'
@@ -105,10 +105,10 @@ export const coverage = (g: Game, keep: readonly Rect[]) => clearance(ROWS, [
 ])
 
 /** The boxes over the panel: the belt's counts that no card covers, then the cards. */
-export const bagOverlay = (g: Game, ui: BagUi): OverlayBox[] => {
+export const bagOverlay = remembered((g: Game, ui: BagUi): OverlayBox[] => {
   const boxes = cardsOver(g, ui)
   return [...clearOf(beltCountsAt(g, BELT_X, INV_TOP + BELT_Y), boxes), ...boxes]
-}
+})
 
 /**
  * The cards while an item is selected: what is worn in its slot, titled Equipped, near that slot; the item's card near

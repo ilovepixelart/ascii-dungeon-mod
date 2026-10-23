@@ -223,6 +223,16 @@ export const place = (cost: ReturnType<typeof coverage>, rows: number, others: r
   return best ?? { x: 0, y: 0 }
 }
 
+/** A window's layout remembered for the last game and window state it was asked for: the hover and each gesture ask
+ * again for the same pair, and a new state is always a new object. */
+export const remembered = <A extends object, B extends object, R>(f: (a: A, b: B) => R) => {
+  let last: { a: A; b: B; r: R } | undefined
+  return (a: A, b: B): R => {
+    if (last === undefined || last.a !== a || last.b !== b) last = { a, b, r: f(a, b) }
+    return last.r
+  }
+}
+
 /** A gesture in the click layer's cells, to the fraction: a drag still held, or a release (a click when it barely moved). */
 export type Gesture = { type: 'drag'; from: Pos; at: Pos } | { type: 'release'; from: Pos; at: Pos; button: 'left' | 'middle' | 'right' }
 /** Moves under this many pixels are a click, not a drag. */

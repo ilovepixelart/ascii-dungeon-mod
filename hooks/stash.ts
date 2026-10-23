@@ -20,7 +20,7 @@ type Stash = Pick<Game, 'stashed' | 'stashSets' | 'stashLegends'>
 /** Every place on the sets' tab, in board order: each set's pieces in turn. */
 export const SET_PLACES = Object.entries(SETS).flatMap(([set, s]) => s.pieces.map(p => ({ set, base: p.base, name: p.name })))
 /** Every place on the Legendaries' tab, in board order. */
-export const LEGEND_PLACES = LEGENDARIES.map(l => ({ power: l.power, name: l.name }))
+export const LEGEND_PLACES = LEGENDARIES.map(l => ({ power: l.power, name: l.name, base: l.base }))
 
 /** Every item in the stash, whatever its tab. */
 export const stashedItems = (g: Stash): Item[] => [...g.stashed.flat(), ...(g.stashSets ?? []), ...(g.stashLegends ?? [])]

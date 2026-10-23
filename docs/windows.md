@@ -65,7 +65,7 @@ Every window keeps these; review them as a real session draws them with `tools/s
 
 ## The stash
 
-- The tabs and the gold in the title bar; the tab shown over the bag, each a grid the bag's size (8 by 6), both 2 px in from the left, so the window is 54 rows; the chosen item's card and its menu beside them. A plain tab's items lie at their cells as the bag's do; the sets' and the Legendaries' tabs are a list a place, over the grid's place; a tab not bought says its price there, with Buy under it.
+- The tabs and the gold in the title bar; the tab shown over the bag, each a grid the bag's size (8 by 6), both 2 px in from the left, so the window is 54 rows; the chosen item's card and its menu beside them. A plain tab's items lie at their cells as the bag's do; the sets' and the Legendaries' tabs are boards over the grid's place, a slot a place, each its piece's cells framed as in the bag (`setSlots`: a column a set, its weapon and armor side by side, its helm under them; `legendSlots`: one row), a piece stored in its tier's box, an empty place its piece's shape in the ghost's ink; a tab not bought says its price there, with Buy under it.
 - A stored item or a bag item is chosen with a click and shows its card; a second click opens Take or Store, which says why when the chest has no room for it or the bag has none (`whyNotStore`, `whyNotTake`). A right-click moves it at once: a stored item into the bag, a bag item onto the tab shown (or its own special tab); when it cannot, the right-click opens the menu, which says why.
 - Two grids the bag's size do not fit side by side in `WINDOW_W`, so the tab's stands over the bag's.
 

@@ -5,6 +5,10 @@ import { canvas } from './canvas'
 import { shots } from './screens'
 import { buttonsIn } from './fixtures'
 import { INK, SURFACE } from './ui/tokens'
+import { WINDOW_W } from './window'
+import type { OverlayBox } from './window'
+import { apply, newGame } from './game'
+import { CHEST_UI_IDLE, chestOverlay } from './chest'
 
 describe('a button', () => {
   test('is 6 pixels tall and as wide as its words and a cell of room each side in its frame', async () => {
@@ -87,5 +91,35 @@ describe('the windows\' buttons', () => {
     expect(said('retire')).toEqual(['RETIRE', 'BACK'])
     expect([said('forge-knight'), said('forge-keep-knight')]).toEqual([['TEMPER', 'REFORGE'], ['TEMPER', 'REFORGE', 'KEEP OLD']])
     expect(said('talk-dog')).toEqual(['PET'])
+  })
+})
+
+describe('a row of buttons', () => {
+  /** The room left and right of each row of buttons: under the nearest box over it that spans it, else the window. */
+  const rooms = (boxes: readonly OverlayBox[], under: 'box' | 'window', isGrid = false) => {
+    const buttons = boxes.filter(b => b.role === 'button')
+    // A grid's columns line up, its short rows with them: the grid is centred, as one row.
+    const ys = isGrid ? [Math.min(...buttons.map(b => b.y))] : [...new Set(buttons.map(b => b.y))]
+    return ys.map(y => {
+      const row = isGrid ? buttons : buttons.filter(b => b.y === y)
+      const left = Math.min(...row.map(b => b.x))
+      const right = Math.max(...row.map(b => b.x + b.w))
+      const over = boxes.filter(b => b.role !== 'button' && b.role !== 'title' && b.role !== 'gold' && b.role !== 'tabs' && b.y + b.h <= y && b.x <= left && b.x + b.w >= right).sort((a, b) => b.y - a.y)[0]
+      const [from, to] = under === 'window' || over === undefined ? [0, WINDOW_W] : [over.x, over.x + over.w]
+      return [left - from, to - right]
+    })
+  }
+  const centred = ([l, r]: number[]) => r! - l! === 0 || r! - l! === 1
+
+  test('stands centred under the box over it, or in the window: as much room each side, the odd pixel on the right', async () => {
+    const all = shots()
+    // Beside the worn slots, under the box there; the rest across the window.
+    const under = { retire: 'box', 'forge-knight': 'box', 'forge-keep-knight': 'box', 'settings-game': 'window', 'settings-orders': 'window', 'death-king': 'window', recap: 'window', 'talent-0': 'window', 'start-knight': 'window' } as const
+    for (const [name, span] of Object.entries(under)) {
+      const s = all.find(x => x.name === name)!
+      for (const room of rooms(s.boxes, span, name.startsWith('settings'))) expect([name, room, centred(room)]).toEqual([name, room, true])
+    }
+    const town = { ...apply(newGame(4), { kind: 'portal' }), gold: 0 }
+    for (const room of rooms(chestOverlay(town, { ...CHEST_UI_IDLE, tab: 1 }), 'box')) expect(['chest tab 2', room, centred(room)]).toEqual(['chest tab 2', room, true])
   })
 })

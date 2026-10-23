@@ -76,6 +76,9 @@ export const gridLines = (c: Canvas, x: number, y: number, cols: number, rows: n
 export const cellBox = (item: Pick<Item, 'x' | 'y' | 'w' | 'h'>, x: number, y: number): Rect =>
   ({ x: x + item.x * CELL + 1, y: y + item.y * CELL + 1, w: item.w * CELL - 1, h: item.h * CELL - 1 })
 
+/** Where a run `w` wide starts, centred between `left` and `right`, the odd pixel on the right. */
+export const runX = (w: number, left: number, right: number) => left + Math.floor((right - left - w) / 2)
+
 /** The bag's grid at x, y with its frame: what a card over the bag keeps off, filled or empty. */
 export const gridBox = (x: number, y: number): Rect => ({ x, y, w: BAG_W * CELL + 1, h: BAG_H * CELL + 1 })
 

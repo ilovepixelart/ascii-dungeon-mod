@@ -127,12 +127,8 @@ const temperPips = (c: ReturnType<typeof canvas>, item: Item, x: number, y: numb
 export const forgePixels = (g: Game, ui: ForgeUi): string[][] => {
   const l = layout(g, ui)
   const body = canvas(WINDOW_W, l.height - WINDOW_TOP)
-  wornSlots(body, g, () => GRID)
-  // White just outside the slot's frame, where a worn piece's tier frame cannot cover it.
-  if (l.slot !== undefined) {
-    const [x, y, w, h] = WORN_SLOTS[l.slot]
-    frame(body, x - 2, y - 2, w + 4, h + 4, CURSOR)
-  }
+  // The chosen slot's own frame white, as the bag frames the slot an item would fill.
+  wornSlots(body, g, slot => (slot === l.slot ? CURSOR : GRID))
   if (l.item !== undefined) {
     // Beside Temper, on its middle.
     temperPips(body, l.item, l.temperAt.x + l.temperAt.w + 4, l.temperAt.y - WINDOW_TOP + Math.floor((BUTTON_H - 4) / 2))

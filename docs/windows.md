@@ -49,7 +49,7 @@ Every window keeps these; review them as a real session draws them with `tools/s
 - The pixel font has no full stop or comma (`drawable` in `hooks/window.ts` drops them from a card's text), nor a colon or an apostrophe: text drawn in a window is written without them, which the assets test holds every window in `hooks/screens.ts` to.
 - A text box is placed in cells (one pixel across, two down), so its frame lands on even pixel rows.
 - A button is its frame and face in pixels (`button` in `hooks/pieces.ts`, `BUTTON_H` 6 px) and its words a text box on the face (`buttonBox`), which the window's overlay lists with its other boxes. Its top goes on an even pixel row (`onCell`), so its words' row is a whole cell; rows of buttons step `BUTTON_H + 2`.
-- `place` scores a spot by what it hides (`coverage`, weights the window chooses) a thousand times over its distance from what the box is about: hiding less always wins over being nearer. The bag weighs every slot, filled or empty, and its grid: a slot is the window's shape whether it holds anything, so a card goes on open ground first. The chosen item's brackets are kept with it.
+- `place` scores a spot by what it hides (`coverage`, weights the window chooses) a thousand times over its distance from what the box is about: hiding less always wins over being nearer. The bag weighs every slot, filled or empty, and its grid: a slot is the window's shape whether it holds anything, so a card goes on open ground first; the compact bag, the shop and the stash weigh the grid too (`gridBox`). A card about an item keeps a pixel of bare ground round it, off every weighed thing and the window's edges (`clearance`), and off the chosen item's brackets (`bracketed`). The stash is the bag window's height, so a card has room under its list.
 
 ## The townsfolk
 
@@ -59,7 +59,7 @@ Every window keeps these; review them as a real session draws them with `tools/s
 
 ## The smith
 
-- The worn slots on the left, as in the inventory; the piece being worked on framed white just outside its frame, where its tier frame cannot cover it. It is the first worn until another is clicked (`chosenSlot`).
+- The worn slots on the left, as in the inventory; the piece being worked on framed white on its slot's own frame, as the bag frames the slot an item would fill. It is the first worn until another is clicked (`chosenSlot`).
 - On the right its card, what the smith works on (`workCard`): name, tier, its stats on one line, its power, trigger or set by name alone (the bag's card says what each does), what it was before a reforge (name, then stats), then what each job costs or why it cannot be done (`whyNotTemper`, `whyNotReforge`), the Temper line with the stat now and after one more (`DEF 4 > 5`). Under it Temper with a pip a tempering beside it, Reforge, and after a reforge Keep old, grey when they cannot act. So with Keep old the window still fits 41 rows.
 - The buttons carry no price: a reforge's runs to three digits, too wide for the work side with the key and label. The prices are in the card.
 

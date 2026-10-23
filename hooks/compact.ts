@@ -11,7 +11,7 @@ import { CELL } from './icons'
 import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
-import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, clickable, itemGrid, itemOutline } from './pieces'
+import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -61,8 +61,9 @@ const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
   [{ text: 'g', color: INK.gold, bold: true }, { text: item.locked === true ? ' Unlock' : ' Lock' }],
 ]
 
-/** What a card would hide: the bag's items, the worn list, the filled belt slots, the title bar. */
+/** What a card would hide: the bag's grid and its items, the worn list, the filled belt slots, the title bar. */
 const shown = (g: Game): Weighted[] => [
+  { rect: gridBox(BAG_X, WINDOW_TOP + BAG_Y), weight: 1 },
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   { rect: { x: LIST.x, y: LIST.y * 2, w: LIST.w, h: LIST.h * 2 }, weight: 1 },
   ...g.belt.flatMap((b, i) => (b === null ? [] : [{ rect: beltRect(i), weight: 1 }])),

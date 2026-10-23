@@ -9,9 +9,9 @@ import { LEGEND_PLACES, SET_PLACES, STASH_SIZE, tabItems, tabName, tabPrice, whe
 import type { StashTab } from './stash'
 import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit } from './items'
 import { BG, canvas, fill } from './canvas'
-import { BAG_X, BAG_Y } from './inventory'
+import { BAG_X, BAG_Y, INV_H } from './inventory'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW, cellBox, itemGrid, itemOutline, onCell } from './pieces'
+import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW, cellBox, gridBox, itemGrid, itemOutline, onCell } from './pieces'
 import type { ButtonState } from './pieces'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, TABS_H, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, tabGround, textTabBoxes, textTabRects, windowPixels, uncovered } from './window'
 import type { Gesture, OverlayBox, Rect, Tab, Weighted } from './window'
@@ -32,8 +32,8 @@ const TABS: readonly Tab[] = STASH_TABS.map(t => ({ label: label(t) }))
 const tabIndex = (ui: ChestUi) => Math.max(0, STASH_TABS.indexOf(ui.tab))
 const top = WINDOW_TOP
 
-/** The window's height: the bag and a row of room under it. */
-export const CHEST_H = WINDOW_TOP + BAG_Y + BAG_H * 7 + 1 + 3
+/** The window's height: the bag window's and the shop's, so a chosen item's card has room under the list. */
+export const CHEST_H = WINDOW_TOP + INV_H
 const ROWS = CHEST_H / 2
 /** The chest's list under the tabs and their rule, in cells: a row an item (a place), framed. */
 const LIST: Rect = { x: 1, y: (top + TABS_H + 2) / 2, w: BAG_X - 3, h: STASH_SIZE + 2 }
@@ -93,6 +93,7 @@ const rowRect = (i: number): Rect => ({ x: LIST.x, y: (LIST.y + 1 + i) * 2, w: L
 
 /** What a card over the window would hide: the bag's items, the chest's list, the tabs and the title bar. */
 const shown = (g: Game): Weighted[] => [
+  { rect: gridBox(BAG_X, WINDOW_TOP + BAG_Y), weight: 1 },
   ...g.bag.map(i => ({ rect: itemRect(i), weight: 1 })),
   { rect: { x: LIST.x, y: LIST.y * 2, w: LIST.w, h: LIST.h * 2 }, weight: 1 },
   { rect: { x: 0, y: 0, w: WINDOW_W, h: top + TABS_H + 2 }, weight: 1 },

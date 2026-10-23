@@ -15,9 +15,9 @@ export const MARKS: Readonly<Record<Mark, { name: string; does: string; hard?: t
   steady: { name: 'Steady', does: 'Nothing changes.' },
   mild: { name: 'Mild', does: 'Foes hit a fifth softer and pay a third less gold.' },
   brittle: { name: 'Brittle', does: 'Foes have a fifth less HP and hit a fifth harder.' },
-  ironclad: { name: 'Ironclad', does: 'Foes have half again the HP and hit a sixth harder but items roll twice.', hard: true },
+  ironclad: { name: 'Ironclad', does: 'Foes have half again the HP and hit a sixth harder, but items roll twice.', hard: true },
   frenzied: { name: 'Frenzied', does: 'One foe in four is a champion and foes hit a sixth harder.', hard: true },
-  lean: { name: 'Lean', does: 'Healing potions drop a quarter as often but gold is doubled.', hard: true },
+  lean: { name: 'Lean', does: 'Healing potions drop a quarter as often, but gold is doubled.', hard: true },
 }
 const EASY: readonly Mark[] = ['steady', 'mild', 'brittle']
 const HARD: readonly Mark[] = ['ironclad', 'frenzied', 'lean']

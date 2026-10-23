@@ -92,7 +92,7 @@ export const sheetPixels = (g: Game): string[][] => {
   portrait(body, heroArt(g), PAD, 2, FACE)
   // XP toward the next level, under the head box: a flat bar, its numbers text on it.
   const xp = xpBar(g)
-  mark(body, MARK.xp, SIDE_X, xp.y - top - 1)
+  mark(body, MARK.xp, SIDE_X, xp.y - top)
   flatBar(body, xp.x, xp.y - top, xp.w, g.xp / xpToLevel(g.level), XP_TONES[1], XP_EMPTY)
   ATTRIBUTES.forEach((_, i) => {
     const r = rowRect(i)

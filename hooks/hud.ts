@@ -6,7 +6,7 @@ import { depthMod } from './game'
 import type { DepthMod } from './game'
 import { BELT_SLOT_W, BG, GRID, SLOT, SLOT_BG, art, canvas, fill, frame, put } from './canvas'
 import type { Canvas } from './canvas'
-import { CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar } from './pieces'
+import { COIN_INK, COIN_MARK, CURSOR, artLabel, barLabel, beltCounts, beltSlot, clearOf, flatBar } from './pieces'
 import { TIERS, activeTier, nameOf } from './consumables'
 import type { Tier } from './consumables'
 import type { Action } from './game'
@@ -54,7 +54,7 @@ export const MARK: Readonly<Record<'heart' | 'xp' | 'coin' | 'stairs' | 'regen' 
   // The heart and the star are 4 px tall, and so are their bars, side by side.
   heart: ['rr.rr', 'rwrrr', '.rrr.', '..r..'],
   xp: ['..x..', 'xXXXx', '.xXx.', '.x.x.'],
-  coin: ['.yyy.', 'yYyyy', 'yYyyy', 'yyyyo', '.yoo.'],
+  coin: COIN_MARK,
   stairs: ['....s', '...ss', '..sss', '.ssss', 'sssss'],
   regen: ['..g..', '..g..', 'ggggg', '..g..', '..g..'],
   ward: ['bbbbb', 'bBbbb', 'bBbbb', '.bbb.', '..b..'],
@@ -68,7 +68,7 @@ export const MARK: Readonly<Record<'heart' | 'xp' | 'coin' | 'stairs' | 'regen' 
   hoard: ['.yyy.', 'yYYYy', '.....', '.yyy.', 'yYYYy'],
 }
 export const MARK_INK: Readonly<Record<string, string>> = {
-  r: '#e04a5a', w: '#ffb0b8', y: '#ffd34d', Y: '#fff2a8', o: '#b08a1e', s: '#9a9aa4', g: '#5ccf6a', b: '#7fe3ff', B: '#d8f8ff', f: '#f06a5a', F: '#ffd34d', x: '#e0b84a', X: '#fff2a8', c: '#8a6cf0', C: '#e4dcff', n: '#6b6258', m: '#a88ae0', h: '#e08a5a',
+  ...COIN_INK, r: '#e04a5a', w: '#ffb0b8', s: '#9a9aa4', g: '#5ccf6a', b: '#7fe3ff', B: '#d8f8ff', f: '#f06a5a', F: '#ffd34d', x: '#e0b84a', X: '#fff2a8', c: '#8a6cf0', C: '#e4dcff', n: '#6b6258', m: '#a88ae0', h: '#e08a5a',
 }
 /** The fortune in force, by its initial beside the crystal ball. */
 export const FORTUNE_INITIAL: Readonly<Record<NonNullable<Game['fortune']>['kind'], string>> = { luck: 'L', riches: 'R', insight: 'I' }

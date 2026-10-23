@@ -23,11 +23,15 @@ export const INK = {
   danger: '#ff5a4f',
   /** What the hero cannot wear or do. */
   wrong: '#ff4a4a',
-  /** A shape for what is not there: an empty slot's ghost. */
-  ghost: '#2a2732',
+  /** A shape for what is not there: an empty slot's ghost. On the host's 17-step grid, two steps over the slot's ground
+   * on each channel: faint, yet painted apart from it. */
+  ghost: '#444455',
   /** Art a palette lacks a color for: loud on purpose. */
   missing: '#ff00ff',
   coinRim: '#c9971f',
+  /** The gold's mark: its glint and its shaded edge, round the gold. */
+  coinGlint: '#fff2a8',
+  coinShade: '#b08a1e',
   unpaidRim: '#4a4652',
   /** The XP bar and the quest's, lit to shaded; the smith's pips. */
   xpLight: '#f0d070',

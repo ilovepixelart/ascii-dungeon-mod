@@ -161,6 +161,12 @@ export const clearOf = <L extends OverlayBox>(labels: readonly L[], over: readon
 export const clickable = <B extends OverlayBox>(boxes: readonly B[]): B[] => boxes.filter(b => b.role !== 'label')
 
 /** A small coin, four pixels square, its top-left at x, y; grey when what it prices cannot be paid. */
+/** The gold's mark, 5 by 5, where the gold is counted (the title bar, the strip): a coin lit top left, its inks. */
+export const COIN_MARK: readonly string[] = ['.yyy.', 'yYyyy', 'yYyyy', 'yyyyo', '.yoo.']
+export const COIN_INK: Readonly<Record<string, string>> = { y: INK.gold, Y: INK.coinGlint, o: INK.coinShade }
+export const coinMark = (c: Canvas, x: number, y: number) =>
+  COIN_MARK.forEach((row, dy) => [...row].forEach((k, dx) => k !== '.' && put(c, x + dx, y + dy, COIN_INK[k]!)))
+
 export const coin = (c: Canvas, x: number, y: number, canPay = true) => {
   art(c, ['.ww.', 'wwww', 'wwww', '.ww.'], x, y, canPay ? COIN_RIM : UNPAID_RIM)
   fill(c, x + 1, y + 1, 2, 2, canPay ? GOLD_INK : UNPAID_INK)

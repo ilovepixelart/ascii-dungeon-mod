@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { BG } from './canvas'
-import { CLOSE_BOX, CLOSE_INK, HEAD_H, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, coverage, place, remembered, windowPixels } from './window'
+import { MARK_INK } from './hud'
+import { INK } from './ui/tokens'
+import { CLOSE_BOX, CLOSE_INK, HEAD_H, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, chromeBoxes, coverage, place, remembered, windowPixels } from './window'
 
 const GOLD_INK = '#ffd34d'
 const inkIn = (px: string[][], ink: string, y0: number, y1: number) => px.slice(y0, y1).some(row => row.includes(ink))
@@ -20,6 +22,18 @@ describe('the window', () => {
   test('shows the gold only when the window says so', async () => {
     expect(inkIn(windowPixels({ title: 'A' }, []).px, GOLD_INK, 0, HEAD_H)).toBe(false)
     expect(inkIn(windowPixels({ title: 'A', gold: 12 }, []).px, GOLD_INK, 0, HEAD_H)).toBe(true)
+  })
+
+  test('draws the gold\'s coin as the strip\'s mark, 5 by 5, a cell of room before its number', async () => {
+    const c = windowPixels({ title: 'A', gold: 12 }, [])
+    const inks = [MARK_INK.y, MARK_INK.Y, MARK_INK.o, INK.coinRim, GOLD_INK]
+    const lit = c.px.flatMap((row, y) => (y < HEAD_H ? [...row].flatMap((p, x) => (inks.includes(p) ? [{ x, y }] : [])) : []))
+    const xs = lit.map(p => p.x)
+    const ys = lit.map(p => p.y)
+    expect([Math.max(...xs) - Math.min(...xs) + 1, Math.max(...ys) - Math.min(...ys) + 1]).toEqual([5, 5])
+    const number = chromeBoxes(c.px).find(b => b.role === 'gold')!
+    // The number's box starts a cell before its words: its words a cell clear of the coin's last column.
+    expect(number.x + 1 - (Math.max(...xs) + 1)).toBe(1)
   })
 
   test('always has its close box', async () => {

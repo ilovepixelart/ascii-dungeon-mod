@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
+import { SLOT_BG } from './canvas'
 
 import type { Game, Item, Rarity } from '../types'
 import { CELL, ICONS } from './icons'
@@ -119,7 +120,10 @@ describe('the panel', () => {
     const [ax, ay, aw, ah] = WORN_SLOTS.amulet
     const px = inventoryPixels(g)
     const amulet = new Set(px.slice(ay, ay + ah).flatMap(r => r.slice(ax, ax + aw)))
-    expect(amulet.has('#2a2732')).toBe(true)
+    expect(amulet.has(GHOST_INK)).toBe(true)
+    // Faint, but painted apart from its slot: two steps of the terminal's 17-step grid lighter on every channel.
+    const step = (hex: string, i: number) => Math.round(Number.parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16) / 17)
+    for (const i of [0, 1, 2]) expect(step(GHOST_INK, i) - step(SLOT_BG, i)).toBeGreaterThanOrEqual(2)
     const [hx, hy, hw, hh] = WORN_SLOTS.helm
     const helm = new Set(px.slice(hy, hy + hh).flatMap(r => r.slice(hx, hx + hw)))
     expect(helm.has(PAL.n!)).toBe(true)

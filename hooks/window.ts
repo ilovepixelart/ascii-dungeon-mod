@@ -6,7 +6,7 @@ import type { Canvas } from './canvas'
 import { textMask } from './pixelart'
 import { countText } from './names'
 import type { Pos } from './map'
-import { coin, mix } from './pieces'
+import { coinMark, mix } from './pieces'
 import { GLOW } from './ui/glow'
 import { INK, SURFACE } from './ui/tokens'
 
@@ -100,6 +100,7 @@ const chromeText = (chrome: Chrome, width: number): OverlayBox[] => {
     : [{ role: 'title', x: TITLE_X - 1, y: 1, w: chrome.title.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text: chrome.title, color: TITLE_INK, bold: true }]] }]
   if (chrome.gold === undefined) return head
   const text = countText(chrome.gold)
+  // The number a cell clear of the coin's 5 columns: its box starts a cell before its words.
   return [...head, { role: 'gold', x: goldX(chrome, width) + 5, y: 1, w: text.length + 2, h: 3, border: HEAD_BG, bg: HEAD_BG, pad: 0, lines: [[{ text, color: GOLD_INK, bold: true }]] }]
 }
 
@@ -146,7 +147,7 @@ export const windowPixels = (chrome: Chrome, body: readonly (readonly string[])[
   fill(c, 0, 0, width, HEAD_H - 1, HEAD_BG)
   fill(c, 0, HEAD_H - 1, width, 1, GRID)
   if (chrome.tabs !== undefined) tabGround(c, chrome.tabs.items, chrome.tabs.chosen)
-  if (chrome.gold !== undefined) coin(c, goldX(chrome, width), TITLE_Y)
+  if (chrome.gold !== undefined) coinMark(c, goldX(chrome, width), TITLE_Y)
   const [cx, cy, cw, ch] = closeBoxOf(width)
   fill(c, cx, cy, cw, ch, CLOSE_BG)
   frame(c, cx, cy, cw, ch, CLOSE_EDGE)

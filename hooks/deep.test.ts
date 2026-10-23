@@ -33,6 +33,14 @@ const bigSlain = (depth: number) => {
   return apply({ ...g, foe: { ...g.foe!, hp: 1 } }, { kind: 'attack' })
 }
 
+describe('the marks\' words', () => {
+  test('set off a clause joined by "but" with a comma, as a sentence does', async () => {
+    const joined = Object.values(MARKS).map(m => m.does).filter(does => / but /.test(does))
+    expect(joined.length).toBeGreaterThan(0)
+    for (const does of joined) expect(does).toMatch(/, but /)
+  })
+})
+
 describe('tiers', () => {
   test('none down to depth 50, then one every ten depths, each ending at its big boss', async () => {
     expect([1, 50, 51, 60, 61, 100, 101].map(tierOf)).toEqual([0, 0, 1, 1, 2, 5, 6])

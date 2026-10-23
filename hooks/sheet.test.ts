@@ -2,6 +2,8 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
+import { MARK_INK } from './hud'
+import { SURFACE } from './ui/tokens'
 import { buttonsIn } from './fixtures'
 import { RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
@@ -13,6 +15,17 @@ const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: 
 const onPlus = (i: number) => tap(plusRect(i).x + 2, plusRect(i).y + 4)
 
 describe('the character sheet', () => {
+  test('stands the XP bar beside its star on the same rows, as the townsfolk\'s bars stand beside theirs', async () => {
+    const g = { ...newGame(4), xp: 5 }
+    const px = sheetPixels(g)
+    const rowsWith = (inks: readonly string[], x0: number, x1: number) => px.flatMap((row, y) => (row.slice(x0, x1).some(p => inks.includes(p)) ? [y] : []))
+    // The star in the mark's inks at the head box's left (x 25, past the portrait), the bar's empty ground right of it.
+    const star = rowsWith([MARK_INK.x!, MARK_INK.X!], 25, 30)
+    const bar = rowsWith([SURFACE.xpEmpty], 60, 100)
+    expect([star.length, bar.length]).toEqual([4, 4])
+    expect(star).toEqual(bar)
+  })
+
   test('a + trains its attribute while there are points; with none it does nothing', async () => {
     const stats = ['might', 'focus', 'vigor', 'insight'] as const
     stats.forEach((stat, i) => expect(sheetGesture(hero({ points: 2 }), onPlus(i))).toEqual([{ kind: 'train', stat }]))

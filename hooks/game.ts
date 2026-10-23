@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, RARITY_RANK, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, RARITY_RANK, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, fitsAt, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, corridorAhead, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -51,8 +51,8 @@ export type Action =
   | { kind: 'buy'; ware: Ware }
   | { kind: 'reforge'; slot: Slot }
   | { kind: 'temper'; slot: Slot }
-  /** The selected bag item into the stash: its own special tab when it has one, else plain tab `tab` (the first unless said) or the first with room. */
-  | { kind: 'store'; tab?: number }
+  /** The selected bag item into the stash: its own special tab when it has one, else plain tab `tab` (the first unless said) or the first with room; dropped at cells `at`, onto plain tab `tab` there. */
+  | { kind: 'store'; tab?: number; at?: Pos }
   | { kind: 'buyTab'; tab: StashTab }
   | { kind: 'fortune' }
   | { kind: 'gamble' }
@@ -60,7 +60,10 @@ export type Action =
   /** The elder's pay for a quest done, asked for again: after a visit found the bag too full for the item. */
   | { kind: 'claim' }
   | { kind: 'pet' }
-  | { kind: 'retrieve'; id: number }
+  /** A stashed item into the bag, at the first place it fits, or at cells `at` it is dropped on. */
+  | { kind: 'retrieve'; id: number; at?: Pos }
+  /** A stashed item moved on its plain tab to cells `x`, `y`. */
+  | { kind: 'moveStashed'; id: number; x: number; y: number }
   | { kind: 'select'; id: number }
   | { kind: 'deselect' }
   | { kind: 'place'; id: number; x: number; y: number }
@@ -1361,6 +1364,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   claim: g => say(g, 'The elder is in town.'),
   pet: g => say(g, 'The dog is in town.'),
   retrieve: g => say(g, 'Your stash is in town.'),
+  moveStashed: g => say(g, 'Your stash is in town.'),
   select: (g, a) => {
     if (g.bag.some(item => item.id === a.id)) g.cursor = a.id
   },
@@ -1574,8 +1578,9 @@ const tradeIn = (g: Game) => {
 
 
 /** Moves the selected bag item into the stash (`whereToStore`), room allowing; said with the tab when not `preferred`. */
-const store = (g: Game, preferred = 0) => {
+const store = (g: Game, preferred = 0, at?: Pos) => {
   const item = selected(g)
+  if (item !== undefined && at !== undefined) return storeAt(g, item, preferred, at)
   const tab = item === undefined ? undefined : whereToStore(g, item, preferred)
   if (item === undefined) say(g, 'Select an item in your bag to store.')
   else if (tab === undefined) say(g, 'Your stash is full.')
@@ -1586,11 +1591,35 @@ const store = (g: Game, preferred = 0) => {
   }
 }
 
-/** Moves a stashed item back into the bag, where it fits. */
-const retrieve = (g: Game, id: number) => {
+/** A bag item dropped on plain tab `tab` at cells `at`: there when it fits, else it stays in the bag, said. */
+const storeAt = (g: Game, item: Item, tab: number, at: Pos) => {
+  const held = g.stashed[tab]
+  if (held === undefined || !fitsAt(held, item.w, item.h, at.x, at.y)) return say(g, "It doesn't fit there.")
+  take(g, item.id)
+  putIn(g, item, tab, at)
+  say(g, `You store the ${item.name} in your stash.`)
+}
+
+/** A stashed item moved on its plain tab to cells `x`, `y`, when it fits there. */
+const moveStashed = (g: Game, id: number, x: number, y: number) => {
+  const tab = g.stashed.findIndex(t => t.some(i => i.id === id))
+  const item = g.stashed[tab]?.find(i => i.id === id)
+  if (item === undefined) return
+  if (!fitsAt(g.stashed[tab]!, item.w, item.h, x, y, id)) return say(g, "It doesn't fit there.")
+  g.stashed = g.stashed.map((t, i) => (i === tab ? t.map(s => (s.id === id ? { ...s, x, y } : s)) : t))
+}
+
+/** Moves a stashed item back into the bag: where it fits, or at cells `at` it is dropped on, when it fits there. */
+const retrieve = (g: Game, id: number, at?: Pos) => {
   const item = stashedItems(g).find(i => i.id === id)
   if (item === undefined) return
-  if (!stash(g, item)) say(g, `No room in your bag for the ${item.name}.`)
+  if (at !== undefined && !fitsAt(g.bag, item.w, item.h, at.x, at.y)) say(g, "It doesn't fit there.")
+  else if (at !== undefined) {
+    takeOut(g, id)
+    g.bag = [...g.bag, { ...item, ...at }]
+    g.cursor ??= item.id
+    say(g, `You take the ${item.name} from your stash.`)
+  } else if (!stash(g, item)) say(g, `No room in your bag for the ${item.name}.`)
   else {
     takeOut(g, id)
     say(g, `You take the ${item.name} from your stash.`)
@@ -1759,7 +1788,7 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   reforge: (g, a) => reforge(g, a.slot),
   keepOld: g => keepOld(g),
   temper: (g, a) => temper(g, a.slot),
-  store: (g, a) => store(g, a.tab),
+  store: (g, a) => store(g, a.tab, a.at),
   buyTab: (g, a) => buyTab(g, a.tab),
   fortune: g => mystic(g),
   gamble: g => gamble(g),
@@ -1769,7 +1798,8 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
     g.petted += 1
     say(g, 'The dog wags its tail and leans into your hand.')
   },
-  retrieve: (g, a) => retrieve(g, a.id),
+  retrieve: (g, a) => retrieve(g, a.id, a.at),
+  moveStashed: (g, a) => moveStashed(g, a.id, a.x, a.y),
   // A task done in town: back through the portal, then down, unless the stairs have a guardian to meet first.
   descend: g => {
     leaveTown(g)

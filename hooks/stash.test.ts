@@ -80,6 +80,17 @@ describe('storing', () => {
     expect(said(apply(inTown(0, [item(905, 'chain')], { stashed: [nearly] }), { kind: 'store' }))).toBe('Your stash is full.')
   })
 
+  test('at the cells it is dropped on, when it fits there; over another item or off the grid, it stays in the bag, said', async () => {
+    const ring = item(906)
+    const g = inTown(0, [ring], { stashed: [[item(907, 'ring', { x: 1, y: 1 })]] })
+    const dropped = apply(g, { kind: 'store', tab: 0, at: { x: 3, y: 2 } })
+    expect(dropped.stashed[0]!.find(i => i.id === 906)).toMatchObject({ x: 3, y: 2 })
+    for (const at of [{ x: 1, y: 1 }, { x: 8, y: 0 }]) {
+      const refused = apply(g, { kind: 'store', tab: 0, at })
+      expect([refused.bag.map(i => i.id), said(refused)]).toEqual([[906], "It doesn't fit there."])
+    }
+  })
+
   test('a set piece on the sets\' tab and a Legendary on the Legendaries\', once bought; a second of one place on a plain tab', async () => {
     const owned = { stashSets: [], stashLegends: [] }
     const piece = apply(inTown(0, [blade(901)], owned), { kind: 'store', tab: 0 })
@@ -90,6 +101,23 @@ describe('storing', () => {
     expect([again.stashSets!.map(i => i.id), again.stashed[0]!.map(i => i.id)]).toEqual([[901], [903]])
     // Not bought: a plain tab.
     expect(apply(inTown(0, [blade(904)]), { kind: 'store' }).stashed[0]!.map(i => i.id)).toEqual([904])
+  })
+
+  test('taken back to the bag cells it is dropped on, when it fits there; else it stays, said', async () => {
+    const stored = item(908)
+    const g = inTown(0, [item(909)], { stashed: [[stored]] })
+    const back = apply(g, { kind: 'retrieve', id: 908, at: { x: 4, y: 1 } })
+    expect(back.bag.find(i => i.id === 908)).toMatchObject({ x: 4, y: 1 })
+    // The bag's first item lies at 0,0.
+    const refused = apply(g, { kind: 'retrieve', id: 908, at: { x: 0, y: 0 } })
+    expect([refused.stashed[0]!.map(i => i.id), said(refused)]).toEqual([[908], "It doesn't fit there."])
+  })
+
+  test('moved on its tab to the cells it is dropped on, when it fits there; else it stays, said', async () => {
+    const g = inTown(0, [], { stashed: [[item(910), item(911, 'ring', { x: 2, y: 0 })]] })
+    expect(apply(g, { kind: 'moveStashed', id: 910, x: 5, y: 4 }).stashed[0]!.find(i => i.id === 910)).toMatchObject({ x: 5, y: 4 })
+    const refused = apply(g, { kind: 'moveStashed', id: 910, x: 2, y: 0 })
+    expect([refused.stashed[0]!.find(i => i.id === 910), said(refused)]).toEqual([expect.objectContaining({ x: 0, y: 0 }), "It doesn't fit there."])
   })
 
   test('taken back from any tab', async () => {

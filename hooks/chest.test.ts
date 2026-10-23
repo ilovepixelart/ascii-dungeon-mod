@@ -13,7 +13,8 @@ import { SET_PLACES } from './stash'
 import { baseOf } from './items'
 const baseNameOf = (base: string) => baseOf(base)?.name ?? base
 import { INK } from './ui/tokens'
-import { CURSOR, GHOST_INK } from './pieces'
+import { CURSOR, GHOST_INK, OFF_CLASS, mix } from './pieces'
+import { GLOW } from './ui/glow'
 import type { ChestUi } from './chest'
 import { newGame } from './world'
 
@@ -299,5 +300,58 @@ describe('the stash\'s tabs', () => {
     const at = (button: 'left' | 'right') => click(first!.x + 3.5, (first!.y + 10) / 2 + 0.25, button)
     expect(chestGesture({ ...g, stashSets: [blade] }, on('sets'), at('left')).ui).toEqual({ ...on('sets'), stored: 42 })
     expect(chestGesture({ ...g, stashSets: [blade] }, on('sets'), at('right')).actions).toEqual([{ kind: 'retrieve', id: 42 }])
+  })
+})
+
+describe('dragging in the stash', () => {
+  /** A press on an item's top-left cell, dragged by the cells `dx`, `dy` and onto the other grid when `toOther`. */
+  const pressOn = (it: Item, onTab: boolean) => ({ x: 4 + it.x * CELL + 2.5, y: ((onTab ? STASH_TOP : BAG_TOP) + it.y * CELL + 2) / 2 + 0.25 })
+  const to = (cellX: number, cellY: number, onTab: boolean) => ({ x: 4 + cellX * CELL + 2.5, y: ((onTab ? STASH_TOP : BAG_TOP) + cellY * CELL + 2) / 2 + 0.25 })
+  const release = (from: { x: number; y: number }, at: { x: number; y: number }): Gesture => ({ type: 'release', from, at, button: 'left' })
+  const drag = (from: { x: number; y: number }, at: { x: number; y: number }): Gesture => ({ type: 'drag', from, at })
+
+  test('a bag item dropped on the tab\'s grid is stored at the cells under it; a stored one dropped on the bag, taken there', async () => {
+    const g = hero()
+    const ring = item(g, 'ring', 'common', { id: 7, x: 2, y: 1 })
+    const kept = item(g, 'ring', 'rare', { id: 501, x: 0, y: 0 })
+    g.bag = [ring]
+    g.stashed = [[kept]]
+    expect(chestGesture(g, CHEST_UI_IDLE, release(pressOn(ring, false), to(5, 3, true))).actions).toEqual([{ kind: 'select', id: 7 }, { kind: 'store', tab: 0, at: { x: 5, y: 3 } }])
+    expect(chestGesture(g, CHEST_UI_IDLE, release(pressOn(kept, true), to(6, 4, false))).actions).toEqual([{ kind: 'retrieve', id: 501, at: { x: 6, y: 4 } }])
+  })
+
+  test('moved within its own grid: a stored item to other cells of its tab, a bag item to other cells of the bag', async () => {
+    const g = hero()
+    const ring = item(g, 'ring', 'common', { id: 7, x: 2, y: 1 })
+    const kept = item(g, 'ring', 'rare', { id: 501, x: 0, y: 0 })
+    g.bag = [ring]
+    g.stashed = [[kept]]
+    expect(chestGesture(g, CHEST_UI_IDLE, release(pressOn(kept, true), to(3, 2, true))).actions).toEqual([{ kind: 'moveStashed', id: 501, x: 3, y: 2 }])
+    expect(chestGesture(g, CHEST_UI_IDLE, release(pressOn(ring, false), to(4, 4, false))).actions).toEqual([{ kind: 'place', id: 7, x: 4, y: 4 }])
+  })
+
+  test('dropped where it does not fit, nothing; while held, its target framed white where it fits and red where not', async () => {
+    const g = hero()
+    const ring = item(g, 'ring', 'common', { id: 7, x: 2, y: 1 })
+    const kept = item(g, 'ring', 'rare', { id: 501, x: 0, y: 0 })
+    g.bag = [ring]
+    g.stashed = [[kept]]
+    expect(chestGesture(g, CHEST_UI_IDLE, release(pressOn(ring, false), to(0, 0, true))).actions).toEqual([])
+    const held = (at: { x: number; y: number }) => chestGesture(g, CHEST_UI_IDLE, drag(pressOn(ring, false), at)).ui
+    // The cell's top line, lit as the hover lights: GLOW.edge of the way from what is there to white or to red.
+    const frameAt = (ui: ChestUi, x: number, y: number) => chestPixels(g, ui)[STASH_TOP + y * CELL]![4 + x * CELL + 3]
+    const idle = (x: number, y: number) => frameAt(CHEST_UI_IDLE, x, y)!
+    expect(frameAt(held(to(5, 3, true)), 5, 3)).toBe(mix(idle(5, 3), CURSOR, GLOW.edge))
+    expect(frameAt(held(to(0, 0, true)), 0, 0)).toBe(mix(idle(0, 0), OFF_CLASS, GLOW.edge))
+  })
+
+  test('a bag item dropped on a board goes to its own place there; a press that does not move is a click', async () => {
+    const g = hero()
+    const blade: Item = { ...item(g, SET_PLACES[0]!.base, 'epic', { id: 42, x: 3, y: 0 }), set: SET_PLACES[0]!.set as Item['set'], name: SET_PLACES[0]!.name }
+    g.bag = [blade]
+    g.stashSets = []
+    const sets = { ...CHEST_UI_IDLE, tab: 'sets' as const }
+    expect(chestGesture(g, sets, release(pressOn(blade, false), to(2, 2, true))).actions).toEqual([{ kind: 'select', id: 42 }, { kind: 'store' }])
+    expect(chestGesture(g, sets, release(pressOn(blade, false), pressOn(blade, false))).actions).toEqual([{ kind: 'select', id: 42 }])
   })
 })

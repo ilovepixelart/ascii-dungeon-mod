@@ -11,6 +11,7 @@ import { BELT_X, BELT_Y, INV_TOP, beltHot } from './inventory'
 import { compactGesture, compactHot, compactOverlay } from './compact'
 import { shopGesture, shopHot } from './shop'
 import { CHEST_UI_IDLE, chestGesture, chestHot, chestOverlay } from './chest'
+import type { ChestUi } from './chest'
 import { deepCards, deepGesture, deepHot } from './deepwindow'
 import { forkTier, pairOf } from './deep'
 import { talentGesture, talentHot } from './talentwindow'
@@ -139,7 +140,7 @@ describe('the hover with a card open', () => {
       found.push(...dead(shopHot(chosen, shopUi), p => shopGesture(chosen, shopUi, tap(p.x, p.y)), shopUi).map(p => `shop ${item.id} ${p.x},${p.y}`))
     }
     for (const stored of g.stashed[0]!) {
-      const ui = { stored: stored.id, menu: false, tab: 0 }
+      const ui: ChestUi = { stored: stored.id, menu: false, tab: 0 }
       found.push(...dead(chestHot(g, ui), p => chestGesture(g, ui, tap(p.x, p.y)), ui).map(p => `stash ${stored.id} ${p.x},${p.y}`))
     }
     expect(found.slice(0, 6)).toEqual([])

@@ -7,22 +7,27 @@
 // window's next state and the game actions to apply.
 import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
-import { LEGEND_PLACES, SET_PLACES, tabItems, tabName, tabPrice, whereToStore, whyNotBuy } from './stash'
+import { LEGEND_PLACES, SET_PLACES, specialTabOf, tabItems, tabName, tabPrice, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
-import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit } from './items'
+import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit, fitsAt } from './items'
 import { GRID, SLOT_BG, art, canvas, fill, frame } from './canvas'
 import { CELL, ICONS } from './icons'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, GHOST_INK, OFF_CLASS, button, buttonBox, buttonW, cellBox, centered, drawItem, gridBox, itemGrid, runX, itemOutline, onCell } from './pieces'
+import { BUTTON_H, CURSOR, GHOST_INK, OFF_CLASS, button, buttonBox, buttonW, cellBox, centered, drawItem, gridBox, itemArt, itemGrid, runX, itemOutline, onCell } from './pieces'
+import { glow } from './ui/kit'
+import type { Pos } from './map'
 import type { ButtonState } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, remembered, textTabRects, uncovered, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect, Tab, Weighted } from './window'
 import { INK, SURFACE } from './ui/tokens'
 import { countText } from './names'
 
-/** What the window shows beyond the game: the tab shown, the stored item chosen (a bag item is chosen in the game), and
- * its menu. */
-export type ChestUi = { stored: number | null; menu: boolean; tab: StashTab }
+/** An item held by the pointer: from the tab shown or the bag, where on it it was grabbed, and the pointer, in window
+ * pixels. */
+type Held = { from: 'tab' | 'bag'; id: number; grab: Pos; at: Pos }
+/** What the window shows beyond the game: the tab shown, the stored item chosen (a bag item is chosen in the game), its
+ * menu, and an item being dragged. */
+export type ChestUi = { stored: number | null; menu: boolean; tab: StashTab; drag?: Held }
 export const CHEST_UI_IDLE: ChestUi = { stored: null, menu: false, tab: 0 }
 /** Nothing chosen, on the tab shown. */
 export const idleOn = (ui: ChestUi): ChestUi => ({ ...CHEST_UI_IDLE, tab: ui.tab })
@@ -150,6 +155,7 @@ const panelBoxes = (g: Game, ui: ChestUi): OverlayBox[] =>
 /** The boxes over the window: the tab's words; the chosen item's card with its menu when open. */
 export const chestOverlay = remembered((g: Game, ui: ChestUi): OverlayBox[] => {
   const panel = panelBoxes(g, ui)
+  if (ui.drag !== undefined) return panel
   const others = panel.filter(b => b.role === 'list')
   const stored = chosenStored(g, ui)
   if (stored !== undefined) {
@@ -180,6 +186,25 @@ const drawBoard = (body: ReturnType<typeof canvas>, g: Game, ui: ChestUi, tab: '
   })
 }
 
+/** An item held: its old place a ghost, where it would land lit white where it fits and red where not, the item at
+ * the pointer; in the body's pixels. */
+const drawHeld = (body: ReturnType<typeof canvas>, g: Game, ui: ChestUi, drag: Held) => {
+  const item = heldItem(g, ui, drag)
+  if (item === undefined) return
+  const rows = itemArt(item)
+  const from = drag.from === 'bag' ? bagRect(item) : placeRect(g, ui, item)
+  fill(body, from.x, from.y - top, from.w, from.h, SLOT_BG)
+  const [gx, gy] = centered(rows, from.x, from.y - top, from.w, from.h)
+  art(body, rows, gx, gy, GHOST_INK)
+  const target = targetOf(g, ui, drag)
+  if (target !== undefined && target.onto !== 'board') {
+    const r = cellBox({ x: target.x, y: target.y, w: item.w, h: item.h }, target.onto === 'bag' ? BAG_AT.x : STASH_AT.x, target.onto === 'bag' ? BAG_AT.y : STASH_AT.y)
+    glow(body, { x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }, target.fits ? CURSOR : OFF_CLASS)
+  }
+  const [ix, iy] = centered(rows, drag.at.x - drag.grab.x, drag.at.y - drag.grab.y - top, from.w, from.h)
+  art(body, rows, ix, iy)
+}
+
 /** The window's pixels: the tabs and the gold in the title bar; a plain tab's grid with its items, else the place
  * its words go; the bag; a tab not bought, its Buy button; the frames of the boxes over them. */
 export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] = []): string[][] => {
@@ -189,6 +214,7 @@ export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] =
   else if (!isPlain(ui.tab) && isBought(g, ui.tab)) drawBoard(body, g, ui, ui.tab)
   itemGrid(body, ui.stored === null ? g : { ...g, cursor: null }, g.bag, BAG_AT.x, BAG_AT.y, BAG_W, BAG_H)
   if (!isBought(g, ui.tab)) button(body, BUY, BUY_RECT.x, BUY_RECT.y - top, buyState(g, ui.tab))
+  if (ui.drag !== undefined) drawHeld(body, g, ui, ui.drag)
   const c = windowPixels(chrome(g, ui), body.px)
   for (const b of boxes) if (b.role !== 'button') drawBox(c, b)
   return c.px
@@ -258,13 +284,64 @@ const click = (g: Game, ui: ChestUi, at: { x: number; y: number }, button: strin
   return { ui: idleOn(ui), actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
 }
 
-/** The window's next state and the game actions for one gesture; a drag does nothing here. */
+/** The item a press at `p` takes hold of, and where on it: one of the tab shown, or of the bag. */
+const grabAt = (g: Game, ui: ChestUi, p: Pos): Omit<Held, 'at'> | undefined => {
+  const stored = storedAt(g, ui, p)
+  if (stored !== undefined) {
+    const r = placeRect(g, ui, stored)
+    return { from: 'tab', id: stored.id, grab: { x: p.x - r.x, y: p.y - r.y } }
+  }
+  const item = g.bag.find(i => {
+    const r = bagRect(i)
+    return isInside(p, r.x, r.y, r.w, r.h)
+  })
+  if (item === undefined) return undefined
+  const r = bagRect(item)
+  return { from: 'bag', id: item.id, grab: { x: p.x - r.x, y: p.y - r.y } }
+}
+const heldItem = (g: Game, ui: ChestUi, drag: Held) => (drag.from === 'bag' ? g.bag.find(i => i.id === drag.id) : shownItems(g, ui).find(i => i.id === drag.id))
+
+/** Where a held item would land: the cells of a grid under its top-left, whether it fits there (over nothing but
+ * itself), or a board, when it is a bag item of that board's; undefined off them. */
+type Target = { onto: 'tab' | 'bag'; x: number; y: number; fits: boolean } | { onto: 'board'; fits: boolean }
+const targetOf = (g: Game, ui: ChestUi, drag: Held): Target | undefined => {
+  const item = heldItem(g, ui, drag)
+  if (item === undefined) return undefined
+  const onGrid = (onto: 'tab' | 'bag', at: { x: number; y: number }, held: readonly Item[]): Target | undefined => {
+    if (!isInside(drag.at, at.x, top + at.y, GRID_W, GRID_H)) return undefined
+    const x = Math.round((drag.at.x - drag.grab.x - at.x - 1) / CELL)
+    const y = Math.round((drag.at.y - drag.grab.y - top - at.y - 1) / CELL)
+    return { onto, x, y, fits: fitsAt(held, item.w, item.h, x, y, drag.from === onto ? item.id : undefined) }
+  }
+  const bag = onGrid('bag', BAG_AT, g.bag)
+  if (bag !== undefined || !isBought(g, ui.tab)) return bag
+  if (isPlain(ui.tab)) return onGrid('tab', STASH_AT, tabItems(g, ui.tab) ?? [])
+  if (!isInside(drag.at, BOARD_LEFT, BOARD_TOP, BOARD_RIGHT - BOARD_LEFT, GRID_H)) return undefined
+  return { onto: 'board', fits: drag.from === 'bag' && specialTabOf(item) === ui.tab && whyNotStore(g, item, ui.tab) === undefined }
+}
+
+/** A held item let go: stored, taken, moved or placed where it lands and fits; anywhere else, nothing. */
+const dropOf = (g: Game, ui: ChestUi, drag: Held): Action[] => {
+  const target = targetOf(g, ui, drag)
+  if (target === undefined || !target.fits) return []
+  if (target.onto === 'board') return [{ kind: 'select', id: drag.id }, storeOn(ui)]
+  const at = { x: target.x, y: target.y }
+  if (drag.from === 'bag') return target.onto === 'bag' ? [{ kind: 'place', id: drag.id, ...at }] : [{ kind: 'select', id: drag.id }, { kind: 'store', tab: ui.tab as number, at }]
+  return target.onto === 'bag' ? [{ kind: 'retrieve', id: drag.id, at }] : [{ kind: 'moveStashed', id: drag.id, ...at }]
+}
+
+/** The window's next state and the game actions for one gesture: a drag holds the item pressed, its release drops it;
+ * a press that barely moved is a click. */
 export const chestGesture = (g: Game, ui: ChestUi, gesture: Gesture): Outcome => {
-  if (gesture.type === 'drag') return { ui, actions: [] }
   const from = pixel(gesture.from)
   const at = pixel(gesture.at)
-  if (Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP) return { ui, actions: [] }
-  return click(g, ui, gesture.at, gesture.button)
+  const moved = Math.max(Math.abs(at.x - from.x), Math.abs(at.y - from.y)) >= CLICK_SLOP
+  const grabbed = moved && !ui.menu ? grabAt(g, ui, from) : undefined
+  const settled = { ...ui, drag: undefined }
+  if (gesture.type === 'drag') return grabbed === undefined ? { ui: settled, actions: [] } : { ui: { ...settled, menu: false, drag: { ...grabbed, at } }, actions: [] }
+  if (grabbed !== undefined) return { ui: idleOn(ui), actions: dropOf(g, ui, { ...grabbed, at }) }
+  if (moved) return { ui: settled, actions: [] }
+  return click(g, settled, gesture.at, gesture.button)
 }
 
 /** The next stored item after the chosen one on the tab shown, for the key that steps through the chest. */

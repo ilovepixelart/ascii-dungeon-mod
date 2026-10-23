@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 import type { On } from 'claude-code'
+import type { OverlayBox } from './window'
 import { INK } from './ui/tokens'
 import type { Engine } from 'claude-code/testing'
 
@@ -735,7 +736,26 @@ test('the start screen\'s keys stand in a row with no bar among them, as every w
   await start.unmount()
 })
 
-test('the settings\' keys have no view key, and name the sound capitalized', async ($, on) => {
+for (const [name, over] of [['settings', { panel: 'settings' }], ['start', { panel: 'start' }], ['retire', { panel: 'retire', level: 30, bossSlain: 30 }]] as [string, Partial<Game>][]) {
+  test(`the ${name} window's keys say its buttons' words${name === 'retire' ? ', and close it' : ''}`, async ($, on) => {
+    storeIn(on, new Map<string, unknown>([['save', { ...newGame(), ...over }]]))
+    on('command.register', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('session.start', (_$, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+    const keys = (await ui.findAll({ type: 'Button' })).filter(b => b.props.hotkey !== undefined).map(b => String(b.props.label))
+    const client = await ui.find({ type: 'Client', key: `${name}-clicks` })
+    const buttons = ((client?.props.props as { boxes?: OverlayBox[] }).boxes ?? []).filter(b => b.role === 'button').map(b => b.lines[0]!.map(r => r.text).join(''))
+    // Each button's key says its words, sentence case; the hero cards' keys, and Close, are keys with no button.
+    expect(buttons.length).toBeGreaterThan(1)
+    for (const words of buttons) expect([name, words, keys.map(k => k.toUpperCase()).includes(words)]).toEqual([name, words, true])
+    if (name === 'retire') expect(keys).toContain('Close')
+    await ui.unmount()
+  })
+}
+
+test('the settings\' keys have no view key, and name the sound capitalized, in their buttons\' words', async ($, on) => {
   storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'settings' }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
@@ -743,7 +763,7 @@ test('the settings\' keys have no view key, and name the sound capitalized', asy
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   const label = (key: string) => ui.find({ type: 'Button', key }).then(b => String(b?.props.label))
-  expect(await label('settings-effects')).toMatch(/^Sound: /)
+  expect(await label('settings-effects')).toMatch(/^Sound (on|off)$/)
   expect(await ui.find({ type: 'Button', key: 'settings-view' })).toBeUndefined()
   await ui.unmount()
 })

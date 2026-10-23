@@ -49,6 +49,15 @@ describe('the piece chosen', () => {
     expect(at('weapon', 1)).not.toBe(CURSOR)
   })
 
+  test('a worn piece still the bag\'s choice is framed as worn, not with the bag\'s white brackets out to the window\'s edge', async () => {
+    // A piece put on from the bag keeps its id, which can still be the bag's choice (g.cursor).
+    const g = knight(0)
+    const weapon = g.gear.weapon!
+    const px = forgePixels({ ...g, cursor: weapon.id }, { slot: 'armor' })
+    const [, y] = WORN_SLOTS.weapon
+    expect(px.slice(WINDOW_TOP + y - 2, WINDOW_TOP + y + 10).map(row => row[0])).toEqual(Array(12).fill(BG))
+  })
+
   test('the step key goes through the worn pieces in slot order and wraps', async () => {
     const g = knight(0)
     const worn = (['weapon', 'offhand', 'helm', 'armor', 'boots', 'ring', 'amulet'] as const).filter(s => g.gear[s] !== undefined)

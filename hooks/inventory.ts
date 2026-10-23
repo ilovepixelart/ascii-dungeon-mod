@@ -47,7 +47,8 @@ export const wornSlots = (c: Canvas, g: Game, edge: (slot: Slot) => string) => {
     fill(c, x, y, w, h, SLOT_BG)
     frame(c, x - 1, y - 1, w + 2, h + 2, edge(slot))
     const worn = g.gear[slot]
-    if (worn !== undefined) drawItem(c, g, worn, x, y, w, h)
+    // Not the bag's white brackets: a piece put on from the bag keeps its id, which can still be the bag's choice.
+    if (worn !== undefined) drawItem(c, { ...g, cursor: null }, worn, x, y, w, h)
     else {
       const rows = ICONS[GHOST[slot]]?.art ?? []
       const [ax, ay] = centered(rows, x, y, w, h)

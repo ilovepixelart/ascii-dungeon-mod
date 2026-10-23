@@ -922,6 +922,37 @@ test('the pointer over a floor tile lights it, as the windows light theirs; over
   await ui.unmount()
 })
 
+test('the pointer on the dash\'s layer over the map between its parts lights the floor under it; on the dash, nothing', async ($, on) => {
+  const g0 = newGame()
+  storeIn(on, new Map<string, unknown>([['save', { ...g0, seen: '1'.repeat(g0.seen.length) }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  const map = await ui.find({ type: 'Raster', key: 'map' })
+  const columns = map?.props.columns as number
+  const rows = map?.props.rows as number
+  const level = levelOf(g0)
+  const top = rows - OVER_ROWS
+  const isDashAt = (c: { x: number; y: number }) => [0, 1].some(dy => dashHit(columns, c.x, c.y * 2 + dy - DASH_OVER) !== undefined)
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: top + c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
+  const cells = Array.from({ length: columns * OVER_ROWS }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
+  const isFloorUnder = (c: { x: number; y: number }) => level.tiles[tileUnder(c).y]?.[tileUnder(c).x] === '.'
+  const gap = cells.find(c => !isDashAt(c) && isFloorUnder(c))!
+  // A cell of the dash over floor too, which the map would light were the dash not over it.
+  const orb = cells.find(c => isDashAt(c) && isFloorUnder(c))!
+  const cellsNow = async () => (await ui.find({ type: 'Raster', key: 'map' }))?.props.cells
+  const idle = await cellsNow()
+  await ui.pointer({ type: 'move', ...orb, in: 'dash-clicks' } as never)
+  expect(await cellsNow()).toEqual(idle)
+  await ui.pointer({ type: 'move', ...gap, in: 'dash-clicks' } as never)
+  expect(await cellsNow()).not.toEqual(idle)
+  await ui.pointer({ type: 'move', ...orb, in: 'dash-clicks' } as never)
+  expect(await cellsNow()).toEqual(idle)
+  await ui.unmount()
+})
+
 test('the pointer over items lying on the map names them there, a row each in its tier\'s color; off them, no name', async ($, on) => {
   const g0 = newGame()
   const level = levelOf(g0)

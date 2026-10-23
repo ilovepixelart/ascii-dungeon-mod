@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import type { Action } from './game'
 import type { Canvas } from './canvas'
 import { clearOf } from './pieces'
-import { DASH_H, OVER_ROWS, dashBeltMenu, dashGesture, dashHot, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, orbPhase, overLabels } from './dash'
+import { DASH_H, OVER_ROWS, dashBeltMenu, isOverMap, dashGesture, dashHot, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, orbPhase, overLabels } from './dash'
 import { beltMenuBox, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels } from './hud'
 import { drawBox, uncovered } from './window'
 import type { Gesture, OverlayBox } from './window'
@@ -46,3 +46,6 @@ export const overMapBoxes = (g: Game, columns: number) => overLabels(g, columns)
 
 /** A gesture on the dash's layer over the map. */
 export const overMapGesture = dashOverGesture
+
+/** Whether a point of the dash's layer over the map shows the map, not the dash. */
+export const isMapUnder = isOverMap

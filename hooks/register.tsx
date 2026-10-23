@@ -8,7 +8,7 @@ import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
-import { OVER_ROWS, isDash, orbPhase, overMapBoxes, overMapGesture, stripBeltMenu, stripBoxes, stripGesture, stripHeight, stripHot, stripOverMap, stripPixels } from './strip'
+import { OVER_ROWS, isDash, isMapUnder, orbPhase, overMapBoxes, overMapGesture, stripBeltMenu, stripBoxes, stripGesture, stripHeight, stripHot, stripOverMap, stripPixels } from './strip'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
@@ -1047,13 +1047,17 @@ const onHudClick = async ($: EngineInterface, data: unknown) => {
   $.ui.invalidate('ui.render')
 }
 
+/** A point of the dash's layer over the map, on the map layer under it. */
+const onMapUnder = (at: Pos, map: { columns: number; rows: number }) => ({ x: at.x, y: at.y + map.rows - OVER_ROWS, ...map })
+
+/** The pointer on the dash's layer over the map: where it shows the map, the map's hover there; on the dash, none. */
+const onDashHover = ($: EngineInterface, at: Pos | null) =>
+  onMapHover($, at !== null && mapSize !== null && isMapUnder(mapSize.columns, at) ? onMapUnder(at, mapSize) : {})
+
 /** A gesture on the dash's layer over the map: its orbs and crests, its plaque's buttons and words; between them, the map. */
 const onDashClick = async ($: EngineInterface, data: unknown) => {
   const outcome = overMapGesture(data as Gesture, hudWidth)
-  if (outcome.toMap !== undefined && mapSize !== null) {
-    const { columns, rows } = mapSize
-    return onMapClick($, { x: outcome.toMap.x, y: outcome.toMap.y + rows - OVER_ROWS, columns, rows })
-  }
+  if (outcome.toMap !== undefined && mapSize !== null) return onMapClick($, onMapUnder(outcome.toMap, mapSize))
   if (outcome.isLog === true) isLogOpen = true
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
@@ -2287,6 +2291,7 @@ export const register: Register = (on, options) => {
     if ((e.data as { type?: string } | undefined)?.type === 'hover') {
       if (e.element === 'map-clicks') await onMapHover($, e.data as { x?: number; y?: number; columns?: number; rows?: number })
       else onHover($, e.element ?? '', (e.data as { at: Pos | null }).at)
+      if (e.element === 'dash-clicks') await onDashHover($, (e.data as { at: Pos | null }).at)
       return {}
     }
     return (await onClick($, e.element ?? '', e.data)) ? {} : next(e)

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { CRACK, CRACK_INK, HERO_LAYERS, MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, isCracked, TOWN_BIG_ART, TOWN_DECOR_ART, TOWN_THING_ART, TREE_ALT, heroArt, torch } from './pixelart'
+import { CRACK, CRACK_INK, HERO_LAYERS, MONSTER_ART, NPC_ART, PAL, PX, TERRAIN, THING_ART, isCracked, TOWN_BIG_ART, TOWN_DECOR_ART, TOWN_THING_ART, TREE_ALT, heroArt, outlined, torch } from './pixelart'
 
 const item = {} as never
 const CAST: [string, readonly string[]][] = [
@@ -99,6 +99,17 @@ describe('pixel art', () => {
         const own = HERO_LAYERS[cls][layer]
         for (const p of changed) expect(own[p.y]![p.x] !== '.' || (slot === 'helm' && HERO_LAYERS[cls].bare[p.y]![p.x] !== '.') ? 'own' : `${cls} ${slot} changed ${p.x},${p.y}`).toBe('own')
       }
+    }
+  })
+
+  test('each hero, in every mix of gear, is outlined in K: no colour of it borders the floor it stands on', async () => {
+    const slots = ['armor', 'helm', 'weapon', 'offhand'] as const
+    for (const cls of ['knight', 'mage', 'rogue'] as const) for (let mix = 0; mix < 16; mix += 1) {
+      const gear = Object.fromEntries(slots.filter((_, i) => (mix >> i) & 1).map(s => [s, item]))
+      const look = outlined(heroArt({ gear, cls }))
+      const bare = (x: number, y: number) => look[y]?.[x] === '.'
+      const open = look.flatMap((row, y) => [...row].flatMap((k, x) => (k !== '.' && k !== 'K' && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => bare(x + dx!, y + dy!)) ? [`${x},${y} ${k}`] : [])))
+      expect([cls, mix, open]).toEqual([cls, mix, []])
     }
   })
 

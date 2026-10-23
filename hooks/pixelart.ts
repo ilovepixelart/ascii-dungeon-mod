@@ -237,6 +237,15 @@ export const stackLayers = (layers: readonly (readonly string[])[]): string[] =>
     return '.'
   }).join(''))
 
+/** A sprite outlined in K where it stands on the floor: each empty pixel beside one of its colours, across or down. */
+export const outlined = (rows: readonly string[]): string[] => {
+  const isInk = (x: number, y: number) => {
+    const k = rows[y]?.[x]
+    return k !== undefined && k !== '.' && k !== 'K'
+  }
+  return rows.map((row, y) => [...row].map((k, x) => (k === '.' && (isInk(x - 1, y) || isInk(x + 1, y) || isInk(x, y - 1) || isInk(x, y + 1)) ? 'K' : k)).join(''))
+}
+
 /** Each look stacked once: by class and which of the four slots hold something. */
 const heroLooks = new Map<string, readonly string[]>()
 

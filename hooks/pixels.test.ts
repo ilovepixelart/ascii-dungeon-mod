@@ -102,6 +102,24 @@ describe('the frame', () => {
     expect(lit(near)).toBeGreaterThan(lit(far))
   })
 
+  test('the hero stands outlined in K on the floor: each empty pixel of its sprite beside a colour is the outline', async () => {
+    for (const cls of ['knight', 'mage', 'rogue'] as const) {
+      const g = newGame(21, cls)
+      const art = heroArt(g)
+      const frame = frameOf(g, W, H, { isLit: false })
+      const rim: [number, number][] = []
+      art.forEach((row, y) => [...row].forEach((k, x) => {
+        const isBeside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !['.', 'K', undefined].includes(art[y + dy!]?.[x + dx!]))
+        if (k === '.' && isBeside) rim.push([x, y])
+      }))
+      expect(rim.length).toBeGreaterThan(3)
+      for (const [x, y] of rim) {
+        const o = screen(g, g.x * PX + x, g.y * PX + y)
+        expect([cls, x, y, at(frame, o.x, o.y)]).toEqual([cls, x, y, hexToInt(PAL.K!)])
+      }
+    }
+  })
+
   test('a creature casts a shadow on the ground under it', async () => {
     const g = newGame(21)
     const away = { ...g, x: g.x + 1 }

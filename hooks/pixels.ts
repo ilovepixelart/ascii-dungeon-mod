@@ -11,7 +11,7 @@ import { TOWN_H, TOWN_W } from './town'
 import { TOWN_PX_H, TOWN_PX_W, townImage } from './townpixels'
 import { BOSS_HOLD, BOSS_KEYS, FOE_HOLD, FOE_KEYS, HERO_HOLD, HERO_KEYS, HERO_REST, bossFall, fallDim, foeFall, heroFall } from './fall'
 import type { Pixel } from './fall'
-import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, GROUND, TERRAIN, pillarShaft, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
+import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, GROUND, TERRAIN, pillarShaft, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, outlined, textMask, torch, wallOcclusion } from './pixelart'
 
 const HALF_BLOCK = 0x2580
 const SPACE = 0x20
@@ -377,7 +377,7 @@ const drawBigBoss = (frame: Uint32Array, g: Game, width: number, height: number,
 const artOf = (g: Game, tile: Tile): readonly string[] | undefined => {
   const o = tile.occupant
   if (o === undefined) return undefined
-  if (o.kind === 'hero') return heroArt(g)
+  if (o.kind === 'hero') return outlined(heroArt(g))
   // A big boss is drawn over the ground in one piece, not in its tile.
   if (o.kind === 'foe') return g.foe?.big !== undefined ? undefined : foeArt(g)
   return THING_ART[o.glyph]
@@ -652,7 +652,7 @@ const lungeOf = (g: Game, hits: readonly Hit[], hitFrame: number): Pos => {
 }
 
 const drawHeroAt = (frame: Uint32Array, g: Game, width: number, height: number, hero: Pos, origin: Pos, isLit: boolean, stride = false) =>
-  (stride ? strideOf(heroArt(g)) : heroArt(g)).forEach((row, dy) => [...row].forEach((key, dx) => {
+  outlined(stride ? strideOf(heroArt(g)) : heroArt(g)).forEach((row, dy) => [...row].forEach((key, dx) => {
     const x = hero.x - PX / 2 + dx - origin.x
     const y = hero.y - PX / 2 + dy - origin.y
     if (key !== '.' && x >= 0 && x < width && y >= 0 && y < height) frame[y * width + x] = hexToInt(isLit ? lightPixel(PAL[key] ?? '#ff00ff', 1, true) : (PAL[key] ?? '#ff00ff'))

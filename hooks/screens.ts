@@ -13,7 +13,7 @@ import { BAG_UI_IDLE, bagOverlay } from './bagui'
 import { compactOverlay, compactPixels } from './compact'
 import { shopOverlay, shopPixels } from './shop'
 import { forgeOverlay, forgePixels } from './forge'
-import { chestOverlay, chestPixels } from './chest'
+import { CHEST_UI_IDLE, chestOverlay, chestPixels } from './chest'
 import { SPEAKERS, talkOverlay, talkPixels } from './talk'
 import { sheetOverlay, sheetPixels } from './sheet'
 import { settingsOverlay, settingsPixels } from './settings'
@@ -115,7 +115,7 @@ export const shots = (): Shot[] => {
     const piece = g.bag.find(i => i.rarity === 'rare')!
     const reforged = apply({ ...smith, gold: 10 ** 6, panel: 'forge', gear: { ...smith.gear, [piece.slot]: piece } }, { kind: 'reforge', slot: piece.slot })
     out.push(shot(`forge-keep-${cls}`, forgePixels(reforged, { slot: piece.slot }), forgeOverlay(reforged, { slot: piece.slot })))
-    out.push(shot(`chest-${cls}`, chestPixels(stash, { picked: null } as never), chestOverlay(stash, { picked: null } as never)))
+    out.push(shot(`chest-${cls}`, chestPixels(stash, CHEST_UI_IDLE), chestOverlay(stash, CHEST_UI_IDLE)))
   }
   out.push(shot('shop', shopPixels(town, { ware: null, menu: false }), shopOverlay(town, { ware: null, menu: false })))
   for (const page of ['game', 'orders'] as const) out.push(shot(`settings-${page}`, settingsPixels(town, { effects: false, music: false, volume: 4 }, { page }), settingsOverlay(town, { effects: false, music: false, volume: 4 }, { page })))

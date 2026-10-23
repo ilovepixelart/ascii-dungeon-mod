@@ -11,6 +11,7 @@ import { PAL, PX } from './pixelart'
 import type { OverlayBox, Rect } from './window'
 import type { Run } from './game'
 import { INK, SURFACE } from './ui/tokens'
+import { countText } from './names'
 
 export const GHOST_INK = INK.ghost
 export const OFF_CLASS = INK.wrong
@@ -169,7 +170,7 @@ export const TAG_H = SLOT + 7
 /** Where a ware's price goes under its slot, for its tag at x, y: the coin, a cell, the number as text, centred, on the
  * first whole cell two pixels under the slot. */
 const tagPrice = (cost: number, x: number, y: number) => {
-  const text = String(cost)
+  const text = countText(cost)
   const left = x + Math.floor((TAG_W - (5 + text.length)) / 2)
   return { text, coinX: left, textX: left + 5, row: onCell(y + SLOT + 2) }
 }
@@ -247,7 +248,7 @@ const BUTTON_EDGE = { ready: SURFACE.buttonEdge, off: SURFACE.tab, armed: CURSOR
 const BUTTON_LIT = SURFACE.buttonLit
 const OFF_INK = INK.off
 
-const costText = (cost: number) => `${cost} gold`
+const costText = (cost: number) => `${countText(cost)} gold`
 /** A button's width in cells: its label and, when it costs, its price; a cell of room each side in its frame. Its key
  * is not drawn on it: the pane has the keys only after ctrl+x tab, and the line under the window says them. */
 export const buttonW = (label: string, cost?: number) => 4 + label.length + (cost === undefined ? 0 : 1 + costText(cost).length)

@@ -45,3 +45,15 @@ describe('a card about an item', () => {
     expect(seen.length).toBeGreaterThan(80)
   })
 })
+
+describe('every window\'s words', () => {
+  test('set off the thousands of every number with commas: no run of four digits or more in any box', async () => {
+    const town = { ...apply(newGame(4), { kind: 'portal' }), gold: 12345 }
+    const said: string[] = []
+    for (const s of shots()) for (const b of s.boxes) for (const line of b.lines) said.push(`${s.name}: ${line.map(r => r.text).join('')}`)
+    // The stash's tabs not yet bought, and the shop, with gold to spare.
+    for (const tab of [1, 2, 3, 'sets', 'legends'] as const) for (const b of chestOverlay(town, { ...CHEST_UI_IDLE, tab })) for (const line of b.lines) said.push(`chest ${tab}: ${line.map(r => r.text).join('')}`)
+    expect(said.filter(line => /\d{4}/.test(line))).toEqual([])
+    expect(said.length).toBeGreaterThan(300)
+  })
+})

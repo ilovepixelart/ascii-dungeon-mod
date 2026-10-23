@@ -13,6 +13,7 @@ import { beltCountsAt, beltSlotRect, clearOf, clickable, gridBox, itemOutline } 
 import { CLICK_SLOP, KEEP, WINDOW_TOP, WINDOW_W, boxShape, bracketed, clearance, isInside, pixel, place, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
+import { countText } from './names'
 
 export type { Gesture } from './window'
 
@@ -52,7 +53,7 @@ export const card = (g: Game, item: Item, title: string | undefined, compare: bo
   ...(item.power === undefined ? [] : [[{ text: POWERS[item.power] ?? item.power, color: RARITY_COLOR.legendary }]]),
   ...triggerLines(g, item),
   ...setLines(g, item),
-  [{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: INK.gold }],
+  [{ text: 'Sells for ', dim: true }, { text: countText(priceOf(item)), color: INK.gold }],
 ]
 
 /** A card's text width for what a trigger does, so the card stays as narrow as its other lines. */

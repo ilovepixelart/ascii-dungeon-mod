@@ -9,7 +9,7 @@ import { BUTTON_H, PORTRAIT, button, buttonBox, buttonW, portrait } from './piec
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { canvas } from './canvas'
-import { theFoe } from './names'
+import { countText, theFoe } from './names'
 import { INK, SURFACE } from './ui/tokens'
 
 const CHROME: Chrome = { title: 'YOU DIED' }
@@ -30,7 +30,7 @@ const layout = (g: Game, f: Fallen) => {
   const who: Run[][] = [[{ text: 'Slain by', color: INK.dim }], [{ text: killerName(f), color: SLAIN, bold: true }], [{ text: `on depth ${f.depth}.`, color: INK.text }]]
   const whoBox: OverlayBox<'who'> = { role: 'who', x: SIDE_X, y: (top + 2) / 2, w: WINDOW_W - SIDE_X - PAD, h: who.length + 2, border: SURFACE.frame, lines: who }
   const toll: Run[][] = [
-    [{ text: `Level ${g.level}, deaths ${g.deaths}. Lost ${f.lost} gold.`, color: INK.dim }],
+    [{ text: `Level ${g.level}, deaths ${countText(g.deaths)}. Lost ${countText(f.lost)} gold.`, color: INK.dim }],
     [{ text: `You wake on depth ${f.wake}.`, color: INK.text }],
   ]
   const tollY = Math.max(top + 2 + PORTRAIT, (whoBox.y + whoBox.h) * 2) + 2

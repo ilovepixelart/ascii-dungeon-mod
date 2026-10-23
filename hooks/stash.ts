@@ -3,6 +3,7 @@
 // is chest.ts.
 import type { Game, Item } from '../types'
 import { LEGENDARIES, SETS } from './items/catalog'
+import { countText } from './names'
 
 /** How many items a plain tab holds. */
 export const STASH_SIZE = 10
@@ -74,5 +75,5 @@ export const tabName = (tab: StashTab) => (tab === 'sets' ? 'the sets\' tab' : t
 export const whyNotBuy = (g: Stash & Pick<Game, 'gold'>, tab: StashTab): string | undefined => {
   if (tabItems(g, tab) !== undefined) return 'bought'
   if (typeof tab === 'number' && (tab >= TAB_PRICES.length || tab !== g.stashed.length)) return tab >= TAB_PRICES.length ? 'no such tab' : `buy tab ${g.stashed.length + 1} first`
-  return g.gold < tabPrice(tab) ? `${tabPrice(tab)} gold` : undefined
+  return g.gold < tabPrice(tab) ? `${countText(tabPrice(tab))} gold` : undefined
 }

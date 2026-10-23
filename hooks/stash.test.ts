@@ -29,7 +29,7 @@ describe('buying the stash\'s tabs', () => {
       g = apply(g, { kind: 'buyTab', tab })
       expect([g.stashed.length, g.gold]).toEqual([tab + 1, left])
     }
-    expect(said(g)).toBe('You buy tab 4 of your stash for 5000 gold.')
+    expect(said(g)).toBe('You buy tab 4 of your stash for 5,000 gold.')
   })
 
   test('not out of order, not twice, not short of gold, and not a fifth; each said, nothing paid', async () => {
@@ -37,7 +37,7 @@ describe('buying the stash\'s tabs', () => {
     const tries: [Game, number, string][] = [
       [g, 2, 'Buy tab 2 first.'],
       [apply(g, { kind: 'buyTab', tab: 1 }), 1, 'You have tab 2 already.'],
-      [inTown(999), 1, 'Tab 2 costs 1000 gold.'],
+      [inTown(999), 1, 'Tab 2 costs 1,000 gold.'],
       [g, 0, 'You have tab 1 already.'],
       [{ ...g, stashed: [[], [], [], []] }, 4, 'No such tab.'],
     ]
@@ -50,7 +50,7 @@ describe('buying the stash\'s tabs', () => {
   test('the sets\' and the Legendaries\' tabs cost 3,000 each, in any order', async () => {
     const g = apply(apply(inTown(6000), { kind: 'buyTab', tab: 'legends' }), { kind: 'buyTab', tab: 'sets' })
     expect([g.stashLegends, g.stashSets, g.gold]).toEqual([[], [], 0])
-    expect(said(apply(inTown(2999), { kind: 'buyTab', tab: 'sets' }))).toBe('The sets\' tab costs 3000 gold.')
+    expect(said(apply(inTown(2999), { kind: 'buyTab', tab: 'sets' }))).toBe('The sets\' tab costs 3,000 gold.')
   })
 
   test('only in town', async () => {

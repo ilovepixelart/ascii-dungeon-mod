@@ -354,10 +354,15 @@ export const overLabels = (g: Game, columns: number): OverlayBox<'label'>[] => [
  * plaque's words for the log; a left click on none of it, to the map under it; a drag or a right-click, nothing. */
 export const dashOverGesture = (gesture: Gesture, columns: number): { actions: Action[]; isLog?: true; toMap?: { x: number; y: number } } => {
   if (gesture.type === 'drag' || gesture.button !== 'left') return { actions: [] }
-  const hit = dashHit(columns, Math.floor(gesture.at.x), Math.floor(gesture.at.y * 2) - DASH_OVER)
+  const hit = overHit(columns, gesture.at)
   if (hit === 'log') return { actions: [], isLog: true }
   return hit === undefined ? { actions: [], toMap: gesture.at } : { actions: [hit] }
 }
+
+/** What a point of the dash's layer over the map (its cells) lands on. */
+const overHit = (columns: number, at: { x: number; y: number }) => dashHit(columns, Math.floor(at.x), Math.floor(at.y * 2) - DASH_OVER)
+/** Whether a point of the dash's layer over the map lands on none of the dash, so on the map under it. */
+export const isOverMap = (columns: number, at: { x: number; y: number }) => overHit(columns, at) === undefined
 
 /** What a click on the dash does, at x, y of its frame (y negative over the map): either orb, its socket or its crest,
  * the character sheet; a belt slot, using it; a plaque button, the bag, settings or the portal; the plaque's words,

@@ -11,6 +11,7 @@ import type { CodexUi } from './codexwindow'
 import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
 import { UNIQUE_ART } from './pixelart'
 import { SURFACE } from './ui/tokens'
+import { BG } from './canvas'
 
 const hit: Action = { kind: 'outcome', ok: true, what: 'Edit' }
 /** The hero at `depth` with a one-HP foe beside them, and the codex `codex`. */
@@ -197,15 +198,15 @@ describe('the codex window', () => {
   })
 
   test('a unique is drawn at its size on the map, a dot a pixel, in a slot as the bag\'s, centred over its column', async () => {
-    // A column every 20 from x 3, 19 wide for a big boss; a unique's slot 10 square, 4 in, the first row under the page
-    // tabs; its 8 by 8 inside the slot's frame.
+    // A column every 20 from x 3, 18 wide for a big boss; a unique's slot 10 square, 4 in, the first row under the page
+    // tabs; its 8 by 8 inside the slot's frame, on the map's floor.
     const top = WINDOW_TOP + TABS_H + 2
     const lit = codexPixels(shown({ ...EMPTY_CODEX, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'] }), FOES)
     const dark = codexPixels(shown(EMPTY_CODEX), FOES)
     for (const [i, key] of (['bones', 'mire', 'rot', 'rime', 'ember'] as const).entries()) {
       const left = 3 + i * 20 + 4
       const drawn: [number, number][] = []
-      for (let y = top + 1; y < top + 9; y++) for (let x = left + 1; x < left + 9; x++) if (lit[y]![x] !== dark[y]![x]) drawn.push([x, y])
+      for (let y = top + 1; y < top + 9; y++) for (let x = left + 1; x < left + 9; x++) if (lit[y]![x] !== SURFACE.floor) drawn.push([x, y])
       expect(drawn.length).toBe(UNIQUE_ART[key].join('').replace(/\./g, '').length)
       // The slot's frame round it: lit, it is not the dark one's.
       expect([lit[top]![left] !== dark[top]![left], lit[top + 9]![left + 9] !== dark[top + 9]![left + 9]]).toEqual([true, true])
@@ -218,6 +219,45 @@ describe('the codex window', () => {
     const lit = codexPixels(shown({ ...EMPTY_CODEX, uniques: ['bones'] }), FOES)
     const dark = codexPixels(shown(EMPTY_CODEX), FOES)
     expect([lit[top]![left], lit[top + 9]![left + 9], dark[top]![left]]).toEqual([SURFACE.frame, SURFACE.frame, SURFACE.line])
+  })
+
+  /** A colour as the terminal paints it: each channel on the host's 17-step grid. */
+  const painted = (hex: string) => [1, 3, 5].map(i => Math.round(Number.parseInt(hex.slice(i, i + 2), 16) / 17)).join()
+
+  test('a shape not yet slain or found is painted apart from its frame and the box\'s ground', async () => {
+    // The first unique's slot: its frame on the first row under the page tabs, 7 in; the shape inside it.
+    const top = WINDOW_TOP + TABS_H + 2
+    const dark = codexPixels(shown(EMPTY_CODEX), FOES)
+    const inside = new Set(dark.slice(top + 1, top + 9).flatMap(row => row.slice(8, 16)))
+    expect(inside.size).toBe(2)
+    expect(new Set([...inside, dark[top]![7]!].map(painted)).size).toBe(3)
+  })
+
+  test('a unique slain stands on the map\'s floor, so its outline shows as it does there', async () => {
+    const top = WINDOW_TOP + TABS_H + 2
+    const lit = codexPixels(shown({ ...EMPTY_CODEX, uniques: ['bones'] }), FOES)
+    // The bones' art, its top row '..KKKK.o': the slot's first two pixels inside the frame are its ground.
+    expect([lit[top + 1]![8], lit[top + 1]![9]]).toEqual([SURFACE.floor, SURFACE.floor])
+    expect(painted(lit[top + 1]![10]!)).not.toBe(painted(SURFACE.floor))
+  })
+
+  test('a big boss\'s box is its 16 px art and a pixel of frame round it, the row centred in the window', async () => {
+    // Five boxes 18 wide, a column every 20: 98 across, from x 3 in a window 105 wide (3 left, 4 right: the odd pixel
+    // on the right); the second row 12 under the first.
+    const y = WINDOW_TOP + TABS_H + 2 + 12
+    const dark = codexPixels(shown(EMPTY_CODEX), FOES)
+    expect([dark[y]![3], dark[y]![20], dark[y]![21], dark[y]![83], dark[y]![100], dark[y]![101]]).toEqual([SURFACE.line, SURFACE.line, BG, SURFACE.line, SURFACE.line, BG])
+  })
+
+  test('a Legendary\'s box is its art and a pixel of frame round it, as in the bag, the row centred in the window', async () => {
+    // Sword, amulet, chain, ring, kite, staff, dagger: art 6, 6, 13, 6, 13, 6 and 6 wide, so boxes 8, 8, 15, 8, 15, 8
+    // and 8, 4 apart: 94 across, from x 5 in a window 105 wide. Each box's left column is its frame, the one before
+    // it bare ground.
+    const y = WINDOW_TOP + TABS_H + 2
+    const dark = codexPixels(shown(EMPTY_CODEX), FINDS)
+    const starts = [5, 17, 29, 48, 60, 79, 91]
+    expect(starts.map(x => [dark[y]![x - 1], dark[y]![x]])).toEqual(starts.map(() => [BG, SURFACE.line]))
+    expect([dark[y]![98], dark[y]![99]]).toEqual([SURFACE.line, BG])
   })
 
   test('each row lights on its own: its entries found, the rest of the codex empty, add their colours', async () => {

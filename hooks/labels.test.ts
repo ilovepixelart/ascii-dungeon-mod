@@ -48,7 +48,7 @@ describe('the windows\' labels', () => {
     expect(said('shop')).toEqual(['25', '50', '80', '45', '50', '50', '75', '35', '60', '1'])
     expect(said('inventory-knight-epic')).toEqual(['1', '1', '1', '1', '1'])
     expect(said('start-knight')).toEqual(['KNIGHT', 'MAGE', 'ROGUE'])
-    expect(said('talent-0')).toEqual(['CRAFT', 'CRAFT', 'CRAFT'])
+    expect(said('talent-0')).toEqual(['CRAFT', 'CRAFT', 'CRAFT', 'TEST DRIVEN', 'CLEAN COMMIT', 'SHIP IT'])
     expect(said('talk-dog')).toEqual(['x 0'])
   })
 

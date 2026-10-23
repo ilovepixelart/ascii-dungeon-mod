@@ -47,7 +47,10 @@ names below point at it.
 
 ## Windows
 
-- One width (`WINDOW_W`), one title bar, a 9 by 9 close box with its X centred, a pixel of room all round.
+- One width (`WINDOW_W`), one title bar, a 7 by 7 close box (`closeBoxOf`) with its X centred, a pixel of room all round.
+- A window's content stands 2 px clear of its sides, its title bar (where no page tabs hang from it) and its bottom;
+  a portrait's box beside it 3 px off. The windows on the bag's grid (the bag, the smith, retiring, the stash, the
+  shop) keep the grid's own pixel from the edge.
 - A window's parts, top to bottom: title; picture and words; what the window shows (a bar, a stat, wares); its
   actions as buttons that say what they do. A part a window lacks leaves no hole.
 - A button says its label, never its key: the composer has the keyboard, and a key reaches the pane only after

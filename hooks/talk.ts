@@ -125,8 +125,8 @@ const ACT: Readonly<Record<Speaker, (g: Game) => Act | undefined>> = {
 }
 export const talkAction = (g: Game, who: Speaker) => ACT[who](g)
 
-const PAD = 3
-const SIDE_X = PAD + PORTRAIT + 4
+const PAD = 2
+const SIDE_X = PAD + PORTRAIT + 3
 const WORDS_W = WINDOW_W - SIDE_X - 2
 
 /** Words wrapped to the box's width (two cells of frame and padding each side), each run keeping its look. */
@@ -156,8 +156,8 @@ const layout = (g: Game, who: Speaker) => {
   const buttonRect: Rect | undefined = act === undefined ? undefined : { x: SIDE_X, y: buttonY, w: buttonW(act.label, act.cost), h: BUTTON_H }
   const sideEnd = buttonRect !== undefined ? buttonRect.y + BUTTON_H : hasStatus ? statusY + 6 : (box.y + box.h) * 2
   const end = Math.max(top + 2 + PORTRAIT, sideEnd)
-  // Even, so the window ends on a whole cell.
-  const height = Math.ceil((end + 3) / 2) * 2
+  // Two rows of room under the last (end is the row past it), even, so the window ends on a whole cell.
+  const height = Math.ceil((end + 2) / 2) * 2
   return { top, box, statusY, act, buttonRect, height }
 }
 

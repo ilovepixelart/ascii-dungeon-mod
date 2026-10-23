@@ -33,7 +33,7 @@ export const familyOf = (t: Talent) => FAMILY_OF[t]
 const GAP = 6
 const CARD_W = 26
 const CARD_H = 31
-const CARD_Y = 6
+const CARD_Y = 2
 /** The ribbon's top, down a card's face. */
 const RIBBON_Y = 4
 /** The icon at its own size inside a pixel of backdrop and a frame. */

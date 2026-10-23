@@ -13,8 +13,8 @@ import { countText, theFoe } from './names'
 import { INK, SURFACE } from './ui/tokens'
 
 const CHROME: Chrome = { title: 'YOU DIED' }
-const PAD = 3
-const SIDE_X = PAD + PORTRAIT + 4
+const PAD = 2
+const SIDE_X = PAD + PORTRAIT + 3
 const SLAIN = INK.danger
 const WAKE = { key: 'W', label: 'WAKE' }
 

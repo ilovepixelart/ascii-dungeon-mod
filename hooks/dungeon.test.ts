@@ -492,8 +492,8 @@ test('the pointer over Take lights its outline; moved off it, or out of the wind
   await move(take.x + 4, Math.floor((take.y + 5) / 2))
   const lit = await cells()
   expect(lit).not.toEqual(idle)
-  // Nothing clickable under it: as it was.
-  await move(50, 8)
+  // Nothing clickable under it, the window's left margin beside the cards: as it was.
+  await move(1, 12)
   expect(await cells()).toEqual(idle)
   await move(take.x + 4, Math.floor((take.y + 5) / 2))
   expect(await cells()).toEqual(lit)

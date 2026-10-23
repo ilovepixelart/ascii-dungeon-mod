@@ -46,7 +46,8 @@ const foe = { hp: 0, maxHp: 1, atk: 1, xp: 1, x: 0, y: 0 }
 const falls = { king: { glyph: '&', name: 'Bone King', big: 'king' as const }, rot: { glyph: 'k', name: 'the Rotking', unique: 'rot' as const }, troll: { glyph: 'T', name: 'bog troll' }, trap: undefined }
 for (const [name, killer] of Object.entries(falls)) {
   const fallen = { by: killer === undefined ? 'a trap' : `the ${killer.name}`, ...(killer === undefined ? {} : { foe: { ...foe, ...killer } }), at: { x: 0, y: 0 }, depth: 30, wake: 26, lost: 120 }
-  out.push({ name: `death-${name}`, game: { ...town, fallen, panel: 'death' } })
+  // A fall counts the death before its window opens.
+  out.push({ name: `death-${name}`, game: { ...town, fallen, deaths: 1, panel: 'death' } })
 }
 const g = kitted('knight', 'epic')
 const codexed: Game = { ...g, panel: 'codex', codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }

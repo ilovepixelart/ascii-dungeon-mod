@@ -6,10 +6,10 @@ import { WINDOW_W } from './window'
 export const UNDER_WINDOW = 6
 /** A window's hint under its keys, a line, where it has one. */
 export const HINT_ROWS = 1
-/** The pane the game plays best in: every window wide enough, the tallest (the bag and the merchant, 41 rows) whole with
- * its keys, its hint and the log under it, and the note's row. */
+/** The pane the game plays best in: every window wide enough, the tallest (the stash, its tab's grid over the bag's: 54
+ * rows) whole with its keys, its hint and the log under it, and the note's row. */
 export const BEST_COLUMNS = WINDOW_W
-export const BEST_ROWS = 49
+export const BEST_ROWS = 62
 
 /** A window of `rows` and `under` rows beneath it that the pane's `bodyRows` cannot show whole: how many it needs, counting this line. */
 export const fitNote = (rows: number, under: number, bodyRows: number): string | undefined => {

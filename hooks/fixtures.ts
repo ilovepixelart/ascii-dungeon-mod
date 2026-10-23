@@ -1,8 +1,8 @@
-import type { Foe, Game } from '../types'
+import type { Foe, Game, Item } from '../types'
 import type { OverlayBox } from './window'
 import { INK } from './ui/tokens'
 import { newGame, routeToStairs } from './game'
-import { plainItem } from './items'
+import { BAG_H, BAG_W, plainItem } from './items'
 
 /** A foe standing `ahead` cells along the hero's route to the stairs. */
 export const foeAhead = (g: Game, ahead = 1, over: Partial<Foe> = {}): Foe => {
@@ -25,3 +25,7 @@ export const plainHero = (seed = 1): Game => {
  * off ink), and its place in window pixels. */
 export const buttonsIn = (boxes: readonly OverlayBox[]) =>
   boxes.filter(b => b.role === 'button').map(b => ({ text: b.lines[0]!.map(r => r.text).join(''), isLit: b.lines[0]![0]!.color !== INK.off, x: b.x, y: b.y * 2, w: b.w, h: 2 * b.h }))
+
+/** A plain stash tab with no room left: a ring in each of its BAG_W by BAG_H cells, ids from `from`. */
+export const fullTab = (from: number): Item[] =>
+  Array.from({ length: BAG_W * BAG_H }, (_, i) => ({ ...plainItem({ nextId: from + i }, 'ring'), x: Math.floor(i / BAG_H), y: i % BAG_H }))

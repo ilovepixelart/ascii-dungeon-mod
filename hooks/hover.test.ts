@@ -17,6 +17,7 @@ import { talentGesture, talentHot } from './talentwindow'
 import { talkAction, talkHot } from './talk'
 import { beltSlotRect } from './pieces'
 import type { Gesture, Rect } from './window'
+import { WINDOW_TOP } from './window'
 import { arrive } from './world'
 
 /** A click on window pixel (`x`, `y`). */
@@ -67,12 +68,12 @@ describe('the hover lights what a click acts on', () => {
     expect(shopHot(g, IDLE_SHOP).length - shopHot({ ...g, belt: g.belt.map(() => null) }, IDLE_SHOP).length).toBe(1)
   })
 
-  test('the stash: each stored item\'s row is lit, and a click on it chooses it', async () => {
-    const stored = [plainItem({ nextId: 6001 }, 'ring'), plainItem({ nextId: 6002 }, 'amulet')]
+  test('the stash: each stored item is lit on the tab\'s grid, and a click on it chooses it', async () => {
+    const stored = [plainItem({ nextId: 6001 }, 'ring'), { ...plainItem({ nextId: 6002 }, 'amulet'), x: 2, y: 3 }]
     const g = inTown({ stashed: [stored], bag: [] })
-    const list = chestOverlay(g, CHEST_UI_IDLE).find(b => b.role === 'list')!
-    stored.forEach((item, i) => {
-      const p = { x: list.x + 3, y: (list.y + 1 + i) * 2 + 1 }
+    stored.forEach(item => {
+      // Its cell's middle on the tab's grid: the frame from x 4, 2 under the title bar.
+      const p = { x: 4 + item.x * 7 + 3, y: WINDOW_TOP + 2 + item.y * 7 + 3 }
       expect(chestGesture(g, CHEST_UI_IDLE, tap(p.x, p.y)).ui.stored).toBe(item.id)
       expect(lit(chestHot(g, CHEST_UI_IDLE), p)).toBe(true)
     })

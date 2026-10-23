@@ -2,13 +2,14 @@
 import type { BeltSlot, Consumable, Game, Item, Rarity } from '../types'
 import { KINDS, TIERS, emptyBelt, slotOf } from './consumables'
 import type { Tier } from './consumables'
-import { baseOf, repack, priceOf } from './items'
+import { baseOf, fit, repack, priceOf } from './items'
+import { TAB_PRICES, laidOut } from './stash'
 import { BIG_EVERY, generate, layoutOf, themeOf } from './map'
 import type { Theme } from './map'
 
 /** The theme of a depth before version 9 added the fungal deep and the frozen caverns: three themes, five depths each. */
 const themeBefore9 = (depth: number): Theme => (['crypt', 'flooded', 'forge'] as const)[Math.floor((depth - 1) / 5) % 3]!
-import { FOG, SAVE_VERSION, arrive, newGame } from './world'
+import { FOG, SAVE_VERSION, arrive, levelOf, newGame } from './world'
 
 type LegacyItem = Omit<Item, 'base' | 'crit' | 'xp' | 'rarity'> & { rarity: string; base?: string; crit?: number; xp?: number }
 
@@ -102,6 +103,27 @@ const toVersion12 = (boons: unknown): Game['boons'] =>
 /** Version 13: the stash has tabs; what one list held is its first. */
 const toVersion13 = (stashed: unknown): Game['stashed'] => [Array.isArray(stashed) ? (stashed as Item[]) : []]
 
+/** Version 14: a plain tab is a grid the bag's size, where it was a list of ten items of any size. Each tab's items
+ * are laid out on its grid; what it cannot hold goes to the next tab with room, then onto a plain tab not yet bought
+ * (given, so nothing is lost), then into the bag, and what is still left waits on the floor by the portal. */
+const toVersion14 = (g: Game): Game => {
+  const { tabs, left } = laidOut(g.stashed)
+  const out: Game = { ...g, stashed: tabs }
+  for (const item of left) {
+    const hasRoom = out.stashed.some(t => fit(t, item.w, item.h) !== null)
+    if (!hasRoom && out.stashed.length < TAB_PRICES.length) out.stashed = [...out.stashed, []]
+    const tab = out.stashed.findIndex(t => fit(t, item.w, item.h) !== null)
+    const spot = fit(out.bag, item.w, item.h)
+    if (tab >= 0) out.stashed = out.stashed.map((t, i) => (i === tab ? [...t, { ...item, ...fit(t, item.w, item.h)! }] : t))
+    else if (spot !== null) out.bag = [...out.bag, { ...item, ...spot }]
+    else {
+      const at = out.portal ?? levelOf(out).start
+      out.floor = [...(out.floor ?? []), { ...at, item }]
+    }
+  }
+  return out
+}
+
 /** The save's fields brought to the current shape, each migration it is behind on run, stamped current. */
 const reshaped = (game: Game, version: number): Game => {
   let g: Game = { ...newGame(game.seed), ...game }
@@ -111,6 +133,7 @@ const reshaped = (game: Game, version: number): Game => {
   if (version < 7) g = { ...g, belt: toVersion7(g.belt as (LegacySlot | BeltSlot | null)[]) }
   if (version < 12) g = { ...g, boons: toVersion12(g.boons as unknown) }
   if (version < 13) g = { ...g, stashed: toVersion13(game.stashed as unknown) }
+  if (version < 14) g = toVersion14(g)
   // Version 4 added the town (`where`, `portal`): the new-game defaults spread above put an older save in the dungeon.
   // A view that no longer exists (4 was briefly a pixel view) opens on the pixel view.
   if (![1, 2, 3].includes(g.zoom)) g = { ...g, zoom: 3 }

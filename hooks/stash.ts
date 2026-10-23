@@ -1,12 +1,13 @@
-// The town's stash, kept from hero to hero: plain tabs of STASH_SIZE items, bought one after another, and two tabs of
-// a place each, one for every class set's piece and one for every Legendary. Pure rules over the game; the window
-// is chest.ts.
+// The town's stash, kept from hero to hero: plain tabs each a grid the bag's size, bought one after another, and two
+// tabs of a place each, one for every class set's piece and one for every Legendary. Pure rules over the game; the
+// window is chest.ts.
 import type { Game, Item } from '../types'
 import { LEGENDARIES, SETS } from './items/catalog'
+import { fit, fitsAt, repack } from './items/bag'
 import { countText } from './names'
 
-/** How many items a plain tab holds. */
-export const STASH_SIZE = 10
+/** A plain tab is a grid the bag's size (BAG_W by BAG_H cells): an item on it lies at its cell (`x`, `y`), as in the
+ * bag, and takes its own w by h of them. */
 /** What each plain tab costs, in the order they are bought; the first is the town's from the start. */
 export const TAB_PRICES: readonly number[] = [0, 1000, 2500, 5000]
 /** What the sets' tab and the Legendaries' tab each cost. */
@@ -34,22 +35,42 @@ export const specialTabOf = (item: Item): 'sets' | 'legends' | undefined =>
 
 const isSamePlace = (a: Item, b: Item) => (a.set !== undefined ? a.set === b.set && a.base === b.base : a.power === b.power)
 
+/** Where on a plain tab an item would go: the first cell it fits at, column by column, as in the bag; null if none. */
+const spotOn = (tab: readonly Item[] | undefined, item: Item) => (tab === undefined ? null : fit(tab, item.w, item.h))
+
 /** Where an item stored goes: its own special tab, bought and its place there empty; else plain tab `preferred` with
- * room; else the first plain tab with room. Undefined when there is none. */
+ * room for it; else the first plain tab with room for it. Undefined when there is none. */
 export const whereToStore = (g: Stash, item: Item, preferred = 0): StashTab | undefined => {
   const special = specialTabOf(item)
   const held = special === undefined ? undefined : tabItems(g, special)
   if (special !== undefined && held !== undefined && !held.some(i => isSamePlace(i, item))) return special
-  if ((g.stashed[preferred]?.length ?? STASH_SIZE) < STASH_SIZE) return preferred
-  const free = g.stashed.findIndex(t => t.length < STASH_SIZE)
+  if (spotOn(g.stashed[preferred], item) !== null) return preferred
+  const free = g.stashed.findIndex(t => spotOn(t, item) !== null)
   return free < 0 ? undefined : free
 }
 
-/** The item put on `tab`, which must be bought. */
+/** The item put on `tab`, which must be bought and, a plain one, have room for it: at its first free cell there. */
 export const putIn = (g: Game, item: Item, tab: StashTab) => {
   if (tab === 'sets') g.stashSets = [...(g.stashSets ?? []), item]
   else if (tab === 'legends') g.stashLegends = [...(g.stashLegends ?? []), item]
-  else g.stashed = g.stashed.map((t, i) => (i === tab ? [...t, item] : t))
+  else g.stashed = g.stashed.map((t, i) => (i === tab ? [...t, { ...item, ...spotOn(t, item)! }] : t))
+}
+
+/** Whether a plain tab's items each lie inside its grid, over no other. */
+export const isLaidOut = (tab: readonly Item[]) => tab.every(i => fitsAt(tab, i.w, i.h, i.x, i.y, i.id))
+
+/** Tabs that held a list of items each laid out on their grids: each tab repacked, largest first, then what it could
+ * not hold onto the first tab with room. What no tab holds is handed back, for the caller to keep. */
+export const laidOut = (tabs: readonly (readonly Item[])[]): { tabs: Item[][]; left: Item[] } => {
+  const packed = tabs.map(t => repack(t))
+  const out = packed.map(p => p.bag)
+  const left: Item[] = []
+  for (const item of packed.flatMap(p => p.left)) {
+    const at = out.findIndex(t => fit(t, item.w, item.h) !== null)
+    if (at < 0) left.push(item)
+    else out[at] = [...out[at]!, { ...item, ...fit(out[at]!, item.w, item.h)! }]
+  }
+  return { tabs: out, left }
 }
 
 /** The stashed item `id` taken off its tab; undefined when the stash has none. */
@@ -61,9 +82,6 @@ export const takeOut = (g: Game, id: number): Item | undefined => {
   if (g.stashLegends !== undefined) g.stashLegends = g.stashLegends.filter(i => i.id !== id)
   return item
 }
-
-/** How many items the stash's bought tabs hold in all. */
-export const stashRoom = (g: Stash) => g.stashed.length * STASH_SIZE + (g.stashSets === undefined ? 0 : SET_PLACES.length) + (g.stashLegends === undefined ? 0 : LEGEND_PLACES.length)
 
 /** What a tab costs. */
 export const tabPrice = (tab: StashTab) => (typeof tab === 'number' ? (TAB_PRICES[tab] ?? Infinity) : SPECIAL_TAB_PRICE)

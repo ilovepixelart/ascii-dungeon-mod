@@ -1,14 +1,17 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Rarity } from '../types'
-import { STASH_SIZE } from './game'
-import { BAG_X, BAG_Y } from './inventory'
 import { CELL } from './icons'
 import { BAG_H, BAG_W, RARITY_COLOR, plainItem } from './items'
-import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
+import { CLOSE_BOX, WINDOW_TOP, chromeBoxes } from './window'
 import type { Gesture, OverlayBox } from './window'
-import { CHEST_UI_IDLE, chestGesture, chestTitle, chestOverlay, chestPixels, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
+import { CHEST_H, CHEST_UI_IDLE, chestGesture, chestOverlay, chestPixels, nextStored, nextTab, storeOn, whyNotStore, whyNotTake } from './chest'
+import { fullTab } from './fixtures'
+import { BG, GRID, canvas } from './canvas'
+import { itemGrid } from './pieces'
 import { SET_PLACES } from './stash'
+import { baseOf } from './items'
+const baseNameOf = (base: string) => baseOf(base)?.name ?? base
 import { INK } from './ui/tokens'
 import { CURSOR } from './pieces'
 import type { ChestUi } from './chest'
@@ -17,9 +20,13 @@ import { newGame } from './world'
 const hero = (): Game => ({ ...newGame(1, 'knight'), bag: [], stashed: [[]] })
 const item = (g: Game, base: string, rarity: Rarity, over: Partial<Item> = {}): Item => ({ ...plainItem(g, base, rarity), x: 0, y: 0, ...over })
 const click = (x: number, y: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x, y }, at: { x, y }, button })
-// A list row: under the tabs (TABS_H) and their rule, the list's frame, then a row an item.
-const onRow = (i: number, button: 'left' | 'right' = 'left') => click(5.5, (WINDOW_TOP + TABS_H + 2) / 2 + 1 + i + 0.5, button)
-const onBag = (it: Item, button: 'left' | 'right' = 'left') => click(BAG_X + it.x * CELL + 3.5, (WINDOW_TOP + BAG_Y + it.y * CELL + 3) / 2 + 0.25, button)
+/** The tab's grid, its frame from x 4 and 2 under the title bar; the bag's 4 under its 43 rows: a cell's middle. */
+const STASH_TOP = WINDOW_TOP + 2
+const BAG_TOP = STASH_TOP + BAG_H * CELL + 1 + 4
+const onStored = (it: Item, button: 'left' | 'right' = 'left') => click(4 + it.x * CELL + 3.5, (STASH_TOP + it.y * CELL + 3) / 2 + 0.25, button)
+const onBag = (it: Item, button: 'left' | 'right' = 'left') => click(4 + it.x * CELL + 3.5, (BAG_TOP + it.y * CELL + 3) / 2 + 0.25, button)
+// A row of the sets' or the Legendaries' list: over the tab's grid's place, its frame, then a row an item.
+const onRow = (i: number, button: 'left' | 'right' = 'left') => click(7.5, STASH_TOP / 2 + 1 + i + 0.5, button)
 const lines = (g: Game, ui: ChestUi, role: string) => chestOverlay(g, ui).find(b => b.role === role)?.lines.map(l => l.map(r => r.text).join(''))
 const onEntry = (g: Game, ui: ChestUi) => {
   const m = chestOverlay(g, ui).find(b => b.role === 'menu')!
@@ -27,34 +34,55 @@ const onEntry = (g: Game, ui: ChestUi) => {
 }
 
 describe('the chest', () => {
-  test('lists each stored item in a row, the rest of its room empty, the chosen one marked', async () => {
+  test('lays a plain tab\'s items on a grid the bag\'s size, each at its cells as the bag draws them, the chosen one framed', async () => {
     const g = hero()
-    g.stashed = [[item(g, 'ring', 'rare', { id: 501, name: 'Band of Wit' }), item(g, 'robe', 'epic', { id: 502, name: 'Robe of Embers' })]]
-    const list = lines(g, { stored: 502, menu: false, tab: 0 }, 'list')!
-    expect(list.length).toBe(STASH_SIZE)
-    expect(list.slice(0, 3)).toEqual(['  Band of Wit', '> Robe of Embers', '  -'])
+    g.stashed = [[item(g, 'ring', 'rare', { id: 501, x: 0, y: 0 }), item(g, 'robe', 'epic', { id: 502, x: 3, y: 2 })]]
+    const px = chestPixels(g, { stored: 502, menu: false, tab: 0 })
+    // The bag's own grid drawing of the same items, the same one chosen: the tab's grid is it, pixel for pixel.
+    const drawn = canvas(BAG_W * CELL + 1, BAG_H * CELL + 1)
+    itemGrid(drawn, { ...g, cursor: 502 }, g.stashed[0]!, 0, 0, BAG_W, BAG_H)
+    const tab = px.slice(STASH_TOP, STASH_TOP + BAG_H * CELL + 1).map(r => r.slice(4, 4 + BAG_W * CELL + 1))
+    expect(tab).toEqual(drawn.px)
+    expect(lines(g, CHEST_UI_IDLE, 'list')).toBeUndefined()
   })
 
-  test('a clicked row is chosen and shows its card; again, its menu: Take', async () => {
+  test('frames both grids from x 4, so a chosen item\'s brackets, 2 px outside it, keep 2 px clear of the edge', async () => {
+    const px = chestPixels(hero(), CHEST_UI_IDLE)
+    // Each grid's left line on column 4, bare ground on column 3.
+    for (const y of [STASH_TOP + 3, BAG_TOP + 3]) expect([px[y]![3], px[y]![4]]).toEqual([BG, GRID])
+  })
+
+  test('stands the tab\'s grid over the bag\'s, the cards beside them: 54 rows, its tabs and the gold in the title bar', async () => {
+    const g = { ...hero(), gold: 1234 }
+    expect(CHEST_H).toBe(108)
+    const px = chestPixels(g, CHEST_UI_IDLE)
+    const said = chromeBoxes(px).map(b => b.lines[0]!.map(r => r.text).join(''))
+    expect(said).toEqual(['1', '2', '3', '4', 'SETS', 'LEGENDS', '1,234'])
+  })
+
+  test('a clicked stored item is chosen and shows its card; again, its menu: Take', async () => {
     const g = hero()
-    g.stashed = [[item(g, 'ring', 'rare', { id: 501 })]]
-    const once = chestGesture(g, CHEST_UI_IDLE, onRow(0))
+    const ring = item(g, 'ring', 'rare', { id: 501, x: 2, y: 3 })
+    g.stashed = [[ring]]
+    const onRow = () => onStored(ring)
+    const once = chestGesture(g, CHEST_UI_IDLE, onRow())
     expect(once).toEqual({ ui: { stored: 501, menu: false, tab: 0 }, actions: [] })
     expect(lines(g, once.ui, 'card')?.[0]).toBe('In your stash')
-    const twice = chestGesture(g, once.ui, onRow(0))
+    const twice = chestGesture(g, once.ui, onRow())
     expect(twice.ui).toEqual({ stored: 501, menu: true, tab: 0 })
     expect(lines(g, twice.ui, 'menu')).toEqual(['t Take'])
     expect(chestGesture(g, twice.ui, onEntry(g, twice.ui))).toEqual({ ui: CHEST_UI_IDLE, actions: [{ kind: 'retrieve', id: 501 }] })
   })
 
-  test('choosing a row lets go of a chosen bag item; an empty row chooses nothing', async () => {
+  test('choosing a stored item lets go of a chosen bag item; an empty cell of the tab chooses nothing', async () => {
     const g = hero()
     const ring = item(g, 'ring', 'common', { id: 7 })
     g.bag = [ring]
     g.cursor = 7
-    g.stashed = [[item(g, 'ring', 'rare', { id: 501 })]]
-    expect(chestGesture(g, CHEST_UI_IDLE, onRow(0)).actions).toEqual([{ kind: 'deselect' }])
-    expect(chestGesture(g, CHEST_UI_IDLE, onRow(5)).ui).toEqual(CHEST_UI_IDLE)
+    const stored = item(g, 'ring', 'rare', { id: 501 })
+    g.stashed = [[stored]]
+    expect(chestGesture(g, CHEST_UI_IDLE, onStored(stored)).actions).toEqual([{ kind: 'deselect' }])
+    expect(chestGesture(g, CHEST_UI_IDLE, onStored({ ...stored, x: 5, y: 4 })).ui).toEqual(CHEST_UI_IDLE)
   })
 
   test('with no room in the bag, Take says so and does nothing', async () => {
@@ -69,9 +97,9 @@ describe('the chest', () => {
     expect(chestGesture(g, open, onEntry(g, open))).toEqual({ ui: open, actions: [] })
   })
 
-  test('the step key goes through the chest and wraps; an empty chest chooses nothing', async () => {
+  test('the step key goes through the chest, column by column, and wraps; an empty chest chooses nothing', async () => {
     const g = hero()
-    g.stashed = [[item(g, 'ring', 'rare', { id: 501 }), item(g, 'ring', 'rare', { id: 502 })]]
+    g.stashed = [[item(g, 'ring', 'rare', { id: 502, x: 1, y: 0 }), item(g, 'ring', 'rare', { id: 501, x: 0, y: 4 })]]
     expect(nextStored(g, CHEST_UI_IDLE).stored).toBe(501)
     expect(nextStored(g, { stored: 501, menu: true, tab: 0 })).toEqual({ stored: 502, menu: false, tab: 0 })
     expect(nextStored(g, { stored: 502, menu: false, tab: 0 }).stored).toBe(501)
@@ -80,10 +108,11 @@ describe('the chest', () => {
 })
 
 describe('a right-click moves at once', () => {
-  test('on a row, it takes the item out, nothing left chosen', async () => {
+  test('on a stored item, it takes the item out, nothing left chosen', async () => {
     const g = hero()
-    g.stashed = [[item(g, 'ring', 'rare', { id: 501 })]]
-    expect(chestGesture(g, CHEST_UI_IDLE, onRow(0, 'right'))).toEqual({ ui: CHEST_UI_IDLE, actions: [{ kind: 'retrieve', id: 501 }] })
+    const ring = item(g, 'ring', 'rare', { id: 501 })
+    g.stashed = [[ring]]
+    expect(chestGesture(g, CHEST_UI_IDLE, onStored(ring, 'right'))).toEqual({ ui: CHEST_UI_IDLE, actions: [{ kind: 'retrieve', id: 501 }] })
   })
 
   test('on a bag item, it stores it on the tab shown', async () => {
@@ -98,14 +127,15 @@ describe('a right-click moves at once', () => {
   test('when the move cannot be made, it opens the menu, which says why', async () => {
     const g = hero()
     g.bag = [item(g, 'ring', 'common', { id: 7, w: 8, h: 6 })]
-    g.stashed = [[item(g, 'ring', 'rare', { id: 501 })]]
-    const taken = chestGesture(g, CHEST_UI_IDLE, onRow(0, 'right'))
+    const stored = item(g, 'ring', 'rare', { id: 501 })
+    g.stashed = [[stored]]
+    const taken = chestGesture(g, CHEST_UI_IDLE, onStored(stored, 'right'))
     expect(taken).toEqual({ ui: { stored: 501, menu: true, tab: 0 }, actions: [] })
     expect(lines(g, taken.ui, 'menu')).toEqual(['t Take  no room in your bag'])
     const full = hero()
     const ring = item(full, 'ring', 'common', { id: 7 })
     full.bag = [ring]
-    full.stashed = [Array.from({ length: STASH_SIZE }, (_, i) => item(full, 'ring', 'common', { id: 600 + i }))]
+    full.stashed = [fullTab(600)]
     expect(chestGesture(full, CHEST_UI_IDLE, onBag(ring, 'right'))).toEqual({ ui: { ...CHEST_UI_IDLE, menu: true }, actions: [{ kind: 'select', id: 7 }] })
   })
 })
@@ -129,7 +159,7 @@ describe('the bag beside it', () => {
     const ring = item(g, 'ring', 'common', { id: 7 })
     g.bag = [ring]
     g.cursor = 7
-    g.stashed = [Array.from({ length: STASH_SIZE }, (_, i) => item(g, 'ring', 'common', { id: 600 + i }))]
+    g.stashed = [fullTab(600)]
     expect(whyNotStore(g, ring)).toBe('the chest is full')
     expect(whyNotStore({ ...g, stashed: [g.stashed[0]!.slice(1)] }, ring)).toBeUndefined()
     const open: ChestUi = { stored: null, menu: true, tab: 0 }
@@ -142,7 +172,7 @@ describe('the bag beside it', () => {
     g.bag = [ring]
     g.cursor = 7
     g.stashed = [[item(g, 'ring', 'rare', { id: 501 })]]
-    const frameAt = (ui: ChestUi) => chestPixels(g, ui)[WINDOW_TOP + BAG_Y + ring.y * CELL - 1]?.[BAG_X + ring.x * CELL + 3]
+    const frameAt = (ui: ChestUi) => chestPixels(g, ui)[BAG_TOP + ring.y * CELL - 1]?.[4 + ring.x * CELL + 3]
     expect(frameAt(CHEST_UI_IDLE)).toBe(CURSOR)
     expect(frameAt({ stored: 501, menu: false, tab: 0 })).not.toBe(CURSOR)
   })
@@ -151,7 +181,8 @@ describe('the bag beside it', () => {
     const g = hero()
     g.bag = [item(g, 'ring', 'common', { id: 7 })]
     g.cursor = 7
-    expect(chestGesture(g, CHEST_UI_IDLE, click(100.5, 31.5))).toEqual({ ui: CHEST_UI_IDLE, actions: [{ kind: 'deselect' }] })
+    // Beside the grids, where no card stands.
+    expect(chestGesture(g, CHEST_UI_IDLE, click(100.5, 50.5))).toEqual({ ui: CHEST_UI_IDLE, actions: [{ kind: 'deselect' }] })
     const [x, y] = CLOSE_BOX
     expect(chestGesture(g, CHEST_UI_IDLE, click(x + 2.5, (y + 2) / 2)).actions).toEqual([{ kind: 'panel', panel: 'stash' }])
     expect(chestGesture(g, CHEST_UI_IDLE, { type: 'drag', from: { x: 5, y: 15 }, at: { x: 30, y: 15 } }).actions).toEqual([])
@@ -163,12 +194,12 @@ describe('the stash, crowded', () => {
   const crowded = (): Game => {
     const g = hero()
     const bag = Array.from({ length: BAG_W * BAG_H }, (_, i) => ({ ...plainItem({ nextId: 7000 + i }, 'ring'), w: 1, h: 1, x: Math.floor(i / BAG_H), y: i % BAG_H }))
-    // Epics with every stat and a trigger: cards too tall to fit under the list, the last row's reaching furthest down.
-    return { ...g, bag, stashed: [Array.from({ length: STASH_SIZE }, (_, i) => item(g, 'amulet', 'epic', { id: 8000 + i, trigger: 'thorns', atk: 1, def: 1, hp: 1, crit: 1, xp: 1 }))] }
+    // Epics with every stat and a trigger, a tab's every cell: cards as tall as they come.
+    return { ...g, bag, stashed: [fullTab(8000).map(i => ({ ...i, base: 'amulet', rarity: 'epic' as const, trigger: 'thorns' as const, atk: 1, def: 1, hp: 1, crit: 1, xp: 1 }))] }
   }
   const overlap = (a: OverlayBox, b: OverlayBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
 
-  test('a chosen stored item\'s card and menu never lie over the chest\'s list', async () => {
+  test('a chosen stored item\'s card and menu never lie over one another', async () => {
     const g = crowded()
     const hits: string[] = []
     for (const stored of g.stashed[0]!) for (const menu of [false, true]) {
@@ -180,32 +211,23 @@ describe('the stash, crowded', () => {
     expect(hits).toEqual([])
   })
 
-  test('a stored name too long for its row shows as its base\'s name', async () => {
+  test('on the sets\' tab, a stored name too long for its row shows as its base\'s name', async () => {
     const g = hero()
-    const long = item(g, 'boots', 'rare', { name: 'Refactored Leather Boots of Fast Feedback' })
-    const list = chestOverlay({ ...g, stashed: [[long]] }, CHEST_UI_IDLE).find(b => b.role === 'list')!
-    expect(lines({ ...g, stashed: [[long]] }, CHEST_UI_IDLE, 'list')![0]).toBe('  Leather Boots')
+    const long = item(g, 'boots', 'rare', { name: 'Refactored Leather Boots of Fast Feedback and the Long Code Review' })
+    const board = { ...g, stashSets: [{ ...long, set: SET_PLACES[0]!.set as Item['set'], base: SET_PLACES[0]!.base }] }
+    const list = chestOverlay(board, { ...CHEST_UI_IDLE, tab: 'sets' }).find(b => b.role === 'list')!
+    expect(lines(board, { ...CHEST_UI_IDLE, tab: 'sets' }, 'list')![0]).toBe(`  ${baseNameOf(SET_PLACES[0]!.base)}`)
     expect(list.lines.every(l => l.map(r => r.text).join('').length <= list.w - 4)).toBe(true)
   })
 })
 
 describe('the stash\'s tabs', () => {
-  test('the title counts the tab shown: what it holds of its room; a tab not bought, no count', async () => {
-    const g = hero()
-    g.stashed = [Array.from({ length: 4 }, (_, i) => item(g, 'ring', 'common', { id: 600 + i }))]
-    g.stashSets = [{ ...item(g, 'ring', 'epic', { id: 700 }), set: SET_PLACES[0]!.set as Item['set'], base: SET_PLACES[0]!.base }]
-    // Nine places on the sets' tab: three sets of three pieces.
-    expect([0, 'sets', 1, 'legends'].map(tab => chestTitle(g, { ...CHEST_UI_IDLE, tab: tab as ChestUi['tab'] }))).toEqual(['STASH 4/10', 'STASH 1/9', 'STASH', 'STASH'])
-  })
-
-  // The tabs from x 2 in the window's body rows 14 to 23: 1, 2, 3, 4 three cells each and a cell apart, then SETS and
-  // LEGENDS; a click on one at its middle row.
-  const onTab = (x: number) => click(x + 0.5, 9.5)
+  // The tabs in the title bar from x 2: 1, 2, 3, 4 three cells each and a cell apart, then SETS and LEGENDS; a click
+  // on one on its middle row.
+  const onTab = (x: number) => click(x + 0.5, 2.5)
   const on = (tab: ChestUi['tab']): ChestUi => ({ ...CHEST_UI_IDLE, tab })
-  const tabLabels = (g: Game, ui: ChestUi) => chestOverlay(g, ui).filter(b => b.role === 'tabs').map(b => b.lines[0]![0]!.text)
 
   test('are the four plain ones, then the sets\' and the Legendaries\'; a click on one shows it', async () => {
-    expect(tabLabels(hero(), CHEST_UI_IDLE)).toEqual(['1', '2', '3', '4', 'SETS', 'LEGENDS'])
     expect(chestGesture(hero(), CHEST_UI_IDLE, onTab(7)).ui).toEqual(on(1))
     expect(chestGesture(hero(), CHEST_UI_IDLE, onTab(20)).ui).toEqual(on('sets'))
     expect(chestGesture(hero(), CHEST_UI_IDLE, onTab(28)).ui).toEqual(on('legends'))
@@ -224,18 +246,18 @@ describe('the stash\'s tabs', () => {
   })
 
   test('Buy buys the tab shown, only when it can', async () => {
-    // Buy, 7 wide, centred under the price box (44 wide from x 1): from x 19; from pixel row 36, its words' row cell 19.
-    const onBuy = click(22.5, 19.5)
+    // Buy, 7 wide, centred under the price box (57 wide from x 4): from x 29; from pixel row 26, its words' row cell 14.
+    const onBuy = click(32.5, 14.5)
     expect(chestGesture({ ...hero(), gold: 1000 }, on(1), onBuy).actions).toEqual([{ kind: 'buyTab', tab: 1 }])
     expect(chestGesture(hero(), on(1), onBuy).actions).toEqual([])
     expect(chestGesture({ ...hero(), gold: 3000 }, on('sets'), onBuy).actions).toEqual([{ kind: 'buyTab', tab: 'sets' }])
   })
 
-  test('a bought tab lists its items, and a bag item stored from it goes there', async () => {
+  test('a bought tab shows its items, and a bag item stored from it goes there', async () => {
     const g = hero()
     const ring = item(g, 'ring', 'rare', { id: 41 })
     const two = { ...g, stashed: [[], [ring]] }
-    expect(lines(two, on(1), 'list')![0]).toBe(`  ${ring.name}`)
+    expect(chestGesture(two, on(1), onStored(ring)).ui).toEqual({ ...on(1), stored: 41 })
     expect(storeOn(on(1))).toEqual({ kind: 'store', tab: 1 })
     expect(storeOn(on('sets'))).toEqual({ kind: 'store' })
   })

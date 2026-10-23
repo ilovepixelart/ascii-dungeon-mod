@@ -6,7 +6,7 @@ import { BAG_H, BAG_W, RARE_KILLS, SETS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } f
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
 import { LOG_KEPT, LOOP_KILLS, isBossDepth } from './game'
-import { STASH_SIZE, TAB_PRICES, specialTabOf, stashedItems } from './stash'
+import { TAB_PRICES, isLaidOut, specialTabOf, stashedItems } from './stash'
 import { CALM_CALLS } from './balance'
 import { TALENT_EVERY } from './talents'
 import { pairOf, tierStart } from './deep'
@@ -144,8 +144,8 @@ const RULES: Readonly<Record<string, Rule>> = {
   },
   'stash within its size': g => {
     if (g.stashed.length < 1 || g.stashed.length > TAB_PRICES.length) return `${g.stashed.length} plain tabs`
-    const over = g.stashed.findIndex(t => t.length > STASH_SIZE)
-    return over < 0 ? undefined : `${g.stashed[over]!.length} items on tab ${over + 1} of ${STASH_SIZE}`
+    const over = g.stashed.findIndex(t => !isLaidOut(t))
+    return over < 0 ? undefined : `tab ${over + 1}'s items off its grid or over one another`
   },
   'a place each on the stash\'s sets\' and Legendaries\' tabs': g => {
     const sets = g.stashSets ?? []

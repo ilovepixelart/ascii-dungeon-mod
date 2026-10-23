@@ -47,7 +47,7 @@ fullscreen layout (`/tui fullscreen`).
 | 105 columns or wider | the map, the strip and every window in pixels |
 | 80 to 104 columns | the map and the strip in pixels, a compact inventory |
 | narrower | the game as text |
-| 49 rows or taller | every window whole with its keys; a shorter pane scrolls, and says by how much on its top row |
+| 62 rows or taller | every window whole with its keys; a shorter pane scrolls, and says by how much on its top row |
 
 With the mouse: click the map to walk there (a foe, to charge it). On a pane of 105 columns or more the dash under
 it has an HP orb and an XP orb (either opens the character sheet), the belt (a slot drinks), buttons in its corners for

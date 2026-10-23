@@ -7,7 +7,7 @@ import { foeAhead, plainHero } from './fixtures'
 import { BOSS_HOLD, BOSS_KEYS, FOE_HOLD, FOE_KEYS, HERO_HOLD, HERO_KEYS, HERO_REST, bossFall, fallDim, foeFall, heroFall } from './fall'
 import type { Pixel } from './fall'
 import { deathGesture, deathHeight, deathOverlay, killerArt, killerName } from './death'
-import { BOSS_ART, PX } from './pixelart'
+import { BOSS_ART, PX, THING_ART } from './pixelart'
 import { HIT_FRAMES, deathScene, frameOf, hitFramesFor, hitsBetween } from './pixels'
 import type { Hit } from './pixels'
 import { CLOSE_BOX, WINDOW_W } from './window'
@@ -144,6 +144,15 @@ describe('the death window', () => {
   test('its portrait is the killer as it stood on its theme: a big boss its own art', async () => {
     const f = after.fallen!
     expect(killerArt({ ...f, foe: { ...f.foe!, glyph: '&', big: 'king' } })).toBe(BOSS_ART.king)
+  })
+
+  test('a trap\'s portrait stands up, its spikes over its plate, mirrored, where the map\'s lies flat on the floor', async () => {
+    const art = killerArt({ ...after.fallen!, foe: undefined, by: 'a trap' })
+    expect(art).not.toBe(THING_ART['^'])
+    expect(art.length).toBe(8)
+    expect(art.map(row => [...row].reverse().join(''))).toEqual([...art])
+    // Something on more than half of its rows: it rises, where the map's plate takes its last four.
+    expect(art.filter(row => row !== '........').length).toBeGreaterThan(4)
   })
 
   test('it says who, where, the toll and where the hero wakes', async () => {

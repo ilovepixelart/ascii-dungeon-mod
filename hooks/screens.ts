@@ -124,7 +124,7 @@ export const shots = (): Shot[] => {
   const falls = { king: { glyph: '&', name: 'Bone King', big: 'king' as const }, rot: { glyph: 'k', name: 'the Rotking', unique: 'rot' as const }, troll: { glyph: 'T', name: 'bog troll' }, trap: undefined }
   for (const [name, killer] of Object.entries(falls)) {
     const fallen = { by: killer === undefined ? 'a trap' : `the ${killer.name}`, ...(killer === undefined ? {} : { foe: { ...foe, ...killer } }), at: { x: 0, y: 0 }, depth: 30, wake: 26, lost: 120 }
-    const dead = { ...town, fallen, panel: 'death' as const }
+    const dead = { ...town, fallen, deaths: 1, panel: 'death' as const }
     out.push(shot(`death-${name}`, deathPixels(dead), deathOverlay(dead)))
   }
   out.push(...heroShots(kitted('knight', 'epic')))

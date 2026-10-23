@@ -1,6 +1,7 @@
 // The stash's window: its tabs in the title bar with the gold; the tab shown over the bag, each a grid the bag's size;
 // the chosen item's card and its menu beside them. A plain tab's items lie on its grid as the bag's do; the sets' and
-// the Legendaries' tabs a row a place, filled or not; a tab not yet bought, its price and a Buy button. An item of the
+// the Legendaries' tabs are boards, a slot a place, each its piece's size, the piece in its tier's box or its shape
+// dark; a tab not yet bought, its price and a Buy button. An item of the
 // tab or the bag is chosen with a click and shows its card; a second click opens its menu: take it out, or store it.
 // A right-click takes it out or stores it at once. Pure: the click layer reports whole gestures, this decides the
 // window's next state and the game actions to apply.
@@ -9,10 +10,10 @@ import type { Action, Run } from './game'
 import { LEGEND_PLACES, SET_PLACES, tabItems, tabName, tabPrice, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
 import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit } from './items'
-import { canvas } from './canvas'
-import { CELL } from './icons'
+import { GRID, SLOT_BG, art, canvas, fill, frame } from './canvas'
+import { CELL, ICONS } from './icons'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, button, buttonBox, buttonW, cellBox, gridBox, itemGrid, runX, itemOutline, onCell } from './pieces'
+import { BUTTON_H, CURSOR, GHOST_INK, OFF_CLASS, button, buttonBox, buttonW, cellBox, centered, drawItem, gridBox, itemGrid, runX, itemOutline, onCell } from './pieces'
 import type { ButtonState } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, remembered, textTabRects, uncovered, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect, Tab, Weighted } from './window'
@@ -58,30 +59,57 @@ export const whyNotTake = (g: Game, item: Item) => (fit(g.bag, item.w, item.h) =
 const isBought = (g: Game, tab: StashTab) => tabItems(g, tab) !== undefined
 const isPlain = (tab: StashTab): tab is number => typeof tab === 'number'
 
-/** The sets' and the Legendaries' rows, each its place's item or none. */
+/** The sets' and the Legendaries' places, each its item or none. */
 const placesOf = (g: Game, tab: 'sets' | 'legends'): (Item | undefined)[] => {
   const held = tabItems(g, tab) ?? []
   return tab === 'sets' ? SET_PLACES.map(p => held.find(i => i.set === p.set && i.base === p.base)) : LEGEND_PLACES.map(p => held.find(i => i.power === p.power))
 }
-/** A row's place's name on the sets' and the Legendaries' tabs, for a row with nothing there. */
-const placeName = (tab: 'sets' | 'legends', row: number) => (tab === 'sets' ? SET_PLACES[row]?.name : LEGEND_PLACES[row]?.name)
+
+/** A place's slot on its board, in window pixels: its piece's cells with a frame round them, as in the bag. */
+type Slot = Rect & { base: string }
+const slotOf = (base: string, x: number, y: number): Slot => {
+  const b = baseOf(base)
+  return { base, x, y, w: (b?.w ?? 1) * CELL + 1, h: (b?.h ?? 1) * CELL + 1 }
+}
+/** The boards over the tab's grid's place, centred across the window inside its 4 px margins. */
+const BOARD_LEFT = STASH_AT.x
+const BOARD_RIGHT = WINDOW_W - STASH_AT.x
+const BOARD_TOP = top + STASH_AT.y
+/** The sets' board: a column a set, its weapon and armor side by side, 2 apart, its helm centred under them, 3 under;
+ * the columns 6 apart. */
+const SET_COLUMN = slotOf('sword', 0, 0).w + 2 + slotOf('plate', 0, 0).w
+const SET_GAP = 6
+const setSlots = (): Slot[] => {
+  const sets = [...new Set(SET_PLACES.map(p => p.set))]
+  const x0 = runX(sets.length * SET_COLUMN + (sets.length - 1) * SET_GAP, BOARD_LEFT, BOARD_RIGHT)
+  return SET_PLACES.map(p => {
+    const x = x0 + sets.indexOf(p.set) * (SET_COLUMN + SET_GAP)
+    const [weapon, armor] = SET_PLACES.filter(q => q.set === p.set)
+    const first = slotOf(weapon!.base, x, BOARD_TOP)
+    if (p === weapon) return first
+    if (p === armor) return slotOf(p.base, x + first.w + 2, BOARD_TOP)
+    const helm = slotOf(p.base, 0, BOARD_TOP + first.h + 3)
+    return { ...helm, x: x + Math.floor((SET_COLUMN - helm.w) / 2) }
+  })
+}
+/** The Legendaries' board: their slots in a row, 4 apart. */
+const LEGEND_GAP = 4
+const legendSlots = (): Slot[] => {
+  const slots = LEGEND_PLACES.map(p => slotOf(p.base, 0, BOARD_TOP))
+  let x = runX(slots.reduce((n, s) => n + s.w, 0) + LEGEND_GAP * (slots.length - 1), BOARD_LEFT, BOARD_RIGHT)
+  return slots.map(s => {
+    const at = { ...s, x }
+    x += s.w + LEGEND_GAP
+    return at
+  })
+}
+const boardOf = (tab: 'sets' | 'legends') => (tab === 'sets' ? setSlots() : legendSlots())
 
 /** The items on the tab shown, in the order the chest's key steps through them. */
 const shownItems = (g: Game, ui: ChestUi): Item[] =>
   !isBought(g, ui.tab) ? [] : isPlain(ui.tab) ? [...(tabItems(g, ui.tab) ?? [])].sort((a, b) => a.x - b.x || a.y - b.y) : placesOf(g, ui.tab).filter((i): i is Item => i !== undefined)
 const chosenStored = (g: Game, ui: ChestUi) => shownItems(g, ui).find(i => i.id === ui.stored)
 const chosenBag = (g: Game, ui: ChestUi) => (ui.stored === null ? g.bag.find(i => i.id === g.cursor) : undefined)
-
-/** The sets' or the Legendaries' rows: each item's name in its tier's color, the chosen one marked; an empty place by
- * its name, dim. */
-const placeLines = (g: Game, ui: ChestUi, tab: 'sets' | 'legends'): Run[][] =>
-  placesOf(g, tab).map((item, i) => {
-    if (item === undefined) return [{ text: `  ${placeName(tab, i) ?? '-'}`, dim: true }]
-    const isChosen = item.id === ui.stored
-    // A name too long for the row shows as its base's: the card says the whole.
-    const name = item.name.length <= PANEL.w - 6 ? item.name : (baseOf(item.base)?.name ?? item.name.slice(0, PANEL.w - 6))
-    return [{ text: isChosen ? '> ' : '  ', color: CURSOR, bold: true }, { text: name, color: RARITY_COLOR[item.rarity], bold: isChosen }]
-  })
 
 /** A tab not bought, in words: what it costs, and why it cannot be bought now. */
 const offerLines = (g: Game, tab: StashTab): Run[][] => {
@@ -99,26 +127,25 @@ const entry = (key: string, text: string, why?: string): Run[] =>
 /** A bag item, and a plain tab's item, in window pixels. */
 const bagRect = (item: Item): Rect => cellBox(item, BAG_AT.x, top + BAG_AT.y)
 const storedRect = (item: Item): Rect => cellBox(item, STASH_AT.x, top + STASH_AT.y)
-/** A row of the sets' or the Legendaries' list, in window pixels. */
-const rowRect = (i: number): Rect => ({ x: PANEL.x, y: (PANEL.y + 1 + i) * 2, w: PANEL.w, h: 2 })
-/** Where a stored item is in window pixels: its cells on a plain tab, its row on a special one. */
-const placeRect = (g: Game, ui: ChestUi, item: Item): Rect => (isPlain(ui.tab) ? storedRect(item) : rowRect(placesOf(g, ui.tab).indexOf(item)))
+/** Where a stored item is in window pixels: its cells on a plain tab, inside its slot's frame on a board. */
+const placeRect = (g: Game, ui: ChestUi, item: Item): Rect => {
+  if (isPlain(ui.tab)) return storedRect(item)
+  const s = boardOf(ui.tab)[placesOf(g, ui.tab).indexOf(item)]!
+  return { x: s.x + 1, y: s.y + 1, w: s.w - 2, h: s.h - 2 }
+}
 
 /** What a card over the window would hide: both grids and their items, and the title bar. */
 const shown = (g: Game, ui: ChestUi): Weighted[] => [
-  { rect: gridBox(STASH_AT.x, top + STASH_AT.y), weight: 1 },
+  ...(isPlain(ui.tab) ? [{ rect: gridBox(STASH_AT.x, top + STASH_AT.y), weight: 1 }] : boardOf(ui.tab).map(rect => ({ rect, weight: 1 }))),
   { rect: gridBox(BAG_AT.x, top + BAG_AT.y), weight: 1 },
   ...shownItems(g, ui).map(i => ({ rect: placeRect(g, ui, i), weight: 1 })),
   ...g.bag.map(i => ({ rect: bagRect(i), weight: 1 })),
   { rect: { x: 0, y: 0, w: WINDOW_W, h: top }, weight: 1 },
 ]
 
-/** The words over the tab's place: the sets' or the Legendaries' list, a tab's offer, or none on a plain tab. */
-const panelBoxes = (g: Game, ui: ChestUi): OverlayBox[] => {
-  if (!isBought(g, ui.tab)) return [{ role: 'list', ...PANEL, h: OFFER_H, border: SURFACE.frame, lines: offerLines(g, ui.tab) }, buttonBox(BUY, BUY_RECT.x, BUY_RECT.y, buyState(g, ui.tab))]
-  if (isPlain(ui.tab)) return []
-  return [{ role: 'list', ...PANEL, h: placesOf(g, ui.tab).length + 2, border: SURFACE.frame, lines: placeLines(g, ui, ui.tab) }]
-}
+/** The words over the tab's place: a tab's offer, or none on a bought one. */
+const panelBoxes = (g: Game, ui: ChestUi): OverlayBox[] =>
+  isBought(g, ui.tab) ? [] : [{ role: 'list', ...PANEL, h: OFFER_H, border: SURFACE.frame, lines: offerLines(g, ui.tab) }, buttonBox(BUY, BUY_RECT.x, BUY_RECT.y, buyState(g, ui.tab))]
 
 /** The boxes over the window: the tab's words; the chosen item's card with its menu when open. */
 export const chestOverlay = remembered((g: Game, ui: ChestUi): OverlayBox[] => {
@@ -135,12 +162,31 @@ export const chestOverlay = remembered((g: Game, ui: ChestUi): OverlayBox[] => {
   return [...panel, ...cardWithMenu(ROWS, shown(g, ui), bagRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), menu, WINDOW_W, others)]
 })
 
+/** A board: each slot framed as the bag's cells are, its piece in its tier's box (the chosen one bracketed), or its
+ * piece's shape in the ghost's ink while none is stored there. */
+const drawBoard = (body: ReturnType<typeof canvas>, g: Game, ui: ChestUi, tab: 'sets' | 'legends') => {
+  const held = placesOf(g, tab)
+  boardOf(tab).forEach((s, i) => {
+    const y = s.y - top
+    fill(body, s.x, y, s.w, s.h, SLOT_BG)
+    frame(body, s.x, y, s.w, s.h, GRID)
+    const item = held[i]
+    if (item !== undefined) drawItem(body, { ...g, cursor: ui.stored }, item, s.x + 1, y + 1, s.w - 2, s.h - 2)
+    else {
+      const rows = ICONS[s.base]?.art ?? []
+      const [ax, ay] = centered(rows, s.x + 1, y + 1, s.w - 2, s.h - 2)
+      art(body, rows, ax, ay, GHOST_INK)
+    }
+  })
+}
+
 /** The window's pixels: the tabs and the gold in the title bar; a plain tab's grid with its items, else the place
  * its words go; the bag; a tab not bought, its Buy button; the frames of the boxes over them. */
 export const chestPixels = (g: Game, ui: ChestUi, boxes: readonly OverlayBox[] = []): string[][] => {
   const body = canvas(WINDOW_W, CHEST_H - top)
   // Each grid draws its own choice: the stored one on the tab, the game's cursor in the bag while the bag has it.
   if (isPlain(ui.tab) && isBought(g, ui.tab)) itemGrid(body, { ...g, cursor: ui.stored }, tabItems(g, ui.tab) ?? [], STASH_AT.x, STASH_AT.y, BAG_W, BAG_H)
+  else if (!isPlain(ui.tab) && isBought(g, ui.tab)) drawBoard(body, g, ui, ui.tab)
   itemGrid(body, ui.stored === null ? g : { ...g, cursor: null }, g.bag, BAG_AT.x, BAG_AT.y, BAG_W, BAG_H)
   if (!isBought(g, ui.tab)) button(body, BUY, BUY_RECT.x, BUY_RECT.y - top, buyState(g, ui.tab))
   const c = windowPixels(chrome(g, ui), body.px)
@@ -239,7 +285,7 @@ export const nextTab = (ui: ChestUi): ChestUi => ({ ...CHEST_UI_IDLE, tab: STASH
 export const chestHot = (g: Game, ui: ChestUi): Rect[] => {
   if (ui.menu) return []
   const tabs = textTabRects(TABS).filter((_, i) => i !== tabIndex(ui))
-  const stored = shownItems(g, ui).map(i => (isPlain(ui.tab) ? itemOutline(i, STASH_AT.x, top + STASH_AT.y) : placeRect(g, ui, i)))
+  const stored = shownItems(g, ui).map(i => (isPlain(ui.tab) ? itemOutline(i, STASH_AT.x, top + STASH_AT.y) : boardOf(ui.tab)[placesOf(g, ui.tab).indexOf(i)]!))
   const buy = !isBought(g, ui.tab) && buyState(g, ui.tab) === 'ready' ? [BUY_RECT] : []
   return uncovered([...tabs, ...stored, ...buy, ...g.bag.map(i => itemOutline(i, BAG_AT.x, top + BAG_AT.y))], chestOverlay(g, ui).filter(b => b.role === 'card' || b.role === 'menu'))
 }

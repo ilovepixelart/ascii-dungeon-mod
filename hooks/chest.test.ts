@@ -13,7 +13,7 @@ import { SET_PLACES } from './stash'
 import { baseOf } from './items'
 const baseNameOf = (base: string) => baseOf(base)?.name ?? base
 import { INK } from './ui/tokens'
-import { CURSOR } from './pieces'
+import { CURSOR, GHOST_INK } from './pieces'
 import type { ChestUi } from './chest'
 import { newGame } from './world'
 
@@ -211,14 +211,6 @@ describe('the stash, crowded', () => {
     expect(hits).toEqual([])
   })
 
-  test('on the sets\' tab, a stored name too long for its row shows as its base\'s name', async () => {
-    const g = hero()
-    const long = item(g, 'boots', 'rare', { name: 'Refactored Leather Boots of Fast Feedback and the Long Code Review' })
-    const board = { ...g, stashSets: [{ ...long, set: SET_PLACES[0]!.set as Item['set'], base: SET_PLACES[0]!.base }] }
-    const list = chestOverlay(board, { ...CHEST_UI_IDLE, tab: 'sets' }).find(b => b.role === 'list')!
-    expect(lines(board, { ...CHEST_UI_IDLE, tab: 'sets' }, 'list')![0]).toBe(`  ${baseNameOf(SET_PLACES[0]!.base)}`)
-    expect(list.lines.every(l => l.map(r => r.text).join('').length <= list.w - 4)).toBe(true)
-  })
 })
 
 describe('the stash\'s tabs', () => {
@@ -262,13 +254,50 @@ describe('the stash\'s tabs', () => {
     expect(storeOn(on('sets'))).toEqual({ kind: 'store' })
   })
 
-  test('the sets\' tab is a board a place a row: a piece stored there in its tier\'s color, the rest by name, dim', async () => {
+  /** Each slot of a board, by the GRID frame: its top-left and size, read off the window's pixels row by row. */
+  const slotsIn = (px: string[][]) => {
+    const found: { x: number; y: number; w: number; h: number }[] = []
+    for (let y = WINDOW_TOP; y < BAG_TOP - 1; y += 1) for (let x = 1; x < px[0]!.length - 1; x += 1) {
+      const isCorner = px[y]![x] === GRID && px[y]![x + 1] === GRID && px[y + 1]![x] === GRID && px[y - 1]![x] !== GRID && px[y]![x - 1] !== GRID
+      if (!isCorner) continue
+      let w = 1
+      while (px[y]![x + w] === GRID) w += 1
+      let h = 1
+      while (px[y + h]?.[x] === GRID) h += 1
+      found.push({ x, y, w, h })
+    }
+    return found
+  }
+
+  test('the sets\' tab is a board: a slot a piece, its piece\'s cells framed, a column a set, the helm under weapon and armor', async () => {
+    const g = { ...hero(), stashSets: [] }
+    const slots = slotsIn(chestPixels(g, on('sets')))
+    // Nine slots: three sets of a 1 by 3 weapon (8 by 22), a 2 by 3 armor (15 by 22) and a 2 by 2 helm (15 by 15).
+    expect(slots.map(s => [s.w, s.h])).toEqual([[8, 22], [15, 22], [8, 22], [15, 22], [8, 22], [15, 22], [15, 15], [15, 15], [15, 15]])
+    // Columns of 25 (8, 2, 15), 6 apart, 87 across, centred in the window's 4 px margins: from x 9; the helms 3 under.
+    expect(slots.slice(0, 6).map(s => s.x)).toEqual([9, 19, 40, 50, 71, 81])
+    expect(slots.slice(6).map(s => [s.x, s.y - slots[0]!.y])).toEqual([[14, 25], [45, 25], [76, 25]])
+  })
+
+  test('the Legendaries\' tab is a board of seven slots in a row, each its piece\'s size, 4 apart, centred', async () => {
+    const slots = slotsIn(chestPixels({ ...hero(), stashLegends: [] }, on('legends')))
+    // Sword, amulet, chain, ring, kite, staff, dagger: 8, 8, 15, 8, 15, 8, 8 wide, 4 apart: 94 across, from x 5.
+    expect(slots.map(s => [s.x, s.w, s.h])).toEqual([[5, 8, 22], [17, 8, 8], [29, 15, 22], [48, 8, 8], [60, 15, 22], [79, 8, 22], [91, 8, 15]])
+  })
+
+  test('a board\'s empty slot shows its piece\'s shape in the ghost\'s ink; a stored piece sits in its tier\'s box, chosen and taken by a click', async () => {
     const g = hero()
     const blade: Item = { ...item(g, SET_PLACES[0]!.base, 'epic', { id: 42 }), set: SET_PLACES[0]!.set as Item['set'], name: SET_PLACES[0]!.name }
-    const board = chestOverlay({ ...g, stashSets: [blade] }, on('sets')).find(b => b.role === 'list')!
-    expect(board.lines.length).toBe(SET_PLACES.length)
-    expect(board.lines[0]!.map(r => r.text).join('')).toBe(`  ${SET_PLACES[0]!.name}`)
-    expect(board.lines[0]![1]!.color).toBe(RARITY_COLOR.epic)
-    expect(board.lines[1]).toEqual([{ text: `  ${SET_PLACES[1]!.name}`, dim: true }])
+    // The slots where the empty board frames them: the stored piece's tier frame lies over its slot's.
+    const [first, second] = slotsIn(chestPixels({ ...g, stashSets: [] }, on('sets')))
+    const px = chestPixels({ ...g, stashSets: [blade] }, on('sets'))
+    const inside = (s: { x: number; y: number; w: number; h: number }) => new Set(px.slice(s.y + 1, s.y + s.h - 1).flatMap(r => r.slice(s.x + 1, s.x + s.w - 1)))
+    expect(inside(second!).has(GHOST_INK)).toBe(true)
+    expect(inside(first!).has(GHOST_INK)).toBe(false)
+    // The tier's frame on the slot's own frame, as a worn slot shows its piece.
+    expect(px[first!.y + 5]![first!.x]).toBe(RARITY_COLOR.epic)
+    const at = (button: 'left' | 'right') => click(first!.x + 3.5, (first!.y + 10) / 2 + 0.25, button)
+    expect(chestGesture({ ...g, stashSets: [blade] }, on('sets'), at('left')).ui).toEqual({ ...on('sets'), stored: 42 })
+    expect(chestGesture({ ...g, stashSets: [blade] }, on('sets'), at('right')).actions).toEqual([{ kind: 'retrieve', id: 42 }])
   })
 })

@@ -113,6 +113,28 @@ describe('the settings window', () => {
   })
 })
 
+describe('the settings window\'s words', () => {
+  const g = newGame(4)
+  const sound: SoundSettings = { effects: true, music: true, volume: VOLUME_STEPS }
+  const about = (ui: SettingsUi) => settingsOverlay(g, sound, ui).find(b => b.role === 'about')
+  const said = (ui: SettingsUi) => about(ui)?.lines.map(l => l.map(r => r.text).join('')).join(' ') ?? ''
+
+  test('say under the buttons what each of the page\'s does', async () => {
+    for (const word of ['New game', 'Help', 'Sound', 'Music', 'Volume']) expect(said({ page: 'game' })).toContain(word)
+    for (const word of ['Drink', 'Smoke', 'loot']) expect(said({ page: 'orders' })).toContain(word)
+  })
+
+  test('stand 2 px under the last row of buttons, across the window, the window one height on both pages', async () => {
+    for (const page of ['game', 'orders'] as const) {
+      const box = about({ page })!
+      const buttons = settingsOverlay(g, sound, { page }).filter(b => b.role === 'button')
+      const bottom = Math.max(...buttons.map(b => b.y + b.h)) * 2
+      expect([page, box.y * 2, box.x, box.w]).toEqual([page, bottom + 2, 2, WINDOW_W - 4])
+      expect(settingsPixels(g, sound, { page }).length).toBe(SETTINGS_H)
+    }
+  })
+})
+
 describe('the sound as saved', () => {
   const OFF: SoundSettings = { effects: false, music: false, volume: 1 }
 

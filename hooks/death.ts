@@ -4,7 +4,7 @@
 import type { Fallen, Game } from '../types'
 import type { Action, Run } from './game'
 import { themeOf } from './map'
-import { THING_ART, foeArtOf } from './pixelart'
+import { foeArtOf } from './pixelart'
 import { BUTTON_H, PORTRAIT, button, buttonBox, buttonW, portrait } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
@@ -18,8 +18,21 @@ const SIDE_X = PAD + PORTRAIT + 4
 const SLAIN = INK.danger
 const WAKE = { key: 'W', label: 'WAKE' }
 
+/** A trap standing up for its portrait, where the map's lies flat on the floor: two steel spikes, blood on their tips,
+ * shaded down their middles, over its grey plate. */
+const TRAP_PORTRAIT: readonly string[] = [
+  '........',
+  '.r....r.',
+  '.w....w.',
+  'wWw..wWw',
+  'wWw..wWw',
+  'eeeeeeee',
+  'EEEEEEEE',
+  '........',
+]
+
 /** What slew the hero, as the portrait draws it: the foe as it stood on its depth's theme, or the trap. */
-export const killerArt = (f: Fallen): readonly string[] => (f.foe === undefined ? THING_ART['^']! : foeArtOf(f.foe, themeOf(f.depth)))
+export const killerArt = (f: Fallen): readonly string[] => (f.foe === undefined ? TRAP_PORTRAIT : foeArtOf(f.foe, themeOf(f.depth)))
 
 /** What slew the hero, named: a unique by its own name (it carries any article), any other foe as "the" its name, else as the log said it. */
 export const killerName = (f: Fallen) => (f.foe === undefined ? f.by : theFoe(f.foe))

@@ -12,7 +12,7 @@ import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
 import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline } from './pieces'
-import { WINDOW_TOP, CLICK_SLOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
+import { CLICK_SLOP, WINDOW_TOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, remembered, uncovered, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 import { INK, SURFACE } from './ui/tokens'
@@ -71,7 +71,7 @@ const shown = (g: Game): Weighted[] => [
 ]
 
 /** The boxes over the screen: the worn list, and the chosen item's card with its menu when open. */
-export const compactOverlay = (g: Game, ui: BagUi): OverlayBox[] => {
+export const compactOverlay = remembered((g: Game, ui: BagUi): OverlayBox[] => {
   const list: OverlayBox = { role: 'worn', ...LIST, border: SURFACE.frame, lines: listLines(g) }
   const item = g.bag.find(i => i.id === g.cursor)
   const counts = beltCountsAt(g, BELT_X, WINDOW_TOP + BELT_Y)
@@ -79,7 +79,7 @@ export const compactOverlay = (g: Game, ui: BagUi): OverlayBox[] => {
   const menu = ui.menu?.id === item.id ? boxShape('menu', menuLines(g, item, ui.menu.confirm), CURSOR) : undefined
   const over = cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), menu, COMPACT_W)
   return [...clearOf(counts, over), list, ...over]
-}
+})
 
 /** The screen's pixels: title and gold, the bag, the belt, and the frames of the boxes over them. */
 export const compactPixels = (g: Game, boxes: readonly OverlayBox[] = []): string[][] => {

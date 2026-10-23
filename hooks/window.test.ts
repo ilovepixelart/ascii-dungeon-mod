@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { BG } from './canvas'
-import { CLOSE_BOX, CLOSE_INK, HEAD_H, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, coverage, place, windowPixels } from './window'
+import { CLOSE_BOX, CLOSE_INK, HEAD_H, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, coverage, place, remembered, windowPixels } from './window'
 
 const GOLD_INK = '#ffd34d'
 const inkIn = (px: string[][], ink: string, y0: number, y1: number) => px.slice(y0, y1).some(row => row.includes(ink))
@@ -26,6 +26,22 @@ describe('the window', () => {
     const c = windowPixels({ title: 'A' }, [])
     const [x, y, w, h] = CLOSE_BOX
     expect(inkIn(c.px.slice(y, y + h).map(r => r.slice(x, x + w)), CLOSE_INK, 0, h)).toBe(true)
+  })
+})
+
+describe('a remembered layout', () => {
+  test('is laid out once for the same game and window state, again for a new one of either', async () => {
+    let made = 0
+    const layout = remembered((g: { n: number }, ui: { open: boolean }) => {
+      made += 1
+      return [g.n, ui.open]
+    })
+    const g = { n: 1 }
+    const ui = { open: false }
+    const first = layout(g, ui)
+    expect([layout(g, ui) === first, made]).toEqual([true, 1])
+    expect([layout({ n: 1 }, ui), made]).toEqual([[1, false], 2])
+    expect([layout(g, { open: true }), made]).toEqual([[1, true], 3])
   })
 })
 

@@ -13,7 +13,7 @@ import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H, beltHot } from './inventory'
 import { card } from './bagui'
 import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
-import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, windowPixels, uncovered } from './window'
+import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, remembered, uncovered, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 import { INK } from './ui/tokens'
@@ -84,11 +84,11 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
 
 /** The boxes over the window: the wares' prices and the belt's counts that nothing covers, then the chosen ware's or
  * item's card and its menu when open. */
-export const shopOverlay = (g: Game, ui: ShopUi): OverlayBox[] => {
+export const shopOverlay = remembered((g: Game, ui: ShopUi): OverlayBox[] => {
   const over = cardsOver(g, ui)
   const prices = WARES.map((ware, i) => warePrice(priceOfWare(ware, g), wareRect(i).x, wareRect(i).y, g.gold >= priceOfWare(ware, g)))
   return [...clearOf([...prices, ...beltCountsAt(g, BELT_X, WINDOW_TOP + BELT_Y)], over), ...over]
-}
+})
 
 /** The chosen ware's or bag item's card near it, and its menu under the card when open. */
 const cardsOver = (g: Game, ui: ShopUi): OverlayBox<'card' | 'menu'>[] => {

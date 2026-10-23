@@ -13,6 +13,7 @@ import type { Pos } from './map'
 import type { Canvas } from './canvas'
 import { INK } from './ui/tokens'
 import { glow } from './ui/kit'
+import { countText } from './names'
 
 export { BELT_STEP, CURSOR, GHOST_INK, OFF_CLASS, UPGRADE } from './pieces'
 export { CLOSE_BOX, CLOSE_INK, LABEL_INK, POPOVER_BG, TITLE_INK, TITLE_X, TITLE_Y } from './window'
@@ -155,7 +156,7 @@ export const itemCard = (g: Game): Run[][] => {
     lines.push([{ text: `${set.name}, ${setWorn(g, item.set)} of ${set.pieces.length} worn: `, color: SET_COLOR, bold: true }, { text: `2, ${set.twoSaid}; ${set.pieces.length}, ${set.three}`, dim: true }])
   }
   if (item.trigger !== undefined) lines.push([{ text: `${TRIGGERS[item.trigger].name}: `, color: RARITY_COLOR[item.rarity], bold: true }, { text: TRIGGERS[item.trigger].does, dim: true }, ...(isTriggerWornElsewhere(g, item) ? [{ text: '  same trigger as worn: no effect', color: OFF_CLASS }] : [])])
-  lines.push([{ text: 'Sells for ', dim: true }, { text: String(priceOf(item)), color: INK.gold }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
+  lines.push([{ text: 'Sells for ', dim: true }, { text: countText(priceOf(item)), color: INK.gold }, ...(item.junk ? [{ text: '  marked junk', dim: true }] : [])])
   return lines
 }
 

@@ -14,6 +14,7 @@ import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, 
 import type { Gesture, OverlayBox, Rect } from './window'
 import type { Pos } from './map'
 import { INK, SURFACE } from './ui/tokens'
+import { countText } from './names'
 
 /** What the window shows beyond the game: the worn piece chosen. */
 export type ForgeUi = { slot: Slot | null }
@@ -38,7 +39,7 @@ export const whyNotReforge = (g: Game, item: Item) =>
 
 const cost = (label: string, price: number | undefined, why: string | undefined): Run[] =>
   why === undefined || why === 'not enough gold'
-    ? [{ text: `${label} `, dim: true }, { text: String(price), color: why === undefined ? INK.gold : OFF_CLASS }, ...(why === undefined ? [] : [{ text: `  ${why}`, color: OFF_CLASS }])]
+    ? [{ text: `${label} `, dim: true }, { text: price === undefined ? '' : countText(price), color: why === undefined ? INK.gold : OFF_CLASS }, ...(why === undefined ? [] : [{ text: `  ${why}`, color: OFF_CLASS }])]
     : [{ text: `${label} `, dim: true }, { text: why, color: OFF_CLASS }]
 
 /** Tempering's line: its price or why not, and the stat it raises, now and after one more. */

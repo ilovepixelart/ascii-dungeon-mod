@@ -214,12 +214,12 @@ describe('the stash\'s tabs', () => {
 
   test('a tab not bought says what it costs and why it cannot be bought yet; Buy is grey till it can', async () => {
     const poor = hero()
-    expect(lines(poor, on(1), 'list')).toEqual(['Tab 2 costs 1000 gold.', 'You have 0 gold.'])
-    expect(lines(poor, on(2), 'list')).toEqual(['Tab 3 costs 2500 gold.', 'Buy tab 2 first.'])
+    expect(lines(poor, on(1), 'list')).toEqual(['Tab 2 costs 1,000 gold.', 'You have 0 gold.'])
+    expect(lines(poor, on(2), 'list')).toEqual(['Tab 3 costs 2,500 gold.', 'Buy tab 2 first.'])
     const buy = (g: Game, ui: ChestUi) => chestOverlay(g, ui).find(b => b.role === 'button')!.lines[0]![0]!
     expect(buy(poor, on(1))).toMatchObject({ text: 'BUY', color: INK.off })
     const rich = { ...hero(), gold: 1000 }
-    expect(lines(rich, on(1), 'list')).toEqual(['Tab 2 costs 1000 gold.', 'Buy it to keep more, from hero to hero.'])
+    expect(lines(rich, on(1), 'list')).toEqual(['Tab 2 costs 1,000 gold.', 'Buy it to keep more, from hero to hero.'])
     expect(buy(rich, on(1))).toMatchObject({ text: 'BUY', color: INK.text })
   })
 

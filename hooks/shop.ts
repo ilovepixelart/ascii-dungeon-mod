@@ -17,6 +17,7 @@ import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, boxShape, cardWithMenu, dr
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
 import { INK } from './ui/tokens'
+import { countText } from './names'
 
 /** The wares in shelf order, three to a row. */
 export const WARES = Object.keys(SHOP_PRICES) as Ware[]
@@ -77,7 +78,7 @@ const wareCard = (g: Game, ware: Ware): Run[][] => {
   return [
     [{ text: CONSUMABLES[kind][tier].name, bold: true }],
     [{ text: CONSUMABLES[kind][tier].about }],
-    [{ text: 'Price ', dim: true }, { text: String(price), color: g.gold >= price ? INK.gold : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
+    [{ text: 'Price ', dim: true }, { text: countText(price), color: g.gold >= price ? INK.gold : OFF_CLASS }, { text: `   On your belt: ${heldOf(g, kind, tier)}`, dim: true }],
   ]
 }
 

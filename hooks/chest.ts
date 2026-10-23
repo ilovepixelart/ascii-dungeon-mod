@@ -78,7 +78,7 @@ const listLines = (g: Game, ui: ChestUi): Run[][] =>
 const offerLines = (g: Game, tab: StashTab): Run[][] => {
   const why = whyNotBuy(g, tab)
   const name = tabName(tab)
-  const head: Run[] = [{ text: `${name.charAt(0).toUpperCase()}${name.slice(1)} costs ` }, { text: `${tabPrice(tab)} gold`, color: INK.gold }, { text: '.' }]
+  const head: Run[] = [{ text: `${name.charAt(0).toUpperCase()}${name.slice(1)} costs ` }, { text: `${countText(tabPrice(tab))} gold`, color: INK.gold }, { text: '.' }]
   const reason = why === undefined ? 'Buy it to keep more, from hero to hero.' : why.startsWith('buy ') ? `${why.charAt(0).toUpperCase()}${why.slice(1)}.` : `You have ${countText(g.gold)} gold.`
   return [head, [{ text: reason, dim: true }]]
 }

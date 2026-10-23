@@ -16,6 +16,7 @@ import { BG, canvas } from './canvas'
 import { RARITY_NAME, SLOTS } from './items'
 import { stashedItems } from './stash'
 import { INK, SURFACE } from './ui/tokens'
+import { countText } from './names'
 
 /** Whoever has a window of talk: the townsfolk but the merchant, the smith and the stash. */
 export type Speaker = 'healer' | 'elder' | 'mystic' | 'guard' | 'villager' | 'dog'
@@ -59,7 +60,7 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
   elder: g => {
     const q = g.quest
     if (q === null) return [said('"Well done. Here is what I promised."'), aside(`Quests done: ${g.questsDone}.`)]
-    const pays = aside(`Pays ${questReward(q)} gold and an item of Uncommon or better.`)
+    const pays = aside(`Pays ${countText(questReward(q))} gold and an item of Uncommon or better.`)
     if (q.have >= q.need) return [said('"Make room in your bag for your reward, then claim it."'), pays]
     return [said(`"${(q.have === 0 ? ASK : STANDING)[q.kind](q)}"`), pays]
   },
@@ -67,8 +68,8 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
     // The three fortunes under her words, the one in force marked.
     const fortunes = FORTUNES.map(kind => (g.fortune?.kind === kind ? [{ text: '> ', color: INK.gold, bold: true }, { text: FORTUNE_NAME[kind], color: INK.gold }] : [{ text: '  ' }, { text: FORTUNE_NAME[kind], dim: true }]))
     const words = g.fortune !== null ? [said(`"${FORTUNE_SAID[g.fortune.kind]}, until you change depth."`), aside('One fortune at a time.')]
-      : g.gold >= fortuneCost(g) ? [said('"The cards favor those who pay for them."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)]
-      : [said('"Come back when your purse is heavier."'), aside(`A fortune costs ${fortuneCost(g)} gold and lasts until you change depth.`)]
+      : g.gold >= fortuneCost(g) ? [said('"The cards favor those who pay for them."'), aside(`A fortune costs ${countText(fortuneCost(g))} gold and lasts until you change depth.`)]
+      : [said('"Come back when your purse is heavier."'), aside(`A fortune costs ${countText(fortuneCost(g))} gold and lasts until you change depth.`)]
     return [...words, ...fortunes]
   },
   guard: g => {
@@ -84,7 +85,7 @@ const WORDS: Readonly<Record<Speaker, (g: Game) => Run[][]>> = {
     return [said('"The dungeon is through the portal. Mind the stairs."'), deepest, trade]
   },
   villager: g => {
-    const pack = aside(`A sealed pack: ${gambleCost(g)} gold for an item of Uncommon or better, rarely an Epic or a Legendary.`)
+    const pack = aside(`A sealed pack: ${countText(gambleCost(g))} gold for an item of Uncommon or better, rarely an Epic or a Legendary.`)
     return stashedItems(g).length === 0 ? [said('"Your stash by the square keeps things safe between trips."'), pack]
       : g.quest === null && g.questsDone === 0 ? [said('"The elder pays well for a job done. Go and ask."'), pack]
       : !hasWorked(g) ? [said('"The smith can temper what you wear. Worth the gold."'), pack]

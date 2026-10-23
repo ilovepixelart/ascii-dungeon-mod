@@ -17,7 +17,7 @@ import type { StashTab } from './stash'
 import { CLASS_LEAN, VIGOR_HP, arrive, levelOf, newGame, reveal } from './world'
 import { TOWN_ARRIVAL, TOWN_SPOTS, TOWN_TALK, isTownWalkable, pathBeside, townPath, townSpotAt } from './town'
 import type { TownPerson, TownSpot } from './town'
-import { TheFoe, capitalized, theFoe } from './names'
+import { TheFoe, capitalized, countText, theFoe } from './names'
 
 export { normalize } from './save'
 export { SAVE_VERSION, levelOf, newGame } from './world'
@@ -241,7 +241,7 @@ const ON_FLOOR: Readonly<Record<string, (g: Game) => void>> = {
   $: g => {
     const coins = (roll(g, 5) + g.depth) * (modHere(g) === 'hoard' ? HOARD_GOLD : 1)
     g.gold += coins
-    say(g, `You pick up ${coins} gold.`)
+    say(g, `You pick up ${countText(coins)} gold.`)
   },
   '!': g => say(g, addToBelt(g, 'health') ? 'You find a Health Potion.' : 'Your belt is full; the potion stays behind.'),
   '^': g => {
@@ -326,7 +326,7 @@ const openChest = (g: Game, kind: ChestKind) => {
   const isKept = item === undefined || stash(g, item)
   if (!isKept) leaveOnFloor(g, item, g)
   const found = item === undefined ? '' : isKept ? ` and ${item.name} (${RARITY_NAME[item.rarity]})` : `; your bag is full, so the ${item.name} lies here`
-  say(g, `You open the ${kind} chest: ${coins} gold${found}.`)
+  say(g, `You open the ${kind} chest: ${countText(coins)} gold${found}.`)
 }
 
 /** How far the hero sees in a corridor: a tile around, two with Pathfinder. */
@@ -781,7 +781,7 @@ const slay = (g: Game, foe: Foe) => {
   g.foe = null
   g.xp += xp
   g.gold += coins
-  say(g, `You slay ${theFoe(foe)}! +${xp} XP, +${coins} gold.`)
+  say(g, `You slay ${theFoe(foe)}! +${countText(xp)} XP, +${countText(coins)} gold.`)
   g.tension += KILL_TENSION
   if (g.cls === 'mage') siphon(g, foe.name)
   if (wornTrigger(g, 'leeching')) g.hp = Math.min(g.maxHp, g.hp + 1)
@@ -922,7 +922,7 @@ const steal = (g: Game, by: string) => {
   const took = Math.min(g.gold, 2 * g.depth)
   g.gold -= took
   g.foe = { ...g.foe, stolen: took }
-  if (took > 0) say(g, `${capitalized(by)} snatches ${took} gold!`)
+  if (took > 0) say(g, `${capitalized(by)} snatches ${countText(took)} gold!`)
 }
 
 /** A vampiric champion after its blow: healed by what it dealt, at most half of what it took since its last blow (its
@@ -1484,7 +1484,7 @@ const elder = (g: Game) => {
     g.gold += coins
     g.quest = null
     g.questsDone += 1
-    say(g, `The elder pays you ${coins} gold and a ${item.name} for your trouble.`)
+    say(g, `The elder pays you ${countText(coins)} gold and a ${item.name} for your trouble.`)
   }
 }
 
@@ -1504,12 +1504,12 @@ const TOWN_PANELS: ReadonlySet<Panel> = new Set<Panel>(['shop', 'forge', 'stash'
 const mystic = (g: Game) => {
   const cost = fortuneCost(g)
   if (g.fortune !== null) say(g, 'The mystic: "Your fortune holds until you change depth."')
-  else if (g.gold < cost) say(g, `The mystic: "A fortune costs ${cost} gold."`)
+  else if (g.gold < cost) say(g, `The mystic: "A fortune costs ${countText(cost)} gold."`)
   else {
     const kind = (['luck', 'riches', 'insight'] as const)[roll(g, 3) - 1]!
     g.gold -= cost
     g.fortune = { kind, depth: g.depth }
-    say(g, `The mystic reads your fortune for ${cost} gold: ${FORTUNE_SAID[kind]} until you change depth.`)
+    say(g, `The mystic reads your fortune for ${countText(cost)} gold: ${FORTUNE_SAID[kind]} until you change depth.`)
   }
 }
 
@@ -1521,7 +1521,7 @@ export const gambleCost = (g: Pick<Game, 'deepest'>) => 50 + 12 * g.deepest
 const gamble = (g: Game) => {
   const cost = gambleCost(g)
   if (g.gold < cost) {
-    say(g, `The villager: "A sealed pack is ${cost} gold. No peeking."`)
+    say(g, `The villager: "A sealed pack is ${countText(cost)} gold. No peeking."`)
     return
   }
   // A refusal leaves the game as it was: the roll, the item's id and the bad-luck counts too.
@@ -1534,7 +1534,7 @@ const gamble = (g: Game) => {
   }
   g.gold -= cost
   announce(g, item)
-  say(g, `You pay the villager ${cost} gold and open the pack: ${item.name} (${RARITY_NAME[item.rarity]}).`)
+  say(g, `You pay the villager ${countText(cost)} gold and open the pack: ${item.name} (${RARITY_NAME[item.rarity]}).`)
 }
 
 /** The tiers the guard takes three of for one of the next, lowest first. */
@@ -1602,14 +1602,14 @@ const retrieve = (g: Game, id: number) => {
 const buyTab = (g: Game, tab: StashTab) => {
   const why = whyNotBuy(g, tab)
   if (why !== undefined) {
-    say(g, why === 'bought' ? `You have ${tabName(tab)} already.` : g.gold < tabPrice(tab) && why.endsWith(' gold') ? `${capitalized(tabName(tab))} costs ${tabPrice(tab)} gold.` : `${capitalized(why)}.`)
+    say(g, why === 'bought' ? `You have ${tabName(tab)} already.` : g.gold < tabPrice(tab) && why.endsWith(' gold') ? `${capitalized(tabName(tab))} costs ${countText(tabPrice(tab))} gold.` : `${capitalized(why)}.`)
     return
   }
   g.gold -= tabPrice(tab)
   if (tab === 'sets') g.stashSets = []
   else if (tab === 'legends') g.stashLegends = []
   else g.stashed = [...g.stashed, []]
-  say(g, `You buy ${tabName(tab)} of your stash for ${tabPrice(tab)} gold.`)
+  say(g, `You buy ${tabName(tab)} of your stash for ${countText(tabPrice(tab))} gold.`)
 }
 
 
@@ -1631,7 +1631,7 @@ const buy = (g: Game, ware: Ware) => {
   else if (!addToBelt(g, kind, tier)) say(g, `Your belt has no room for a ${name}.`)
   else {
     g.gold -= price
-    say(g, `You buy a ${name} for ${price} gold.`)
+    say(g, `You buy a ${name} for ${countText(price)} gold.`)
   }
 }
 
@@ -1651,7 +1651,7 @@ const reforge = (g: Game, slot: Slot) => {
     g.reforges += 1
     g.gear = { ...g.gear, [slot]: made }
     g.reforgedFrom = { slot, item }
-    say(g, `The smith reforges your ${item.name} into ${made.name} for ${cost} gold.`)
+    say(g, `The smith reforges your ${item.name} into ${made.name} for ${countText(cost)} gold.`)
   }
 }
 
@@ -1684,7 +1684,7 @@ const temper = (g: Game, slot: Slot) => {
     g.gold -= cost
     g.gear = { ...g.gear, [slot]: temperItem(item) }
     g.reforgedFrom = null
-    say(g, `The smith tempers your ${item.name}: +1 ${temperStat(item) === 'atk' ? 'attack' : 'defense'}, for ${cost} gold.`)
+    say(g, `The smith tempers your ${item.name}: +1 ${temperStat(item) === 'atk' ? 'attack' : 'defense'}, for ${countText(cost)} gold.`)
   }
 }
 
@@ -1708,7 +1708,7 @@ const visit = (g: Game, spot: TownSpot) => {
     elder(g)
   } else if (spot === 'mystic') {
     g.panel = 'mystic'
-    say(g, g.fortune !== null ? 'The mystic: "Your fortune holds until you change depth."' : `The mystic gazes into the crystal. "A fortune costs ${fortuneCost(g)} gold."`)
+    say(g, g.fortune !== null ? 'The mystic: "Your fortune holds until you change depth."' : `The mystic gazes into the crystal. "A fortune costs ${countText(fortuneCost(g))} gold."`)
   } else if (spot === 'stash') {
     g.panel = 'stash'
     say(g, `Your stash holds ${stashedItems(g).length} of ${stashRoom(g)} items.`)

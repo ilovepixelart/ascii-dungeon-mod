@@ -15,14 +15,17 @@ import { begun } from './recap'
 const CHROME: Chrome = { title: 'WHILE YOU WORKED' }
 const top = WINDOW_TOP
 const PAD = 3
-/** The portrait at twice the sprite's size, the find's box under it; the text beside each. */
+/** The portrait at twice the sprite's size, the find's box under it, as wide, its frame round the tallest item's art
+ * (20 px); the text beside each. */
 const FACE = PX * 2 + 4
-const FIND_BOX = 17
+const FIND_W = FACE
+const FIND_H = FACE + 2
 const SIDE_X = PAD + FACE + 3
-const FIND_X = PAD + Math.floor((FACE - FIND_BOX) / 2)
+const FIND_X = PAD
 const SLAIN = INK.danger
 const PLAY = { key: 'P', label: 'PLAY ON' }
-const FIND_Y = top + 2 + FACE + 3
+/** The find's frame's top: two under the portrait, on a whole cell, so the box beside it starts level with it. */
+const FIND_Y = top + 2 + FACE + 2
 
 const many = (n: number, one: string, more = `${one}s`) => `${countText(n)} ${n === 1 ? one : more}`
 const fromTo = (what: string, from: number, to: number) => (from === to ? `${what} ${to}` : `${what} ${from} to ${to}`)
@@ -52,7 +55,7 @@ const toldLines = (g: Game, r: Recap): Run[][] => [
 
 /** Play on, centered under the find (under the portrait without one). */
 const playRect = (r: Recap): Rect => {
-  const y = onCell(r.best === undefined ? FIND_Y : FIND_Y + FIND_BOX + 3)
+  const y = onCell(r.best === undefined ? FIND_Y : FIND_Y + FIND_H + 2)
   const w = buttonW(PLAY.label)
   return { x: Math.floor((WINDOW_W - w) / 2), y, w, h: BUTTON_H }
 }
@@ -65,7 +68,7 @@ export const recapOverlay = (g: Game): OverlayBox[] => {
   const box = (lines: Run[][], y: number): OverlayBox => ({ role: 'about', x: SIDE_X, y, w: WINDOW_W - SIDE_X - 2, h: lines.length + 2, border: SURFACE.frame, lines })
   return [
     box(told, (top + 2) / 2),
-    ...(r.best === undefined ? [] : [box([[{ text: 'Best find', dim: true }], [{ text: r.best.name, bold: true, color: RARITY_COLOR[r.best.rarity] }]], Math.ceil(FIND_Y / 2))]),
+    ...(r.best === undefined ? [] : [box([[{ text: 'Best find', dim: true }], [{ text: r.best.name, bold: true, color: RARITY_COLOR[r.best.rarity] }]], FIND_Y / 2)]),
     buttonBox(PLAY.label, play.x, play.y, 'armed'),
   ]
 }
@@ -84,7 +87,8 @@ export const recapPixels = (g: Game): string[][] => {
   const r = recapOf(g)
   const body = canvas(WINDOW_W, recapHeight(g) - top)
   portrait(body, heroArt(g), PAD, 2, FACE)
-  if (r.best !== undefined) drawItem(body, { ...g, cursor: null }, r.best, FIND_X, FIND_Y - top, FIND_BOX, FIND_BOX)
+  // The item's box inside its frame: drawItem frames it a pixel outside.
+  if (r.best !== undefined) drawItem(body, { ...g, cursor: null }, r.best, FIND_X + 1, FIND_Y - top + 1, FIND_W - 2, FIND_H - 2)
   const play = playRect(r)
   button(body, PLAY.label, play.x, play.y - top, 'armed')
   const c = windowPixels(CHROME, body.px)

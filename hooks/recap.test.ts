@@ -6,9 +6,10 @@ import type { Action } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { plainItem } from './items'
 import { RECAP_CALLS, noted } from './recap'
-import { recapGesture, recapHeight, recapLines, recapOverlay } from './recapwindow'
-import { CLOSE_BOX, WINDOW_W } from './window'
-import { BASES, LEGENDARIES, PREFIXES, SUFFIXES } from './items'
+import { recapGesture, recapHeight, recapLines, recapOverlay, recapPixels } from './recapwindow'
+import { BG } from './canvas'
+import { CLOSE_BOX, WINDOW_TOP, WINDOW_W } from './window'
+import { BASES, LEGENDARIES, PREFIXES, RARITY_COLOR, SUFFIXES } from './items'
 
 const run = (g: Game, actions: readonly Action[]) => actions.reduce(apply, g)
 const outcome = (ok = true, over: Partial<Extract<Action, { kind: 'outcome' }>> = {}): Action => ({ kind: 'outcome', ok, what: 'Edit', ...over })
@@ -104,6 +105,25 @@ describe('the recap window', () => {
       '34 tool calls', 'Depth 11 to 14, level 17 to 18.', '21 kills, 2 champions, +412 gold, 0 deaths.', '4 green test runs, 2 commits, 1 push.',
       'Best find', 'Steel Helm of Fast Feedback',
     ])
+  })
+
+  test('frames the best find as wide as the portrait over it, the find inside its frame, its box beside it level with its top', async () => {
+    // A Legendary sword, 20 px tall: the portrait 20 square at x 3, 2 under the title bar; the find's frame 20 wide at
+    // x 3, 22 tall (18 by 20 inside), 2 under the portrait, on a whole cell; the box beside it starts on that row.
+    const sword = { ...plainItem({ nextId: 801 }, 'sword', 'legendary'), name: 'Sword' }
+    const g = shown({ ...told, best: sword })
+    const px = recapPixels(g)
+    const face = WINDOW_TOP + 2
+    const findTop = face + 20 + 2
+    // The frame's sides, in the Legendary's color, at the portrait's columns; bare ground past them.
+    const mid = findTop + 10
+    expect([px[mid]![3], px[mid]![22], px[mid]![2], px[mid]![23]]).toEqual([RARITY_COLOR.legendary, RARITY_COLOR.legendary, BG, BG])
+    // The frame's top and bottom rows are the tier frame's inks alone: the sword's art stays inside.
+    const inks = new Set([...px[findTop]!.slice(4, 22), ...px[findTop + 21]!.slice(4, 22)])
+    expect(inks.size).toBeLessThanOrEqual(2)
+    expect(px[findTop - 1]![12]).toBe(BG)
+    expect(findTop % 2).toBe(0)
+    expect(recapOverlay(g).find(b => b.lines[0]![0]!.text === 'Best find')!.y).toBe(findTop / 2)
   })
 
   test('one of a thing is said as one; a depth and a level that did not change are said once', async () => {

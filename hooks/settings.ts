@@ -41,6 +41,10 @@ const rowsOf = (g: Game, sound: SoundSettings, ui: SettingsUi): Key[][] => ui.pa
     ]
   : [[{ key: 'D', label: orderWord(g, 'drink'), does: 'drink' }], [{ key: 'F', label: orderWord(g, 'smoke'), does: 'smoke' }], [{ key: 'K', label: orderWord(g, 'leave'), does: 'leave' }]]
 
+/** A button's words, on either page, by what it does: the window's keys say the same. */
+export const settingsWord = (g: Game, sound: SoundSettings, does: string) =>
+  [...rowsOf(g, sound, { page: 'game' }), ...rowsOf(g, sound, { page: 'orders' })].flat().find(k => k.does === does)?.label ?? does
+
 /** The rows' top, under the pages' tabs and their rule. */
 const ROWS_Y = top + TABS_H + 4
 const ROWS = 3

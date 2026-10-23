@@ -22,7 +22,7 @@ import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import { deepGesture, deepHeight, deepHot, deepOverlay, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
-import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsHot, settingsOverlay, settingsPixels, soundFrom, volumeShare } from './settings'
+import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsWord, settingsHot, settingsOverlay, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SettingsUi } from './settings'
 import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
 import { logGesture, logHeight, logOverlay, logPixels } from './logwindow'
@@ -1322,22 +1322,29 @@ const bagActions = ({ Box, Button, press }: Pane) => (
 )
 
 /** The settings' keys; the orders' hotkeys only where the window has the pane to itself, the dashboard's d and k being taken. */
+/** A pixel button's words as its key says them: sentence case, HP kept. */
+const asKey = (label: string) => {
+  const word = label.toLowerCase().replace(/\bhp\b/, 'HP')
+  return word[0]!.toUpperCase() + word.slice(1)
+}
+
 const settingsKeys = (p: Pane, isWindow = false) => {
   const { g, Button, press, redraw, setSoundTo } = p
-  const orderKey = (which: 'drink' | 'smoke' | 'leave', hotkey: string) => {
-    const word = orderWord(g, which).toLowerCase().replace(/\bhp\b/, 'HP')
-    return <Button key={`settings-${which}`} label={word[0]!.toUpperCase() + word.slice(1)} hotkey={isWindow ? hotkey : undefined} plain onPress={press({ kind: 'order', order: which })} />
-  }
+  const orderKey = (which: 'drink' | 'smoke' | 'leave', hotkey: string) => (
+    <Button key={`settings-${which}`} label={asKey(orderWord(g, which))} hotkey={isWindow ? hotkey : undefined} plain onPress={press({ kind: 'order', order: which })} />
+  )
+  // The window's keys say its buttons' words; the text dashboard's its own.
+  const said = (does: string, text: string) => (isWindow ? asKey(settingsWord(g, soundSettings, does)) : text)
   const soundKey = (does: 'effects' | 'music' | 'volume') => () => {
     setSoundTo(nextSound(soundSettings, does))
     redraw()
   }
   const game = [
-    <Button key="settings-new" label="New game..." hotkey="n" plain onPress={press({ kind: 'panel', panel: 'start' })} />,
+    <Button key="settings-new" label={said('new', 'New game...')} hotkey="n" plain onPress={press({ kind: 'panel', panel: 'start' })} />,
     helpKey(p, isWindow ? 'h' : undefined),
-    <Button key="settings-effects" label={soundSettings.effects ? 'Sound: on' : 'Sound: off'} hotkey="e" plain onPress={soundKey('effects')} />,
-    <Button key="settings-music" label={soundSettings.music ? 'Music: on' : 'Music: off'} hotkey="m" plain onPress={soundKey('music')} />,
-    <Button key="settings-volume" label={`Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`} hotkey="l" plain onPress={soundKey('volume')} />,
+    <Button key="settings-effects" label={said('effects', soundSettings.effects ? 'Sound: on' : 'Sound: off')} hotkey="e" plain onPress={soundKey('effects')} />,
+    <Button key="settings-music" label={said('music', soundSettings.music ? 'Music: on' : 'Music: off')} hotkey="m" plain onPress={soundKey('music')} />,
+    <Button key="settings-volume" label={said('volume', `Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`)} hotkey="l" plain onPress={soundKey('volume')} />,
   ]
   const orders = [orderKey('drink', 'd'), orderKey('smoke', 'f'), orderKey('leave', 'k')]
   const close = <Button key="settings-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'settings' })} />
@@ -1353,9 +1360,9 @@ const settingsKeys = (p: Pane, isWindow = false) => {
   return [...(isGame ? game : orders), other, close]
 }
 
-/** Help: the how-it-plays window, over whatever is open. */
-const helpKey = ({ Button, redraw }: Pane, hotkey?: string) => (
-  <Button key="help-open" label="How it plays" hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
+/** Help: the how-it-plays window, over whatever is open. A pixel window's key says its button's word. */
+const helpKey = ({ Button, redraw, isWindowWide }: Pane, hotkey?: string) => (
+  <Button key="help-open" label={isWindowWide && hotkey !== undefined ? 'Help' : 'How it plays'} hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
 )
 /** The log's latest line under the map, a button that opens the whole log (g, unless a window open answers to it). */
 const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined, taken: ReadonlySet<string>) => (
@@ -1541,9 +1548,9 @@ const startScreen = (p: Pane) => {
   }
   const keys = [
     ...HEROES.map((cls, i) => <Button key={`start-${cls}`} label={cls === ui.cls ? `[${CLASS_NAME[cls]}]` : CLASS_NAME[cls]} hotkey={String(i + 1)} plain dimColor={cls !== ui.cls} onPress={choose(cls)} />),
-    <Button key="start-go" label={`Start as ${CLASS_NAME[ui.cls]}`} hotkey="s" plain onPress={press(begin(ui.cls))} />,
+    <Button key="start-go" label={p.isWindowWide ? 'Start' : `Start as ${CLASS_NAME[ui.cls]}`} hotkey="s" plain onPress={press(begin(ui.cls))} />,
     helpKey(p, 'h'),
-    ...(isUnderWay(g) ? [<Button key="start-back" label="Back to your game" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'start' })} />] : []),
+    ...(isUnderWay(g) ? [<Button key="start-back" label={p.isWindowWide ? 'Back' : 'Back to your game'} hotkey="b" plain onPress={press({ kind: 'panel', panel: 'start' })} />] : []),
   ]
   if (p.isWindowWide) return pixelWindow(p, 'start', startHeight(g, ui), startPixels(g, ui), startOverlay(g, ui), keys, 'Click a hero to choose, again (or Start) to begin.', startHot(g))
   return (
@@ -1651,6 +1658,7 @@ const retireWindow = (p: Pane) => {
       redraw()
     }} />,
     <Button key="retire-back" label="Back" hotkey="b" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
+    <Button key="retire-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'retire' })} />,
   ], 'Click a piece you wear to pass it down.', retireHot(g, retireUi))
 }
 

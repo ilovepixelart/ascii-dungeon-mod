@@ -20,6 +20,15 @@ const keyColumns = (g: Game) => {
   return buttons.length === 0 ? undefined : { y: buttons[0]!.y, xs: buttons.map(b => b.x) }
 }
 
+describe('the start screen\'s cards', () => {
+  test('span the box under them, 2 px from each side of the window, and stand 2 px over the buttons', async () => {
+    // Three cards 31 wide, 4 apart: 101 across, from x 2 to 102, as the box under them.
+    expect([cardRect(0).x, cardRect(2).x + cardRect(2).w]).toEqual([2, WINDOW_W - 2])
+    const button = startOverlay(newGame(1, 'knight'), { cls: 'knight' }).find(b => b.role === 'button')!
+    expect(button.y * 2 - (cardRect(0).y + cardRect(0).h)).toBe(2)
+  })
+})
+
 describe('opening a session', () => {
   test('a first game opens on the start screen; a saved one as it was saved; a game already set is left alone', async () => {
     const fresh = newGame(1)
@@ -72,12 +81,12 @@ describe('choosing', () => {
     expect(isUnderWay({ ...first, xp: 3 })).toBe(true)
     expect(isUnderWay({ ...first, deepest: 2 })).toBe(true)
     const [s, h, b] = [buttonW('START'), buttonW('HELP'), buttonW('BACK')]
-    // A first game: Start, 3 pixels, Help, the pair centered, 3 pixels under the cards.
+    // A first game: Start, 3 pixels, Help, the pair centered, 2 pixels under the cards.
     const x0 = Math.floor((WINDOW_W - s - 3 - h) / 2)
     const keys = keyColumns(first)!
     expect(buttonsIn(startOverlay(first, { cls: 'knight' })).map(b => b.text)).toEqual(['START', 'HELP'])
     expect(keys.xs).toEqual([x0, x0 + s + 3])
-    expect(keys.y).toBe(cardRect(0).y + cardRect(0).h + 3)
+    expect(keys.y).toBe(cardRect(0).y + cardRect(0).h + 2)
     expect(startGesture(first, { cls: 'mage' }, tap(x0 + 1, keys.y + 2)).actions).toEqual([{ kind: 'restart', cls: 'mage' }])
     // Under way: Start, Help and Back, the three centered.
     const going = { ...first, xp: 3 }
@@ -100,7 +109,7 @@ describe('choosing', () => {
   test('a drag, or a click on nothing, does nothing', async () => {
     const g = onStart()
     expect(startGesture(g, { cls: 'knight' }, { type: 'drag', from: { x: 10, y: 20 }, at: { x: 40, y: 20 } }).actions).toEqual([])
-    expect(startGesture(g, { cls: 'knight' }, tap(WINDOW_W - 3, 20))).toEqual({ ui: { cls: 'knight' }, actions: [] })
+    expect(startGesture(g, { cls: 'knight' }, tap(WINDOW_W - 1, 20))).toEqual({ ui: { cls: 'knight' }, actions: [] })
   })
 })
 
@@ -140,7 +149,7 @@ describe('the screen', () => {
     const helpEdge = (g: Game) => {
       const s = buttonW('START')
       const left = Math.floor((WINDOW_W - s - 3 - buttonW('HELP') - (isUnderWay(g) ? 3 + buttonW('BACK') : 0)) / 2)
-      return startPixels(g, { cls: 'knight' })[cardRect(0).y + cardRect(0).h + 3]![left + s + 3 + 4]
+      return startPixels(g, { cls: 'knight' })[cardRect(0).y + cardRect(0).h + 2]![left + s + 3 + 4]
     }
     const first = onStart()
     expect(isFirstGame(first)).toBe(true)

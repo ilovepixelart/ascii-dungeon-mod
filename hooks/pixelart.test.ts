@@ -125,3 +125,16 @@ describe('floor variety', () => {
     expect(slab(plain.tx, plain.ty).filter((p, i) => i % 8 > 0 && i % 8 < 7 && i >= 8 && i < 56 && p === CRACK_INK)).toEqual([])
   })
 })
+
+describe('the town\'s art', () => {
+  test('has no dark outline round it: no K pixel of a town sprite borders the ground beside it', async () => {
+    const outer: string[] = []
+    for (const [name, table] of Object.entries({ NPC_ART, TOWN_THING_ART, TOWN_DECOR_ART, TOWN_BIG_ART })) {
+      for (const [key, rows] of Object.entries(table as Record<string, readonly string[]>)) rows.forEach((row, y) => [...row].forEach((k, x) => {
+        const isBeside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => [undefined, '.'].includes(rows[y + dy!]?.[x + dx!]))
+        if (k === 'K' && isBeside) outer.push(`${name}.${key} ${x},${y}`)
+      }))
+    }
+    expect(outer).toEqual([])
+  })
+})

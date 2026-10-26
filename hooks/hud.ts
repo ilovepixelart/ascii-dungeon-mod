@@ -185,8 +185,8 @@ export const hudContent = (g: Game, width: number): Canvas => {
   fill(c, px + 1, 1, PX, PX, SLOT_BG)
   const isShut = g.where !== 'town' && g.foe !== null
   TOWN_THING_ART.portal.forEach((row, dy) => [...row].forEach((k, dx) => {
-    // Shut, its inside goes grey; its dark outline stays as it is, so the portal keeps its size.
-    if (k !== '.') put(c, px + 1 + dx, 1 + dy, isShut && k !== 'K' ? PORTAL_SHUT : (PAL[k] ?? '#ff00ff'))
+    // Shut, it goes grey, its shape kept.
+    if (k !== '.') put(c, px + 1 + dx, 1 + dy, isShut ? PORTAL_SHUT : (PAL[k] ?? '#ff00ff'))
   }))
   const sx = settingsSlotX(width)
   frame(c, sx, 0, SLOT, SLOT, GRID)

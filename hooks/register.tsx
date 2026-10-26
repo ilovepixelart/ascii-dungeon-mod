@@ -8,7 +8,7 @@ import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
 import type { FrameSummary, TickStats } from './frames'
-import { OVER_ROWS, isDash, isMapUnder, orbPhase, overMapBoxes, overMapGesture, stripBeltMenu, stripBoxes, stripGesture, stripHeight, stripHot, stripOverMap, stripPixels } from './strip'
+import { OVER_ROWS, isDash, isMapUnder, mapCovered, orbPhase, overMapBoxes, overMapGesture, stripBeltMenu, stripBoxes, stripGesture, stripHeight, stripHot, stripOverMap, stripPixels } from './strip'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
@@ -170,9 +170,10 @@ let isPixelDash = false
 /** The place the hero is in: the town, or a depth of the dungeon. */
 const placeOf = (g: Game) => (g.where === 'town' ? 'town' : `depth ${g.depth}`)
 
-/** The camera for this frame: recentered in a new place, else following the hero only out of the view's middle. */
+/** The camera for this frame: recentered in a new place, else following the hero only out of the view's middle, the
+ * middle of what the dash leaves seen. */
 const cameraFor = (g: Game, hero: Pos, columns: number, rows: number) => {
-  const at = tileCamera(camera === null || camera.place !== placeOf(g) ? null : camera.at, hero, columns, rows * 2)
+  const at = tileCamera(camera === null || camera.place !== placeOf(g) ? null : camera.at, hero, columns, rows * 2 - mapCovered(columns, rows))
   camera = { at, place: placeOf(g) }
   return at
 }
@@ -340,7 +341,7 @@ const drawWalk = ($: EngineInterface, w: Walk, frame: number, at: ReturnType<typ
   const view = cameraFor(drawnGame, at, size.columns, size.rows)
   const builds = layerBuildCount()
   const drawFrom = fineNow()
-  const drawn = pixelMap(drawnGame, size.columns, size.rows, at, view, [], 0, isStrideFrame(frame), STILL, undefined, stripOverMap(drawnGame, size.columns, 0))
+  const drawn = pixelMap(drawnGame, size.columns, size.rows, at, view, [], 0, isStrideFrame(frame), STILL, undefined, stripOverMap(drawnGame, size.columns, 0), mapCovered(size.columns, size.rows))
   ;(layerBuildCount() === builds ? keptMaps : builtMaps).add(fineNow() - drawFrom)
   // The bench walk's frames carry their number, so a measure reads which arrived: skipped, repeated, late.
   sendLatest($, isBenching ? stampCells(drawn, frame) : drawn, size)
@@ -501,7 +502,7 @@ const playHits = ($: EngineInterface, g: Game, hits: readonly Hit[]) => {
       return false
     }
     const view = cameraFor(g, tileCenter(g), mapSize.columns, mapSize.rows)
-    const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame, false, STILL, undefined, stripOverMap(g, mapSize.columns, 0)), mapSize)
+    const painted = await sendMap($, pixelMap(g, mapSize.columns, mapSize.rows, undefined, view, hits, frame, false, STILL, undefined, stripOverMap(g, mapSize.columns, 0), mapCovered(mapSize.columns, mapSize.rows)), mapSize)
     if (painted.deny === undefined) return true
     // A map the host will not take (a window over it, the pane resized) ends the blow: the idle motion and the death
     // window wait on it no longer.
@@ -522,7 +523,7 @@ const endHits = async ($: EngineInterface) => {
   if (size !== null) {
     const g = normalize(await read($, game))
     const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit, stripOverMap(g, size.columns, 0)), size)
+    await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit, stripOverMap(g, size.columns, 0), mapCovered(size.columns, size.rows)), size)
   }
   $.ui.invalidate('ui.render')
 }
@@ -605,7 +606,7 @@ const ambientTick = async ($: EngineInterface) => {
   shown = next
   const size = mapSize
   const view = cameraFor(g, tileCenter(g), size.columns, size.rows)
-  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit, stripOverMap(g, size.columns, 0)), size)
+  await sendMap($, pixelMap(g, size.columns, size.rows, undefined, view, [], 0, false, shown, mapHoverOf(g).lit, stripOverMap(g, size.columns, 0), mapCovered(size.columns, size.rows)), size)
 }
 
 /** A ripple's repaint on its way to the host: one at a time, so a slow host is never sent a queue of them; and the
@@ -900,18 +901,18 @@ const isClickable = (g: Game, tile: Pos) => {
  */
 const mapHoverOf = (g: Game, pointer = mapPointer): { lit?: PixelRect; label: MapLabel | null } => {
   if (pointer === null) return { label: null }
-  const size = { columns: pointer.columns, rows: pointer.rows }
+  const size = { columns: pointer.columns, rows: pointer.rows, covered: mapCovered(pointer.columns, pointer.rows) }
   const view = camera?.place === placeOf(g) ? camera.at : undefined
   const litAt = (tile: Pos) => (isClickable(g, tile) ? tileRect(g, tile, size, view) : undefined)
   const held = pinned === null ? null : labelFor(g, pinned, size, view)
   const row = held === null ? undefined : labelRowAt({ ...held, lines: held.lines.map(l => l.mark + l.text) }, { x: Math.floor(pointer.x), y: Math.floor(pointer.y) })
   if (held !== null && row !== undefined) return { lit: litAt(held.tile), label: { ...held, row } }
-  const tile = clickToTile(g, pointer, view)
+  const tile = clickToTile(g, { ...pointer, covered: size.covered }, view)
   return { lit: litAt(tile), label: labelFor(g, tile, size, view) }
 }
 
 /** The label of what lies on a seen tile, in the map's cells; null with nothing there. */
-const labelFor = (g: Game, tile: Pos, size: { columns: number; rows: number }, view: Pos | undefined): MapLabel | null => {
+const labelFor = (g: Game, tile: Pos, size: { columns: number; rows: number; covered?: number }, view: Pos | undefined): MapLabel | null => {
   const lying = g.where === 'dungeon' && g.seen[cellId(tile)] === '1' ? (g.floor ?? []).filter(f => f.x === tile.x && f.y === tile.y).map(f => f.item) : []
   if (lying.length === 0) return null
   const { lines } = lyingLabel(lying, pinned !== null && same(tile, pinned) ? labelPage : 0, i => isUpgrade(g, i))
@@ -972,7 +973,7 @@ const onMapClick = async ($: EngineInterface, data: unknown) => {
     labelPage += 1
     $.ui.invalidate('ui.render')
   } else if (label?.row !== undefined) await act($, line?.id === undefined ? { kind: 'goto', ...label.tile } : { kind: 'pick', ...label.tile, id: line.id }, true)
-  else await act($, { kind: 'goto', ...clickToTile(g, click, camera?.place === placeOf(g) ? camera.at : undefined) }, true)
+  else await act($, { kind: 'goto', ...clickToTile(g, { ...click, covered: mapCovered(click.columns, click.rows) }, camera?.place === placeOf(g) ? camera.at : undefined) }, true)
 }
 
 const onBagClick = async ($: EngineInterface, data: unknown) => {
@@ -2091,7 +2092,7 @@ const mapView = (p: Pane, l: Layout) => {
   }
   const stride = l.heroAt !== undefined && walk !== null && isStrideFrame(walk.frame)
   const hover = mapHoverOf(p.g)
-  const map = pixelMapFrame(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? hover.lit : undefined, stripOverMap(l.told, l.mapWidth, 0))
+  const map = pixelMapFrame(l.drawn, l.mapWidth, l.pixelRows, l.heroAt, l.view, [], 0, stride, l.heroAt === undefined ? shown : STILL, l.heroAt === undefined ? hover.lit : undefined, stripOverMap(l.told, l.mapWidth, 0), mapCovered(l.mapWidth, l.pixelRows))
   return (
     <Box>
       <Raster key="map" columns={l.mapWidth} rows={l.pixelRows} cells={drawnMap(map.cells)} />

@@ -8,7 +8,8 @@ release may change behaviour.
 
 ### Changed
 
-- The hero has no dark outline on the map: the floor shows right up to its sprite again.
+- The hero has no dark outline on the map: the floor shows right up to its sprite again. Nor does the town's art:
+  its townsfolk, trees, fountain, portal, stash, anvil, lamps, signs and the rest.
 
 ### Fixed
 

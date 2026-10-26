@@ -67,7 +67,8 @@ names below point at it.
 
 ## Sprites
 
-- 8 by 8, outlined in `K` where they stand on the floor, lit from the top left. A big boss alone is 16 by 16
+- 8 by 8, a foe's outlined in `K` where it stands on the floor, lit from the top left. The hero has no outline: on
+  the floor its rim read as a dark halo round it. A big boss alone is 16 by 16
   (`BOSS_ART`), its feet on its tile's bottom edge; the hero beside it is drawn over it.
 - A death plays from the sprite itself, no extra art: white, red, then its own end (crumble, burst, topple), held a
   few frames a keyframe (`hooks/fall.ts`).

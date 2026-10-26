@@ -6,6 +6,10 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed
+
+- The hero has no dark outline on the map: the floor shows right up to its sprite again.
+
 ### Fixed
 
 - On a pane with the dash, a hero near the level's bottom walked under the dash's plaque, and the level's last rows

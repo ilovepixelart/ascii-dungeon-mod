@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Game } from '../types'
 import { GOLD_INK } from './pieces'
 import { MARK_INK } from './hud'
-import { SURFACE } from './ui/tokens'
+import { SPACE, SURFACE } from './ui/tokens'
 import { buttonsIn } from './fixtures'
 import { RETIRE_RECT, SHEET_H, plusRect, sheetGesture, sheetOverlay, sheetPixels } from './sheet'
 import { CLOSE_BOX, WINDOW_W } from './window'
@@ -13,6 +13,29 @@ import { newGame } from './world'
 const hero = (over: Partial<Game> = {}): Game => ({ ...newGame(1, 'knight'), ...over })
 const tap = (px: number, py: number): Gesture => ({ type: 'release', from: { x: px + 0.5, y: py / 2 + 0.25 }, at: { x: px + 0.5, y: py / 2 + 0.25 }, button: 'left' })
 const onPlus = (i: number) => tap(plusRect(i).x + 2, plusRect(i).y + 4)
+
+describe('the sheet\'s spacing', () => {
+  test('the attributes start 2 px under the portrait', async () => {
+    const px = sheetPixels(hero())
+    const y0 = plusRect(0).y
+    const ground = px[y0 - 1]![5]
+    let y = y0 - 1
+    while (px[y]![5] === ground) y--
+    expect(y0 - 1 - y).toBe(2)
+  })
+
+  test('each attribute ends SPACE.gap before its + button', async () => {
+    const boxes = sheetOverlay(hero()).filter(b => b.role === 'attribute')
+    expect(boxes.length).toBe(4)
+    boxes.forEach((b, i) => expect(plusRect(i).x - (b.x + b.w)).toBe(SPACE.gap))
+    const px = sheetPixels(hero())
+    const y = plusRect(0).y + 3
+    const ground = px[y]![0]
+    const gapRun = Array.from({ length: SPACE.gap }, (_, k) => px[y]![plusRect(0).x - 1 - k])
+    expect(gapRun).toEqual(Array(SPACE.gap).fill(ground))
+    expect(px[y]![plusRect(0).x - 1 - SPACE.gap]).toBe(SURFACE.cardEdge)
+  })
+})
 
 describe('the character sheet', () => {
   test('stands the XP bar beside its star on the same rows, as the townsfolk\'s bars stand beside theirs', async () => {

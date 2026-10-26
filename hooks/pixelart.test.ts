@@ -139,6 +139,12 @@ describe('the town\'s art', () => {
   })
 })
 
+describe('the town stash', () => {
+  test('is the dungeon\'s wooden chest, its dark outline drawn in dark wood', () => {
+    expect(TOWN_THING_ART.stash).toEqual(THING_ART.C!.map(r => r.replaceAll('K', 'N')))
+  })
+})
+
 describe('the dog', () => {
   test('stands as tall as the townsfolk, its ear in row 1, its paws on the bottom row, its tail raised', async () => {
     const rows = NPC_ART.dog
@@ -146,5 +152,21 @@ describe('the dog', () => {
     expect(used.indexOf(true)).toBe(1)
     expect(used[rows.length - 1]).toBe(true)
     expect(rows[2]![0]).not.toBe('.')
+  })
+})
+
+describe('the townsfolk\'s faces', () => {
+  test('each has two eyes on one row, a pixel of face between them, nothing black above either to run into it', async () => {
+    for (const who of ['merchant', 'smith', 'healer', 'elder', 'guard', 'villager'] as const) {
+      const y = NPC_ART[who].findIndex(r => /k.k/.test(r))
+      const row = NPC_ART[who][y]!
+      const i = row.indexOf('k')
+      const above = NPC_ART[who][y - 1]!
+      expect([who, row[i + 1], ['k', 'K'].includes(above[i]!), ['k', 'K'].includes(above[i + 2]!)]).toEqual([who, 's', false, false])
+    }
+  })
+
+  test('the merchant wears a hat in his robe\'s colours, so his head stands off the counter\'s wood', async () => {
+    expect([...NPC_ART.merchant[0]!, ...NPC_ART.merchant[1]!].filter(k => k !== '.').every(k => k === 'a' || k === 'A')).toBe(true)
   })
 })

@@ -30,18 +30,18 @@ export type TownSpot = 'merchant' | 'smith' | 'healer' | 'stash' | 'portal' | 'e
 /** The townsfolk without work yet: visited, they have a word. */
 export type TownPerson = 'guard' | 'villager' | 'dog'
 
-/** Who and what the hero visits, each on its own tile: the shopkeepers at their counters, the smith at his anvil, the rest about the square. */
+/** Who and what the hero visits, each on its own tile: the shopkeepers at their counters, the smith at his anvil with the stash beside it on the forge floor, the rest about the square. */
 export const TOWN_SPOTS: Readonly<Record<TownSpot, Pos>> = {
   merchant: { x: 3, y: 5 },
   smith: { x: 8, y: 5 },
   healer: { x: 15, y: 5 },
-  stash: { x: 3, y: 10 },
+  stash: { x: 11, y: 5 },
   portal: { x: 9, y: 12 },
   elder: { x: 8, y: 10 },
   mystic: { x: 16, y: 9 },
   guard: { x: 11, y: 12 },
   villager: { x: 4, y: 7 },
-  dog: { x: 5, y: 6 },
+  dog: { x: 5, y: 7 },
 }
 
 /** What each townsperson without work says when visited. */

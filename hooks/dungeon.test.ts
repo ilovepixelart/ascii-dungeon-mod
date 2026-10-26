@@ -1874,7 +1874,7 @@ test('on a wide pane every townsperson opens a pixel window of their words with 
   const town = apply(newGame(), { kind: 'portal' })
   const words = async () => ((await ui.find({ type: 'Client', key: 'talk-clicks' })) === undefined ? [] : ((await boxTexts(ui, 'talk-clicks'))[0] ?? []))
   // The first words of each, for a new hero on their first visit.
-  const first = { healer: /^"Not a scratch on you/, elder: /^"Slay|^"Reach/, mystic: /^"Come back when your purse is heavier/, guard: /^"/, villager: /^"Your stash by the square/, dog: /^The dog wags its tail/ } as const
+  const first = { healer: /^"Not a scratch on you/, elder: /^"Slay|^"Reach/, mystic: /^"Come back when your purse is heavier/, guard: /^"/, villager: /^"Your stash in the smithy/, dog: /^The dog wags its tail/ } as const
   for (const who of Object.keys(first) as (keyof typeof first)[]) {
     // Out and back through the portal: the camera recenters on the arrival, where the cells below assume it.
     if (who !== 'healer') {

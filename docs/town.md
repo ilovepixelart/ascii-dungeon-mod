@@ -4,7 +4,7 @@ A fixed square of shops, reached by portal: lit by day, no fog, no foes. The gro
 
 ## Layout
 
-Three shops face a cobbled square across its north side: the merchant (red roof, coin sign, goods outside), the smith (slate roof with a smoking chimney, stone wall, furnace and anvil on an open forge floor) and the healer (teal roof, red-cross sign). The square has a fountain at its center between two flower beds and two lamps, the stash on its west side, and the portal on the road out through the south gate. An overlapping line of trees in two greens frames the town, broken only by the gate. Trees, the fountain, lamps, the goods and the anvil block walking; signs, the furnace and the chimney sit on walls.
+Three shops face a cobbled square across its north side: the merchant (red roof, coin sign, goods outside), the smith (slate roof with a smoking chimney, stone wall, furnace, anvil and the stash on an open forge floor) and the healer (teal roof, red-cross sign). The square has a fountain at its center between two flower beds and two lamps, and the portal on the road out through the south gate. An overlapping line of trees in two greens frames the town, broken only by the gate. Trees, the fountain, lamps, the goods and the anvil block walking; signs, the furnace and the chimney sit on walls.
 
 ## The portal
 

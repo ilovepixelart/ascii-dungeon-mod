@@ -8,7 +8,7 @@ import { BAG_H, BAG_W, plainItem } from './items'
 import { arrive } from './world'
 import { analyze, bfs, cellId, chestAt, floorThing, generate, isFloor, layoutOf, same, themedRoomOf } from './map'
 import { foeRuns, mapRows, statusRuns, tileAt } from './panels'
-import { TOWN_ARRIVAL, TOWN_DECOR, TOWN_H, TOWN_SPOTS, TOWN_W, isTownWalkable, pathBeside } from './town'
+import { TOWN_ARRIVAL, TOWN_DECOR, TOWN_GROUND, TOWN_H, TOWN_SPOTS, TOWN_W, isTownWalkable, pathBeside } from './town'
 
 const text = (rows: ReturnType<typeof mapRows>) => rows.map(r => r.map(run => run.text).join(''))
 const stepsLeft = (g: Game) => (routeToStairs(g)?.length ?? 0) - 1
@@ -569,6 +569,13 @@ describe('organizing the bag', () => {
 })
 
 describe('the town', () => {
+  test('the stash stands on the smith\'s forge floor, at its right end past the anvil', () => {
+    const forge = TOWN_DECOR.find(d => d.art === 'anvil')!
+    const row = TOWN_GROUND[TOWN_SPOTS.stash.y]!
+    expect(row[TOWN_SPOTS.stash.x]).toBe('f')
+    expect(row[TOWN_SPOTS.stash.x + 1]).not.toBe('f')
+    expect(TOWN_SPOTS.stash.x).toBeGreaterThan(forge.x)
+  })
   const inDungeon = () => ({ ...newGame(4), seen: '1'.repeat(64 * 18) })
   const inTown = () => apply(inDungeon(), { kind: 'portal' })
   const beside = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) === 1

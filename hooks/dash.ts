@@ -162,8 +162,20 @@ export const glassPixel = (x: number, y: number, share: number, phase: number, i
   if (share <= 0) return inks.glass
   const wave = isStill(y) ? 0 : Math.round(Math.sin((x / 7 + phase / ORB_PHASES) * 2 * Math.PI) * 0.9)
   const surface = surfaceRow(share) + wave
-  if (y < surface) return inks.glass
-  return y === surface ? inks.surface : liquidAt(x, y, inks)
+  const [lit, last] = litRows(surface)
+  if (y < lit) return inks.glass
+  return y <= last ? inks.surface : liquidAt(x, y, inks)
+}
+
+/** The glass's first row under the orbs' numbers, their two rows of cells from it. */
+const TEXT_ROW = ORB_TEXT_Y - GLASS_TOP
+/** The rows the lit surface takes: its own; on a cell of the numbers' rows, the whole cell, so the cell is one ground
+ * and the number on it shows no box. */
+const litRows = (surface: number): [number, number] => {
+  const k = surface - TEXT_ROW
+  if (k < 0 || k > 3) return [surface, surface]
+  const top = TEXT_ROW + k - (k % 2)
+  return [top, top + 1]
 }
 
 /** The socket's pixel at x, y of the orb's box: the carved stone ring round the glass, lit on the light's side, its

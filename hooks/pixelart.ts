@@ -938,13 +938,13 @@ export const NPC_ART: Readonly<Record<'merchant' | 'smith' | 'healer' | 'elder' 
   ],
   dog: [
     '........',
-    '........',
-    '........',
-    '......nn',
-    'n....nkn',
-    'nnnnnnnN',
+    '.....nN.',
+    'N....nkn',
+    'n...nnnk',
+    'nDDDDDn.',
+    'nnnnnnN.',
     '.nN.nN..',
-    '.N...N..',
+    '.N..N...',
   ],
 }
 

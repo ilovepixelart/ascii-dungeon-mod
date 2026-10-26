@@ -399,8 +399,8 @@ export const MONSTER_VARIANT: Readonly<Record<'flooded' | 'fungal' | 'frozen' | 
 export const UNIQUE_ART: Readonly<Record<'bones' | 'mire' | 'rot' | 'rime' | 'ember', readonly string[]>> = {
   bones: ['..KKKK.o', '.KooooKo', '.KkooKko', 'PPKoOKPo', 'PKoKoKPW', 'PPoooOP.', '.PKoOKP.', '.Ko..oK.'],
   mire: ['..lLlL..', '.lLlLlL.', 'lLKkKkLl', 'lKtoomKl', 'LKmmmmKL', 'lKmMmMKl', 'L.KmMK.L', '.MM..MM.'],
-  // The Rotking: a kobold under a toadstool cap, spores drifting off it.
-  rot: ['.vPPPPv.', 'vPvPPvPv', '..KxxK..', '.Kvkvve.', '..KxxKe.', '.KxPxvK.', 'v.xPx...', '...P.P.v'],
+  // The Rotking: a kobold under a red toadstool cap spotted white, in a rotting robe, two spores drifting off it.
+  rot: ['.KrrrrK.', 'KrorrorK', 'KrrrrrrK', '.KffffK.', 'vfkffkf.', '.KfPPfKv', '.KPPPPK.', '.f.KK.f.'],
   // Rimehide: an orc in a mantle of ice, icicle tusks, a frost axe.
   rime: ['.c.KK.c.', '.KCCCCKZ', '.CcCCcCZ', '.KZCCZKZ', 'cKWWWWKc', 'CKWccWKC', '.KCC.CC.', '.BB..BB.'],
   ember: ['I.I..I.I', '.II..II.', 'iRiKKiRi', 'iRiyykRi', '.KiIIiK.', '..KiyiK.', '.Ki..iK.', '.i....i.'],

@@ -78,7 +78,7 @@ Every window keeps these; review them as a real session draws them with `tools/s
 
 ## The character sheet
 
-- The first of the hero's tabs (`hooks/herotabs.ts`: Hero, Bag, Talent, Deep, Codex, in the title bar; Talent and Deep marked gold while a talent is owed or a fork waits). The hero's portrait in what they wear, beside it who they are, their HP, attack, defense and crit, what Vigor and Insight give, and the points to spend; the XP bar; the attributes two to a row, each its value and a `+` (lit while there are points); Retire (`r`) under them, lit once the hero has slain a big boss (`canRetire`). New game is in settings.
+- The first of the hero's tabs (`hooks/herotabs.ts`: Hero, Bag, Talent, Abyss, Codex, in the title bar; Talent and Abyss marked gold while a talent is owed or a fork waits). The hero's portrait in what they wear, beside it who they are, their HP, attack, defense and crit, what Vigor and Insight give, and the points to spend; the XP bar; the attributes two to a row, 2 px under the portrait, each its value and a `+` standing `SPACE.gap` past it (lit while there are points); Retire (`r`) under them, lit once the hero has slain a big boss (`canRetire`). New game is in settings.
 
 ## Settings
 

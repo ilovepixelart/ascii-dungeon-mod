@@ -26,8 +26,8 @@ const SIDE_X = PAD + FACE + 3
 const XP_TONES = [INK.xpLight, INK.xp, INK.xpShade] as const
 const XP_EMPTY = SURFACE.xpEmpty
 const NAMES = ['MIGHT', 'FOCUS', 'VIGOR', 'INSIGHT'] as const
-/** The attributes two to a row under the portrait, each a framed row as tall as its + button, a cell apart. */
-const ROWS_Y = onCell(top + 2 + FACE + 3)
+/** The attributes two to a row under the portrait, each a framed row as tall as its + button, the button SPACE.gap past its end. */
+const ROWS_Y = onCell(top + 2 + FACE + 2)
 const ROW_W = Math.floor((WINDOW_W - 2 * PAD - SPACE.gap) / 2)
 
 /** Each attribute's place, two to a row, and its + button's at its right end, in window pixels. */
@@ -65,7 +65,7 @@ const xpBar = (g: Game) => {
 /** An attribute's row in words, on its face up to its + button: its name, its value at the right. */
 const attributeBox = (g: Game, i: number): OverlayBox<'attribute'> => {
   const r = rowRect(i)
-  const w = plusRect(i).x - r.x
+  const w = plusRect(i).x - SPACE.gap - r.x
   const value = String(g.stats[ATTRIBUTES[i]!.stat])
   const room = w - 4 - NAMES[i]!.length - value.length
   return { role: 'attribute', x: r.x, y: r.y / 2, w, h: 3, border: SURFACE.card, bg: SURFACE.card, pad: 1, lines: [[{ text: `${NAMES[i]}${' '.repeat(room)}`, color: INK.text }, { text: value, color: NUM_INK, bold: true }]] }
@@ -97,8 +97,9 @@ export const sheetPixels = (g: Game): string[][] => {
   ATTRIBUTES.forEach((_, i) => {
     const r = rowRect(i)
     const p = plusRect(i)
-    fill(body, r.x, r.y - top, r.w, r.h, SURFACE.card)
-    frame(body, r.x, r.y - top, r.w, r.h, SURFACE.cardEdge)
+    const w = p.x - SPACE.gap - r.x
+    fill(body, r.x, r.y - top, w, r.h, SURFACE.card)
+    frame(body, r.x, r.y - top, w, r.h, SURFACE.cardEdge)
     button(body, '+', p.x, p.y - top, plusState(g))
   })
   button(body, RETIRE_KEY.label, RETIRE_RECT.x, RETIRE_RECT.y - top, retireState(g))

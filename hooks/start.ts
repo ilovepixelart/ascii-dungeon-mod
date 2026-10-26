@@ -23,13 +23,13 @@ export type StartUi = { cls: HeroClass }
 const CHROME: Chrome = { title: 'ASCII DUNGEON' }
 /** A card: the portrait at twice the sprite's size, the name under it on a whole cell. */
 const FACE = PX * 2 + 4
-const CARD_W = 30
+const CARD_W = 31
 const CARD_GAP = 4
 /** The name 3 under the portrait, so with the card 2 under the title bar it lies on a whole cell. */
 const NAME_Y = 3 + FACE + 3
-const CARD_H = NAME_Y + 2 + 3
+const CARD_H = NAME_Y + 2 + 4
 const CARD_Y = 2
-const BUTTON_Y = CARD_Y + CARD_H + 3
+const BUTTON_Y = CARD_Y + CARD_H + 2
 /** The body over the box: the cards and the buttons, the box's top on a whole cell. */
 const BODY_H = BUTTON_Y + BUTTON_H + 2
 

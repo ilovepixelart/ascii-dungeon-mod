@@ -30,7 +30,7 @@ export const COMPACT_H = WINDOW_TOP + BELT_Y + 10 + 2
 const ROWS = COMPACT_H / 2
 const SLOT_WORD: Readonly<Record<Slot, string>> = { weapon: 'Weapon', offhand: 'Off-hand', helm: 'Helm', armor: 'Armor', boots: 'Boots', ring: 'Ring', amulet: 'Amulet' }
 /** The worn list, in cells: two rows a slot, its name and what is worn there. */
-const LIST: Rect = { x: LIST_X, y: WINDOW_TOP / 2 + 1, w: COMPACT_W - LIST_X - 1, h: SLOTS.length * 2 + 2 }
+const LIST: Rect = { x: LIST_X, y: WINDOW_TOP / 2 + 1, w: COMPACT_W - LIST_X - 2, h: SLOTS.length * 2 + 2 }
 const CLOSE = closeBoxOf(COMPACT_W)
 
 const itemRect = (item: Item): Rect => cellBox(item, BAG_X, WINDOW_TOP + BAG_Y)
@@ -57,7 +57,7 @@ const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
   canWear(g, item) ? [{ text: 'e', color: INK.gold, bold: true }, { text: ' Equip' }] : [{ text: 'e Equip', dim: true }, { text: `  ${classLabel(item)}`, color: OFF_CLASS }],
   item.locked === true
     ? [{ text: 'd Destroy', dim: true }, { text: '  locked', color: OFF_CLASS }]
-    : [{ text: 'd', color: INK.gold, bold: true }, confirm ? { text: ' Destroy? again', color: OFF_CLASS, bold: true } : { text: ' Destroy' }],
+    : [{ text: 'd', color: INK.gold, bold: true }, confirm ? { text: ' Destroy? click again', color: OFF_CLASS, bold: true } : { text: ' Destroy' }],
   [{ text: 'g', color: INK.gold, bold: true }, { text: item.locked === true ? ' Unlock' : ' Lock' }],
 ]
 

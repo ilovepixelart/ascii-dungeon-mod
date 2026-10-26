@@ -24,13 +24,13 @@ const tap = (cx: number, cy: number, button: 'left' | 'right' = 'left'): Gesture
 const onItem = (item: Item) => tap(2 + item.x * CELL + 4.5, (WINDOW_TOP + 2 + item.y * CELL + 4) / 2 + 0.25)
 
 describe('the compact screen\'s room', () => {
-  test('a pixel of room each side: a top-left item\'s brackets keep off the left edge, the worn list off the right', async () => {
+  test('room each side: a top-left item\'s brackets keep off the left edge, the worn list 2 px off the right as the grid is off the left', async () => {
     for (const s of shots().filter(x => x.name.startsWith('compact-'))) {
       // The body's outer columns are the window's ground alone.
       const edges = s.px.slice(WINDOW_TOP).flatMap(row => [row[0], row[COMPACT_W - 1]])
       expect([s.name, [...new Set(edges)]]).toEqual([s.name, [BG]])
       const list = s.boxes.find(b => b.role === 'worn')!
-      expect([s.name, list.x + list.w]).toEqual([s.name, COMPACT_W - 1])
+      expect([s.name, list.x + list.w]).toEqual([s.name, COMPACT_W - 2])
     }
   })
 })
@@ -106,5 +106,20 @@ describe('the compact inventory', () => {
       const covers = own.x < b.x + b.w && b.x < own.x + own.w && own.y < (b.y + b.h) * 2 && b.y * 2 < own.y + own.h
       expect(covers).toBe(false)
     }
+  })
+})
+
+describe('the compact bag\'s edges and words', () => {
+  test('the worn list stands 2 px from the window\'s right side, as the bag stands from its left', async () => {
+    const list = compactOverlay(knight(), BAG_UI_IDLE).find(b => b.role === 'worn')!
+    expect(COMPACT_W - (list.x + list.w)).toBe(2)
+  })
+
+  test('an armed Destroy says to click again, in the wide bag\'s words', async () => {
+    const g = knight()
+    const sword = put(g, 'sword', 0, 0)
+    const armed = { ...BAG_UI_IDLE, menu: { id: sword.id, confirm: true } }
+    const menu = compactOverlay({ ...g, bag: [sword], cursor: sword.id }, armed).find(b => b.role === 'menu')!
+    expect(menu.lines.map(l => l.map(r => r.text).join(''))).toContain('d Destroy? click again')
   })
 })

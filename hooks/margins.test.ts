@@ -3,6 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import { shots } from './screens'
 import { BG, canvas } from './canvas'
 import { WINDOW_TOP, drawBox } from './window'
+import { SPACE } from './ui/tokens'
 
 /** The windows laid out on the bag's grid, a pixel from their edges as the grid is: the bag, the smith, retiring, the
  * stash, the shop, and the compact bag, narrower. The strip and the dash are no windows. */
@@ -49,6 +50,43 @@ describe('a portrait', () => {
       let right = beside.x - 1
       while (right >= 0 && row[right] === BG) right -= 1
       expect([name, beside.x - 1 - right]).toEqual([name, 3])
+    }
+  })
+})
+
+describe('a window\'s parts', () => {
+  /** The rows of bare ground between a box and the nearest drawn row over it, across the box's width. */
+  const roomOver = (px: string[][], b: { x: number; y: number; w: number }) => {
+    let y = b.y * 2 - 1
+    while (y >= WINDOW_TOP && px[y]!.slice(b.x, b.x + b.w).every(p => p === BG)) y -= 1
+    // Nothing drawn over it in the body: the box stands under the title bar, as the margins say.
+    return y < WINDOW_TOP ? undefined : b.y * 2 - 1 - y
+  }
+
+  test('stand 2 px over the box under them: the last row of cards, slots or buttons', async () => {
+    const all = shots().filter(s => /^(talent-[0-3]|deep-|codex-|settings-|talk-)/.test(s.name))
+    expect(all.length).toBeGreaterThan(15)
+    for (const s of all) {
+      const box = s.boxes.filter(b => b.role === 'about' || b.role === 'words').sort((a, b) => b.y - a.y)[0]
+      const room = box === undefined || s.name.startsWith('talk-') ? undefined : roomOver(s.px, box)
+      if (room !== undefined) expect([s.name, room]).toEqual([s.name, 2])
+    }
+  })
+
+  test('the talent cards stand 2 px over their buttons', async () => {
+    const s = shots().find(x => x.name === 'talent-0')!
+    const take = s.boxes.find(b => b.role === 'button')!
+    expect(roomOver(s.px, take)).toBe(2)
+  })
+
+  test('stand a gap apart in a row of buttons, the one gap every window uses', async () => {
+    // The sheet's + buttons stand at their attributes' rows, not in a row of their own.
+    for (const s of shots().filter(x => !x.name.startsWith('sheet-'))) {
+      const buttons = s.boxes.filter(b => b.role === 'button')
+      for (const a of buttons) {
+        const next = buttons.filter(b => b.y === a.y && b.x > a.x).sort((p, q) => p.x - q.x)[0]
+        if (next !== undefined) expect([s.name, next.x - (a.x + a.w)]).toEqual([s.name, SPACE.gap])
+      }
     }
   })
 })

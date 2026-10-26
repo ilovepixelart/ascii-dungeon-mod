@@ -63,8 +63,9 @@ const bigs = Object.entries(BIG_BOSSES)
 
 /** The Card button, under the Legendaries on Finds: it saves the hero card and copies it as text. */
 export const CARD_KEY = { key: 'K', label: 'CARD' }
-const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 3), w: buttonW(CARD_KEY.label), h: BUTTON_H }
-/** The box under the pages stands under the lower of the two pages' last rows: Foes' big bosses, Finds' Card. */
+const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 2), w: buttonW(CARD_KEY.label), h: BUTTON_H }
+/** The box under the pages stands 2 px under the lower of the two pages' last rows: Foes' big bosses, Finds' Card (the
+ * two end on one row). */
 const BOX_ABOVE = Math.max(ROW2_Y + FOE_BOX, CARD_RECT.y + BUTTON_H)
 /** The Card button's place, in window pixels, on the page it is on: Finds; none on Foes. */
 export const codexCardRect = (ui: CodexUi = { page: 'finds' }): Rect | undefined => (ui.page === 'finds' ? CARD_RECT : undefined)
@@ -82,7 +83,7 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
     [{ text: `Deaths ${countText(c.deaths)}, heroes retired ${c.retired ?? 0}, gold found ${countText(c.gold)}.`, dim: true }],
   ]
   const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []
-  return [{ role: 'about', x: 2, y: Math.ceil((BOX_ABOVE + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
+  return [{ role: 'about', x: 2, y: Math.ceil((BOX_ABOVE + 2) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
 }
 
 /** The window's height in pixels, title bar and all. */

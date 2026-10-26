@@ -13,7 +13,7 @@ import type { ButtonState } from './pieces'
 import { GRID, canvas, frame } from './canvas'
 import { WORK_X, chosenSlot } from './forge'
 import type { ForgeUi } from './forge'
-import { SURFACE } from './ui/tokens'
+import { SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
@@ -54,9 +54,9 @@ const layout = (g: Game, ui: RetireUi) => {
   const lines = aboutLines(g, slot)
   const box: OverlayBox = { role: 'about', x: WORK_X, y: (top + 2) / 2, w: WINDOW_W - WORK_X - 1, h: lines.length + 2, border: SURFACE.frame, lines }
   // Retire and Back, a row centred under the box.
-  const row = buttonW(RETIRE.label) + 4 + buttonW(BACK.label)
+  const row = buttonW(RETIRE.label) + SPACE.gap + buttonW(BACK.label)
   const retire: Rect = { x: runX(row, box.x, box.x + box.w), y: (box.y + box.h) * 2 + 2, w: buttonW(RETIRE.label), h: BUTTON_H }
-  const back: Rect = { x: retire.x + retire.w + 4, y: retire.y, w: buttonW(BACK.label), h: BUTTON_H }
+  const back: Rect = { x: retire.x + retire.w + SPACE.gap, y: retire.y, w: buttonW(BACK.label), h: BUTTON_H }
   const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
   const end = Math.max(top + WORN_END, retire.y + BUTTON_H)
   // A pixel of room under the last row, as the bag keeps under its belt, on a whole cell.

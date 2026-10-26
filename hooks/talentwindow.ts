@@ -9,7 +9,7 @@ import { BUTTON_H, artLabel, button, buttonBox, buttonW, onCell } from './pieces
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
 import { flatCard, ribbon, ribbonLabel } from './ui/kit'
-import { FAMILIES, INK, SURFACE } from './ui/tokens'
+import { FAMILIES, INK, SPACE, SURFACE } from './ui/tokens'
 import type { FamilyName } from './ui/tokens'
 import { heroChrome, heroTabAt } from './herotabs'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
@@ -32,7 +32,8 @@ export const familyOf = (t: Talent) => FAMILY_OF[t]
 
 const GAP = 6
 const CARD_W = 26
-const CARD_H = 33
+/** Even, so the buttons stand on a whole cell 2 px under the cards. */
+const CARD_H = 34
 const CARD_Y = 2
 /** The ribbon's top, down a card's face. */
 const RIBBON_Y = 4
@@ -48,14 +49,14 @@ const chosenOf = (g: Game, ui: TalentUi) => Math.min(Math.max(0, ui.chosen), Mat
 const rowX = Math.floor((WINDOW_W - (3 * CARD_W + 2 * GAP)) / 2)
 /** A card's place in its column: where a click on it acts and the hover lights it. */
 export const cardRect = (i: number): Rect => ({ x: rowX + i * (CARD_W + GAP), y: top + CARD_Y, w: CARD_W, h: CARD_H })
-const BUTTONS_Y = onCell(CARD_Y + CARD_H + 5)
+const BUTTONS_Y = onCell(CARD_Y + CARD_H + 2)
 export const takeRect = (): Rect => {
   const w = buttonW('TAKE')
-  return { x: Math.floor((WINDOW_W - w - 4 - buttonW('LATER')) / 2), y: top + BUTTONS_Y, w, h: BUTTON_H }
+  return { x: Math.floor((WINDOW_W - w - SPACE.gap - buttonW('LATER')) / 2), y: top + BUTTONS_Y, w, h: BUTTON_H }
 }
 export const laterRect = (): Rect => {
   const t = takeRect()
-  return { x: t.x + t.w + 4, y: t.y, w: buttonW('LATER'), h: BUTTON_H }
+  return { x: t.x + t.w + SPACE.gap, y: t.y, w: buttonW('LATER'), h: BUTTON_H }
 }
 /** The box under the buttons, in cells: the chosen talent's line; then Take's and Later's words, and each card's
  * ribbon's. */

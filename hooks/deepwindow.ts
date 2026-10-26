@@ -39,7 +39,7 @@ const layout = (g: Game) => {
     rect: { x: PAD + i * (CARD_W + SPACE.gap), y: cardsY, w: CARD_W, h: CARD_H },
     isChosen: g.marks?.[fork] === mark,
   }))
-  const boxY = cards.length > 0 ? Math.ceil((cardsY + CARD_H + 3) / 2) : top / 2 + 1
+  const boxY = cards.length > 0 ? Math.ceil((cardsY + CARD_H + 2) / 2) : top / 2 + 1
   return { fork, cards, boxY }
 }
 

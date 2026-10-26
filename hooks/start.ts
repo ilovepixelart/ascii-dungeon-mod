@@ -9,7 +9,7 @@ import { canvas } from './canvas'
 import { PX, heroArt } from './pixelart'
 import { BUTTON_H, artLabel, button, buttonBox, buttonW, portrait } from './pieces'
 import { flatCard } from './ui/kit'
-import { INK, SURFACE } from './ui/tokens'
+import { INK, SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 import { newGame } from './world'
@@ -44,7 +44,7 @@ export const cardRect = (i: number): Rect => ({ x: CARDS_X + i * (CARD_W + CARD_
 /** A first game: nothing played, and no codex yet from an earlier hero. */
 export const isFirstGame = (g: Game) => g.codex === undefined && !isUnderWay(g)
 
-const BUTTON_GAP = 3
+const BUTTON_GAP = SPACE.gap
 const START_KEY = ['S', 'START'] as const
 const HELP_KEY = ['H', 'HELP'] as const
 const BACK_KEY = ['B', 'BACK'] as const

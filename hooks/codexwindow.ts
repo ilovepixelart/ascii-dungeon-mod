@@ -5,8 +5,8 @@
 import type { Codex, Game } from '../types'
 import type { Action, Run } from './game'
 import { BIG_BOSSES, UNIQUES, firstCodex } from './game'
-import { LEGENDARIES } from './items'
-import { ICONS } from './icons'
+import { LEGENDARIES, baseOf } from './items'
+import { CELL, ICONS } from './icons'
 import { BOSS_ART, PAL, foeArtOf } from './pixelart'
 import { BUTTON_H, button, buttonBox, buttonW, onCell, tierBox } from './pieces'
 import { BG, SLOT, art, canvas, fill, frame } from './canvas'
@@ -120,23 +120,26 @@ const drawFoes = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
 /** Each Legendary's art, and its box: the art and a pixel of frame round it across, as in the bag, LEG_H down. */
 const legendaryBoxes = () => {
   const icons = LEGENDARIES.map(one => ICONS[one.base]?.art ?? [])
-  const widths = icons.map(icon => (icon[0]?.length ?? 0) + 2)
-  const across = widths.reduce((n, w) => n + w, 0) + LEG_GAP * (widths.length - 1)
+  // Its piece's cells framed, as the bag holds it: w by h cells of CELL, a frame line round them.
+  const sizes = LEGENDARIES.map(one => ({ w: (baseOf(one.base)?.w ?? 1) * CELL + 1, h: (baseOf(one.base)?.h ?? 1) * CELL + 1 }))
+  const across = sizes.reduce((n, s) => n + s.w, 0) + LEG_GAP * (sizes.length - 1)
   let x = Math.floor((WINDOW_W - across) / 2)
   return icons.map((icon, i) => {
-    const at = { icon, x, w: widths[i]! }
-    x += widths[i]! + LEG_GAP
+    const at = { icon, x, ...sizes[i]! }
+    x += sizes[i]!.w + LEG_GAP
     return at
   })
 }
 
 const drawFinds = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
   const y = ROW1_Y - top
-  legendaryBoxes().forEach(({ icon, x, w }, i) => {
-    // A Legendary found sits in its tier's box, as in the bag; one not yet found is a shape in a plain one.
-    if (lit.legendaries[i]) tierBox(body, x + 1, y + 1, w - 2, LEG_H - 2, 'legendary')
-    else box(body, x, y, w, LEG_H, false)
-    art(body, icon, x + 1, y + Math.floor((LEG_H - icon.length) / 2), lit.legendaries[i] ? undefined : SHADE)
+  legendaryBoxes().forEach(({ icon, x, w, h }, i) => {
+    // Each stands on the row's bottom line. A Legendary found sits in its tier's box, as in the bag; one not yet found
+    // is a shape in a plain one.
+    const top = y + LEG_H - h
+    if (lit.legendaries[i]) tierBox(body, x + 1, top + 1, w - 2, h - 2, 'legendary')
+    else box(body, x, top, w, h, false)
+    art(body, icon, x + 1 + Math.floor((w - 2 - (icon[0]?.length ?? 0)) / 2), top + 1 + Math.floor((h - 2 - icon.length) / 2), lit.legendaries[i] ? undefined : SHADE)
   })
   button(body, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y - top, 'ready')
 }

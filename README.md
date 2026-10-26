@@ -23,19 +23,36 @@ three spare pieces for one better.
 
 ## Install
 
+Requires a Claude Code with mods. Developed and tested on 2.1.309. The game is drawn for a dark Claude Code theme; on
+a light theme some of its text is hard to read.
+
+From the ilovepixelart marketplace, which pins each mod to its latest release:
+
+```
+/plugin marketplace add ilovepixelart/claude-code-mods
+/plugin install ascii-dungeon@ilovepixelart
+```
+
+Or in one line, straight from this repository, following `main`:
+
 ```
 /plugin install ascii-dungeon --marketplace ilovepixelart/ascii-dungeon-mod
 ```
 
-That follows `main`. To stay on one release, add the repository at its tag, then install from it:
+To stay on one release, add this repository at its tag instead, then install from it:
 
 ```
 /plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.5.0
 /plugin install ascii-dungeon@ascii-dungeon-mod
 ```
 
-Run `/reload-plugins` (or start a new session) after installing. Tested on Claude Code 2.1.303. To try it from a clone
-without installing: `claude --plugin-dir /path/to/ascii-dungeon-mod`.
+Run `/reload-plugins` (or start a new session) after installing. To take a new release later, run
+`claude plugin update ascii-dungeon@ilovepixelart` in your shell, or `ascii-dungeon@ascii-dungeon-mod` if you installed
+from this repository. Each [release](https://github.com/ilovepixelart/ascii-dungeon-mod/releases) also carries a zip of
+the plugin for `claude --plugin-url`, with its SHA-256 beside it, and [CHANGELOG.md](CHANGELOG.md) lists what each one
+changed.
+
+To try it from a clone without installing: `claude --plugin-dir /path/to/ascii-dungeon-mod`.
 
 ## Playing
 
@@ -96,6 +113,12 @@ Rule changes go through the simulator; visual changes through a mockup round fir
 `docs/items.md` (classes, items, foes, loot), `docs/pacing.md` (what keeps a session varied, and the numbers),
 `docs/town.md`, `docs/windows.md` (every pixel window), `docs/inventory.md`, `docs/dashboard.md` (the strip). Changes
 by version: `CHANGELOG.md`.
+
+## Versioning
+
+Releases follow [Semantic Versioning](https://semver.org/). While the version is 0.x, any release may change
+behaviour. The game is saved in a versioned layout (`SAVE_VERSION`): a release brings an older save up to its own, and
+never reads or overwrites a save from a newer layout than it knows, and says so instead.
 
 ## License
 

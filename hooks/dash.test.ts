@@ -63,9 +63,11 @@ describe('the dash', () => {
     const at = (hp: number) => overMap(hero({ hp, maxHp: 100 }), W)[DASH_OVER - 10]![11]
     const int = (hex: string) => Number.parseInt(hex.slice(1), 16)
     expect([at(100), at(70)]).toEqual([int(RED[1]), int(RED[1])])
-    // At 60%: the surface on row 9, lit. At 55%: on row 10, under row 9, which is glass.
+    // At 60%: the surface on row 9, lit. At 55%: on row 10, which shares a cell of the numbers with row 9: the cell lit
+    // whole. Row 8 over them, at 55%, is glass.
     expect(at(60)).toBe(int(RED[0]))
-    expect(at(55)).toBe(int(mix(BG, RED[1], 0.14)))
+    expect(at(55)).toBe(int(RED[0]))
+    expect(overMap(hero({ hp: 55, maxHp: 100 }), W)[DASH_OVER - 11]![11]).toBe(int(mix(BG, RED[1], 0.14)))
   })
 
   test('ripples where a surface lies in the dash\'s own rows; over the map the orbs hold still', async () => {
@@ -90,6 +92,21 @@ describe('the dash', () => {
       expect((r as { bg?: string }).bg).toBe(top === bottom ? top : mix(top, bottom, 0.5))
     })
     expect(text(overLabels({ ...g, points: 1 }, W)[3]!)).toBe('LV1+')
+  })
+
+  test('never cuts a cell of the orbs\' numbers across the liquid\'s surface line, at any fill: each is one ground', async () => {
+    const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`
+    const cut: string[] = []
+    for (let n = 0; n <= 100; n += 1) {
+      const g = hero({ hp: Math.max(1, n), maxHp: 100, xp: n, level: 1 })
+      const rows = overMap(g, W)
+      for (const b of overLabels(g, W).slice(0, 4)) b.lines[0]!.forEach((_, i) => {
+        const x = b.x + 1 + i
+        const [top, bottom] = [rows[(b.y + 1) * 2]![x]!, rows[(b.y + 1) * 2 + 1]![x]!]
+        if (top !== bottom) cut.push(`${n}% ${x},${b.y + 1}: ${hex(top)} over ${hex(bottom)}`)
+      })
+    }
+    expect(cut.slice(0, 5)).toEqual([])
   })
 
   test('writes the belt\'s counts on its own rows', async () => {

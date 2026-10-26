@@ -6,6 +6,12 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Fixed
+
+- On a pane with the dash, a hero near the level's bottom walked under the dash's plaque, and the level's last rows
+  could not be seen there, nor clicked to walk to. The camera keeps the hero above the dash, and at the level's bottom
+  the map runs past it, its last rows shown above the dash.
+
 ## [0.5.0] - 2026-10-23
 
 Saves from 0.4.0 load as they are, brought to save version 14: each stash tab, a list of ten, is laid out on a grid

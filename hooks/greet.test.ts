@@ -21,7 +21,7 @@ describe('a session begun with choices waiting', () => {
   test('an open fork is said with its two marks', async () => {
     const g = hero({ ...arrive(plainHero(3).world, 110), deepest: 110, bossSlain: 110, level: 5 })
     const [easy, hard] = pairOf(g.world, 7).map(m => MARKS[m].name)
-    expect(greeted(g)).toEqual([`The deep forks: tier VII will be ${easy} or ${hard}. Choose on the character sheet.`])
+    expect(greeted(g)).toEqual([`The Abyss forks: circle VII, The Drowned Stair, takes the blessing ${easy} or the curse ${hard}. Choose in the Abyss.`])
   })
 
   test('a fork already chosen, or no fork, is not said; nor is a hero with every talent taken', async () => {
@@ -35,7 +35,7 @@ describe('a session begun with choices waiting', () => {
     const g = hero({ ...arrive(plainHero(3).world, 60), deepest: 60, bossSlain: 60, level: 20 })
     const said = greeted(g)
     expect(said.length).toBe(2)
-    expect([said[0], said[1]!.startsWith('The deep forks: tier II')]).toEqual(['2 talents to choose: open the character sheet.', true])
+    expect([said[0], said[1]!.startsWith('The Abyss forks: circle II')]).toEqual(['2 talents to choose: open the character sheet.', true])
   })
 
   test('changes nothing else about the game, but for opening the talent window on the talents owed', async () => {

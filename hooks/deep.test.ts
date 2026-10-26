@@ -89,13 +89,13 @@ describe('the fork', () => {
   test('the big boss falling at 50 says the fork and its two marks', async () => {
     const g = bigSlain(50)
     const [easy, hard] = pairOf(g.world, 1).map(m => MARKS[m].name)
-    expect(g.log).toContain(`The deep forks: tier I will be ${easy} or ${hard}. Choose on the character sheet.`)
+    expect(g.log).toContain(`The Abyss forks: circle I, The Hollow Halls, takes the blessing ${easy} or the curse ${hard}. Choose in the Abyss.`)
   })
 
   test('a big boss above the tiers, or a lesser boss in one, says no fork', async () => {
     for (const g of [bigSlain(40), bigSlain(55)]) {
       expect(g.log.some(l => l.endsWith('The way down is open.') || l.startsWith('Loot: '))).toBe(true)
-      expect(g.log.some(l => l.startsWith('The deep forks'))).toBe(false)
+      expect(g.log.some(l => l.startsWith('The Abyss forks'))).toBe(false)
     }
   })
 })
@@ -114,37 +114,37 @@ describe('choosing', () => {
   test('a mark not offered is refused, and said', async () => {
     const other = [...EASY, ...HARD].find(m => m !== easy && m !== hard)!
     const refused = apply(atFork, { kind: 'mark', mark: other })
-    expect([refused.marks, refused.log.at(-1)]).toEqual([undefined, `${MARKS[other].name} is not on offer for tier II.`])
+    expect([refused.marks, refused.log.at(-1)]).toEqual([undefined, `${MARKS[other].name} is not on offer for circle II.`])
   })
 
   test('with no fork open, a choice is refused, and said', async () => {
     const refused = apply(deepAt(IN_TIER), { kind: 'mark', mark: 'mild' })
-    expect([refused.marks, refused.log.at(-1)]).toEqual([undefined, 'The deep has no fork to choose now.'])
+    expect([refused.marks, refused.log.at(-1)]).toEqual([undefined, 'The Abyss has no fork to choose now.'])
   })
 
   test('the stairs into the tier take the chosen mark and say it', async () => {
     const down = apply(apply(atFork, { kind: 'mark', mark: hard }), { kind: 'descend' })
     expect([down.depth, down.marks]).toEqual([61, { 2: hard }])
-    expect(down.log).toContain(`Tier II, ${MARKS[hard].name}: ${MARKS[hard].does}`)
+    expect(down.log).toContain(`Circle II, The Sunken Vaults: ${MARKS[hard].name}, a curse. ${MARKS[hard].does}`)
     expect(down.log.some(l => l.startsWith('Unchosen'))).toBe(false)
   })
 
   test('unchosen, the stairs take the easier mark and say so', async () => {
     const down = apply(atFork, { kind: 'descend' })
     expect(down.marks).toEqual({ 2: easy })
-    expect(down.log).toContain('Unchosen, tier II takes the easier mark.')
-    expect(down.log).toContain(`Tier II, ${MARKS[easy].name}: ${MARKS[easy].does}`)
+    expect(down.log).toContain('Unchosen, circle II, The Sunken Vaults, takes the blessing.')
+    expect(down.log).toContain(`Circle II, The Sunken Vaults: ${MARKS[easy].name}, a blessing. ${MARKS[easy].does}`)
   })
 
   test('woken above a fork, the stairs down to it take no mark and say no tier', async () => {
     const above = apply(deepAt(55, { bossSlain: 60, deepest: 60 }), { kind: 'descend' })
-    expect([above.depth, above.marks, above.log.some(l => l.startsWith('Tier ') || l.startsWith('Unchosen'))]).toEqual([56, undefined, false])
+    expect([above.depth, above.marks, above.log.some(l => l.startsWith('Circle ') || l.startsWith('Unchosen'))]).toEqual([56, undefined, false])
   })
 
   test('the stairs within a tier, or into a tier with no fork, say no tier', async () => {
-    expect(apply(deepAt(56), { kind: 'descend' }).log.some(l => l.startsWith('Tier '))).toBe(false)
+    expect(apply(deepAt(56), { kind: 'descend' }).log.some(l => l.startsWith('Circle '))).toBe(false)
     const passed = apply(deepAt(60, { bossSlain: 60, deepest: 70 }), { kind: 'descend' })
-    expect([passed.marks, passed.log.some(l => l.startsWith('Tier '))]).toEqual([undefined, false])
+    expect([passed.marks, passed.log.some(l => l.startsWith('Circle '))]).toEqual([undefined, false])
   })
 })
 
@@ -218,36 +218,40 @@ describe('what each mark does', () => {
   })
 })
 
-describe('the deep window', () => {
+describe('the Abyss window', () => {
   const tap = (p: { x: number; y: number }): Gesture => ({ type: 'release', from: { x: p.x + 0.5, y: p.y / 2 + 0.25 }, at: { x: p.x + 0.5, y: p.y / 2 + 0.25 }, button: 'left' })
   const W = deepAt(1).world
   const atFork = deepAt(100, { bossSlain: 100, marks: { 4: pairOf(W, 4)[0], 5: pairOf(W, 5)[1] } })
   const said = (g: Game) => deepOverlay(g)[0]!.lines.map(l => l.map(r => r.text).join(''))
   const name = (tier: number, i: number) => MARKS[pairOf(W, tier)[i]!].name
 
-  test('heads with the depth and its tier, and lists the last three tiers reached with their marks', async () => {
+  test('heads with the circle the hero is in, its depths and its warden, then the fates chosen and where the next fork opens', async () => {
+    // Circle V is depths 91 to 100, the Ember Deeps; depth 100 is the forge's, its warden the Furnace Wyrm.
     expect(said({ ...atFork, depth: 97, bossSlain: 90, deepest: 97 })).toEqual([
-      'Depth 97, tier V',
-      '  Tier III, depths 71 to 80: Steady',
-      `  Tier IV, depths 81 to 90: ${name(4, 0)}`,
-      `> Tier V, depths 91 to 100: ${name(5, 1)}`,
-      'Next fork at depth 100.',
+      'Circle V: The Ember Deeps',
+      'Depths 91 to 100, its warden the Furnace Wyrm.',
+      `Fates chosen: III Steady, IV ${name(4, 0)}, V ${name(5, 1)}`,
+      'The next fork opens at depth 100, when its warden falls.',
     ])
   })
 
-  test('while a fork waits, its cards stand above the box and the last three tiers are still listed', async () => {
-    expect(said(atFork).slice(0, 4)).toEqual(['Depth 100, tier V', '  Tier III, depths 71 to 80: Steady', `  Tier IV, depths 81 to 90: ${name(4, 0)}`, `> Tier V, depths 91 to 100: ${name(5, 1)}`])
+  test('while a fork waits, its cards stand above the box, which heads with the circle to choose for', async () => {
+    // Circle VI is depths 101 to 110, the Bone Choir; depth 110 is flooded, its warden the Drowned Queen.
+    expect(said(atFork).slice(0, 2)).toEqual(['Circle VI: The Bone Choir', 'Depths 101 to 110, its warden the Drowned Queen.'])
     const cards = deepCards(atFork)
     expect(cards[0]!.rect.y + cards[0]!.rect.h).toBeLessThan(deepOverlay(atFork)[0]!.y * 2)
   })
 
-  test('while a fork waits, a card each mark side by side, the easier first, and a click on one chooses it', async () => {
+  test('while a fork waits, its blessing and its curse side by side, the blessing first, and a click on one chooses it', async () => {
     const cards = deepCards(atFork)
     expect(cards.map(c => c.mark)).toEqual(pairOf(atFork.world, 6))
     expect([cards[0]!.rect.y === cards[1]!.rect.y, cards[0]!.rect.x + cards[0]!.rect.w < cards[1]!.rect.x]).toEqual([true, true])
     expect(CARD_KEYS).toEqual(['A', 'B'])
     const [a, b] = pairOf(atFork.world, 6).map(m => MARKS[m])
-    expect(said(atFork).slice(-3)).toEqual([`A ${a!.name}: ${a!.does}`, `B ${b!.name}: ${b!.does}`, 'Choose tier VI: none chosen means A.'])
+    const words = deepOverlay(atFork).filter(x => x.role === 'button').map(x => x.lines[0]!.map(r => r.text).join(''))
+    expect(words).toEqual([`BLESSING: ${a!.name.toUpperCase()}`, `CURSE: ${b!.name.toUpperCase()}`])
+    expect(said(atFork).slice(2, 4)).toEqual([`A ${a!.name}, a blessing: ${a!.does}`, `B ${b!.name}, a curse: ${b!.does}`])
+    expect(said(atFork).at(-1)).toBe('Choose its fate: none chosen, the blessing holds.')
     expect(deepGesture(atFork, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 3 }))).toEqual([{ kind: 'mark', mark: cards[1]!.mark }])
   })
 
@@ -258,27 +262,29 @@ describe('the deep window', () => {
     const edge = (g: Game, r: { x: number; y: number }) => deepPixels(g)[r.y]![r.x + 30]
     expect([edge(chosen, a!.rect) === '#ffffff', edge(chosen, b!.rect) === '#ffffff']).toEqual([false, true])
     expect(edge(atFork, b!.rect)).not.toBe('#ffffff')
-    expect(said(chosen).at(-1)).toBe('Choose tier VI: a click changes it.')
+    expect(said(chosen).at(-1)).toBe('Choose its fate: a click changes it.')
   })
 
-  test('above the tiers, says where they begin and which big boss opens the first fork', async () => {
+  test('above the circles, says what the Abyss is and where it opens', async () => {
     const g = deepAt(30, { bossSlain: 30 })
-    expect(said(g)).toEqual(['Depth 30', 'The tiers begin past depth 50.', 'Next fork at depth 50.'])
-    expect(said({ ...g, where: 'town' })[0]).toBe('In town')
+    const told = ['The Abyss', 'It opens past depth 50: every 10 depths a circle, a warden at its end, its fate yours to choose.']
+    expect(said(g)).toEqual(told)
+    expect(said({ ...g, where: 'town' })).toEqual(told)
     expect(deepCards(deepAt(30))).toEqual([])
   })
 
-  test('the tier the hero is in is marked, its mark named in its ink; in town, none is', async () => {
+  test('the circle the hero is in has its fate in its ink among those chosen; in town, none is', async () => {
     const g = deepAt(97, { bossSlain: 90 })
-    const here = deepOverlay(g)[0]!.lines.find(l => l[0]!.text === '> ')!
-    // Unchosen, a tier's mark is Steady, an easy one.
-    expect(here.at(-1)).toMatchObject({ text: 'Steady', color: '#5ccf6a' })
-    expect(said({ ...g, where: 'town' }).filter(t => t.startsWith('> '))).toEqual([])
+    const fates = deepOverlay(g)[0]!.lines.find(l => l[0]!.text === 'Fates chosen: ')!
+    // Unchosen, a circle's fate is Steady, a blessing.
+    expect(fates.at(-1)).toMatchObject({ text: 'V Steady', color: '#5ccf6a' })
+    const away = deepOverlay({ ...g, where: 'town' })[0]!.lines.find(l => l[0]!.text === 'Fates chosen: ')!
+    expect(away.filter(r => (r as { color?: string }).color !== undefined)).toEqual([])
   })
 
-  test('in a tier with no fork waiting, names the big boss that opens the next', async () => {
-    expect(said(deepAt(97, { bossSlain: 90 })).at(-1)).toBe('Next fork at depth 100.')
-    expect(said(deepAt(60, { bossSlain: 55 })).at(-1)).toBe('Next fork at depth 60.')
+  test('in a circle with no fork waiting, says where the next opens', async () => {
+    expect(said(deepAt(97, { bossSlain: 90 })).at(-1)).toBe('The next fork opens at depth 100, when its warden falls.')
+    expect(said(deepAt(60, { bossSlain: 55 })).at(-1)).toBe('The next fork opens at depth 60, when its warden falls.')
   })
 
   test('the close box closes it; a click elsewhere does nothing', async () => {

@@ -1,10 +1,13 @@
-// The deep window: while a fork waits, the next tier's two marks as cards side by side, a click (or its letter)
-// choosing one; under them a box with the depth and its tier, the last tiers reached with their marks (the one the
-// hero is in marked), what each card does, and where the next fork opens. Pure: the click layer reports whole
-// gestures, this decides the game actions they make.
+// The Abyss window: past DEEP_FROM every TIER_DEPTHS depths are a circle, named, its warden the big boss at its end.
+// While a fork waits, the next circle's two fates as cards side by side, its blessing and its curse, a click (or its
+// letter) choosing one; under them a box with the circle, its depths and its warden, what each fate does, the fates
+// chosen so far, and where to choose or where the next fork opens. Pure: the click layer reports whole gestures, this
+// decides the game actions they make.
 import type { Game, Mark } from '../types'
 import type { Action, Run } from './game'
-import { DEEP_FROM, MARKS, TIER_DEPTHS, forkTier, markOf, pairOf, roman, tierOf, tierStart } from './deep'
+import { DEEP_FROM, MARKS, TIER_DEPTHS, circleName, fateOf, forkTier, markOf, pairOf, roman, tierOf, tierStart } from './deep'
+import { BIG_BOSSES } from './game'
+import { themeOf } from './map'
 import { canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { BUTTON_H, buttonFace, wideButtonBox } from './pieces'
@@ -13,7 +16,6 @@ import { INK, SPACE, SURFACE } from './ui/tokens'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
-const CHROME: Chrome = { title: 'THE DEEP' }
 const top = WINDOW_TOP
 const PAD = 3
 const EASY = INK.easy
@@ -43,49 +45,62 @@ const layout = (g: Game) => {
   return { fork, cards, boxY }
 }
 
-/** What the head says: the depth, and its tier if it has one. */
-const headOf = (g: Game) => {
-  if (g.where !== 'dungeon') return 'In town'
-  const tier = tierOf(g.depth)
-  return tier === 0 ? `Depth ${g.depth}` : `Depth ${g.depth}, tier ${roman(tier)}`
+/** A circle's warden: the big boss on its last depth, its theme's. */
+const wardenOf = (tier: number) => BIG_BOSSES[themeOf(tierStart(tier) + TIER_DEPTHS - 1)].name
+
+/** The circle the box is about: the fork's while one waits, else the one the hero is in or last reached. */
+const circleShown = (g: Game, fork: number | undefined) => fork ?? (g.where === 'dungeon' && tierOf(g.depth) > 0 ? tierOf(g.depth) : tierOf(g.deepest))
+
+/** The box's head: the circle by number and name, then its depths and its warden. */
+const circleLines = (tier: number): Run[][] => {
+  const start = tierStart(tier)
+  return [
+    [{ text: `Circle ${roman(tier)}: ${circleName(tier)}`, bold: true, color: INK.gold }],
+    [{ text: `Depths ${start} to ${start + TIER_DEPTHS - 1}, its warden the ${wardenOf(tier)}.`, dim: true }],
+  ]
 }
 
-/** A tier reached: its depths and its mark; the one the hero is in marked, its mark in its ink. */
-const tierLine = (g: Game, tier: number): Run[] => {
-  const mark = markOf(g, tier)
-  const start = tierStart(tier)
-  const text = `Tier ${roman(tier)}, depths ${start} to ${start + TIER_DEPTHS - 1}: `
-  const isHere = g.where === 'dungeon' && tierOf(g.depth) === tier
-  if (!isHere) return [{ text: '  ' }, { text: `${text}${MARKS[mark].name}`, dim: true }]
-  return [{ text: '> ', color: INK.gold, bold: true }, { text }, { text: MARKS[mark].name, color: inkOf(mark) }]
+/** The fates chosen so far, a circle each, the last three: the one the hero is in in its ink. */
+const fatesLine = (g: Game): Run[] => {
+  const reached = tierOf(g.deepest)
+  const tiers = Array.from({ length: Math.min(SHOWN, reached) }, (_, i) => reached - Math.min(SHOWN, reached) + 1 + i)
+  const here = g.where === 'dungeon' ? tierOf(g.depth) : 0
+  return [{ text: 'Fates chosen: ', dim: true }, ...tiers.flatMap((t, i) => [
+    ...(i > 0 ? [{ text: ', ', dim: true }] : []),
+    t === here ? { text: `${roman(t)} ${MARKS[markOf(g, t)].name}`, color: inkOf(markOf(g, t)) } : { text: `${roman(t)} ${MARKS[markOf(g, t)].name}`, dim: true },
+  ])]
 }
 
 const cardState = (c: Card): ButtonState => (c.isChosen ? 'armed' : 'ready')
 
-/** A choice's words centred on its face, as a wide button's: its mark's name in the mark's ink. */
+/** A choice's words centred on its face, as a wide button's: the fate it is and its mark's name, in the mark's ink. */
 const cardBox = (c: Card): OverlayBox<'button'> => {
-  const name = MARKS[c.mark].name.toUpperCase()
-  return { ...wideButtonBox(name, c.rect.x, c.rect.y, c.rect.w, cardState(c)), lines: [[{ text: name, color: inkOf(c.mark), bold: true }]] }
+  const words = `${fateOf(c.mark).toUpperCase()}: ${MARKS[c.mark].name.toUpperCase()}`
+  return { ...wideButtonBox(words, c.rect.x, c.rect.y, c.rect.w, cardState(c)), lines: [[{ text: words, color: inkOf(c.mark), bold: true }]] }
 }
 
-/** The note under the cards: how the fork is chosen, or with none waiting where the next opens. */
+/** The note under the fates: how the fork is chosen, or with none waiting where the next opens. */
 const noteOf = (g: Game, fork: number | undefined) => {
-  if (fork === undefined) return `Next fork at depth ${DEEP_FROM + tierOf(g.deepest) * TIER_DEPTHS}.`
-  return `Choose tier ${roman(fork)}: ${g.marks?.[fork] === undefined ? 'none chosen means A' : 'a click changes it'}.`
+  if (fork === undefined) return `The next fork opens at depth ${DEEP_FROM + tierOf(g.deepest) * TIER_DEPTHS}, when its warden falls.`
+  return `Choose its fate: ${g.marks?.[fork] === undefined ? 'none chosen, the blessing holds' : 'a click changes it'}.`
 }
 
 /** The box, in cells: the head, the last tiers reached, what each card's mark does, then the note. Then the choices'
  * words. */
 export const deepOverlay = (g: Game): OverlayBox[] => {
   const l = layout(g)
-  const reached = tierOf(g.deepest)
-  const tiers = Array.from({ length: Math.min(SHOWN, reached) }, (_, i) => reached - Math.min(SHOWN, reached) + 1 + i)
-  const lines: Run[][] = [
-    [{ text: headOf(g), bold: true, color: INK.gold }],
-    ...(tiers.length === 0 ? [[{ text: `The tiers begin past depth ${DEEP_FROM}.`, dim: true }]] : tiers.map(t => tierLine(g, t))),
-    ...l.cards.map((c, i) => [{ text: `${CARD_KEYS[i]} ` }, { text: `${MARKS[c.mark].name}: `, bold: true, color: inkOf(c.mark) }, { text: MARKS[c.mark].does }]),
-    [{ text: noteOf(g, l.fork), dim: true }],
-  ]
+  const tier = circleShown(g, l.fork)
+  const lines: Run[][] = tier === 0
+    ? [
+        [{ text: 'The Abyss', bold: true, color: INK.gold }],
+        [{ text: `It opens past depth ${DEEP_FROM}: every ${TIER_DEPTHS} depths a circle, a warden at its end, its fate yours to choose.`, dim: true }],
+      ]
+    : [
+        ...circleLines(tier),
+        ...l.cards.map((c, i) => [{ text: `${CARD_KEYS[i]} ` }, { text: `${MARKS[c.mark].name}, a ${fateOf(c.mark)}: `, bold: true, color: inkOf(c.mark) }, { text: MARKS[c.mark].does }]),
+        ...(tierOf(g.deepest) > 0 ? [fatesLine(g)] : []),
+        [{ text: noteOf(g, l.fork), dim: true }],
+      ]
   return [{ role: 'about', x: 2, y: l.boxY, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...l.cards.map(cardBox)]
 }
 

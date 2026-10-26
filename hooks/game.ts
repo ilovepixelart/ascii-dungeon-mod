@@ -10,7 +10,7 @@ import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed } from './talents'
-import { MARKS, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
+import { MARKS, circleSaid, fateOf, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { putIn, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
@@ -1873,7 +1873,7 @@ const announceFork = (g: Game) => {
 /** What a fork says: the tier and its two marks, and where to choose. */
 const forkSaid = (g: Game, tier: number) => {
   const [easy, hard] = pairOf(g.world, tier).map(m => MARKS[m].name)
-  return `The deep forks: tier ${roman(tier)} will be ${easy} or ${hard}. Choose on the character sheet.`
+  return `The Abyss forks: ${circleSaid(tier)}, takes the blessing ${easy} or the curse ${hard}. Choose in the Abyss.`
 }
 
 /**
@@ -1893,21 +1893,21 @@ const enterTier = (g: Game, fork: number | undefined) => {
   if (fork === undefined || g.depth !== tierStart(fork)) return
   if (g.marks?.[fork] === undefined) {
     g.marks = { ...g.marks, [fork]: pairOf(g.world, fork)[0] }
-    say(g, `Unchosen, tier ${roman(fork)} takes the easier mark.`)
+    say(g, `Unchosen, ${circleSaid(fork)}, takes the blessing.`)
   }
   const mark = MARKS[markOf(g, fork)]
-  say(g, `Tier ${roman(fork)}, ${mark.name}: ${mark.does}`)
+  say(g, `${capitalized(circleSaid(fork))}: ${mark.name}, a ${fateOf(markOf(g, fork))}. ${mark.does}`)
 }
 
 /** One of the next tier's two marks chosen, while its fork is open; a choice made may be changed until the stairs. */
 const chooseMark = (g: Game, mark: Mark) => {
   const tier = forkTier(g)
   if (tier === undefined) {
-    say(g, 'The deep has no fork to choose now.')
+    say(g, 'The Abyss has no fork to choose now.')
     return
   }
   if (!pairOf(g.world, tier).includes(mark)) {
-    say(g, `${MARKS[mark].name} is not on offer for tier ${roman(tier)}.`)
+    say(g, `${MARKS[mark].name} is not on offer for circle ${roman(tier)}.`)
     return
   }
   g.marks = { ...g.marks, [tier]: mark }

@@ -7,13 +7,13 @@ import { TALENTS, offer, owed } from './talents'
 import { killConsumable, slotOf } from './consumables'
 import { MAP_W, isFloor, roomAt, visibleFrom } from './map'
 import { visibleSet } from './panels'
-import { levelOf } from './world'
-import { familyOf, laterRect, takeRect, talentCards, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
+import { levelOf, newGame } from './world'
+import { TALENT_UI, familyOf, laterRect, takeRect, talentCards, talentGesture, talentHeight, talentOverlay, talentPixels } from './talentwindow'
 import { CLOSE_BOX } from './window'
 import type { Gesture } from './window'
 import { MAP_H } from './map'
 import { PX } from './pixelart'
-import { INK } from './ui/tokens'
+import { FAMILIES, INK } from './ui/tokens'
 
 const ALL = Object.keys(TALENTS) as Talent[]
 const knowing = (g: Game, ...talents: Talent[]): Game => ({ ...g, talents })
@@ -272,7 +272,7 @@ describe('the talent window', () => {
     const all = { ...g, level: 200, talents: ALL }
     expect(said(all)[0]).toBe('Every talent is taken.')
     // Coding's own talents are named in green.
-    expect(talentOverlay({ ...g, level: 15, talents: ['testDriven'] as Talent[] }, ui(0))[0]!.lines[1]![0]!.color).toBe('#3ccf4e')
+    expect(talentOverlay({ ...g, level: 15, talents: ['testDriven'] as Talent[] }, ui(0))[0]!.lines[1]![0]!.color).toBe(FAMILIES.work.ink)
     expect(talentHeight(all)).toBeLessThanOrEqual(82)
     expect(talentPixels(all).length).toBe(talentHeight(all))
   })
@@ -307,5 +307,14 @@ describe('the talent window opening on its own', () => {
     expect([opened.panel, opened.talentOffered]).toEqual(['talent', 2])
     const taken = apply(opened, { kind: 'talent', talent: offer(opened)[0]! })
     expect(taken.panel).toBe('none')
+  })
+})
+
+describe('the talents taken', () => {
+  test('each is named in its family\'s ink, as its card\'s ribbon is', async () => {
+    const g = { ...newGame(3), level: 35, talents: ['testDriven', 'opener', 'haggler'] as Talent[] }
+    const box = talentOverlay(g, TALENT_UI)[0]!
+    const inks = box.lines.slice(1).map(l => l[0]!.color)
+    expect(inks).toEqual([FAMILIES.work.ink, FAMILIES.fight.ink, FAMILIES.road.ink])
   })
 })

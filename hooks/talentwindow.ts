@@ -121,7 +121,7 @@ const takenBox = (g: Game): OverlayBox => {
   const head = taken.length === Object.keys(TALENTS).length ? 'Every talent is taken.' : `The next talent comes at level ${TALENT_EVERY * (taken.length + 1)}.`
   const lines: Run[][] = [
     [{ text: head, bold: true }],
-    ...taken.map(t => [{ text: `${TALENTS[t].name}: `, bold: true, ...(TALENTS[t].work === true ? { color: INK.good } : {}) }, { text: TALENTS[t].does, dim: true }]),
+    ...taken.map(t => [{ text: `${TALENTS[t].name}: `, bold: true, color: FAMILIES[FAMILY_OF[t]].ink }, { text: TALENTS[t].does, dim: true }]),
   ]
   return { role: 'about', x: 2, y: top / 2 + 1, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }
 }

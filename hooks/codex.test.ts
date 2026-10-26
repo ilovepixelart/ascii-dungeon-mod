@@ -162,13 +162,24 @@ describe('the codex window', () => {
   const FINDS = { page: 'finds' as const }
   const FOES = { page: 'foes' as const }
 
-  test('Foes counts the uniques and big bosses slain; Finds the Legendaries found, then the records', async () => {
-    expect(said(shown(told), 'foes')).toEqual(['Uniques slain 3 of 5, big bosses 1 of 5.'])
+  test('Foes counts the uniques and big bosses slain, Finds the Legendaries found, each then the records', async () => {
+    expect(said(shown(told), 'foes')).toEqual([
+      'Uniques slain 3 of 5, big bosses 1 of 5.',
+      'Deepest 34, level 22, kills 1,240, bosses 12.',
+      'Deaths 9, heroes retired 2, gold found 18,450.',
+    ])
     expect(said(shown(told), 'finds')).toEqual([
       'Legendaries found 2 of 7.',
       'Deepest 34, level 22, kills 1,240, bosses 12.',
       'Deaths 9, heroes retired 2, gold found 18,450.',
     ])
+  })
+
+  test('is one height on both pages, the records under each, so turning the page does not move the window', async () => {
+    const g = shown(told)
+    expect(codexHeight(g, FOES)).toBe(codexHeight(g, FINDS))
+    expect(said(g, 'foes').slice(1)).toEqual(said(g, 'finds').slice(1))
+    expect(codexOverlay(g, FOES)[0]!.y).toBe(codexOverlay(g, FINDS)[0]!.y)
   })
 
   test('a click on a page\'s tab shows that page', async () => {

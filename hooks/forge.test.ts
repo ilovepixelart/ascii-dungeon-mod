@@ -49,6 +49,16 @@ describe('the piece chosen', () => {
     expect(at('weapon', 1)).not.toBe(CURSOR)
   })
 
+  test('the chosen piece is framed white over its tier\'s frame, an Epic as a Common', async () => {
+    // An Epic's tier frame lies on the slot's own frame line, where the chosen white goes.
+    for (const rarity of ['common', 'rare', 'epic', 'legendary'] as const) {
+      const g = wear(knight(0), 'weapon', 'sword', rarity)
+      const px = forgePixels(g, { slot: 'weapon' })
+      const [x, y] = WORN_SLOTS.weapon
+      expect([rarity, px[WINDOW_TOP + y - 1]?.[x + 5], px[WINDOW_TOP + y + 5]?.[x - 1]]).toEqual([rarity, CURSOR, CURSOR])
+    }
+  })
+
   test('a worn piece still the bag\'s choice is framed as worn, not with the bag\'s white brackets out to the window\'s edge', async () => {
     // A piece put on from the bag keeps its id, which can still be the bag's choice (g.cursor).
     const g = knight(0)

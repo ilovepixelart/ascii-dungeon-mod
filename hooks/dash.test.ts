@@ -7,7 +7,7 @@ import { mix } from './pieces'
 import { BG } from './canvas'
 import {
   BELT_Y, BUTTON_Y, DASH_H, DASH_OVER, ORB_BOX, ORB_PHASES, PLAQUE_FACE, SKULL_COLUMNS, dashBeltX, dashButtons, dashHit,
-  dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, overLabels, xpBoxX,
+  ICON, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, overLabels, xpBoxX,
 } from './dash'
 import { stripHeight } from './strip'
 import type { Gesture } from './window'
@@ -185,5 +185,22 @@ describe('clicks on the dash', () => {
     // Cell 50, 1: 24 px up, x 50, between the crests' horns and over the plaque: the map.
     expect(dashOverGesture(tap(50.5, 1.25), W)).toEqual({ actions: [], toMap: { x: 50.5, y: 1.25 } })
     expect(dashOverGesture(tap(50.5, 1.25, 'right'), W)).toEqual({ actions: [] })
+  })
+})
+
+describe('the dash\'s button icons', () => {
+  const widths = (rows: readonly string[]) => rows.map(r => r.replace(/^\.+|\.+$/g, '').length)
+  test('the bag is a sack: a narrow tied neck over a wider body', async () => {
+    const w = widths(ICON.bag.rows)
+    expect(w[1]).toBe(1)
+    expect(Math.max(...w.slice(2))).toBeGreaterThan(w[1]! + 2)
+  })
+
+  test('the gear has a tooth on each side and corner round its dark hole, its shape the same mirrored either way', async () => {
+    const shape = ICON.settings.rows.map(r => r.replace(/[^.]/g, '#'))
+    expect(shape).toEqual([...shape].reverse())
+    expect(shape.map(r => [...r].reverse().join(''))).toEqual(shape)
+    expect(ICON.settings.rows[2]![2]).toBe('K')
+    expect([shape[0]![0], shape[0]![2], shape[0]![4], shape[2]![0], shape[2]![4]]).toEqual(['#', '#', '#', '#', '#'])
   })
 })

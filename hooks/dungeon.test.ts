@@ -755,6 +755,19 @@ for (const [name, over] of [['settings', { panel: 'settings' }], ['start', { pan
   })
 }
 
+test('the codex lists Card among its keys on Finds, where its button is, and not on Foes', async ($, on) => {
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'codex' }]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
+  expect(await ui.find({ type: 'Button', key: 'codex-card' })).toBeUndefined()
+  await ui.press({ key: 'codex-page' })
+  expect(await ui.find({ type: 'Button', key: 'codex-card' })).toBeDefined()
+  await ui.unmount()
+})
+
 test('the settings\' keys have no view key, and name the sound capitalized, in their buttons\' words', async ($, on) => {
   storeIn(on, new Map<string, unknown>([['save', { ...newGame(), panel: 'settings' }]]))
   on('command.register', () => ({ value: undefined }) as never)

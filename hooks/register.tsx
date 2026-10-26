@@ -20,7 +20,7 @@ import { TALENT_UI, talentGesture, talentHeight, talentHot, talentOverlay, talen
 import type { TalentUi } from './talentwindow'
 import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
 import { deepGesture, deepHeight, deepHot, deepOverlay, deepPixels } from './deepwindow'
-import { DEEP_FROM, MARKS, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
+import { DEEP_FROM, MARKS, circleSaid, fateOf, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsWord, settingsHot, settingsOverlay, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SettingsUi } from './settings'
@@ -34,7 +34,7 @@ import { SHOP_H, SHOP_UI_IDLE, WARES, nextWare, shopGesture, shopHot, shopOverla
 import type { ShopUi } from './shop'
 import { chromeBoxes, closeBoxOf, onPixels, pixel } from './window'
 import type { OverlayBox, Rect } from './window'
-import { countText } from './names'
+import { capitalized, countText } from './names'
 import { hoveredRect, lightUp } from './ui/kit'
 import { heroTabsHot } from './herotabs'
 import { canvasCells } from './canvas'
@@ -1617,7 +1617,7 @@ const talentKey = ({ g, Button, press }: Pane, hotkey?: string) => (
 
 /** Deep on the sheet: marked while a fork waits. */
 const deepKey = ({ g, Button, press }: Pane, hotkey?: string) => (
-  <Button key="sheet-deep" label={isForkOpen(g) ? 'Deep (choose)' : 'Deep'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'deep' })} />
+  <Button key="sheet-deep" label={isForkOpen(g) ? 'Abyss (choose)' : 'Abyss'} hotkey={hotkey} plain onPress={press({ kind: 'panel', panel: 'deep' })} />
 )
 
 /** The fork's two marks, a key each, the easier first; the window's own close. */
@@ -1626,7 +1626,7 @@ const deepKeys = ({ g, Button, press }: Pane, isWindow: boolean) => {
   const chosen = fork === undefined ? undefined : g.marks?.[fork]
   return [
     ...(fork === undefined ? [] : pairOf(g.world, fork)).map((m, i) => (
-      <Button key={`deep-${m}`} label={isWindow ? MARKS[m].name : `${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
+      <Button key={`deep-${m}`} label={isWindow ? `${capitalized(fateOf(m))}: ${MARKS[m].name}` : `${capitalized(fateOf(m))}, ${MARKS[m].name}: ${MARKS[m].does}`} hotkey={isWindow ? 'ab'[i] : undefined} plain dimColor={chosen !== undefined && chosen !== m} onPress={press({ kind: 'mark', mark: m })} />
     )),
     <Button key="deep-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'deep' })} />,
   ]
@@ -2040,19 +2040,19 @@ const textRetire = ({ g, Box, Text, Button, press }: Pane) => (
   </Box>
 )
 
-/** The deep window as text: the tier the hero is in and its mark, the tiers reached, and the fork's two marks while one waits. */
+/** The Abyss as text: the circle the hero is in and its fate, the fates chosen, and the fork's two fates while one waits. */
 const textDeep = (p: Pane) => {
   const { g, Box, Text } = p
   const fork = forkTier(g)
   const here = g.where === 'dungeon' ? tierOf(g.depth) : 0
   const reached = Array.from({ length: tierOf(g.deepest) }, (_, i) => `${roman(i + 1)} ${MARKS[markOf(g, i + 1)].name}`).join(', ')
   const head = fork !== undefined
-    ? `Choose the mark of tier ${roman(fork)}. None chosen, the stairs take ${MARKS[pairOf(g.world, fork)[0]].name}.`
-    : here > 0 ? `Depth ${g.depth}, tier ${roman(here)}: ${MARKS[markOf(g, here)].name}. ${MARKS[markOf(g, here)].does}` : `The tiers begin past depth ${DEEP_FROM}.`
+    ? `Choose the fate of ${circleSaid(fork)}. None chosen, the blessing holds: ${MARKS[pairOf(g.world, fork)[0]].name}.`
+    : here > 0 ? `${capitalized(circleSaid(here))}: ${MARKS[markOf(g, here)].name}. ${MARKS[markOf(g, here)].does}` : `The Abyss opens past depth ${DEEP_FROM}.`
   return (
     <Box flexDirection="column">
       <Text bold>{head}</Text>
-      {reached === '' ? null : <Text dimColor>Tiers: {reached}</Text>}
+      {reached === '' ? null : <Text dimColor>Fates chosen: {reached}</Text>}
       <Box flexDirection="column">{deepKeys(p, false)}</Box>
     </Box>
   )

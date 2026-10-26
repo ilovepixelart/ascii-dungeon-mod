@@ -27,6 +27,14 @@ export const tierOf = (depth: number) => Math.max(0, Math.ceil((depth - DEEP_FRO
 /** A tier's first depth. */
 export const tierStart = (tier: number) => DEEP_FROM + (tier - 1) * TIER_DEPTHS + 1
 
+/** The Abyss's circles, a tier each, by name: the first ten their own, the rest the Nameless Dark. */
+const CIRCLES = ['The Hollow Halls', 'The Sunken Vaults', 'The Rotting Gardens', 'The Rime Galleries', 'The Ember Deeps', 'The Bone Choir', 'The Drowned Stair', 'The Spore Throne', 'The Frozen Heart', 'The Last Forge']
+export const circleName = (tier: number) => CIRCLES[tier - 1] ?? 'The Nameless Dark'
+/** A circle as said: its numeral and its name. */
+export const circleSaid = (tier: number) => `circle ${roman(tier)}, ${circleName(tier)}`
+/** What a mark is to the hero: the easier a blessing, the harder a curse that pays more. */
+export const fateOf = (mark: Mark) => (MARKS[mark].hard === true ? 'curse' : 'blessing')
+
 /** A tier's mark: as chosen, else Steady. */
 export const markOf = (g: Pick<Game, 'marks'>, tier: number): Mark => g.marks?.[tier] ?? 'steady'
 /** The mark where the hero is: none in town or above the tiers. */

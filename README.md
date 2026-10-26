@@ -80,7 +80,7 @@ As text, the keys are `i` inventory, `c` character, `a` attack, `p` potion, `w` 
     <td><img src="docs/img/talent-0.png" alt="The talent window: three talent cards side by side"></td>
   </tr>
   <tr>
-    <td><img src="docs/img/deep-brittle-ironclad.png" alt="The deep window: a fork between two marks for the next tier"></td>
+    <td><img src="docs/img/deep-brittle-ironclad.png" alt="The Abyss: a fork between a blessing and a curse for the next circle"></td>
     <td><img src="docs/img/talk-mystic.png" alt="The mystic in town with her three fortunes"></td>
   </tr>
   <tr>

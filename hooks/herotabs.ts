@@ -14,7 +14,7 @@ const TABS: readonly { label: string; panel: HeroPanel }[] = [
   { label: 'HERO', panel: 'sheet' },
   { label: 'BAG', panel: 'bag' },
   { label: 'TALENT', panel: 'talent' },
-  { label: 'DEEP', panel: 'deep' },
+  { label: 'ABYSS', panel: 'deep' },
   { label: 'CODEX', panel: 'codex' },
 ]
 

@@ -565,12 +565,12 @@ test('a fork waiting is chosen from the sheet, saved, and said', async ($, on) =
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'sheet' })
-  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Deep \(choose\)/ })).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Abyss \(choose\)/ })).toBeDefined()
   await ui.press({ key: 'sheet-deep' })
   const hard = pairOf(saved.world, 2)[1]
   await ui.press({ key: `deep-${hard}` })
   expect((kept.get('save') as Game).marks).toEqual({ 2: hard })
-  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Deep \(choose\)/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'sheet-deep', text: /Abyss \(choose\)/ })).toBeUndefined()
   await ui.unmount()
 })
 
@@ -681,7 +681,7 @@ test('a session begun with nothing waiting says nothing of it', async ($, on) =>
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   const log = ((kept.get('save') as Game | undefined)?.log ?? [])
-  expect(log.some(l => l.includes('to choose') || l.startsWith('The deep forks'))).toBe(false)
+  expect(log.some(l => l.includes('to choose') || l.startsWith('The Abyss forks'))).toBe(false)
   await ui.unmount()
 })
 

@@ -41,7 +41,7 @@ describe('the character sheet', () => {
   })
 
   /** Each tab's first and last column, worked by hand: from column 2, a label with a column each side, a column between. */
-  const TABS = [[2, 7], [9, 13], [15, 22], [24, 29], [31, 37]] as const
+  const TABS = [[2, 7], [9, 13], [15, 22], [24, 30], [32, 38]] as const
   const onTab = (i: number) => tap(TABS[i]![0] + 1, 4)
 
   test('its tabs open the bag, the talents, the deep and the codex; its own tab does nothing', async () => {

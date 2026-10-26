@@ -77,10 +77,11 @@ const CREST: readonly string[] = [
 const HORN: readonly string[] = ['K...', 'SK..', 'LSS.', '.LLS', '..LS']
 /** A skull at each end of the plaque. */
 const SKULL: readonly string[] = ['.www.', 'wwwww', 'wKwKw', '.wWw.', '.w.w.']
-/** The plaque's buttons, 5 by 5: the bag, the settings gear, the portal. */
-const ICON: Readonly<Record<'bag' | 'settings' | 'portal', { rows: readonly string[]; ink: Readonly<Record<string, string>> }>> = {
-  bag: { rows: ['.KKK.', 'KbbbK', 'bbBbb', 'bbbbb', '.bbb.'], ink: { K: '#6b4a2a', b: '#a8733e', B: '#e0b070' } },
-  settings: { rows: ['.s.s.', 'sSSSs', '.SKS.', 'sSSSs', '.s.s.'], ink: { s: '#a4acb8', S: '#e4e8f0', K: '#141219' } },
+/** The plaque's buttons, 5 by 5: the bag, a sack tied with gold at its neck, its body lit from the top left; the
+ * settings gear, eight teeth round a body with a dark axle hole, its top lit and its bottom in shade; the portal. */
+export const ICON: Readonly<Record<'bag' | 'settings' | 'portal', { rows: readonly string[]; ink: Readonly<Record<string, string>> }>> = {
+  bag: { rows: ['.n.n.', '..y..', '.Bbb.', 'bBbbn', '.bbn.'], ink: { n: '#6b4a2a', y: '#ffd34d', b: '#a8733e', B: '#e0b070' } },
+  settings: { rows: ['S.S.S', '.SSS.', 'SSKSS', '.sss.', 's.s.s'], ink: { s: '#a4acb8', S: '#e4e8f0', K: '#141219' } },
   portal: { rows: ['.ccc.', 'cCbCc', 'cb.bc', 'cCbCc', '.ccc.'], ink: { c: '#3a7bd5', C: '#7fe3ff', b: '#1f4a8a' } },
 }
 const PORTAL_SHUT = '#3a3e48'

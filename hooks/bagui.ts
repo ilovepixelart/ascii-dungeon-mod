@@ -99,7 +99,8 @@ const menuLines = (g: Game, item: Item, confirm: boolean): Run[][] => [
 export const coverage = (g: Game, keep: readonly Rect[]) => clearance(ROWS, [
   { rect: { x: 0, y: 0, w: WINDOW_W, h: WINDOW_TOP }, weight: 1 },
   { rect: gridBox(BAG_X, INV_TOP + BAG_Y), weight: 1 },
-  ...(Object.values(WORN_SLOTS)).map(([x, y, w, h]) => ({ rect: { x, y: INV_TOP + y, w, h }, weight: 1 })),
+  // A worn slot with its frame, a pixel outside its inside.
+  ...(Object.values(WORN_SLOTS)).map(([x, y, w, h]) => ({ rect: { x: x - 1, y: INV_TOP + y - 1, w: w + 2, h: h + 2 }, weight: 1 })),
   ...g.belt.map((_, i) => ({ rect: beltSlotRect(BELT_X, INV_TOP + BELT_Y, i), weight: 1 })),
   ...keep.map(r => ({ rect: bracketed(r), weight: KEEP })),
 ])

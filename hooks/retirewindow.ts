@@ -7,7 +7,7 @@ import type { Action, Run } from './game'
 import { whyNotRetire } from './game'
 import { BIG_EVERY } from './map'
 import { CLASS_NAME, RARITY_COLOR, SLOTS } from './items'
-import { WORN_SLOTS, wornSlots } from './inventory'
+import { WORN_END, WORN_SLOTS, wornSlots } from './inventory'
 import { BUTTON_H, CURSOR, button, buttonBox, buttonW, runX } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, frame } from './canvas'
@@ -58,8 +58,9 @@ const layout = (g: Game, ui: RetireUi) => {
   const retire: Rect = { x: runX(row, box.x, box.x + box.w), y: (box.y + box.h) * 2 + 2, w: buttonW(RETIRE.label), h: BUTTON_H }
   const back: Rect = { x: retire.x + retire.w + 4, y: retire.y, w: buttonW(BACK.label), h: BUTTON_H }
   const retireState: ButtonState = slot !== undefined && whyNotRetire(g, slot) === undefined ? 'armed' : 'off'
-  const end = Math.max(top + 58, retire.y + BUTTON_H)
-  return { slot, box, retire, back, retireState, height: Math.ceil((end + 3) / 2) * 2 }
+  const end = Math.max(top + WORN_END, retire.y + BUTTON_H)
+  // A pixel of room under the last row, as the bag keeps under its belt, on a whole cell.
+  return { slot, box, retire, back, retireState, height: Math.ceil((end + 1) / 2) * 2 }
 }
 
 /** The box beside the worn slots, in cells, then the buttons' words. */

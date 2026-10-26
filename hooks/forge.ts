@@ -5,7 +5,7 @@ import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { keptChoice, reforgeCost } from './game'
 import { POWERS, RARITY_COLOR, SETS, SET_COLOR, SLOTS, TEMPER_MAX, TRIGGERS, describe, setWorn, temperCost, temperStat } from './items'
-import { WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
+import { WORN_END, WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
 import { BUTTON_H, CURSOR, OFF_CLASS, buttonFace, buttonW, runX, wideButtonBox } from './pieces'
 import type { ButtonState } from './pieces'
@@ -100,13 +100,14 @@ const layout = (g: Game, ui: ForgeUi) => {
   const temperAt: Rect = { x, y: (box.y + box.h) * 2 + 2, w, h: BUTTON_H }
   const reforgeAt: Rect = { x, y: temperAt.y + BUTTON_H + 2, w, h: BUTTON_H }
   const keepAt: Rect | undefined = canKeepOld(g, slot) ? { x, y: reforgeAt.y + BUTTON_H + 2, w, h: BUTTON_H } : undefined
-  const end = Math.max(WINDOW_TOP + 58, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
+  const end = Math.max(WINDOW_TOP + WORN_END, item === undefined ? (box.y + box.h) * 2 : (keepAt ?? reforgeAt).y + BUTTON_H)
   const buttons = item === undefined ? [] : [
     { key: 'T', label: 'TEMPER', at: temperAt, state: stateOf(whyNotTemper(g, item)) },
     { key: 'R', label: 'REFORGE', at: reforgeAt, state: stateOf(whyNotReforge(g, item)) },
     ...(keepAt === undefined ? [] : [{ key: 'K', label: 'KEEP OLD', at: keepAt, state: 'ready' as const }]),
   ]
-  return { slot, item, box, temperAt, reforgeAt, keepAt, buttons, height: Math.ceil((end + 3) / 2) * 2 }
+  // A pixel of room under the last row, as the bag keeps under its belt, on a whole cell.
+  return { slot, item, box, temperAt, reforgeAt, keepAt, buttons, height: Math.ceil((end + 1) / 2) * 2 }
 }
 
 export const forgeHeight = (g: Game, ui: ForgeUi) => layout(g, ui).height

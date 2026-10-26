@@ -30,16 +30,20 @@ export const BELT_X = 2
 /** The panel starts below the window's title bar. */
 export const INV_TOP = WINDOW_TOP
 
-/** Each worn slot's inner rectangle (x, y, w, h), sized to the largest footprint its items have. */
+/** Each worn slot's inner rectangle (x, y, w, h), sized to the largest footprint its items have. The weapon, armor and
+ * off-hand share their frame lines, as the bag's cells do (three of them with gaps would reach the bag); the helm and
+ * the boots stand a pixel over and under them, the ring and the amulet centred over the weapon and the off-hand. */
 export const WORN_SLOTS: Readonly<Record<Slot, readonly [number, number, number, number]>> = {
   ring: [5, 5, 6, 6],
-  helm: [17, 2, 13, 13],
-  amulet: [36, 5, 6, 6],
-  weapon: [2, 19, 13, 20],
-  armor: [17, 19, 13, 20],
-  offhand: [32, 19, 13, 20],
-  boots: [17, 42, 13, 13],
+  helm: [16, 2, 13, 13],
+  amulet: [33, 5, 6, 6],
+  weapon: [2, 18, 13, 20],
+  armor: [16, 18, 13, 20],
+  offhand: [30, 18, 13, 20],
+  boots: [16, 41, 13, 13],
 }
+/** The worn slots' bottom, the row past the boots' frame, under the window's top: what a window showing them ends on. */
+export const WORN_END = WORN_SLOTS.boots[1] + WORN_SLOTS.boots[3] + 1
 
 /** The worn slots at the panel's top-left, each framed in the color `edge` gives it, an empty one showing its ghost. */
 export const wornSlots = (c: Canvas, g: Game, edge: (slot: Slot) => string) => {

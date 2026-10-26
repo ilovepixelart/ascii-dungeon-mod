@@ -80,7 +80,7 @@ const slotOf = (base: string, x: number, y: number): Slot => {
 const BOARD_LEFT = STASH_AT.x
 const BOARD_RIGHT = WINDOW_W - STASH_AT.x
 const BOARD_TOP = top + STASH_AT.y
-/** The sets' board: a column a set, its weapon and armor side by side, 2 apart, its helm centred under them, 3 under;
+/** The sets' board: a column a set, its weapon and armor side by side, 2 apart, its helm centred under them, 2 under;
  * the columns 6 apart. */
 const SET_COLUMN = slotOf('sword', 0, 0).w + 2 + slotOf('plate', 0, 0).w
 const SET_GAP = 6
@@ -93,7 +93,7 @@ const setSlots = (): Slot[] => {
     const first = slotOf(weapon!.base, x, BOARD_TOP)
     if (p === weapon) return first
     if (p === armor) return slotOf(p.base, x + first.w + 2, BOARD_TOP)
-    const helm = slotOf(p.base, 0, BOARD_TOP + first.h + 3)
+    const helm = slotOf(p.base, 0, BOARD_TOP + first.h + 2)
     return { ...helm, x: x + Math.floor((SET_COLUMN - helm.w) / 2) }
   })
 }

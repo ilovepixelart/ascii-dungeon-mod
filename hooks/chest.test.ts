@@ -275,9 +275,9 @@ describe('the stash\'s tabs', () => {
     const slots = slotsIn(chestPixels(g, on('sets')))
     // Nine slots: three sets of a 1 by 3 weapon (8 by 22), a 2 by 3 armor (15 by 22) and a 2 by 2 helm (15 by 15).
     expect(slots.map(s => [s.w, s.h])).toEqual([[8, 22], [15, 22], [8, 22], [15, 22], [8, 22], [15, 22], [15, 15], [15, 15], [15, 15]])
-    // Columns of 25 (8, 2, 15), 6 apart, 87 across, centred in the window's 4 px margins: from x 9; the helms 3 under.
+    // Columns of 25 (8, 2, 15), 6 apart, 87 across, centred in the window's 4 px margins: from x 9; the helms 2 under.
     expect(slots.slice(0, 6).map(s => s.x)).toEqual([9, 19, 40, 50, 71, 81])
-    expect(slots.slice(6).map(s => [s.x, s.y - slots[0]!.y])).toEqual([[14, 25], [45, 25], [76, 25]])
+    expect(slots.slice(6).map(s => [s.x, s.y - slots[0]!.y])).toEqual([[14, 24], [45, 24], [76, 24]])
   })
 
   test('the Legendaries\' tab is a board of seven slots in a row, each its piece\'s size, 4 apart, centred', async () => {

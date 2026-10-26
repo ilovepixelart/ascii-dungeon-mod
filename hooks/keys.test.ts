@@ -52,3 +52,13 @@ describe('the text dashboard\'s keys', () => {
     })
   }
 })
+
+describe('the sheet\'s keys', () => {
+  test('list the hero\'s other tabs in the title bar\'s order: Talent, Abyss, Codex', async ($, on) => {
+    await begin($, on, { ...newGame(), panel: 'sheet' })
+    const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, bodyColumns: 110 }, surface: 'terminal' })
+    const keys = (await ui.findAll({ type: 'Button' })).map(b => String(b.key)).filter(k => ['sheet-talent', 'sheet-deep', 'sheet-codex'].includes(k))
+    expect(keys).toEqual(['sheet-talent', 'sheet-deep', 'sheet-codex'])
+    await ui.unmount()
+  })
+})

@@ -1597,10 +1597,10 @@ const sheetWindow = (p: Pane) => {
   const { g, Button, press } = p
   return pixelWindow(p, 'sheet', SHEET_H, sheetPixels(g), sheetOverlay(g), [
     ...ATTRIBUTES.map((a, i) => <Button key={`train-${a.stat}`} label={`+${a.label.trim()}`} hotkey={String(i + 1)} plain dimColor={g.points === 0} onPress={press({ kind: 'train', stat: a.stat })} />),
-    <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     retireKey(p, 'r'),
     talentKey(p, 't'),
     deepKey(p, 'd'),
+    <Button key="sheet-codex" label="Codex" hotkey="x" plain onPress={press({ kind: 'panel', panel: 'codex' })} />,
     <Button key="sheet-close" label="Close" hotkey="c" plain onPress={press({ kind: 'panel', panel: 'sheet' })} />,
   ], g.points > 0 ? 'Click a + (or press its number) to spend a point.' : undefined, [...sheetHot(g), ...heroTabsHot(g, 'sheet')])
 }

@@ -267,8 +267,14 @@ describe('the codex window', () => {
     const y = WINDOW_TOP + TABS_H + 2
     const dark = codexPixels(shown(EMPTY_CODEX), FINDS)
     const starts = [5, 17, 29, 48, 60, 79, 91]
-    expect(starts.map(x => [dark[y]![x - 1], dark[y]![x]])).toEqual(starts.map(() => [BG, SURFACE.line]))
-    expect([dark[y]![98], dark[y]![99]]).toEqual([SURFACE.line, BG])
+    // Read on the row's bottom line, where every box stands.
+    const foot = y + 21
+    expect(starts.map(x => [dark[foot]![x - 1], dark[foot]![x]])).toEqual(starts.map(() => [BG, SURFACE.line]))
+    expect([dark[foot]![98], dark[foot]![99]]).toEqual([SURFACE.line, BG])
+    // Each box as tall as its piece's cells, as in the bag: the amulet (1 by 1) and the ring 8, the dagger (1 by 2) 15,
+    // the rest 22; their tops on the row's bottom less that.
+    const tops = starts.map(x => dark.findIndex((row, ry) => ry >= y && row[x] === SURFACE.line) - y)
+    expect(tops).toEqual([0, 14, 0, 14, 0, 0, 7])
   })
 
   test('each row lights on its own: its entries found, the rest of the codex empty, add their colours', async () => {

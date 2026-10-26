@@ -37,6 +37,7 @@ for (const cls of CLASSES) {
     out.push({ name: 'chest-sets', game: { ...smith, panel: 'stash', stashed: [g.bag.slice(1, 4)], stashSets: [piece] }, keys: ['p', 'p', 'p', 'p'] })
   }
 }
+out.push({ name: 'map-town', game: { ...town, panel: 'none' } })
 out.push({ name: 'shop', game: { ...town, panel: 'shop' } })
 out.push({ name: 'settings-game', game: { ...town, panel: 'settings' } })
 out.push({ name: 'settings-orders', game: { ...town, panel: 'settings' }, keys: ['p'] })

@@ -139,6 +139,12 @@ describe('the town\'s art', () => {
   })
 })
 
+describe('the town stash', () => {
+  test('is the dungeon\'s wooden chest, its dark outline drawn in dark wood', () => {
+    expect(TOWN_THING_ART.stash).toEqual(THING_ART.C!.map(r => r.replaceAll('K', 'N')))
+  })
+})
+
 describe('the dog', () => {
   test('stands as tall as the townsfolk, its ear in row 1, its paws on the bottom row, its tail raised', async () => {
     const rows = NPC_ART.dog

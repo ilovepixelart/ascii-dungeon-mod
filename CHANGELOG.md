@@ -10,6 +10,11 @@ release may change behaviour.
 
 - The hero has no dark outline on the map: the floor shows right up to its sprite again. Nor does the town's art:
   its townsfolk, trees, fountain, portal, stash, anvil, lamps, signs and the rest.
+- The town redrawn: the merchant wears a hat and the smith a cap, with two eyes over his beard; the fountain is a
+  stone basin seen from above and in front, its rim lit, its water rippling round a raised bowl; the dog stands on
+  the grass.
+- The stash is the dungeon's wooden chest and stands on the smith's forge floor, past the anvil, instead of on the
+  square's west side. The villager's hint says so.
 
 ### Fixed
 

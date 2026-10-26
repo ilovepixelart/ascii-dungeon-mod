@@ -16,6 +16,8 @@ release may change behaviour.
 - On a pane with the dash, a hero near the level's bottom walked under the dash's plaque, and the level's last rows
   could not be seen there, nor clicked to walk to. The camera keeps the hero above the dash, and at the level's bottom
   the map runs past it, its last rows shown above the dash.
+- In town, the view past the town's bottom edge, shown above the dash, was empty black. The forest goes on there,
+  the road from the gate running south through it.
 
 ## [0.5.0] - 2026-10-23
 

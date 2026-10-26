@@ -27,14 +27,17 @@ export const TOWN_PX_H = TOWN_H * PX
 
 const toInt = (hex: string) => Number.parseInt(hex.slice(1, 7), 16)
 const shade = (c: number, k: number) => (Math.round(((c >> 16) & 0xff) * k) << 16) | (Math.round(((c >> 8) & 0xff) * k) << 8) | Math.round((c & 0xff) * k)
-const tileAt = (tx: number, ty: number) => TOWN_GROUND[ty]?.[tx] ?? 'H'
+/** The columns the road leaves the town by, through the gate in its last row. */
+const GATE = new Set([...TOWN_GROUND[TOWN_H - 1]!].flatMap((t, i) => (t === '=' ? [i] : [])))
+/** A tile of the town, or past its edge the forest floor, the road running on south from the gate. */
+const tileAt = (tx: number, ty: number) => TOWN_GROUND[ty]?.[tx] ?? (ty >= TOWN_H && GATE.has(tx) ? '=' : 'H')
 
 /** One ground pixel: the tile's texture, then the roof ridge and eave edge, the eaves' shadow, and the road's edges. */
 const groundPixel = (x: number, y: number) => {
   const tx = Math.floor(x / PX)
   const ty = Math.floor(y / PX)
-  const lx = x % PX
-  const ly = y % PX
+  const lx = x - tx * PX
+  const ly = y - ty * PX
   const t = tileAt(tx, ty)
   const base = toInt(TOWN_TERRAIN[TILE[t] ?? 'grass'](x, y))
   return roofEdge(t, tx, ty, ly, base) ?? (t === '=' ? roadEdge(tx, ty, lx, ly) : undefined) ?? base
@@ -97,6 +100,19 @@ const drawBig = (img: Uint32Array, ink: Ink, d: TownDecor) => {
   TOWN_BIG_ART[d.art as keyof typeof TOWN_BIG_ART].forEach((row, ly) => [...row].forEach((k, lx) => {
     if (k !== '.') putAt(img, d.x * PX + lx, d.y * PX + ly, toInt((d.alt === true ? TREE_ALT[k] : undefined) ?? PAL[ink(d.art, k)] ?? '#ff00ff'))
   }))
+}
+
+/** Past the town's edge, by world pixel: the tree line's grid carried on over the forest floor, the gate's road
+ * running on south through it, unshaded as the edge's own trees are. */
+export const wildsPixel = (x: number, y: number): number => {
+  const gx = x + PX
+  const gy = y - (TOWN_H - 1) * PX
+  const [i, j] = [Math.floor(gx / (2 * PX)), Math.floor(gy / (2 * PX))]
+  const onRoad = GATE.has(2 * i - 1) || GATE.has(2 * i)
+  const k = onRoad && y >= TOWN_PX_H ? '.' : (TOWN_BIG_ART.tree[gy - j * 2 * PX]?.[gx - i * 2 * PX] ?? '.')
+  if (k === '.') return groundPixel(x, y)
+  const isAlt = (((i + j) % 3) + 3) % 3 === 1
+  return toInt((isAlt ? TREE_ALT[k] : undefined) ?? PAL[k] ?? '#ff00ff')
 }
 
 /** The whole town, TOWN_PX_W by TOWN_PX_H, 0xRRGGBB per pixel, row-major; `shimmer`, the water's other phase. */

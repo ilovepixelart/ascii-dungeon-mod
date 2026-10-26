@@ -373,6 +373,18 @@ describe('the camera', () => {
     expect(clickToTile(g, click, { x: 52, y: 140 }).y).toBe(MAP_H - 1)
   })
 
+  test('in town with the dash over the map, the view past the town\'s bottom shows the wilds, not empty canvas', async () => {
+    const [w, h, covered] = [105, 60, 26]
+    const g = { ...newGame(3), where: 'town' as const, x: 9, y: TOWN_H - 1 }
+    const frame = frameOf(g, w, h, { covered })
+    const blank = [...frame].filter(c => c === hexToInt(CANVAS)).length
+    expect(blank).toBe(0)
+    // The gate's road runs on south: under the hero, past the town's last row, the road's own texture.
+    const o = originAt({ x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, w, h, worldSize(g), covered)
+    const [x, y] = [g.x * PX + 3, TOWN_H * PX + 4]
+    expect(frame[(y - o.y) * w + (x - o.x)]).toBe(hexToInt(TOWN_TERRAIN.road(x, y)))
+  })
+
   const w = 96
   const h = 48
   test('holds still while the hero stays in the middle of the view', async () => {

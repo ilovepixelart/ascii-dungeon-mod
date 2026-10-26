@@ -8,7 +8,7 @@ import { CANVAS, INK } from './palette'
 import { tileAt, visibleSet } from './panels'
 import type { Tile } from './panels'
 import { TOWN_H, TOWN_W } from './town'
-import { TOWN_PX_H, TOWN_PX_W, townImage } from './townpixels'
+import { TOWN_PX_H, TOWN_PX_W, townImage, wildsPixel } from './townpixels'
 import { BOSS_HOLD, BOSS_KEYS, FOE_HOLD, FOE_KEYS, HERO_HOLD, HERO_KEYS, HERO_REST, bossFall, fallDim, foeFall, heroFall } from './fall'
 import type { Pixel } from './fall'
 import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, GROUND, TERRAIN, pillarShaft, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
@@ -680,7 +680,7 @@ const townFrame = (g: Game, width: number, height: number, heroAt: Pos | undefin
     const wx = origin.x + x
     const wy = origin.y + y
     const isInside = wx >= 0 && wy >= 0 && wx < TOWN_PX_W && wy < TOWN_PX_H
-    frame[y * width + x] = isInside ? (img[wy * TOWN_PX_W + wx] ?? 0) : hexToInt(CANVAS)
+    frame[y * width + x] = isInside ? (img[wy * TOWN_PX_W + wx] ?? 0) : wildsPixel(wx, wy)
   }
   // Standing still, the hero casts the same shadow as everyone in town.
   if (heroAt === undefined) townShadow(frame, width, height, g.x * PX - origin.x, g.y * PX - origin.y)

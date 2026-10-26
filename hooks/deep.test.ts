@@ -242,6 +242,12 @@ describe('the Abyss window', () => {
     expect(cards[0]!.rect.y + cards[0]!.rect.h).toBeLessThan(deepOverlay(atFork)[0]!.y * 2)
   })
 
+  test('while a fork waits, its two cards span the box under them, edge to edge', async () => {
+    const [a, b] = deepCards(atFork)
+    const box = deepOverlay(atFork)[0]!
+    expect([a!.rect.x, b!.rect.x + b!.rect.w]).toEqual([box.x, box.x + box.w])
+  })
+
   test('while a fork waits, its blessing and its curse side by side, the blessing first, and a click on one chooses it', async () => {
     const cards = deepCards(atFork)
     expect(cards.map(c => c.mark)).toEqual(pairOf(atFork.world, 6))

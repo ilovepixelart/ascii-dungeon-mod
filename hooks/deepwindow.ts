@@ -17,7 +17,7 @@ import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, drawBox, isInside, pixel, 
 import type { Chrome, Gesture, OverlayBox, Rect } from './window'
 
 const top = WINDOW_TOP
-const PAD = 3
+const PAD = 2
 const EASY = INK.easy
 const HARD = INK.hard
 /** The tiers the window lists, the deepest reached last. */

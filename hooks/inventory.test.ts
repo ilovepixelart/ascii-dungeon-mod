@@ -115,6 +115,15 @@ describe('the panel', () => {
     expect(edge(inventoryPixels(g), 'helm')).toBe(GRID)
   })
 
+  test('lays the worn slots out with one line between neighbours: the middle three share their frames, the helm and the boots a pixel off', async () => {
+    // Frames a pixel round each inside: the weapon's 1 to 15, the armor's 15 to 29, the off-hand's 29 to 43; the helm's
+    // bottom line on 15, the middle row's top on 17, its bottom on 38, the boots' top on 40.
+    const frameX = (slot: keyof typeof WORN_SLOTS) => [WORN_SLOTS[slot][0] - 1, WORN_SLOTS[slot][0] + WORN_SLOTS[slot][2]]
+    const frameY = (slot: keyof typeof WORN_SLOTS) => [WORN_SLOTS[slot][1] - 1, WORN_SLOTS[slot][1] + WORN_SLOTS[slot][3]]
+    expect([frameX('weapon'), frameX('armor'), frameX('offhand')]).toEqual([[1, 15], [15, 29], [29, 43]])
+    expect([frameY('helm')[1], frameY('armor'), frameY('boots')[0]]).toEqual([15, [17, 38], 40])
+  })
+
   test('shows a faint ghost in an empty worn slot and the item in a filled one', async () => {
     const g = knight()
     const [ax, ay, aw, ah] = WORN_SLOTS.amulet

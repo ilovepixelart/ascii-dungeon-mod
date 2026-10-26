@@ -138,3 +138,13 @@ describe('the town\'s art', () => {
     expect(outer).toEqual([])
   })
 })
+
+describe('the dog', () => {
+  test('stands as tall as the townsfolk, its ear in row 1, its paws on the bottom row, its tail raised', async () => {
+    const rows = NPC_ART.dog
+    const used = rows.map(r => r !== '........')
+    expect(used.indexOf(true)).toBe(1)
+    expect(used[rows.length - 1]).toBe(true)
+    expect(rows[2]![0]).not.toBe('.')
+  })
+})

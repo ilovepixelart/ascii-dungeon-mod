@@ -353,6 +353,23 @@ describe('the palette a frame sends', () => {
 })
 
 describe('the camera', () => {
+  test('with a band covered at the bottom (the dash over the map), centres on the hero in what stays seen, and scrolls past the level to show its last row above the band', async () => {
+    // A view 105 by 60 with 26 covered at the bottom: 34 seen. The level is 144 tall (18 tiles of 8).
+    const [w, h, covered] = [105, 60, 26]
+    const size = worldSize({})
+    // The hero's middle on the last row, pixel 140: the seen 34 stop at the level's bottom, from 110, the last row
+    // (136 to 143) seen at 26 to 33, the band's 26 past the level; with nothing covered the view stops at 84, the last
+    // row under where the band would be.
+    expect(originAt({ x: 52, y: 140 }, w, h, size, covered).y).toBe(size.h - (h - covered))
+    expect(originAt({ x: 52, y: 140 }, w, h, size).y).toBe(size.h - h)
+    // Mid level, the seen part centred on the hero: 80 - 17.
+    expect(originAt({ x: 52, y: 80 }, w, h, size, covered).y).toBe(63)
+    // A click on the last row, just above the band, lands on it: the tile under it is the one drawn there.
+    const g = { x: 5, y: MAP_H - 1 }
+    const click = { x: 52, y: (h - covered - 2) / 2, columns: w, rows: h / 2, covered }
+    expect(clickToTile(g, click, { x: 52, y: 140 }).y).toBe(MAP_H - 1)
+  })
+
   const w = 96
   const h = 48
   test('holds still while the hero stays in the middle of the view', async () => {

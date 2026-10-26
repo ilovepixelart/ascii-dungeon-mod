@@ -17,7 +17,7 @@ import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threa
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
 import { INSET } from './hud'
 import { BELT_Y, BUTTON_Y, DASH_OVER, ORB_STEP_MS, OVER_ROWS, dashBeltX, dashButtons, dashHit } from './dash'
-import { stripHeight, stripOverMap } from './strip'
+import { mapCovered, stripHeight, stripOverMap } from './strip'
 import { bfs, cellId, floorThing, same } from './map'
 import type { Pos } from './map'
 import { TOWN_SPOTS, isTownWalkable, townSpotAt } from './town'
@@ -247,7 +247,7 @@ const WIDE = { ...PANE, props: { ...PANE.props, bodyColumns: 110 } } as const
 /** The wide pane's strip: its content's width, where its portrait is clicked, and its orbs' middle. */
 /** The map's cells as the pane sends them: the dash's upper half over its bottom, at rest, on a pane wide enough for it. */
 const paneMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL) =>
-  pixelMap(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, undefined, stripOverMap(g, columns, 0))
+  pixelMap(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, undefined, stripOverMap(g, columns, 0), mapCovered(columns, rows))
 /** Where the wide pane's dash is clicked, in its pixels (a row above 0 over the map): the HP orb for the sheet, a
  * plaque button, the plaque's words for the log. */
 const SHEET_AT = { x: 13, y: 2 }
@@ -279,12 +279,12 @@ const clickStrip = async (ui: { pointer: (e: never) => Promise<unknown> }, x: nu
   await ui.pointer({ type: 'up', ...stripCell(x, y), button: 'left', in: 'hud-clicks' } as never)
 }
 /** Where the view's camera starts in a place: on the tile line nearest the hero, as the pane puts it. */
-const viewOf = (g: Pick<Game, 'x' | 'y'>, columns: number, rows: number) => tileCamera(null, { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, columns, rows * 2)
+const viewOf = (g: Pick<Game, 'x' | 'y'>, columns: number, rows: number) => tileCamera(null, { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, columns, rows * 2 - mapCovered(columns, rows))
 
 /** The map's cell showing `tile`, with the camera where it starts, as before any walk moves it. */
 const cellOf = (g: Game, tile: Pos, columns: number, rows: number) => {
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
-  return cells.find(c => same(clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g, columns, rows)), tile))!
+  return cells.find(c => same(clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g, columns, rows)), tile))!
 }
 const heroCell = (g: Game, columns: number, rows: number) => cellOf(g, g, columns, rows)
 /** Every floor tile of the level, nearest the hero first. */
@@ -870,7 +870,7 @@ test('a click on the pixel map reaches the game through the click layer', async 
   // The pane starts a new game; find a cell over ground no one can walk to (rock, or not yet seen) and one over seen floor beside the hero.
   const g = newGame()
   const level = levelOf(g)
-  const tileAt = (x: number, y: number) => clickToTile(g, { x: x + 0.5, y: y + 0.5, columns, rows }, viewOf(g, columns, rows))
+  const tileAt = (x: number, y: number) => clickToTile(g, { x: x + 0.5, y: y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g, columns, rows))
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const unseen = cells.find(c => {
     const t = tileAt(c.x, c.y)
@@ -891,21 +891,34 @@ test('a click on the pixel map reaches the game through the click layer', async 
   await ui.unmount()
 })
 
+/** A new game with the hero on a floor tile in the level's top rows: the dash's band over the map then covers rows of
+ * the level, where a hero low on it would have the camera hold the level's end above the band. */
+const highUp = (g: Game = newGame()): Game => {
+  const level = levelOf(g)
+  for (let y = 1; y < 5; y += 1) for (let x = 1; x < 63; x += 1) if (level.tiles[y]?.[x] === '.') return { ...g, x, y, seen: '1'.repeat(g.seen.length) }
+  return g
+}
+
 test('a click on the dash\'s layer over the map between its parts reaches the map under it', async ($, on) => {
   const said = toasts(on)
   on('ui.blit', () => ({ value: {} }))
+  const g = { ...highUp(), seen: newGame().seen }
+  storeIn(on, new Map<string, unknown>([['save', g]]))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
-  const g = newGame()
   const level = levelOf(g)
   // A cell of the dash's layer that none of the dash covers, over ground no one can walk to.
   const top = rows - OVER_ROWS
   const cells = Array.from({ length: columns * OVER_ROWS }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const gap = cells.find(c => {
     if (dashHit(columns, c.x, c.y * 2 - DASH_OVER) !== undefined || dashHit(columns, c.x, c.y * 2 + 1 - DASH_OVER) !== undefined) return false
-    const t = clickToTile(g, { x: c.x + 0.5, y: top + c.y + 0.5, columns, rows }, viewOf(g, columns, rows))
+    const t = clickToTile(g, { x: c.x + 0.5, y: top + c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g, columns, rows))
     return t.x >= 0 && t.y >= 0 && t.x < 64 && t.y < 18 && (g.seen[t.y * 64 + t.x] === '0' || level.tiles[t.y]?.[t.x] !== '.')
   })!
   await ui.pointer({ type: 'down', x: gap.x + 0.5, y: gap.y + 0.5, button: 'left', in: 'dash-clicks' } as never)
@@ -922,7 +935,7 @@ test('the pointer over a floor tile lights it, as the windows light theirs; over
   const g = newGame()
   const level = levelOf(g)
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
-  const tileUnder = (c: { x: number; y: number }) => clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g, columns, rows))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g, columns, rows))
   const floor = cells.find(c => {
     const t = tileUnder(c)
     return Math.abs(t.x - g.x) + Math.abs(t.y - g.y) === 1 && level.tiles[t.y]?.[t.x] === '.'
@@ -943,8 +956,8 @@ test('the pointer over a floor tile lights it, as the windows light theirs; over
 })
 
 test('the pointer on the dash\'s layer over the map between its parts lights the floor under it; on the dash, nothing', async ($, on) => {
-  const g0 = newGame()
-  storeIn(on, new Map<string, unknown>([['save', { ...g0, seen: '1'.repeat(g0.seen.length) }]]))
+  const g0 = highUp()
+  storeIn(on, new Map<string, unknown>([['save', g0]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -956,7 +969,7 @@ test('the pointer on the dash\'s layer over the map between its parts lights the
   const level = levelOf(g0)
   const top = rows - OVER_ROWS
   const isDashAt = (c: { x: number; y: number }) => [0, 1].some(dy => dashHit(columns, c.x, c.y * 2 + dy - DASH_OVER) !== undefined)
-  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: top + c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: top + c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g0, columns, rows))
   const cells = Array.from({ length: columns * OVER_ROWS }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   const isFloorUnder = (c: { x: number; y: number }) => level.tiles[tileUnder(c).y]?.[tileUnder(c).x] === '.'
   const gap = cells.find(c => !isDashAt(c) && isFloorUnder(c))!
@@ -989,7 +1002,7 @@ test('the pointer over items lying on the map names them there, a row each in it
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
-  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g0, columns, rows))
   const over = cells.find(c => same(tileUnder(c), beside))!
   const blocks = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks?: { rows: { text: string; color?: string }[][] }[] }).blocks ?? []
   expect(await blocks()).toEqual([])
@@ -1020,7 +1033,7 @@ test('a pile past five on a tile still draws its names, the row counting the res
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
-  const over = cells.find(c => same(clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows)), beside))!
+  const over = cells.find(c => same(clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g0, columns, rows)), beside))!
   await ui.pointer({ type: 'move', ...over, in: 'map-clicks' } as never)
   // The pane drew its own tree, the engine not refusing it: the label is there, its last row turning the page.
   const blocks = ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks?: { rows: Record<string, unknown>[][] }[] }).blocks
@@ -1055,7 +1068,7 @@ test('the pointer moved from a tile onto its label keeps it, its row lit; a clic
   const columns = map?.props.columns as number
   const rows = map?.props.rows as number
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
-  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g0, columns, rows))
+  const tileUnder = (c: { x: number; y: number }) => clickToTile(g0, { x: c.x + 0.5, y: c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g0, columns, rows))
   const over = cells.find(c => same(tileUnder(c), beside))!
   type Shown = { x: number; y: number; rows: { text: string }[][]; grounds: string[][] }
   const blocks = async () => ((await ui.find({ type: 'Client', key: 'map-clicks' }))?.props.props as { blocks?: Shown[] }).blocks ?? []
@@ -1094,7 +1107,7 @@ test('a click during a walk goes to the tile drawn under the pointer, the hero w
   const level = levelOf(g)
   const cells = Array.from({ length: columns * rows }, (_, i) => ({ x: i % columns, y: Math.floor(i / columns) }))
   // Read off the frame on screen before the walk: which cell shows the hero's tile, which one a floor tile beside it.
-  const tileAt = (c: { x: number; y: number }) => clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows }, viewOf(g, columns, rows))
+  const tileAt = (c: { x: number; y: number }) => clickToTile(g, { x: c.x + 0.5, y: c.y + 0.5, columns, rows, covered: mapCovered(columns, rows) }, viewOf(g, columns, rows))
   const home = cells.find(c => same(tileAt(c), g))!
   const floor = cells.find(c => {
     const t = tileAt(c)
@@ -1406,7 +1419,7 @@ test('/dungeon-bench plays a long walk in a fixed scene on screen only, and /dun
   const route = benchRoute(bench, 40)
   // A new place: the camera starts on the tile line nearest the hero as the first frame draws him.
   const at = walkPosition(route, 1)
-  expect(frames[0]).toBe(stampCells(paneMap(walkingGame(bench, bench, route, 1), columns, rows, at, tileCamera(null, at, columns, rows * 2), [], 0, true), 1))
+  expect(frames[0]).toBe(stampCells(paneMap(walkingGame(bench, bench, route, 1), columns, rows, at, tileCamera(null, at, columns, rows * 2 - mapCovered(columns, rows)), [], 0, true), 1))
   // Each bench frame carries its number: every one of them sent, in order, once; nothing after the bench is stamped.
   const stamps = frames.map(stampOf)
   expect(stamps.slice(0, 40 * 4 - 1)).toEqual(Array.from({ length: 40 * 4 - 1 }, (_, i) => (i + 1) % 16))
@@ -1607,7 +1620,7 @@ describe('a click is carried out when the hero gets there, not when it is made',
     const tiles = alongTheWay(g, plan)!
     const expected = Array.from({ length: (path.length - 1) * 4 - 1 }, (_, i) => {
       const at = walkPosition(path, i + 1)
-      camera = tileCamera(camera, at, columns, rows * 2)
+      camera = tileCamera(camera, at, columns, rows * 2 - mapCovered(columns, rows))
       return paneMap(walkState(g, tiles, i + 1), columns, rows, at, camera, [], 0, isStrideFrame(i + 1))
     })
     expect(frames.length).toBe(expected.length)

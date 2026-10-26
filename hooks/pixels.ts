@@ -244,12 +244,14 @@ type Located = Pick<Game, 'x' | 'y'> & Partial<Pick<Game, 'where'>>
 /** The world the hero is in, in pixels: the dungeon level or the town. */
 export const worldSize = (g: Partial<Pick<Game, 'where'>>) => (g.where === 'town' ? { w: TOWN_W * PX, h: TOWN_H * PX } : { w: MAP_W * PX, h: MAP_H * PX })
 
-export const viewOrigin = (g: Located, width: number, height: number) => originAt({ x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, width, height, worldSize(g))
+export const viewOrigin = (g: Located, width: number, height: number, covered = 0) => originAt({ x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, width, height, worldSize(g), covered)
 
-/** The window's origin around a world-pixel point: what the camera follows while the hero walks. */
-export const originAt = (center: Pos, width: number, height: number, size = worldSize({})) => ({
+/** The window's origin around a world-pixel point: what the camera follows while the hero walks. `covered` pixels at
+ * its bottom are hidden (the dash over the map): the window is centred and clamped on what stays seen, so it may run
+ * past the world's bottom by them, its last row seen above them. */
+export const originAt = (center: Pos, width: number, height: number, size = worldSize({}), covered = 0) => ({
   x: windowOrigin(center.x, width, size.w),
-  y: windowOrigin(center.y, height, size.h),
+  y: windowOrigin(center.y, height - covered, size.h),
 })
 
 /** Half the size of the view's middle, in pixels: while the hero stays inside it, the camera holds still. */
@@ -669,9 +671,9 @@ const townShadow = (frame: Uint32Array, width: number, height: number, left: num
   }
 }
 
-const townFrame = (g: Game, width: number, height: number, heroAt: Pos | undefined, camera: Pos | undefined, stride: boolean, shimmer: boolean) => {
+const townFrame = (g: Game, width: number, height: number, heroAt: Pos | undefined, camera: Pos | undefined, stride: boolean, shimmer: boolean, covered: number) => {
   const hero = heroAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }
-  const origin = originAt(camera ?? hero, width, height, worldSize(g))
+  const origin = originAt(camera ?? hero, width, height, worldSize(g), covered)
   const img = townImage(shimmer)
   const frame = new Uint32Array(width * height)
   for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
@@ -732,17 +734,17 @@ export const frameOf = (
   g: Game,
   width: number,
   height: number,
-  { isLit = true, heroAt: walkingAt, camera, hits = [], hitFrame: rawHitFrame = 0, lights, stride: isStriding = false, bob = false, shimmer = false }: { isLit?: boolean; heroAt?: Pos; camera?: Pos; hits?: readonly Hit[]; hitFrame?: number; lights?: readonly Pos[]; stride?: boolean; bob?: boolean; shimmer?: boolean } = {},
+  { isLit = true, heroAt: walkingAt, camera, hits = [], hitFrame: rawHitFrame = 0, lights, stride: isStriding = false, bob = false, shimmer = false, covered = 0 }: { isLit?: boolean; heroAt?: Pos; camera?: Pos; hits?: readonly Hit[]; hitFrame?: number; lights?: readonly Pos[]; stride?: boolean; bob?: boolean; shimmer?: boolean; covered?: number } = {},
 ) => {
   // Standing idle, the bob lifts the hero a pixel off their tile.
   const idleAt = walkingAt ?? (bob ? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 - 1 } : undefined)
-  if (g.where === 'town') return townFrame(g, width, height, idleAt, camera, isStriding, shimmer)
+  if (g.where === 'town') return townFrame(g, width, height, idleAt, camera, isStriding, shimmer, covered)
   const level = levelOf(g)
   // The freeze holds the blow's first frame, then plays the rest as it would have.
   const freeze = hitFreeze(hits)
   const hitFrame = rawHitFrame <= freeze ? Math.min(1, rawHitFrame) : rawHitFrame - freeze
   const { heroAt, stride, hero } = heroDrawn(g, hits, hitFrame, walkingAt, idleAt, isStriding)
-  const origin = originAt(camera ?? walkingAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, width, height)
+  const origin = originAt(camera ?? walkingAt ?? { x: g.x * PX + PX / 2, y: g.y * PX + PX / 2 }, width, height, worldSize(g), covered)
   const torchAt = torchOf(level, hero)
   // A falling hero is drawn by the fall alone.
   const dying = hits.find(h => h.kind === 'death')
@@ -1062,15 +1064,15 @@ const lightRect = (frame: Uint32Array, width: number, height: number, r: PixelRe
 }
 
 /** The map's cells; `lit`, the tile under the pointer, lit for the hover over everything else. */
-export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect, over?: Over) =>
-  pixelMapFrame(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, lit, over).cells
+export const pixelMap = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect, over?: Over, covered = 0) =>
+  pixelMapFrame(g, columns, rows, heroAt, camera, hits, hitFrame, stride, ambient, lit, over, covered).cells
 
 /** The map's Raster cells and the frame they pack, for what is written over it to take its ground from. */
 /** What a caller paints over the map's frame last, `height` pixels tall: the dash standing over its bottom. */
 export type Over = (frame: Uint32Array, height: number) => void
 
-export const pixelMapFrame = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect, over?: Over) => {
-  const drawn = frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient })
+export const pixelMapFrame = (g: Game, columns: number, rows: number, heroAt?: Pos, camera?: Pos, hits: readonly Hit[] = [], hitFrame = 0, stride = false, ambient: Ambient = STILL, lit?: PixelRect, over?: Over, covered = 0) => {
+  const drawn = frameOf(g, columns, rows * 2, { heroAt, camera, hits, hitFrame, stride, ...ambient, covered })
   const frame = lit === undefined ? drawn : lightRect(drawn, columns, rows * 2, lit)
   over?.(frame, rows * 2)
   return { cells: rasterCells(frame, columns, rows), frame }
@@ -1110,22 +1112,22 @@ export const labelGrounds = (frame: Uint32Array, columns: number, label: LabelBl
  * The map tile under a click on the pixel map: `x`, `y` in cells of the map's region (fractions where the terminal
  * reports them), `columns` by `rows` that region's size. A cell is one pixel across and two down.
  */
-export const clickToTile = (g: Located, click: { x: number; y: number; columns: number; rows: number }, camera?: Pos) => {
-  const origin = camera === undefined ? viewOrigin(g, click.columns, click.rows * 2) : originAt(camera, click.columns, click.rows * 2, worldSize(g))
+export const clickToTile = (g: Located, click: { x: number; y: number; columns: number; rows: number; covered?: number }, camera?: Pos) => {
+  const origin = camera === undefined ? viewOrigin(g, click.columns, click.rows * 2, click.covered) : originAt(camera, click.columns, click.rows * 2, worldSize(g), click.covered)
   const px = origin.x + Math.floor(click.x)
   const py = origin.y + Math.floor(click.y * 2)
   return { x: Math.floor(px / PX), y: Math.floor(py / PX) }
 }
 
 /** A tile's pixels on the map, `size` its cells, the camera at `camera`: what the hover lights. */
-export const tileRect = (g: Located, tile: Pos, size: { columns: number; rows: number }, camera?: Pos): PixelRect => {
-  const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2) : originAt(camera, size.columns, size.rows * 2, worldSize(g))
+export const tileRect = (g: Located, tile: Pos, size: { columns: number; rows: number; covered?: number }, camera?: Pos): PixelRect => {
+  const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2, size.covered) : originAt(camera, size.columns, size.rows * 2, worldSize(g), size.covered)
   return { x: tile.x * PX - origin.x, y: tile.y * PX - origin.y, w: PX, h: PX }
 }
 
 /** Where a tile's top-left lands on the map, in its cells: `clickToTile` the other way. */
-export const tileToCell = (g: Located, tile: Pos, size: { columns: number; rows: number }, camera?: Pos): Pos => {
-  const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2) : originAt(camera, size.columns, size.rows * 2, worldSize(g))
+export const tileToCell = (g: Located, tile: Pos, size: { columns: number; rows: number; covered?: number }, camera?: Pos): Pos => {
+  const origin = camera === undefined ? viewOrigin(g, size.columns, size.rows * 2, size.covered) : originAt(camera, size.columns, size.rows * 2, worldSize(g), size.covered)
   return { x: tile.x * PX - origin.x, y: Math.floor((tile.y * PX - origin.y) / 2) }
 }
 

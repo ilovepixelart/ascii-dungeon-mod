@@ -4,12 +4,12 @@ import type { Game } from '../types'
 import type { Action } from './game'
 import type { Canvas } from './canvas'
 import { clearOf } from './pieces'
-import { DASH_H, OVER_ROWS, dashBeltMenu, isOverMap, dashGesture, dashHot, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, orbPhase, overLabels } from './dash'
+import { DASH_H, DASH_OVER, OVER_ROWS, dashBeltMenu, isOverMap, dashGesture, dashHot, dashLabels, dashOverGesture, dashOverMap, dashStrip, isDash, orbPhase, overLabels } from './dash'
 import { beltMenuBox, hudBoxes, hudGesture, hudHot, hudLayout, hudPixels } from './hud'
 import { drawBox, uncovered } from './window'
 import type { Gesture, OverlayBox } from './window'
 
-export { OVER_ROWS, isDash, orbPhase }
+export { DASH_OVER, OVER_ROWS, isDash, orbPhase }
 
 /** The strip's height in pixels on a pane `columns` wide. */
 export const stripHeight = (columns: number) => (isDash(columns) ? DASH_H : hudLayout(columns).height)
@@ -43,6 +43,11 @@ export const stripOverMap = (g: Game, columns: number, phase: number) => (isDash
 
 /** The dash's words over the map, for its layer there: the orbs' numbers and the plaque's words. */
 export const overMapBoxes = (g: Game, columns: number) => overLabels(g, columns)
+
+/** The map's pixels the dash hides at its bottom, standing over a map `columns` by `rows` cells: the camera keeps the
+ * hero above them and lets the map run past the level's bottom by them. None without the dash, or on a map too short
+ * for it to stand over. */
+export const mapCovered = (columns: number, rows: number) => (isDash(columns) && rows > OVER_ROWS ? DASH_OVER : 0)
 
 /** A gesture on the dash's layer over the map. */
 export const overMapGesture = dashOverGesture

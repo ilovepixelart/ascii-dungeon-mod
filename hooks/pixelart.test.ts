@@ -148,3 +148,19 @@ describe('the dog', () => {
     expect(rows[2]![0]).not.toBe('.')
   })
 })
+
+describe('the townsfolk\'s faces', () => {
+  test('each has two eyes on one row, a pixel of face between them, nothing black above either to run into it', async () => {
+    for (const who of ['merchant', 'smith', 'healer', 'elder', 'guard', 'villager'] as const) {
+      const y = NPC_ART[who].findIndex(r => /k.k/.test(r))
+      const row = NPC_ART[who][y]!
+      const i = row.indexOf('k')
+      const above = NPC_ART[who][y - 1]!
+      expect([who, row[i + 1], ['k', 'K'].includes(above[i]!), ['k', 'K'].includes(above[i + 2]!)]).toEqual([who, 's', false, false])
+    }
+  })
+
+  test('the merchant wears a hat in his robe\'s colours, so his head stands off the counter\'s wood', async () => {
+    expect([...NPC_ART.merchant[0]!, ...NPC_ART.merchant[1]!].filter(k => k !== '.').every(k => k === 'a' || k === 'A')).toBe(true)
+  })
+})

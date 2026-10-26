@@ -121,7 +121,13 @@ describe('the settings window\'s words', () => {
 
   test('say under the buttons what each of the page\'s does', async () => {
     for (const word of ['New game', 'Help', 'Sound', 'Music', 'Volume']) expect(said({ page: 'game' })).toContain(word)
-    for (const word of ['Drink', 'Smoke', 'loot']) expect(said({ page: 'orders' })).toContain(word)
+    for (const word of ['Drink', 'Smoke', 'Loot']) expect(said({ page: 'orders' })).toContain(word)
+  })
+
+  test('name each button bright and say what it does dimmed, as the other windows\' boxes do', async () => {
+    const lead = (page: SettingsUi['page']) => about({ page })!.lines.map(l => [l[0]!.text, l[0]!.dim === true, l.slice(1).every(r => r.dim === true)])
+    expect(lead('game')).toEqual([['New game', false, true], ['Help', false, true], ['Sound', false, true], ['Volume', false, true]])
+    expect(lead('orders').slice(1)).toEqual([['Drink:', false, true], ['Smoke:', false, true], ['Loot:', false, true]])
   })
 
   test('stand 2 px under the last row of buttons, across the window, the window one height on both pages', async () => {

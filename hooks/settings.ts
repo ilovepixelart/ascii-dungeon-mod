@@ -90,23 +90,24 @@ export const nextSound = (s: SoundSettings, does: 'effects' | 'music' | 'volume'
   does === 'effects' ? { ...s, effects: !s.effects } : does === 'music' ? { ...s, music: !s.music } : { ...s, volume: (s.volume % VOLUME_STEPS) + 1 }
 
 /** The window's height in pixels: three rows of buttons on either page and a cell of room under them. */
-/** What each page's buttons do, in the box under them: a line each, so both pages are one height. */
-const ABOUT: Readonly<Record<SettingsUi['page'], readonly string[]>> = {
+/** What each page's buttons do, in the box under them: a line each, so both pages are one height; each line the
+ * button's name, then what it does. The orders' first line says what the page is. */
+const ABOUT: Readonly<Record<SettingsUi['page'], readonly (readonly [string, string])[]>> = {
   game: [
-    'New game opens the start screen for a new hero; the codex and the stash are kept.',
-    'Help opens How it plays.',
-    'Sound turns the effects on or off, Music the tune.',
-    'Volume steps a quarter at a time, for every sound.',
+    ['New game', ' opens the start screen for a new hero; the codex and the stash are kept.'],
+    ['Help', ' opens How it plays.'],
+    ['Sound', ' turns the effects on or off, Music the tune.'],
+    ['Volume', ' steps a quarter at a time, for every sound.'],
   ],
   orders: [
-    'What the hero does on their own while you work.',
-    'Drink: a healing potion after a blow leaves HP under the mark.',
-    'Smoke: a smoke bomb when low, with no healing potion left and a foe near.',
-    'Leave: the loot a kill drops below the mark stays on the floor; a prize always comes.',
+    ['', 'What the hero does on their own while you work.'],
+    ['Drink:', ' a healing potion after a blow leaves HP under the mark.'],
+    ['Smoke:', ' a smoke bomb when low, with no healing potion left and a foe near.'],
+    ['Loot:', ' what a kill drops below the mark stays on the floor; a prize always comes.'],
   ],
 }
 /** The box under the buttons, 2 px under their last row, across the window. */
-const aboutBox = (ui: SettingsUi): OverlayBox => ({ role: 'about', x: 2, y: (ROWS_Y + (ROWS - 1) * ROW_STEP + BUTTON_H + 2) / 2, w: WINDOW_W - 4, h: ABOUT[ui.page].length + 2, border: SURFACE.frame, lines: ABOUT[ui.page].map(text => [{ text }]) })
+const aboutBox = (ui: SettingsUi): OverlayBox => ({ role: 'about', x: 2, y: (ROWS_Y + (ROWS - 1) * ROW_STEP + BUTTON_H + 2) / 2, w: WINDOW_W - 4, h: ABOUT[ui.page].length + 2, border: SURFACE.frame, lines: ABOUT[ui.page].map(([name, does]) => [{ text: name }, { text: does, dim: true }]) })
 export const SETTINGS_H = (aboutBox(SETTINGS_UI).y + aboutBox(SETTINGS_UI).h) * 2 + 2
 
 /** Where a button is on its page, in window pixels, by what it does. */

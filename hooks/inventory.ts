@@ -54,6 +54,8 @@ export const wornSlots = (c: Canvas, g: Game, edge: (slot: Slot) => string) => {
       const [ax, ay] = centered(rows, x, y, w, h)
       art(c, rows, ax, ay, GHOST_INK)
     }
+    // A slot lit (chosen, or where a drag would go) keeps its ink over the piece's tier frame, which lies on the same line.
+    if (worn !== undefined && edge(slot) !== GRID) frame(c, x - 1, y - 1, w + 2, h + 2, edge(slot))
   }
 }
 

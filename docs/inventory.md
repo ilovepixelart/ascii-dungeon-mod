@@ -14,7 +14,7 @@ Opened by clicking the portrait (`i` on the text dashboard). On a terminal at le
 - Worn slots on the left, each sized to the largest footprint its items have, so the same icon art serves the bag and the slot. An empty slot shows a faint outline of what goes there.
 - The bag grid on the right (`BAG_W` x `BAG_H` in `hooks/items/bag.ts`), 7 px cells. An item covers its whole footprint; the frame around it shows its tier (see `items.md`).
 - The belt along the bottom, a slot a kind, as the dashboard draws it (`beltSlot` in `hooks/pieces.ts`).
-- Off-class items carry a small red mark in a corner; a small green up mark means an upgrade for this hero.
+- Off-class items carry a small red mark in a corner; a small green up mark means an upgrade for this hero (`isUpgrade`): worth more worn than what is in its slot, a set's two-piece bonus counted, and never one that would break a whole set or take off a Legendary's power for a piece without one.
 
 Colors keep one meaning each: white is "this one, and where it goes"; red is "cannot". Green is not used for targets, because it is the Uncommon tier's color.
 

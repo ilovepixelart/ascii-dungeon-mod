@@ -31,8 +31,19 @@ export const canWear = (g: Pick<Game, 'cls'>, item: Item) => item.cls === undefi
 
 export const classLabel = (item: Item) => (item.cls === undefined ? 'Any class' : `${CLASS_NAME[item.cls]} only`)
 
-/** Better than what the hero wears in its slot, and wearable by the hero. */
-export const isUpgrade = (g: Game, item: Item) => canWear(g, item) && worth(item) > worth(g.gear[item.slot] ?? {})
+/** What everything worn is worth, a set's two-piece bonus included. */
+const wornWorth = (g: Game) => worth(Object.fromEntries(STAT_KEYS.map(k => [k, gearBonus(g, k)])))
+
+/** Wearable by the hero and better worn than what is in its slot: worth more with the set bonus counted, a whole set
+ * kept whole and a worn Legendary's power kept, since neither is a stat to weigh. */
+export const isUpgrade = (g: Game, item: Item) => {
+  if (!canWear(g, item)) return false
+  const worn = g.gear[item.slot]
+  const swapped = { ...g, gear: { ...g.gear, [item.slot]: item } }
+  if (isSetWhole(g) && !isSetWhole(swapped)) return false
+  if (worn?.power !== undefined && item.power === undefined) return false
+  return wornWorth(swapped) > wornWorth(g)
+}
 
 /** The change on each stat if `item` replaced what is worn in its slot. */
 export const deltas = (g: Game, item: Item): Stats => {

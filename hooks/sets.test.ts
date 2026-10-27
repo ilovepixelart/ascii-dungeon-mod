@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { ClassSet, Foe, Game, HeroClass, Item } from '../types'
 import { apply } from './game'
 import { foeAhead, plainHero } from './fixtures'
-import { SETS, SET_COLOR, gearBonus, heirloomOf, plainItem, reforgeItem, setPiece } from './items'
+import { SETS, SET_COLOR, gearBonus, heirloomOf, isUpgrade, plainItem, reforgeItem, setPiece } from './items'
 import { card } from './bagui'
 import { itemCard } from './inventory'
 import { arrive } from './world'
@@ -146,6 +146,31 @@ describe('three worn', () => {
     const g = { ...wearing('rogue', 'oathbound', 3), cls: 'knight' as const }
     const off = { ...g, cls: 'mage' as const, hp: 1, maxHp: 20, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, opened: true }) }
     expect(ok(off).hp).toBe(1 + 4)
+  })
+})
+
+describe('the upgrade arrow', () => {
+  test('counts the two-piece bonus a swap would lose: a plain piece must beat the set piece and the bonus', async () => {
+    const g = wearing('knight', 'oathbound', 2)
+    const plate = g.gear.armor!
+    const plain = (more: number): Item => ({ ...plate, id: 900, name: 'Plain Plate', set: undefined, def: plate.def + more })
+    expect(isUpgrade(g, plain(1))).toBe(false)
+    expect(isUpgrade(g, plain(3))).toBe(true)
+  })
+
+  test('never points at a piece that would break a whole set; a better piece of the same set it does', async () => {
+    const g = wearing('knight', 'oathbound', 3)
+    const blade = g.gear.weapon!
+    expect(isUpgrade(g, { ...blade, id: 901, name: 'Plain Blade', set: undefined, atk: blade.atk + 20 })).toBe(false)
+    expect(isUpgrade(g, { ...blade, id: 902, atk: blade.atk + 1 })).toBe(true)
+  })
+
+  test("never points away from a worn Legendary's power to a piece without one", async () => {
+    const g0 = plainHero(3)
+    const legend: Item = { ...plainItem(g0, 'sword', 'legendary'), power: 'test' }
+    const g = { ...g0, cls: 'knight' as const, gear: { ...g0.gear, weapon: legend } }
+    expect(isUpgrade(g, { ...legend, id: 903, rarity: 'rare', power: undefined, atk: legend.atk + 20 })).toBe(false)
+    expect(isUpgrade(g, { ...legend, id: 904, atk: legend.atk + 1 })).toBe(true)
   })
 })
 

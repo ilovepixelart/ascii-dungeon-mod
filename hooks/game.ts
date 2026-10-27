@@ -176,6 +176,7 @@ const die = (g: Game, killer: string) => {
   const wake = g.waypoint !== undefined && g.waypoint >= first && g.waypoint <= g.depth ? g.waypoint : first
   say(g, `You were slain by ${killer} on depth ${g.depth}. You wake on depth ${wake}.`)
   if (foe !== undefined) remember(g, foe)
+  if (foe?.unique !== undefined) g.uniqueWon = { ...g.uniqueWon, [bandOf(depth)]: g.level }
   // Waking on the same depth, what lies on its floor still lies there; on another, it is lost, said.
   const lying = g.floor ?? []
   if (wake !== depth && lying.length > 0) say(g, `${lying.length === 1 ? 'The item' : `The ${lying.length} items`} left on the floor of depth ${depth} ${lying.length === 1 ? 'is' : 'are'} lost.`)
@@ -1054,7 +1055,7 @@ const summon = (g: Game, name: string) => {
     return
   }
   const band = bandOf(g.depth)
-  if (g.where === 'dungeon' && g.depth === uniqueDepth(g.world, band) && !g.uniquesSlain.includes(band)) {
+  if (g.where === 'dungeon' && g.depth === uniqueDepth(g.world, band) && !g.uniquesSlain.includes(band) && (g.uniqueWon?.[band] ?? 0) < g.level) {
     g.foe = uniqueFoe(g)
     g.toast = `${g.foe.name} is here!`
     say(g, `The ground trembles. ${g.foe.name} is here!`)

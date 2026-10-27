@@ -34,6 +34,18 @@ describe('where a unique waits', () => {
     expect(summon(at(d, { uniquesSlain: [1] })).foe?.unique).toBeUndefined()
   })
 
+  test('one that slew the hero waits for them a level stronger; slain by another, it is there as ever', async () => {
+    const d = uniqueDepth(WORLD, 0)
+    const g = at(d, { level: 3 })
+    const met = summon(g)
+    const slain = apply({ ...met, hp: 1, belt: met.belt.map(() => null), foe: { ...met.foe!, atk: 50, opened: true } }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect([slain.deaths, slain.uniqueWon]).toEqual([g.deaths + 1, { 0: 3 }])
+    const back = { ...slain, ...arrive(WORLD, d) }
+    expect(summon(back).foe?.unique).toBeUndefined()
+    expect(summon({ ...back, level: 4 }).foe?.unique).toBe('bones')
+    expect(summon({ ...at(d), uniqueWon: { 1: 50 } }).foe?.unique).toBe('bones')
+  })
+
   test('each theme has its own: Old Bones the skeleton, Mother Mire the troll, the Rotking, Rimehide, Emberjaw the drake', async () => {
     expect([0, 1, 2, 3, 4].map(b => summon(at(uniqueDepth(WORLD, b))).foe?.name)).toEqual(['Old Bones', 'Mother Mire', 'the Rotking', 'Rimehide', 'Emberjaw'])
     expect(Object.values(UNIQUES).map(u => u.glyph)).toEqual(['s', 'T', 'k', 'o', 'D'])

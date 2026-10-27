@@ -14,6 +14,9 @@ release may change behaviour.
 
 ### Changed
 
+- A unique that slays the hero waits for them to gain a level before it rises again. Old Bones, on depths 2 to 4,
+  met a hero sent back to depth 1 on every return, and with no one spending points it caused 104 of 261 deaths over
+  30 games of about 300 tool calls (56 of 236 now).
 - Armor lets at least a quarter of a blow through, rounded up: it took its whole defense off, down to 1, and from
   about depth 11 a hero's defense passed what most foes hit for, so ordinary fights cost nothing and the danger lay
   only in blows that pierce armor. Over 4,000 steps, damage taken a kill goes from 20 to 33 and deaths per 1,000

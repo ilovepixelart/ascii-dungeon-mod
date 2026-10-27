@@ -1800,13 +1800,8 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   },
   retrieve: (g, a) => retrieve(g, a.id, a.at),
   moveStashed: (g, a) => moveStashed(g, a.id, a.x, a.y),
-  // A task done in town: back through the portal, then down, unless the stairs have a guardian to meet first.
-  descend: g => {
-    leaveTown(g)
-    walkDown(g)
-    // Through the portal and down at once: a walk on the dungeon's ground is not one the town's screen can play.
-    g.walked = []
-  },
+  // A task done in town leaves the hero there, mid-visit: the portal is the way back.
+  descend: () => {},
 }
 
 /**

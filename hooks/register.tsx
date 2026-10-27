@@ -2279,6 +2279,8 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('tool.call', async ($, e, next) => {
+    // Only the main loop's calls play: a subagent's, a workflow's and the engine's forks carry an agentId.
+    if (e.agentId !== undefined) return next(e)
     await act($, onToolStart(String(e.tool), targetOf(e)))
     const ran = await next(e)
     const ok = ran.deny === undefined && ran.isError !== true

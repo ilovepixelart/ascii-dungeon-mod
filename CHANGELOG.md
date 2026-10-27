@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Fixed
+
+- A subagent's tool calls, a workflow's and the engine's own background agents' summoned foes and struck or hurt the
+  hero as if the main session had made them. Only the main session's tool calls play now.
+
 ## [0.6.0] - 2026-10-27
 
 Saves from 0.5.0 load as they are: the save stays at version 14, and the deep's fates chosen so far are the Abyss's.

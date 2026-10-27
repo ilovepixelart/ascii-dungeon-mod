@@ -185,7 +185,9 @@ const die = (g: Game, killer: string) => {
   const mod = depthMod(g.world, wake)
   if (mod !== undefined) say(g, `${MOD_SAID[mod]}.`)
   g.hp = g.maxHp
-  const lost = g.gold - Math.floor(g.gold / 2)
+  // Gold brought to town is safe: a death takes half of what was earned since, rounded up.
+  const atRisk = g.gold - Math.min(g.banked ?? 0, g.gold)
+  const lost = atRisk - Math.floor(atRisk / 2)
   g.gold -= lost
   g.foe = null
   g.fallen = { by: killer, ...(foe === undefined ? {} : { foe }), at, depth, wake, lost }
@@ -2005,6 +2007,14 @@ const handFoe = (g: Game) => {
   if (roll(g, 100) <= Math.min(HAND_FOE_MAX, HAND_FOE_TILE * g.walked.length)) summon(g, 'the depths')
 }
 
+/** In town all the gold carried is banked; elsewhere what is spent comes off the banked first, and what is earned is
+ * not. Written only when it changes, so an action that changes nothing leaves the game as it was. */
+const bank = (before: Game, g: Game) => {
+  const banked = g.where === 'town' ? g.gold : Math.min(g.banked ?? 0, g.gold)
+  const isNew = g.where === 'town' ? before.where !== 'town' || g.gold !== before.gold : banked < (g.banked ?? 0)
+  if (isNew) g.banked = banked
+}
+
 export const apply = (game: Game, action: Action): Game => {
   // A new hero keeps the codex and the heirloom: they are the save's, not one hero's.
   if (action.kind === 'restart') return newHero(game, action.cls ?? game.cls ?? 'knight')
@@ -2014,6 +2024,7 @@ export const apply = (game: Game, action: Action): Game => {
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)
+  bank(before, g)
   if (HAND_STEPS.has(action.kind)) handFoe(g)
   offerTalent(g)
   if (TOOL_DRIVEN.has(action.kind)) g.recap = noted(before, g, action)

@@ -48,3 +48,6 @@ export const heroDamage = (level: number, d4: number, attackBonus: number) => 1 
  * session's tool calls bring one in two calls, each exploring a few tiles. */
 export const HAND_FOE_TILE = 15
 export const HAND_FOE_MAX = 60
+
+/** The least share of a blow armor lets through: deep heroes stack defense past what foes hit for. */
+export const ARMOR_FLOOR = 0.25

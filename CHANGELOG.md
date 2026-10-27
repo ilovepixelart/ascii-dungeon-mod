@@ -14,6 +14,10 @@ release may change behaviour.
 
 ### Changed
 
+- Armor lets at least a quarter of a blow through, rounded up: it took its whole defense off, down to 1, and from
+  about depth 11 a hero's defense passed what most foes hit for, so ordinary fights cost nothing and the danger lay
+  only in blows that pierce armor. Over 4,000 steps, damage taken a kill goes from 20 to 33 and deaths per 1,000
+  steps from 0.51 to 0.59.
 - The attributes rebalanced, each worth a point: Might gives a point of attack a point (half before), Focus 5% more
   critical damage a point besides its 3% crit chance, Insight 5% more XP a point (10% before). Foes have 6 HP a
   depth (4 before), so a kill still takes 2 to 3 hits. A hero putting every point in Might or Focus died three to

@@ -145,6 +145,16 @@ describe('the stash is the town\'s', () => {
     expect(stashedItems(next).every(i => i.id < next.nextId)).toBe(true)
   })
 
+  test("a new hero's stash holds its items as heirlooms: the base's plain stats, untempered, the lock and the junk mark kept", async () => {
+    // A sword found deep: 30 attack and 2 tempers; the plain Short Sword has 2.
+    const deep = item(600, 'sword', { rarity: 'epic', atk: 30, temper: 2, locked: true })
+    const junk = item(601, 'ring', { def: 9, junk: true, y: 1 })
+    const next = apply(veteran({ stashed: [[deep, junk]] }), { kind: 'restart', cls: 'knight' })
+    const [sword, ring] = next.stashed[0]!
+    expect([sword?.name, sword?.rarity, sword?.atk, sword?.temper, sword?.locked]).toEqual([deep.name, 'epic', 2, undefined, true])
+    expect([ring?.def, ring?.junk]).toEqual([0, true])
+  })
+
   test('a new game from settings keeps them too', async () => {
     const next = apply(veteran(kept), { kind: 'restart', cls: 'rogue' })
     expect(names(next)).toEqual(names(veteran(kept)))

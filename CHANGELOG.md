@@ -14,6 +14,9 @@ release may change behaviour.
 
 ### Changed
 
+- A new hero's stash holds its items as an heirloom comes: their base's plain stats, untempered, their lock and junk
+  mark kept. Kept at the stats they were found with, they let a level-1 hero start with 51 to 111 attack and no
+  death in the first 1,000 steps, on a new game as on retiring.
 - Past depth 10 foes grow half a percent more a depth, in HP and attack: a depth-50 foe a fifth over its depth's
   plain sum. The hero's levels and gear outgrew a depth's worth, so depths 11 to 100 slew the hero 0 to 0.29 times
   in 100 tool calls; over 30 games of 6,000 steps they now do 0.10 at depths 21 to 30, 0.49 to 0.93 at 31 to 50 and

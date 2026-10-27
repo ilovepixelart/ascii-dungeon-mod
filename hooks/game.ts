@@ -1940,12 +1940,16 @@ const retiredFrom = (g: Game, slot: Slot): Game => {
 /** The standing orders, the player's and not the hero's: kept from hero to hero. */
 const keptOrders = (g: Pick<Game, 'orders'>): Pick<Game, 'orders'> => (g.orders === undefined ? {} : { orders: g.orders })
 
-/** The stash's items given ids of the new game `g`, from its next on: the old hero's ids are not the new one's. */
+/**
+ * The stash's items for the new game `g`: given ids from its next on, the old hero's ids not being the new one's, and
+ * each as an heirloom is (`heirloomOf`), its base's plain stats, its lock and junk mark kept. A stash kept at its
+ * depth's stats let a level-1 hero start with 51 to 111 attack.
+ */
 const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegends'>) => {
   const fresh = (items: readonly Item[]) =>
     items.map(item => {
       g.nextId += 1
-      return { ...item, id: g.nextId - 1 }
+      return { ...heirloomOf(item), id: g.nextId - 1, ...(item.locked === true ? { locked: true } : {}), ...(item.junk === true ? { junk: true } : {}) }
     })
   g.stashed = kept.stashed.map(fresh)
   if (kept.stashSets !== undefined) g.stashSets = fresh(kept.stashSets)

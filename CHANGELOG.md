@@ -6,6 +6,13 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-27
+
+Saves from 0.6.0 load as they are: the save stays at version 14, and the new fields (the play order, the gold banked,
+a unique's wait, a retired hero's gold) start empty. What changes on loading: a hero past a fifth level is owed the
+talents that now come every fifth level, the stash's items for the next new hero are their plain heirloom stats, and
+the game plays harder past depth 10 and in the shops' prices. Nothing needs doing.
+
 ### Added
 
 - A save the store refuses is said in a toast, once until one lands again, with the reason: it was dropped in

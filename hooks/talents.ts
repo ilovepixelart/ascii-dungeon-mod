@@ -5,7 +5,7 @@ import type { Game, Talent } from '../types'
 import { hash } from './rng'
 
 /** A talent is earned at every this many levels. */
-export const TALENT_EVERY = 10
+export const TALENT_EVERY = 5
 /** Talents offered at each pick. */
 export const OFFERED = 3
 

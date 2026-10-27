@@ -14,6 +14,8 @@ release may change behaviour.
 
 ### Changed
 
+- A talent comes every fifth level, where it came every tenth: about 6 in a game of 6,000 simulated steps, where it
+  was 3. A hero of a save finds the talents now owed waiting.
 - A new hero's stash holds its items as an heirloom comes: their base's plain stats, untempered, their lock and junk
   mark kept. Kept at the stats they were found with, they let a level-1 hero start with 51 to 111 attack and no
   death in the first 1,000 steps, on a new game as on retiring.

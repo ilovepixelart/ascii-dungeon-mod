@@ -61,7 +61,7 @@ export type Orders = { drink: 0 | 25 | 50; smoke: boolean; leave: Rarity | 'all'
 /** What every hero of this save has done, kept through a new game: the uniques and big bosses slain and the Legendaries found, by key and name, the records, and the heroes retired (absent, none). */
 export type Codex = { uniques: NonNullable<Foe['unique']>[]; bigs: NonNullable<Foe['big']>[]; legendaries: string[]; deepest: number; level: number; kills: number; bosses: number; deaths: number; gold: number; retired?: number }
 
-/** A talent by key: one picked of three every tenth level, each changing a rule (`TALENTS` in hooks/talents.ts). */
+/** A talent by key: one picked of three every fifth level, each changing a rule (`TALENTS` in hooks/talents.ts). */
 /** A tier's mark past depth 50: easier (steady, mild, brittle) or harder for more (ironclad, frenzied, lean) (`MARKS` in hooks/deep.ts). */
 export type Mark = 'steady' | 'mild' | 'brittle' | 'ironclad' | 'frenzied' | 'lean'
 

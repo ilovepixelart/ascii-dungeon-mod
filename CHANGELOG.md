@@ -14,6 +14,8 @@ release may change behaviour.
 
 ### Changed
 
+- The merchant asks the shelf price once more for every ten depths the hero has reached: a Health Potion is 25 gold
+  to depth 9, 50 from depth 10 and 150 from depth 50. Its prices stood still while a kill's gold grew with the depth.
 - A talent comes every fifth level, where it came every tenth: about 6 in a game of 6,000 simulated steps, where it
   was 3. A hero of a save finds the talents now owed waiting.
 - A new hero's stash holds its items as an heirloom comes: their base's plain stats, untempered, their lock and junk

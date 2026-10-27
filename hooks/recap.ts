@@ -44,9 +44,9 @@ export const noted = (before: Game, after: Game, action: Action): Recap => {
   }
 }
 
-/** A look at the pane: enough unseen opens the recap, unless the death window is up; else what was counted is forgotten. */
+/** A look at the pane: enough unseen opens the recap; under the death window it waits for the first look after it;
+ * fewer unseen are forgotten. */
 export const look = (g: Game) => {
-  if (g.recap === undefined) return
-  if (g.recap.calls >= RECAP_CALLS && g.panel !== 'death') g.panel = 'recap'
-  else delete g.recap
+  if (g.recap === undefined || g.recap.calls < RECAP_CALLS) delete g.recap
+  else if (g.panel !== 'death') g.panel = 'recap'
 }

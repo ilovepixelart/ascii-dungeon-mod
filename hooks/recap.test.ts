@@ -80,10 +80,13 @@ describe('when the recap opens', () => {
     expect(after.recap).toBeUndefined()
   })
 
-  test('the death window is not covered: the look forgets instead', async () => {
-    const after = apply({ ...due(plainHero(3), 40), panel: 'death' }, { kind: 'look' })
+  test('the death window is not covered: the look keeps the count, and the first look once it is closed opens the recap', async () => {
+    const dying = { ...due(plainHero(3), 40), panel: 'death' as const }
+    const after = apply(dying, { kind: 'look' })
     expect(after.panel).toBe('death')
-    expect(after.recap).toBeUndefined()
+    expect(after.recap).toEqual(dying.recap)
+    const closed = apply(after, { kind: 'panel', panel: 'death' })
+    expect(apply(closed, { kind: 'look' }).panel).toBe('recap')
   })
 
   test('closing it, or opening another window over it, forgets what it told', async () => {

@@ -10,6 +10,7 @@ import { MUSIC_GAIN, TOWN_TUNE, gainOf } from './sounds'
 import { base64Of, bytesOf, readWav, sampleOf, wavOf } from './mixdown'
 import { BENCH_SEED, IDLE_BEFORE_BOB_MS, ambientAt, framesReport, toastFor } from './register'
 import { FRAME_MS } from './frames'
+import { OWNER_STALE_MS, isHeldElsewhere } from './save'
 
 import type { Game } from '../types'
 import { foeAhead } from './fixtures'
@@ -207,6 +208,46 @@ test('a stat trained by hand is saved at once, and a later session opens on it',
   const saved = kept.get('save') as Game
   expect([saved.stats.might, saved.points]).toEqual([might + 1, 0])
   await ui.unmount()
+})
+
+describe('two sessions at once', () => {
+  /** A session begun on the store `kept`, as session `me` at time `now`, a stat then trained by hand; its toasts. */
+  const begin = async ($: Engine, on: On, kept: Map<string, unknown>, me: string, now: number) => {
+    storeIn(on, kept)
+    const said = toasts(on)
+    on('session.id', () => ({ value: me }))
+    on('clock.now', () => ({ value: now }))
+    on('command.register', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('session.start', (_$, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    await ui.press({ key: 'sheet' })
+    await ui.press({ key: 'train-might' })
+    await ui.unmount()
+    return said
+  }
+  const store = (owner: unknown) => new Map<string, unknown>([['save', { ...newGame(), points: 1 }], ['owner', owner]])
+
+  test("whose claim holds: another session's within ten minutes; never this session's own, a stale one, or none", async () => {
+    const claim = { session: 'other', at: 0 }
+    expect(isHeldElsewhere(claim, 'me', OWNER_STALE_MS - 1)).toBe(true)
+    expect([isHeldElsewhere(claim, 'other', 1), isHeldElsewhere(claim, 'me', OWNER_STALE_MS), isHeldElsewhere(undefined, 'me', 1), isHeldElsewhere({ session: 'other' }, 'me', 1)]).toEqual([false, false, false, false])
+  })
+
+  test('a save another session played within ten minutes is left as it is: this one plays unsaved, and says so', async ($, on) => {
+    const kept = store({ session: 'other', at: 1_000_000 })
+    const said = await begin($, on, kept, 'me', 1_000_000 + OWNER_STALE_MS - 1)
+    expect((kept.get('save') as Game).points).toBe(1)
+    expect(kept.get('owner')).toEqual({ session: 'other', at: 1_000_000 })
+    expect(said).toContain('Another session is playing this save: this one plays on unsaved, and saves again once started after that one ends.')
+  })
+
+  test("a claim ten minutes old is taken: the session saves", async ($, on) => {
+    const kept = store({ session: 'other', at: 1_000_000 })
+    await begin($, on, kept, 'me', 1_000_000 + OWNER_STALE_MS)
+    expect([(kept.get('save') as Game).points, kept.get('owner')]).toEqual([0, { session: 'me', at: 1_000_000 + OWNER_STALE_MS }])
+  })
 })
 
 test('an order changed in settings is kept with the game, and said on its key', async ($, on) => {

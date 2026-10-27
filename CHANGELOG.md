@@ -16,6 +16,8 @@ release may change behaviour.
 
 ### Changed
 
+- Two sessions open at once no longer overwrite each other's save: the first keeps it, and one started while another
+  has saved in the last 10 minutes plays unsaved and says so. A session gives up its claim as it ends.
 - Retiring passes half the hero's gold, rounded down, to the next hero, banked in town and said: retiring wiped it
   all. A new game begun from settings still starts with none.
 - Fewer free potions, so the merchant has more to sell: a kill leaves healing at a quarter of its potion chance (half

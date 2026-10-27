@@ -2139,7 +2139,9 @@ describe('sound', () => {
       const next = apply(apply(g, onToolStart('Edit', '/src/utils.ts')), { kind: 'outcome', ok: true, what: 'Edit' })
       await $.tool.call({ tool: 'Edit', file_path: '/src/utils.ts', old_string: 'a', new_string: 'b' })
       await clock.advance(5000)
-      if (next.log.some(l => l.startsWith('You slay ') && !g.log.includes(l))) break
+      // A plain kill, its only news: loot, a level or a find outranks the kill's own sound.
+      const fresh = next.log.filter(l => !g.log.includes(l))
+      if (fresh.length === 1 && fresh[0]!.startsWith('You slay ')) break
       g = next
     }
     await ui.unmount()

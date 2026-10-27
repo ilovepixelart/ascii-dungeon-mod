@@ -7,11 +7,11 @@ describe('the balance formulas', () => {
   test('XP per level: 20, 57, 104, 160 for levels 1 to 4', async () => {
     expect([1, 2, 3, 4].map(xpToLevel)).toEqual([20, 57, 104, 160])
   })
-  test('a depth-1 rat has 11 to 14 HP and hits for 5 or 7; a depth-10 dragon 61 to 64 HP, hitting 19 or 22', async () => {
+  test('a depth-1 rat has 13 to 16 HP and hits for 5 or 7; a depth-10 dragon 81 to 84 HP, hitting 19 or 22', async () => {
     // The plain sums (4 or 6, 16 or 18) times FOE_ATK_SCALE 1.2, rounded: 4.8, 7.2, 19.2, 21.6.
-    expect([foeHp(1, 0, 1), foeHp(1, 0, 4)]).toEqual([11, 14])
+    expect([foeHp(1, 0, 1), foeHp(1, 0, 4)]).toEqual([13, 16])
     expect([foeAtk(1, 0, 1), foeAtk(1, 0, 2)]).toEqual([5, 7])
-    expect([foeHp(10, 7, 1), foeHp(10, 7, 4)]).toEqual([61, 64])
+    expect([foeHp(10, 7, 1), foeHp(10, 7, 4)]).toEqual([81, 84])
     expect([foeAtk(10, 7, 1), foeAtk(10, 7, 2)]).toEqual([19, 22])
   })
   test('hero damage grows half a point a level', async () => {

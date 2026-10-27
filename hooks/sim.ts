@@ -1,6 +1,6 @@
 // Simulation: plays whole games through the real rules with a scripted coding session and a simple player,
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
-import type { Consumable, Game, HeroClass } from '../types'
+import type { Attribute, Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
 import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
@@ -295,8 +295,14 @@ const chooseMark = (g: Game, d: Dice): Action | undefined => {
   return tier === undefined || !isForkOpen(g) ? undefined : { kind: 'mark', mark: pairOf(g.world, tier)[d(2) - 1]! }
 }
 
+/** A point to spend, on one of the four attributes at random: each is trained by some game. */
+const TRAINED: readonly Attribute[] = ['might', 'focus', 'vigor', 'insight']
+const trainPoint = (g: Game, d: Dice): Action | undefined => (g.points > 0 ? { kind: 'train', stat: TRAINED[d(TRAINED.length) - 1]! } : undefined)
+
 /** What the simulated player does on its own before the next tool call, if anything. */
 const playerMove = (g: Game, d: Dice): Action | undefined => {
+  const trained = trainPoint(g, d)
+  if (trained !== undefined) return trained
   const learnt = learnTalent(g, d)
   if (learnt !== undefined) return learnt
   const marked = chooseMark(g, d)

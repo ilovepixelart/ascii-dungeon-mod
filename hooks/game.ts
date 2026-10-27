@@ -110,12 +110,12 @@ export const BESTIARY = [
   { glyph: 'D', name: 'dragon' },
 ]
 
-/** Bonus melee damage: half of Might, plus every worn item's attack. */
-export const attackBonus = (g: Game) => Math.floor(g.stats.might / 2) + gearBonus(g, 'atk')
+/** Bonus melee damage: a point a point of Might, plus every worn item's attack. */
+export const attackBonus = (g: Game) => g.stats.might + gearBonus(g, 'atk')
 export const defense = (g: Game) => gearBonus(g, 'def')
 export const critChance = (g: Game) => Math.min(60, g.stats.focus * 3 + gearBonus(g, 'crit') + (g.fortune?.kind === 'luck' ? LUCK_CRIT : 0))
 export const xpGain = (g: Game, xp: number) => {
-  const gained = Math.floor(xp * (1 + g.stats.insight / 10 + gearBonus(g, 'xp') / 100))
+  const gained = Math.floor(xp * (1 + g.stats.insight / 20 + gearBonus(g, 'xp') / 100))
   return g.fortune?.kind === 'insight' ? Math.floor(gained * FORTUNE_MORE) : gained
 }
 
@@ -822,7 +822,7 @@ const swing = (g: Game, foe: Foe, isSure: boolean) => {
   if (isCrit && !isChained && wornPower(g, 'chainCrit') !== undefined) g.chain = true
   const isFury = g.effects.fury > 0
   if (isFury) g.effects = { ...g.effects, fury: g.effects.fury - 1 }
-  const critTimes = wornPower(g, 'tripleCrit') === undefined ? 2 : 3
+  const critTimes = (wornPower(g, 'tripleCrit') === undefined ? 2 : 3) + g.stats.focus / 20
   const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? critTimes : 1) * (isFury ? 2 : 1))
   return { blow, isCrit, opened: isAmbush ? openingPlayed(g, foe) : {} }
 }

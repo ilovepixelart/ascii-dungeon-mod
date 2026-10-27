@@ -52,7 +52,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 const headLines = (g: Game): Run[][] => [
   [{ text: `Level ${g.level} ${CLASS_NAME[g.cls]}`, bold: true }, { text: `   HP ${Math.max(0, g.hp)}/${g.maxHp}`, dim: true }],
   [{ text: `Attack +${attackBonus(g)}  Defense ${defense(g)}  Crit ${critChance(g)}%`, dim: true }],
-  [{ text: `Vigor +3 max HP a point, Insight +${g.stats.insight * 10}% XP`, dim: true }],
+  [{ text: `Vigor +3 max HP a point, Insight +${g.stats.insight * 5}% XP`, dim: true }],
   g.points > 0 ? [{ text: `${plural(g.points, 'point')} to spend`, color: INK.easy, bold: true }] : [{ text: 'Level up for points to spend', dim: true }],
 ]
 

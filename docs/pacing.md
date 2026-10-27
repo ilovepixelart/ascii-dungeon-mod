@@ -1,6 +1,6 @@
 # Pacing
 
-What keeps a session from being the same fight over and over, and how it is judged. `tools/feel.ts` measures it from simulated games, a class each: deaths and close calls per 100 tool calls, bosses won, notable moments per 100 calls, the longest stretch without one, foe kinds per depth, the share of calls spent below depths already reached. The numbers below are its, over 100 games a class of 1,000 steps (about 320 tool calls). Its player never trains an attribute (`playerMove` in `hooks/sim.ts`), so a player who spends their points dies less than these numbers say.
+What keeps a session from being the same fight over and over, and how it is judged. `tools/feel.ts` measures it from simulated games, a class each: deaths and close calls per 100 tool calls, bosses won, notable moments per 100 calls, the longest stretch without one, foe kinds per depth, the share of calls spent below depths already reached. The numbers below are its, over 100 games a class of 1,000 steps (about 320 tool calls). Its player spends each point on one of the four attributes at random (`trainPoint` in `hooks/sim.ts`).
 
 ## Which foes
 
@@ -58,9 +58,9 @@ Only real outcomes pay: an amend, a cherry-pick or a comment on a pull request d
 
 | | Before | Now |
 |---|---|---|
-| Deaths per 100 tool calls | 0.16 to 0.21 | 0.70 to 0.80 |
+| Deaths per 100 tool calls | 0.16 to 0.21 | 0.40 to 0.61 |
 | Longest wait in a game for a Rare or better, 9 games in 10 | 145 calls | 110 calls |
-| Bosses won | 91 to 93% | 67 to 77% |
-| Notable moments per 100 calls | 10 to 12 | 16 to 19 |
-| Longest quiet stretch, median | 29 to 34 calls | 21 to 26 calls |
-| Foe kinds per depth | 1.5 | 2.6 |
+| Bosses won | 91 to 93% | 52 to 54% |
+| Notable moments per 100 calls | 10 to 12 | 17 to 21 |
+| Longest quiet stretch, median | 29 to 34 calls | 21 to 25 calls |
+| Foe kinds per depth | 1.5 | 2.2 to 2.3 |

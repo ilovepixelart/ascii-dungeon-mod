@@ -46,7 +46,8 @@ import { stashedItems, tabItems, whyNotBuy } from './stash'
 import { HINT_ROWS, UNDER_WINDOW, fitNote, sizeNote } from './panesize'
 import { CLASSES as HEROES, STATS_LINE, begin, isUnderWay, startGesture, startHeight, startHot, startOverlay, startPixels } from './start'
 import type { StartUi } from './start'
-import { isFromLater, isReadable, openingGame, savable } from './save'
+import { isFromLater, isHeldElsewhere, isReadable, openingGame, savable } from './save'
+import type { Owner } from './save'
 import { SHEET_H, sheetGesture, sheetHot, sheetOverlay, sheetPixels } from './sheet'
 import { COMPACT_H, COMPACT_W, compactGesture, compactHot, compactOverlay, compactPixels } from './compact'
 import { FORTUNE_NAME, isSpeaker, talkAction, talkGesture, talkHeight, talkHot, talkOverlay, talkPixels } from './talk'
@@ -459,14 +460,26 @@ let isSaveHeld = false
 /** Whether the last save was refused: said once, until one lands again. */
 let isSaveFailing = false
 
+/** Whether another session played the save when this one began: this one then plays it unsaved. */
+let isSaveShared = false
+/** This session's claim on the save, renewed at most once a minute as it saves. */
+let claim: Owner | null = null
+const OWNER = 'owner'
+const CLAIM_RENEW_MS = 60 * 1000
+
 /** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. A
  * save the store refuses is said once; the next change tries again. */
 const save = ($: EngineInterface, g: Game) => {
-  if (isSaveHeld) return
+  if (isSaveHeld || isSaveShared) return
   saving = saving
     .then(async () => {
       await $.store.set(SAVE, savable(g))
       isSaveFailing = false
+      const now = await nowOr($, 0)
+      if (claim !== null && now - claim.at >= CLAIM_RENEW_MS) {
+        claim = { ...claim, at: now }
+        await $.store.set(OWNER, claim)
+      }
     })
     .catch((error: unknown) => {
       if (!isSaveFailing) $.ui.toast(`The game could not be saved: ${error instanceof Error ? error.message : String(error)}. Play goes on; it is tried again on every change.`)
@@ -1227,6 +1240,14 @@ const beginSession = async ($: EngineInterface) => {
   const { version } = await $.state.get(GAME_REF)
   const saved: unknown = await $.store.get(SAVE)
   isSaveHeld = isFromLater(saved)
+  const me = await $.session.id().catch(() => '')
+  const now = await nowOr($, 0)
+  isSaveShared = !isSaveHeld && isHeldElsewhere(await $.store.get(OWNER).catch(() => undefined), me, now)
+  if (isSaveShared) $.ui.toast('Another session is playing this save: this one plays on unsaved, and saves again once started after that one ends.')
+  else if (!isSaveHeld) {
+    claim = { session: me, at: now }
+    await $.store.set(OWNER, claim).catch(() => undefined)
+  }
   if (isSaveHeld) $.ui.toast('This save is from a newer version of the dungeon: it is kept as it is, and play goes on unsaved until the mod is updated.')
   // A save that cannot be read is kept aside before a new game is saved over it.
   else if (version === 0 && saved !== undefined && !isReadable(saved)) {
@@ -2304,6 +2325,13 @@ export const register: Register = (on, options) => {
 
     return ran
   }).catch(($, e, next) => next(e))
+
+  // The session's claim on the save given up as it ends, so the next session to start saves at once.
+  on('session.end', async ($, e, next) => {
+    const owner = (await $.store.get(OWNER).catch(() => undefined)) as Partial<Owner> | undefined
+    if (claim !== null && owner?.session === claim.session) await $.store.delete(OWNER).catch(() => undefined)
+    return next(e)
+  })
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.reason === 'answer' && !isPaused && !isByHand(await current($))) {

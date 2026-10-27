@@ -171,6 +171,17 @@ const normalizeOnce = (game: Game): Game => {
 }
 
 /** A save written by a newer version of the mod than this one: opened here it would be read wrong, and saved, stamped older. */
+/** Which session plays the save, and when it last saved: one store serves every session at once. */
+export type Owner = { session: string; at: number }
+/** A claim on the save left this long without a save is stale: its session has ended or gone quiet. */
+export const OWNER_STALE_MS = 10 * 60 * 1000
+
+/** Whether another session plays the save: a claim not this session's, renewed within OWNER_STALE_MS. */
+export const isHeldElsewhere = (owner: unknown, me: string, now: number) => {
+  const o = owner as Partial<Owner> | null | undefined
+  return typeof o?.session === 'string' && typeof o.at === 'number' && o.session !== me && now - o.at < OWNER_STALE_MS
+}
+
 export const isFromLater = (saved: unknown) =>
   typeof saved === 'object' && saved !== null && typeof (saved as Game).version === 'number' && (saved as Game).version > SAVE_VERSION
 

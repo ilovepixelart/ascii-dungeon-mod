@@ -43,6 +43,15 @@ describe('passing an item down', () => {
 })
 
 describe('retiring', () => {
+  test("half the retiring hero's gold, rounded down, waits banked for the next hero; a new game from settings has none", async () => {
+    const retired = apply({ ...veteran(piece('steelHelm')), gold: 901 }, { kind: 'retire', slot: 'helm' })
+    const next = apply(retired, { kind: 'restart' })
+    expect([next.gold, next.banked]).toEqual([450, 450])
+    expect(next.log).toContain('Your predecessor left you 450 gold, safe in town.')
+    expect(apply(next, { kind: 'restart' }).gold).toBe(0)
+    expect(apply({ ...veteran(piece('steelHelm')), gold: 901 }, { kind: 'restart' }).gold).toBe(0)
+  })
+
   test("the hero's standing orders carry over to the next hero, retired or started anew", async () => {
     const orders = { drink: 50 as const, smoke: true, leave: 'uncommon' as const }
     const retired = apply({ ...veteran(piece('steelHelm')), orders }, { kind: 'retire', slot: 'helm' })

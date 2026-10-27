@@ -456,10 +456,22 @@ let saving: Promise<unknown> = Promise.resolve()
 /** Whether the store holds a save from a newer version of the mod: it is left as it is, the game played unsaved. */
 let isSaveHeld = false
 
-/** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. */
+/** Whether the last save was refused: said once, until one lands again. */
+let isSaveFailing = false
+
+/** Keeps the game across sessions as it stands after every change: what is done by hand between turns is not lost. A
+ * save the store refuses is said once; the next change tries again. */
 const save = ($: EngineInterface, g: Game) => {
   if (isSaveHeld) return
-  saving = saving.then(() => $.store.set(SAVE, savable(g))).catch(() => undefined)
+  saving = saving
+    .then(async () => {
+      await $.store.set(SAVE, savable(g))
+      isSaveFailing = false
+    })
+    .catch((error: unknown) => {
+      if (!isSaveFailing) $.ui.toast(`The game could not be saved: ${error instanceof Error ? error.message : String(error)}. Play goes on; it is tried again on every change.`)
+      isSaveFailing = true
+    })
 }
 
 const commit = async ($: EngineInterface, action: Action, byHand: boolean, isWalkShown: boolean, shown?: Game) => {

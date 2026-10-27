@@ -14,6 +14,9 @@ release may change behaviour.
 
 ### Changed
 
+- A knight keeps half their defense, rounded down, against a blow that passes through armor (a wraith's, the
+  Drowned Queen's, the Hive Mother's); a mage or a rogue still keeps none. Over 30 knight games of 6,000 steps, big
+  bosses slew knights 0.3 times a game, where they did 1.2, the Hive Mother on depth 40 most of all.
 - A unique that slays the hero waits for them to gain a level before it rises again. Old Bones, on depths 2 to 4,
   met a hero sent back to depth 1 on every return, and with no one spending points it caused 104 of 261 deaths over
   30 games of about 300 tool calls (56 of 236 now).

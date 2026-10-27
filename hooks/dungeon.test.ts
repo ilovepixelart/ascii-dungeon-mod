@@ -69,6 +69,16 @@ test("a subagent's tool calls leave the hero be: no foe, no blow", async ($, on)
   expect(await ui.find({ type: 'Text', text: /^\[ +HP 30\/30 +\]/ })).toBeDefined()
 })
 
+test('a refused tool call is no failure: the foe it summoned does not strike', async ($, on) => {
+  on('tool.call', () => ({ deny: 'not allowed' }))
+  await $.tool.call({ tool: 'Bash', command: 'npm test' })
+  await $.tool.call({ tool: 'Bash', command: 'npm test' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /of npm strikes you/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /^> Your shield turns/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /^\[ +HP 30\/30 +\]/ })).toBeDefined()
+})
+
 test("a failing shell command costs the hero HP, once the knight's shield has turned the first blow", async ($, on) => {
   on('tool.call', () => ({ result: { stdout: '', stderr: 'boom' } as never, isError: true }))
   await $.tool.call({ tool: 'Bash', command: 'npm test' })

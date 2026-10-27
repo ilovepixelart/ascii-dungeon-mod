@@ -2283,7 +2283,9 @@ export const register: Register = (on, options) => {
     if (e.agentId !== undefined) return next(e)
     await act($, onToolStart(String(e.tool), targetOf(e)))
     const ran = await next(e)
-    const ok = ran.deny === undefined && ran.isError !== true
+    // A refused call never ran: no blow either way.
+    if (ran.deny !== undefined) return ran
+    const ok = ran.isError !== true
     const work = ok ? workDone(e, ran.result) : undefined
     await act($, { kind: 'outcome', ok, what: String(e.tool), ...(work === undefined ? {} : { work }) })
 

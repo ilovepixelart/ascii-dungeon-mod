@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderChildren, RenderElement, RenderIn
 
 import type { Game, HeroClass, Talent } from '../types'
 import { TOWN_TALK, isTownWalkable, townSpotAt } from './town'
-import { BIG_BOSSES, LOG_KEPT, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
+import { BIG_BOSSES, LOG_KEPT, UNIQUES, alongTheWay, apply, canRetire, classAbout, firstCodex, fortuneCost, gambleCost, isByHand, isOnlyAWalk, keptChoice, newGame, normalize, onToolStart, priceOfWare, questLine, questReward, reforgeCost, threat, tradeInOf, whyNotRetire } from './game'
 import type { Action, Run } from './game'
 import { BELT_SIZE, nameOf, wareOf } from './consumables'
 import { FRAME_MS, LATE_MS, createSamples, createTicker, summarize } from './frames'
@@ -1348,6 +1348,7 @@ const settingsKeys = (p: Pane, isWindow = false) => {
     <Button key="settings-effects" label={said('effects', soundSettings.effects ? 'Sound: on' : 'Sound: off')} hotkey="e" plain onPress={soundKey('effects')} />,
     <Button key="settings-music" label={said('music', soundSettings.music ? 'Music: on' : 'Music: off')} hotkey="m" plain onPress={soundKey('music')} />,
     <Button key="settings-volume" label={said('volume', `Volume: ${(100 * soundSettings.volume) / VOLUME_STEPS}%`)} hotkey="l" plain onPress={soundKey('volume')} />,
+    <Button key="settings-play" label={asKey(orderWord(g, 'play'))} hotkey="y" plain onPress={press({ kind: 'order', order: 'play' })} />,
   ]
   const orders = [orderKey('drink', 'd'), orderKey('smoke', 'f'), orderKey('leave', 'k')]
   const close = <Button key="settings-close" label="Close" hotkey={isWindow ? 'c' : undefined} plain onPress={press({ kind: 'panel', panel: 'settings' })} />
@@ -2280,7 +2281,7 @@ export const register: Register = (on, options) => {
 
   on('tool.call', async ($, e, next) => {
     // Only the main loop's calls play: a subagent's, a workflow's and the engine's forks carry an agentId.
-    if (e.agentId !== undefined) return next(e)
+    if (e.agentId !== undefined || isByHand(await current($))) return next(e)
     await act($, onToolStart(String(e.tool), targetOf(e)))
     const ran = await next(e)
     // A refused call never ran: no blow either way.
@@ -2293,7 +2294,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
-    if (e.agentId === undefined && e.reason === 'answer' && !isPaused) {
+    if (e.agentId === undefined && e.reason === 'answer' && !isPaused && !isByHand(await current($))) {
       await act($, { kind: 'descend' })
       if (!isSaveHeld) await $.store.set(SAVE, savable(await read($, game)))
     }

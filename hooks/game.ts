@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -202,9 +202,12 @@ const hurt = (g: Game, amount: number, by: string) => {
   else obey(g)
 }
 
-/** The orders a game keeps until the player changes them: drink under a quarter of max HP, no smoke, take every item. */
-export const DEFAULT_ORDERS: Orders = { drink: 25, smoke: false, leave: 'common' }
-export const ordersOf = (g: Pick<Game, 'orders'>) => g.orders ?? DEFAULT_ORDERS
+/** The orders a game keeps until the player changes them: drink under a quarter of max HP, no smoke, take every item,
+ * the session playing. A save from before an order has its default. */
+export const DEFAULT_ORDERS: Orders = { drink: 25, smoke: false, leave: 'common', play: 'session' }
+export const ordersOf = (g: Pick<Game, 'orders'>): Orders => ({ ...DEFAULT_ORDERS, ...g.orders })
+/** Whether the player plays by hand: the session's tool calls and answers leave the hero be. */
+export const isByHand = (g: Pick<Game, 'orders'>) => ordersOf(g).play === 'hand'
 
 /** The hero's orders after a blow: a healing potion under the drink line; with none, smoke when under a quarter and a foe is near. */
 const obey = (g: Game) => {
@@ -215,12 +218,13 @@ const obey = (g: Game) => {
 }
 
 /** Each order's choices in the order a click steps through them. */
-const ORDER_STEPS: { [K in keyof Orders]: readonly Orders[K][] } = { drink: [25, 50, 0], smoke: [false, true], leave: ['common', 'uncommon', 'rare', 'all'] }
+const ORDER_STEPS: { [K in keyof Orders]: readonly Orders[K][] } = { drink: [25, 50, 0], smoke: [false, true], leave: ['common', 'uncommon', 'rare', 'all'], play: ['session', 'hand'] }
 
 const order = (g: Game, which: keyof Orders) => {
   const orders = ordersOf(g)
   const steps = ORDER_STEPS[which] as readonly unknown[]
   g.orders = { ...orders, [which]: steps[(steps.indexOf(orders[which]) + 1) % steps.length] }
+  if (which === 'play') say(g, isByHand(g) ? 'You play by hand: the session no longer moves you, and foes find you as you walk.' : 'The session plays: every tool call moves you, every answer takes the stairs.')
 }
 
 /** Furnishings: braziers, shelves, reeds and embers, nothing to take. */
@@ -1981,6 +1985,15 @@ const offerTalent = (g: Game) => {
   g.talentOffered = now
 }
 
+/** The player's own steps: by hand, each walk may meet a foe, as a tool call would summon one. */
+const HAND_STEPS: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['move', 'goto', 'walk'])
+
+/** A walk by hand in the dungeon with no foe about: a foe met, HAND_FOE_TILE percent a tile walked, at most HAND_FOE_MAX. */
+const handFoe = (g: Game) => {
+  if (!isByHand(g) || g.where !== 'dungeon' || g.foe !== null || g.hp <= 0 || g.walked.length === 0) return
+  if (roll(g, 100) <= Math.min(HAND_FOE_MAX, HAND_FOE_TILE * g.walked.length)) summon(g, 'the depths')
+}
+
 export const apply = (game: Game, action: Action): Game => {
   // A new hero keeps the codex and the heirloom: they are the save's, not one hero's.
   if (action.kind === 'restart') return newHero(game, action.cls ?? game.cls ?? 'knight')
@@ -1990,6 +2003,7 @@ export const apply = (game: Game, action: Action): Game => {
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)
+  if (HAND_STEPS.has(action.kind)) handFoe(g)
   offerTalent(g)
   if (TOOL_DRIVEN.has(action.kind)) g.recap = noted(before, g, action)
   g.codex = record(before, g)

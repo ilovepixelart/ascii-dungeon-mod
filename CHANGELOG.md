@@ -6,6 +6,12 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Added
+
+- Play by hand, in settings beside Volume (`y`): the session's tool calls and answers no longer move the hero, and a
+  walk in the dungeon meets foes as tool calls would summon them, so the game plays from keys and clicks alone. By
+  session stays the default; saves from before it play by session.
+
 ### Changed
 
 - The green upgrade mark counts a set's two-piece bonus, and never marks a piece that would break a whole set or

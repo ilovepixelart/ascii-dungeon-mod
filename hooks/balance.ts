@@ -43,3 +43,8 @@ export const HEALING_DROP_SHARE = 0.5
 
 /** The hero's base damage before crits and fury: half the level, a d4, and the attack bonus from Might and gear. */
 export const heroDamage = (level: number, d4: number, attackBonus: number) => 1 + Math.floor(level / 2) + d4 + attackBonus
+
+/** By hand, the percent chance a tile walked meets a foe, and the most a walk can: about a foe every few tiles, as the
+ * session's tool calls bring one in two calls, each exploring a few tiles. */
+export const HAND_FOE_TILE = 15
+export const HAND_FOE_MAX = 60

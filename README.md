@@ -17,7 +17,8 @@ lets the foe hit back, and real work pays.
 | An answer finished | The stairs down |
 
 The same list is in the game, under How it plays. The hero follows the main session alone: a subagent's tool calls
-play no part. What stays yours: the gear, the talents, and the standing orders in
+play no part. To play by hand instead, set Play by hand in settings: the session then leaves the hero be, and foes
+find them as they walk. What stays yours: the gear, the talents, and the standing orders in
 settings (when to drink, when to throw smoke, what loot to leave). Through the portal is the town: a merchant, a smith,
 a healer, a stash, an elder with quests, a mystic with fortunes, a villager with sealed packs and a guard who trades
 three spare pieces for one better.

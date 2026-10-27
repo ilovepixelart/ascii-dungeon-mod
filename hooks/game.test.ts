@@ -1057,6 +1057,13 @@ describe('the merchant', () => {
     expect({ gold: passage.gold, slot: passage.belt[4] }).toEqual({ gold: 40, slot: { kind: 'smoke', tiers: [0, 0, 1] } })
   })
 
+  test('asks the shelf price once more for every ten depths the hero has reached', async () => {
+    const at = (deepest: number) => apply({ ...inTown(), deepest, gold: 1000 }, { kind: 'buy', ware: 'health1' })
+    // 25 on depths 1 to 9; 50 from depth 10; 150 from depth 50.
+    expect([1, 9, 10, 50].map(d => 1000 - at(d).gold)).toEqual([25, 25, 50, 150])
+    expect(at(50).log.at(-1)).toBe('You buy a Health Potion for 150 gold.')
+  })
+
   test('a ware the merchant does not stock is not sold, and costs nothing', async () => {
     const g = apply(inTown(), { kind: 'buy', ware: 'fury3' })
     expect({ gold: g.gold, slot: g.belt[2] }).toEqual({ gold: 100, slot: null })

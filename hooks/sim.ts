@@ -2,7 +2,7 @@
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
 import type { Attribute, Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
-import { BIG_BOSSES, SHOP_PRICES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, reforgeCost, sightOf, threat } from './game'
+import { BIG_BOSSES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, priceOfWare, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same, shapeCut } from './map'
@@ -195,8 +195,8 @@ const mendInTown = (g: Game): Action | undefined => {
  */
 const errands = (g: Game, d: Dice): Action | undefined => {
   if ((g.quest === null || g.quest.have >= g.quest.need) && d(2) === 1) return { kind: 'goto', ...TOWN_SPOTS.elder }
-  if (g.gold >= SHOP_PRICES.health1 && countOf(g.belt[slotOf('health')]) < 2) return { kind: 'buy', ware: 'health1' }
-  const canAffordFortune = g.fortune === null && g.gold >= fortuneCost(g) + 2 * SHOP_PRICES.health1
+  if (g.gold >= priceOfWare('health1', g) && countOf(g.belt[slotOf('health')]) < 2) return { kind: 'buy', ware: 'health1' }
+  const canAffordFortune = g.fortune === null && g.gold >= fortuneCost(g) + 2 * priceOfWare('health1', g)
   if (canAffordFortune && g.panel === 'mystic') return { kind: 'fortune' }
   if (canAffordFortune && d(3) === 1) return { kind: 'goto', ...TOWN_SPOTS.mystic }
   return deals(g, d)
@@ -213,7 +213,7 @@ const deals = (g: Game, d: Dice): Action | undefined => {
 const smithing = (g: Game, d: Dice): Action | undefined => {
   const temperable = SLOTS.filter(slot => (g.gear[slot]?.temper ?? 0) < TEMPER_MAX && g.gear[slot] !== undefined)
   const cheapest = temperable.sort((a, b) => temperCost(g.gear[a]!) - temperCost(g.gear[b]!))[0]
-  if (cheapest !== undefined && g.gold >= temperCost(g.gear[cheapest]!) + SHOP_PRICES.health1) return { kind: 'temper', slot: cheapest }
+  if (cheapest !== undefined && g.gold >= temperCost(g.gear[cheapest]!) + priceOfWare('health1', g)) return { kind: 'temper', slot: cheapest }
   const weapon = g.gear.weapon
   const isReforgeable = weapon !== undefined && weapon.rarity !== 'common' && weapon.rarity !== 'legendary'
   return isReforgeable && g.gold >= 2 * reforgeCost(g) && d(3) === 1 ? { kind: 'reforge', slot: 'weapon' } : undefined

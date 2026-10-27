@@ -1924,8 +1924,11 @@ const townStash = (game: Game): Pick<Game, 'stashed' | 'stashSets' | 'stashLegen
 /** The hero retired: counted in the codex, the piece in `slot` the heirloom, the stash kept, and a new hero to choose on the start screen. */
 const retiredFrom = (g: Game, slot: Slot): Game => {
   const codex = g.codex ?? firstCodex(g)
-  return { ...newGame(g.seed, g.cls), ...townStash(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
+  return { ...newGame(g.seed, g.cls), ...townStash(g), ...keptOrders(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
 }
+
+/** The standing orders, the player's and not the hero's: kept from hero to hero. */
+const keptOrders = (g: Pick<Game, 'orders'>): Pick<Game, 'orders'> => (g.orders === undefined ? {} : { orders: g.orders })
 
 /** The stash's items given ids of the new game `g`, from its next on: the old hero's ids are not the new one's. */
 const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegends'>) => {
@@ -1941,7 +1944,7 @@ const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegen
 
 /** A new hero for the save of `game`: its codex, stash and heirloom kept, the heirloom worn when the class can, else in the bag. */
 const newHero = (game: Game, cls: HeroClass): Game => {
-  const g: Game = { ...newGame(game.seed, cls), codex: game.codex ?? firstCodex(normalize(game)) }
+  const g: Game = { ...newGame(game.seed, cls), ...keptOrders(game), codex: game.codex ?? firstCodex(normalize(game)) }
   restash(g, normalize(game))
   if (game.heirloom === undefined) return g
   const item = { ...game.heirloom, id: g.nextId }

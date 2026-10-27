@@ -42,7 +42,7 @@ Or in one line, straight from this repository, following `main`:
 To stay on one release, add this repository at its tag instead, then install from it:
 
 ```
-/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.5.0
+/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.6.0
 /plugin install ascii-dungeon@ascii-dungeon-mod
 ```
 

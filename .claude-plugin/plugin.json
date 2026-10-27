@@ -1,7 +1,7 @@
 {
   "name": "ascii-dungeon",
   "displayName": "ASCII Dungeon",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A roguelike in a pane, driven by the session's coding: each tool call moves the hero, a failure lets the foe hit back, a turn's end takes the stairs.",
   "author": {
     "name": "ilovepixelart",

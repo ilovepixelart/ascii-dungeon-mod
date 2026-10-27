@@ -14,6 +14,9 @@ release may change behaviour.
 
 ### Changed
 
+- The smith's tempering costs once more for every ten depths the hero has reached: 60 gold for the first to depth
+  9, 120 from depth 10, 360 from depth 50. It cost the same at depth 50, where a kill pays about 100 gold, as on
+  depth 1.
 - The merchant asks the shelf price once more for every ten depths the hero has reached: a Health Potion is 25 gold
   to depth 9, 50 from depth 10 and 150 from depth 50. Its prices stood still while a kill's gold grew with the depth.
 - A talent comes every fifth level, where it came every tenth: about 6 in a game of 6,000 simulated steps, where it

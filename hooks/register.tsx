@@ -1866,7 +1866,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
             <Text color={RARITY_COLOR[item.rarity]}>{item.name}</Text>
             <Text dimColor>{`  +${tempered}/${TEMPER_MAX}  `}</Text>
             {tempered < TEMPER_MAX
-              ? <Button key={`temper-${slot}`} label={`Temper: ${temperCost(item)} gold`} plain dimColor={g.gold < temperCost(item)} onPress={press({ kind: 'temper', slot })} />
+              ? <Button key={`temper-${slot}`} label={`Temper: ${temperCost(item, g.deepest)} gold`} plain dimColor={g.gold < temperCost(item, g.deepest)} onPress={press({ kind: 'temper', slot })} />
               : <Text dimColor>Fully tempered</Text>}
             {isReforgeable && <Text>{'  '}</Text>}
             {isReforgeable && <Button key={`reforge-${slot}`} label="Reforge" plain dimColor={g.gold < reforgeCost(g)} onPress={press({ kind: 'reforge', slot })} />}

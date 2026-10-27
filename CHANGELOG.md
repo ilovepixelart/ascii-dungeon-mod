@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Fixed
 
+- A refused tool call (a No at the permission prompt, or a hook's or a rule's deny) counted as a failure: the foe
+  struck, or an imp hit for the depth with no foe near, and it could fell the hero. A refused call deals and takes no
+  blow.
 - A subagent's tool calls, a workflow's and the engine's own background agents' summoned foes and struck or hurt the
   hero as if the main session had made them. Only the main session's tool calls play now.
 

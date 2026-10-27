@@ -737,7 +737,9 @@ const loot = (g: Game, at: Pos, champion?: string) => {
 /** A boss's hoard: the best of three rolls, Rare at least (a big boss's Epic at least), and an Elixir; the way down opens. */
 const bossLoot = (g: Game, foe: Foe, isBig = false) => {
   const name = foe.name
-  say(g, addToBelt(g, 'health', 3) ? 'Loot: Elixir.' : 'Your belt has no room for the Elixir.')
+  // A big boss leaves an Elixir, a guardian a Greater Health Potion: the merchant is where the rest of the belt comes from.
+  const potion = isBig ? 'Elixir' : 'Greater Health Potion'
+  say(g, addToBelt(g, 'health', isBig ? 3 : 2) ? `Loot: ${potion}.` : `Your belt has no room for the ${potion}.`)
   // Half a big boss's Epics, by the depth and the world, are a piece of the hero's class's set.
   const item = isBig && hash(g.depth, g.world, 41) < SET_SHARE ? setPiece(g, setOf(g.cls)) : makeItem(g, isBig ? 'epic' : 'rare', 3)
   keepPrize(g, item, foe, named => `Loot: ${named}.`)

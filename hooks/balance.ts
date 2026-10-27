@@ -43,9 +43,11 @@ export const HP_PER_LEVEL = 5
 /**
  * A kill's healing potion chance is this share of `potionChance`. At the full chance three healing finds in four went
  * to waste. Simulated (80 games a class, 3,000 steps), deaths per 1,000 steps are 1.46 at the full chance and 1.55 at
- * half, the hero buying, gathering and using the rest of the belt more; at 15% they rose to 1.81.
+ * half, the hero buying, gathering and using the rest of the belt more; at 15% they rose to 1.81. At a quarter, with a
+ * guardian's Greater Health Potion in place of its Elixir (30 games a class, 6,000 steps): 1.31, where half and the
+ * Elixir gave 1.19, and the merchant sells 1.2 potions a game, where it sold 0.7.
  */
-export const HEALING_DROP_SHARE = 0.5
+export const HEALING_DROP_SHARE = 0.25
 
 /** The hero's base damage before crits and fury: half the level, a d4, and the attack bonus from Might and gear. */
 export const heroDamage = (level: number, d4: number, attackBonus: number) => 1 + Math.floor(level / 2) + d4 + attackBonus

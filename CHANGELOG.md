@@ -16,6 +16,10 @@ release may change behaviour.
 
 ### Changed
 
+- Fewer free potions, so the merchant has more to sell: a kill leaves healing at a quarter of its potion chance (half
+  before), and a boss leaves a Greater Health Potion, a big boss still an Elixir. Over 30 games a class of 6,000
+  steps, potions bought go from 0.7 to 1.2 a game and deaths per 1,000 steps from 1.19 to 1.31; most healing still
+  comes from drops deep down and from potions on the floor.
 - Gold brought to town is safe: a death takes half, rounded up, of only what was earned since the hero was last in
   town, and spending in the dungeon comes off the safe gold first. A death took half of all the gold carried, so
   saving up for a stash tab only put more at risk.

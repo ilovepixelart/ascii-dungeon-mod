@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, ARMOR_FLOOR, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, ARMOR_FLOOR, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -963,8 +963,11 @@ const counter = (g: Game, what: string) => {
 /** What the log adds to a blow halved once or twice. */
 const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned'] as const
 
+/** The defense a blow meets: all of it; through armor, a knight's PIERCED_DEF of it, rounded down, and no one else's. */
+const armorAgainst = (g: Game, pierces: boolean) => (!pierces ? defense(g) : g.cls === 'knight' ? Math.floor(defense(g) * PIERCED_DEF) : 0)
+
 /**
- * The foe's blow (an imp's with no foe) after the hero's defense, never under ARMOR_FLOOR of it unless it pierces,
+ * The foe's blow (an imp's with no foe) after the hero's defense (`armorAgainst`), never under ARMOR_FLOOR of it,
  * its turn and the depth's twist, halved (rounded up)
  * for the first of a fight to land with Bulwark worn, and for the knight's braced shield: with the whole Oathbound set
  * the shield turns the first blow and halves the second, which spends the opening.
@@ -972,7 +975,7 @@ const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned']
 const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
   const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
   const raw = Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust)
-  const blow = Math.max(1, Math.ceil(raw * ARMOR_FLOOR), raw - (turn?.pierces === true ? 0 : defense(g)))
+  const blow = Math.max(1, Math.ceil(raw * ARMOR_FLOOR), raw - armorAgainst(g, turn?.pierces === true))
   const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
   const isBraced = g.cls === 'knight' && g.foe?.braced === true && g.foe.opened === undefined
   if (isBraced && g.foe !== null) g.foe = { ...g.foe, opened: true }

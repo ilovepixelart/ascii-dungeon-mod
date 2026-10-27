@@ -51,3 +51,6 @@ export const HAND_FOE_MAX = 60
 
 /** The least share of a blow armor lets through: deep heroes stack defense past what foes hit for. */
 export const ARMOR_FLOOR = 0.25
+
+/** The share of defense a piercing blow leaves standing, rounded down. */
+export const PIERCED_DEF = 0.5

@@ -4,6 +4,7 @@ import type { Foe } from '../types'
 import { apply, newGame } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { foeTurn, heroBlowOn } from './patterns'
+import { plainItem } from './items'
 
 /** A foe of `glyph` beside the bare hero, 100 HP. */
 const foe = (glyph: string, over: Partial<Foe> = {}): Foe => ({ ...foeAhead(plainHero(), 1, { glyph, name: `${glyph}-foe`, hp: 100, maxHp: 100, atk: 10 }), ...over })
@@ -29,6 +30,16 @@ describe("each kind's trait", () => {
 
   test("a wraith's every third blow passes through armor", async () => {
     expect([0, 1, 2].map(turn => foeTurn(plainHero(), foe('W', { turn })).pierces)).toEqual([false, false, true])
+  })
+
+  test("a blow through armor takes a knight's half defense off, rounded down, and none of another class's", async () => {
+    const taken = (cls: 'knight' | 'rogue', turn: number) => {
+      const g = { ...plainHero(), cls, hp: 100, maxHp: 100 }
+      const armored = { ...g, gear: { ...g.gear, armor: { ...plainItem({ nextId: 901 }, 'plate'), def: 11 } } }
+      return 100 - apply({ ...armored, foe: foe('W', { atk: 21, turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
+    }
+    // Defense 11 takes 11 off the plain blow of 21; through armor a knight keeps 5 of it, a rogue none.
+    expect([taken('knight', 0), taken('knight', 2), taken('rogue', 0), taken('rogue', 2)]).toEqual([10, 16, 10, 21])
   })
 
   test('a dragon draws breath on its second turn of three and breathes on the third, half again as hard; an overlord two and a half times', async () => {
@@ -73,8 +84,8 @@ describe('the traits in a fight', () => {
     expect([after.hp, after.foe?.hp]).toEqual([g.hp, 80])
   })
 
-  test("a wraith's chill ignores the hero's armor; a plain blow does not", async () => {
-    const armored = { ...plainHero(), gear: { ...plainHero().gear, armor: { ...plainHero().gear.weapon!, slot: 'armor' as const, atk: 0, def: 4, id: 901 } } }
+  test("a wraith's chill ignores a rogue's armor; a plain blow does not", async () => {
+    const armored = { ...plainHero(), cls: 'rogue' as const, gear: { ...plainHero().gear, armor: { ...plainHero().gear.weapon!, slot: 'armor' as const, atk: 0, def: 4, id: 901 } } }
     const hit = (turn: number) => armored.hp - apply({ ...armored, foe: foe('W', { turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
     expect([hit(0), hit(2)]).toEqual([6, 10])
   })

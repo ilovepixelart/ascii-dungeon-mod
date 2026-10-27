@@ -3,14 +3,20 @@
 // max HP, and living) about every 100, and a boss won about two times in three, by the simulated player, who spends
 // its points at random.
 
+/** Past DEEP_FROM, foes grow DEEP_GROWTH more a depth, HP and attack alike: the hero's levels and gear outgrow a
+ * plain depth's worth. */
+export const DEEP_FROM = 10
+export const DEEP_GROWTH = 0.005
+export const deepGrowth = (depth: number) => 1 + Math.max(0, depth - DEEP_FROM) * DEEP_GROWTH
+
 /** A monster's hit points: its depth and its tier in the bestiary (0 rat .. 7 dragon), plus a d4. */
-export const foeHp = (depth: number, tier: number, d4: number) => 6 + depth * 6 + tier * 2 + d4
+export const foeHp = (depth: number, tier: number, d4: number) => Math.round((6 + depth * 6 + tier * 2 + d4) * deepGrowth(depth))
 
 /** How much harder than the plain sum foes hit: at 1 the hero died about once in 550 tool calls. */
 export const FOE_ATK_SCALE = 1.2
 
 /** A monster's attack: mostly depth, a little tier, and a swing of 3 or 5 so some monsters hit hard. */
-export const foeAtk = (depth: number, tier: number, d2: number) => Math.round((depth + Math.floor(tier / 2) + d2 * 2 + 1) * FOE_ATK_SCALE)
+export const foeAtk = (depth: number, tier: number, d2: number) => Math.round((depth + Math.floor(tier / 2) + d2 * 2 + 1) * FOE_ATK_SCALE * deepGrowth(depth))
 
 /**
  * The pacing: tension builds with every blow the hero takes (its share of max HP, in percent) and KILL_TENSION a

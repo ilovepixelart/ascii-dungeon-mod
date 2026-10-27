@@ -212,8 +212,8 @@ const deals = (g: Game, d: Dice): Action | undefined => {
 /** At the smith, with gold to spare: the cheapest tempering, now and then a reforge of the weapon. */
 const smithing = (g: Game, d: Dice): Action | undefined => {
   const temperable = SLOTS.filter(slot => (g.gear[slot]?.temper ?? 0) < TEMPER_MAX && g.gear[slot] !== undefined)
-  const cheapest = temperable.sort((a, b) => temperCost(g.gear[a]!) - temperCost(g.gear[b]!))[0]
-  if (cheapest !== undefined && g.gold >= temperCost(g.gear[cheapest]!) + priceOfWare('health1', g)) return { kind: 'temper', slot: cheapest }
+  const cheapest = temperable.sort((a, b) => temperCost(g.gear[a]!, g.deepest) - temperCost(g.gear[b]!, g.deepest))[0]
+  if (cheapest !== undefined && g.gold >= temperCost(g.gear[cheapest]!, g.deepest) + priceOfWare('health1', g)) return { kind: 'temper', slot: cheapest }
   const weapon = g.gear.weapon
   const isReforgeable = weapon !== undefined && weapon.rarity !== 'common' && weapon.rarity !== 'legendary'
   return isReforgeable && g.gold >= 2 * reforgeCost(g) && d(3) === 1 ? { kind: 'reforge', slot: 'weapon' } : undefined

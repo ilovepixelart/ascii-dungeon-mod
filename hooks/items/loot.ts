@@ -87,8 +87,9 @@ export const heirloomOf = (item: Item): Item => {
 /** How many times the smith will temper one item. */
 export const TEMPER_MAX = 3
 
-/** The smith's price to temper an item once more: 60 gold, times the square of the tempering it would be. */
-export const temperCost = (item: Pick<Item, 'temper'>) => 60 * ((item.temper ?? 0) + 1) ** 2
+/** The smith's price to temper an item once more: 60 gold, times the square of the tempering it would be, times one
+ * more for every ten depths the hero has reached. */
+export const temperCost = (item: Pick<Item, 'temper'>, deepest = 1) => 60 * ((item.temper ?? 0) + 1) ** 2 * (1 + Math.floor(deepest / 10))
 
 /** What tempering raises: attack on a weapon or on a base made to strike (more attack than defense), defense on the rest. */
 export const temperStat = (item: Pick<Item, 'base' | 'slot'>): 'atk' | 'def' => {

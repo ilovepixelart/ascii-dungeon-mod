@@ -1717,9 +1717,9 @@ const temper = (g: Game, slot: Slot) => {
   const item = g.gear[slot]
   if (item === undefined) say(g, 'Nothing worn there to temper.')
   else if ((item.temper ?? 0) >= TEMPER_MAX) say(g, `Your ${item.name} is tempered as far as it will go.`)
-  else if (g.gold < temperCost(item)) say(g, `Not enough gold: tempering costs ${temperCost(item)}.`)
+  else if (g.gold < temperCost(item, g.deepest)) say(g, `Not enough gold: tempering costs ${temperCost(item, g.deepest)}.`)
   else {
-    const cost = temperCost(item)
+    const cost = temperCost(item, g.deepest)
     g.gold -= cost
     g.gear = { ...g.gear, [slot]: temperItem(item) }
     g.reforgedFrom = null

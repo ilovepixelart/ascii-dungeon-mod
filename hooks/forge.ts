@@ -33,7 +33,7 @@ const worn = (g: Game) => SLOTS.filter(s => g.gear[s] !== undefined)
 export const chosenSlot = (g: Game, ui: ForgeUi): Slot | undefined => (ui.slot !== null && g.gear[ui.slot] !== undefined ? ui.slot : worn(g)[0])
 
 /** Why the smith cannot temper or reforge a piece now, or undefined when they can. */
-export const whyNotTemper = (g: Game, item: Item) => ((item.temper ?? 0) >= TEMPER_MAX ? 'tempered as far as it goes' : g.gold < temperCost(item) ? 'not enough gold' : undefined)
+export const whyNotTemper = (g: Game, item: Item) => ((item.temper ?? 0) >= TEMPER_MAX ? 'tempered as far as it goes' : g.gold < temperCost(item, g.deepest) ? 'not enough gold' : undefined)
 export const whyNotReforge = (g: Game, item: Item) =>
   item.rarity === 'common' ? 'a Common has no affixes' : item.rarity === 'legendary' ? 'a Legendary stays as it was made' : g.gold < reforgeCost(g) ? 'not enough gold' : undefined
 
@@ -48,7 +48,7 @@ const temperRuns = (g: Game, item: Item): Run[] => {
   const now = item[stat]
   const why = whyNotTemper(g, item)
   if ((item.temper ?? 0) >= TEMPER_MAX) return [...cost('Temper', undefined, why), { text: `  ${stat.toUpperCase()} ${now}`, dim: true }]
-  const [label, price, ...rest] = cost('Temper', temperCost(item), why)
+  const [label, price, ...rest] = cost('Temper', temperCost(item, g.deepest), why)
   return [label!, price!, { text: `  ${stat.toUpperCase()} ${now} > ${now + 1}` }, ...rest]
 }
 

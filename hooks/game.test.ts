@@ -1140,6 +1140,13 @@ describe('the smith', () => {
     expect(more.log.at(-1)).toBe('Your Sharp Short Sword of Force is tempered as far as it will go.')
   })
 
+  test('the smith asks once more for every ten depths the hero has reached', async () => {
+    const g = inTown()
+    const at = (deepest: number) => 2000 - apply({ ...g, deepest, gold: 2000, gear: { ...g.gear, helm: plainItem(g, 'steelHelm') } }, { kind: 'temper', slot: 'helm' }).gold
+    // The first temper's 60, to depth 9; 120 from depth 10; 360 from depth 50.
+    expect([1, 9, 10, 50].map(at)).toEqual([60, 60, 120, 360])
+  })
+
   test('tempering armor raises its defense; an offhand that strikes raises its attack', async () => {
     const g = inTown()
     const helm = apply({ ...g, gear: { ...g.gear, helm: plainItem(g, 'steelHelm') } }, { kind: 'temper', slot: 'helm' })

@@ -26,6 +26,23 @@ describe('falling', () => {
     expect(after.fallen).toEqual({ by: 'the rat of x', foe: { ...foe, turn: 1 }, at: { x: g.x, y: g.y }, depth: 14, wake: 11, lost: 16 })
   })
 
+  test('gold brought to town is safe: a death takes half, rounded up, of what was earned past it', async () => {
+    const fall = (over: Partial<Game>) => {
+      const g: Game = { ...plainHero(5), depth: 14, deepest: 14, hp: 2, gold: 31, ...over }
+      return apply({ ...g, foe: foeAhead(g, 1, { glyph: 'r', name: 'rat of x', opened: true, atk: 99 }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+    }
+    // 31 carried, 11 banked: 20 at risk, 10 lost. All banked: nothing lost. More banked than carried, spent since: none at risk.
+    expect([fall({ banked: 11 }).gold, fall({ banked: 31 }).gold, fall({ banked: 50 }).gold]).toEqual([21, 31, 31])
+  })
+
+  test('in town all the gold carried is banked; in the dungeon a spend lowers the bank, a find does not raise it', async () => {
+    const town = apply({ ...plainHero(5), gold: 40 }, { kind: 'portal' })
+    expect(town.banked).toBe(40)
+    const back = apply(town, { kind: 'portal' })
+    expect(apply({ ...back, gold: 90 }, { kind: 'walk' }).banked).toBe(40)
+    expect(apply({ ...back, gold: 25 }, { kind: 'walk' }).banked).toBe(25)
+  })
+
   test('a trap, even with a foe waiting beyond it, keeps no foe', async () => {
     // A trap with open floor either side along a row: the hero on one side, the foe on the other.
     for (let world = 1; world <= 200; world += 1) {

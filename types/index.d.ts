@@ -222,6 +222,8 @@ export type Game = {
   uniquesSlain: number[]
   /** By band, the level of the hero a band's unique last slew: it waits for one a level stronger (absent, none). */
   uniqueWon?: Partial<Record<number, number>>
+  /** Gold brought to town and not spent since: a death takes half of what is carried past it (absent, none). */
+  banked?: number
   /** The champion that slew the hero, waiting deeper; null when there is none, or once it is slain. */
   nemesis: Nemesis | null
   /** The last sale, to buy back at what it fetched: one item, or a sale of junk's every item; gone on the next sale, a change of depth or the portal. */

@@ -14,6 +14,9 @@ release may change behaviour.
 
 ### Changed
 
+- Gold brought to town is safe: a death takes half, rounded up, of only what was earned since the hero was last in
+  town, and spending in the dungeon comes off the safe gold first. A death took half of all the gold carried, so
+  saving up for a stash tab only put more at risk.
 - The smith's tempering costs once more for every ten depths the hero has reached: 60 gold for the first to depth
   9, 120 from depth 10, 360 from depth 50. It cost the same at depth 50, where a kill pays about 100 gold, as on
   depth 1.

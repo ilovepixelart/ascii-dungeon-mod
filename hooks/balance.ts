@@ -1,6 +1,7 @@
 // Every number that sets how hard the game is, in one place. Tune here, then judge it with tools/simulate.ts.
 // Tuned against: about 3 hits a kill, a death every 150 to 200 tool calls, a close call (the hero under a quarter of
-// max HP, and living) about every 100, and a boss won about two times in three.
+// max HP, and living) about every 100, and a boss won about two times in three, by the simulated player, who never
+// trains an attribute.
 
 /** A monster's hit points: its depth and its tier in the bestiary (0 rat .. 7 dragon), plus a d4. */
 export const foeHp = (depth: number, tier: number, d4: number) => 6 + depth * 4 + tier * 2 + d4

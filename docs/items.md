@@ -34,7 +34,7 @@ Five tiers. Each tier owns its color and nothing else in the game uses it (gold 
 | Uncommon | green `#3ccf4e` | plain 1px frame | 1 affix | 28% |
 | Rare | blue `#3b8eea` | frame with bright corners | 2 affixes | 12% |
 | Epic | purple `#a85cf0` | double frame | 3 affixes | 4% |
-| Legendary | orange `#ff8a1f` | frame that shimmers | 2 affixes plus one fixed power | 1% |
+| Legendary | orange `#ff8a1f` | frame that shimmers | fixed stats and one fixed power, no affixes | 1% |
 
 Each depth moves 1 point of weight from Common toward the higher tiers, down to a floor of 30% (`tierWeights` in `hooks/items/loot.ts`). A kill leaves an item 35% of the time plus 1% a depth, at most 55% (`itemChance`). Legendaries keep their stats' shape but grow with depth like any item. Selling pays 2, 5, 6, 12 and 20 per point of worth by tier. Names: "Prefix Base of Suffix" up to Epic; Legendaries have hand-written names.
 
@@ -47,7 +47,7 @@ Seven slots. Each base has a size in the bag grid (columns x rows) and the class
 | Weapon | Short Sword | Knight | +2 atk | 1x3 | the current sword |
 | Weapon | Mace | Knight | +3 atk | 1x3 | flanged head |
 | Weapon | War Axe | Knight | +4 atk | 2x3 | broad axe head |
-| Weapon | Ash Staff | Mage | +2 atk, +1 Insight | 1x3 | wooden staff, glowing tip |
+| Weapon | Ash Staff | Mage | +2 atk, +10% XP | 1x3 | wooden staff, glowing tip |
 | Weapon | Wand | Mage | +1 atk, +10% crit | 1x2 | short rod, spark |
 | Weapon | Rune Scepter | Mage | +3 atk | 1x3 | gold rod, violet gem |
 | Weapon | Dagger | Rogue | +1 atk, +5% crit | 1x2 | short blade |
@@ -65,16 +65,16 @@ Seven slots. Each base has a size in the bag grid (columns x rows) and the class
 | Helm | Hood | Knight | +3 HP | 2x2 | leather hood |
 | Helm | Steel Helm | Knight | +1 def | 2x2 | visor slit |
 | Helm | Horned Helm | Knight | +2 def | 2x2 | horns |
-| Helm | Pointed Hat | Mage | +1 Insight | 2x2 | tall hat |
+| Helm | Pointed Hat | Mage | +10% XP, +1 def | 2x2 | tall hat |
 | Helm | Silver Circlet | Mage | +1 atk, +1 def | 2x2 | silver band, gem |
 | Helm | Sage's Hood | Mage | +4 HP | 2x2 | violet hood, gold trim |
-| Helm | Cowl | Rogue | +1 Focus | 2x2 | dark hood over the eyes |
+| Helm | Cowl | Rogue | +5% crit, +1 def | 2x2 | dark hood over the eyes |
 | Helm | Thief's Mask | Rogue | +5% crit, +5% XP | 2x2 | domino mask |
 | Helm | Bandana | Rogue | +4 HP | 2x2 | red wrap |
 | Armor | Tunic | Knight | +4 HP | 2x3 | blue cloth (the current look) |
 | Armor | Chain Shirt | Knight | +2 def | 2x3 | grey mail |
 | Armor | Plate | Knight | +3 def | 2x3 | bright steel, shoulder plates |
-| Armor | Robe | Mage | +5 HP | 2x3 | long robe to the feet |
+| Armor | Robe | Mage | +5 HP, +1 def | 2x3 | long robe to the feet |
 | Armor | Silk Vestments | Mage | +10% XP, +3 HP | 2x3 | cream and gold robe |
 | Armor | Warded Mantle | Mage | +2 def, +2 HP | 2x3 | hooded blue mantle |
 | Armor | Leather Coat | Rogue | +1 def | 2x3 | brown |
@@ -82,7 +82,7 @@ Seven slots. Each base has a size in the bag grid (columns x rows) and the class
 | Armor | Studded Jerkin | Rogue | +2 def, +2 HP | 2x3 | studded leather |
 | Boots | Leather Boots | all | +1 def | 2x2 | brown boots |
 | Boots | Iron Greaves | Knight | +2 def | 2x2 | steel boots |
-| Boots | Silk Slippers | Mage | +1 Insight | 2x2 | purple slippers |
+| Boots | Silk Slippers | Mage | +10% XP | 2x2 | purple slippers |
 | Boots | Shadow Treads | Rogue | +5% crit | 2x2 | dark boots |
 | Ring | Band, Signet | all | by affixes | 1x1 | not drawn |
 | Amulet | Charm, Pendant | all | +2 HP | 1x1 | not drawn |
@@ -203,7 +203,7 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
 - The themed room: most levels give one room (`themedRoomOf` in `hooks/map.ts`; at least 5 wide, never the start's or the stairs') a purpose. A shrine: an altar in the middle, a brazier two cells each side; walking onto the altar heals a quarter of the hero's max HP, once. A library: a lectern in the middle, shelves along the top wall; walking onto the lectern gives a Scroll of the Berserker, once, and leaves it for later when the belt is full. The flooded halls (depths 6 to 10 and every 15 after) may have a spring instead, a third of the time each: a pool in the middle, reeds two cells each side; walking into it restores all HP, once, kept while the hero is unhurt. The forge (depths 11 to 15 and on) may have an old anvil: the town's anvil in the middle, embers two cells each side that light the room like braziers; walking up to it tempers the worn weapon once for nothing, waiting while it cannot take one. An unhurt hero passes the altar by in the same way. The furnishings stay drawn once used.
 - Gold lies on floors in three sizes (coin, pile, bar by amount), is picked up by walking over it and never takes bag space.
 - Epic and Legendary drops send a short beam of their color up from the tile; a Legendary also gets its own log line. Nothing else ever beams.
-- The smith's tempering is the gold sink: each worn item takes up to 3 temperings, each +1 attack (a weapon, or a base made to strike) or +1 defense (the rest), for 60, 240, then 540 gold (`temperCost`). A reforge keeps the temper. Over 300 simulated games it takes about 18 temperings a game, leaves about 680 gold of the 2,800 earned, and cuts potions drunk from about 13 to about 9.
+- The smith's tempering is a gold sink, with the gamble's sealed packs, the mystic's fortunes, reforging, the stash's tabs and a death's half of the gold carried: each worn item takes up to 3 temperings, each +1 attack (a weapon, or a base made to strike) or +1 defense (the rest), for 60, 240, then 540 gold (`temperCost`). A reforge keeps the temper. Over 300 simulated games of 1,000 steps it takes about 17 temperings a game, the hero ending with about 790 gold and having drunk about 10 potions.
 - Junk: any bag item can be marked junk; "sell junk" sells every marked item at once.
 
 ## Save format

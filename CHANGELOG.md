@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Added
 
+- A save the store refuses is said in a toast, once until one lands again, with the reason: it was dropped in
+  silence, and the game went on unsaved.
 - Play by hand, in settings beside Volume (`y`): the session's tool calls and answers no longer move the hero, and a
   walk in the dungeon meets foes as tool calls would summon them, so the game plays from keys and clicks alone. By
   session stays the default; saves from before it play by session.

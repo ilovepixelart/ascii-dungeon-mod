@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { foeAtk, foeHp, heroDamage, xpToLevel } from './balance'
+import { deepGrowth, foeAtk, foeHp, heroDamage, xpToLevel } from './balance'
 import { simulate } from './sim'
 
 describe('the balance formulas', () => {
@@ -14,6 +14,12 @@ describe('the balance formulas', () => {
     expect([foeHp(10, 7, 1), foeHp(10, 7, 4)]).toEqual([81, 84])
     expect([foeAtk(10, 7, 1), foeAtk(10, 7, 2)]).toEqual([19, 22])
   })
+  test('past depth 10 foes grow half a percent more a depth: a depth-30 rat 10% over the plain sum, a depth-110 one half again', async () => {
+    expect([1, 10, 11, 30, 110].map(deepGrowth)).toEqual([1, 1, 1.005, 1.1, 1.5])
+    // The plain sums: 6 + 180 + 0 + 1 is 187, and (30 + 0 + 2 + 1) times 1.2 is 39.6; a tenth more, rounded: 206 and 44.
+    expect([foeHp(30, 0, 1), foeAtk(30, 0, 1)]).toEqual([206, 44])
+  })
+
   test('hero damage grows half a point a level', async () => {
     expect([heroDamage(1, 1, 0), heroDamage(2, 1, 0), heroDamage(10, 1, 0)]).toEqual([2, 3, 7])
   })

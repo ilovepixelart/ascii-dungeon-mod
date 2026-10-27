@@ -14,6 +14,10 @@ release may change behaviour.
 
 ### Changed
 
+- Past depth 10 foes grow half a percent more a depth, in HP and attack: a depth-50 foe a fifth over its depth's
+  plain sum. The hero's levels and gear outgrew a depth's worth, so depths 11 to 100 slew the hero 0 to 0.29 times
+  in 100 tool calls; over 30 games of 6,000 steps they now do 0.10 at depths 21 to 30, 0.49 to 0.93 at 31 to 50 and
+  0.27 to 0.96 in the Abyss.
 - A knight keeps half their defense, rounded down, against a blow that passes through armor (a wraith's, the
   Drowned Queen's, the Hive Mother's); a mage or a rogue still keeps none. Over 30 knight games of 6,000 steps, big
   bosses slew knights 0.3 times a game, where they did 1.2, the Hive Mother on depth 40 most of all.

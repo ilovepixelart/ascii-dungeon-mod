@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- The green upgrade mark counts a set's two-piece bonus, and never marks a piece that would break a whole set or
+  replace a worn Legendary with a piece without a power. It weighed the two items' own stats alone, so a plain
+  blade a point better was marked over a whole set's.
 - The recap waits out the death window: a click on it kept nothing of what happened unseen, so after a fall the
   recap never showed. The first click after the death window closes opens it.
 - The standing orders (drink, smoke, loot) carry over to a retired hero's successor and to a new game: each new hero

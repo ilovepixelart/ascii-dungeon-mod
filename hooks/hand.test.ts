@@ -4,6 +4,8 @@ import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 import type { Game } from '../types'
 import { DEFAULT_ORDERS, apply, isByHand, levelOf, newGame, ordersOf } from './game'
+import { healingSlot } from './consumables'
+import { isUpgrade } from './items'
 
 const PANE = { plugin: 'ascii-dungeon', component: 'Pane', requestId: 'dungeon', props: { title: 'Dungeon', isFocused: true, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 60 }, view: {} } } as const
 
@@ -22,12 +24,16 @@ const begin = async ($: Engine, on: On, saved: Game) => {
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
 }
 
-/** A player by hand alone: a foe fought, points trained, the stairs taken, else a step toward them. */
+/** A player by hand alone: a potion when low, a better piece put on, points trained, a foe fought, the stairs taken,
+ * else a step toward them. */
+const better = (g: Game) => g.bag.find(i => isUpgrade(g, i))
 const playByHand = (g0: Game, actions: number) => {
   let g = g0
   for (let i = 0; i < actions; i += 1) {
     const stairs = levelOf(g).stairs
     if (g.panel !== 'none') g = apply(g, { kind: 'panel', panel: g.panel })
+    else if (g.hp < g.maxHp * 0.4 && healingSlot(g) >= 0) g = apply(g, { kind: 'use', slot: healingSlot(g) })
+    else if (better(g) !== undefined) g = apply(apply(g, { kind: 'select', id: better(g)!.id }), { kind: 'equip' })
     else if (g.points > 0) g = apply(g, { kind: 'train', stat: 'vigor' })
     else if (g.foe !== null) g = apply(g, { kind: 'attack' })
     else if (g.x === stairs.x && g.y === stairs.y) g = apply(g, { kind: 'stairs' })

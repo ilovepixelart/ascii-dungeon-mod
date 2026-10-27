@@ -31,7 +31,7 @@ Besides the shrine, the library, the flooded halls' spring and the forge's anvil
 
 ## Uniques
 
-See `items.md`, Finding things: a named monster a band of five depths, met about twice in 100 tool calls.
+See `items.md`, Finding things: a named monster a band of five depths, met about twice in 100 tool calls. One that slays the hero waits until they are a level stronger (`Game.uniqueWon`, by band): the hero wakes at the band's first depth, and an early unique met them again on every return before they could grow, the deaths of a hero whose points went unspent piling up on it.
 
 ## Good loot
 

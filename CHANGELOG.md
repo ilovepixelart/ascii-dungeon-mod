@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed
+
+- A finished answer leaves a hero in town where they are: it took them through the portal and down a depth, closing
+  the shop, the smith or any window mid-visit and dropping the smith's Keep old. The portal is the way back.
+
 ### Fixed
 
 - A refused tool call (a No at the permission prompt, or a hook's or a rule's deny) counted as a failure: the foe

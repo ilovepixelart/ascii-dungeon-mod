@@ -620,12 +620,10 @@ describe('the town', () => {
     expect(after.log.at(-1)).toMatch(/^You rest in town\./)
   })
 
-  test('a finished task still takes the hero down: from town to the next depth', async () => {
+  test('a finished task leaves the hero in town, the portal still open to the tile it was opened on', async () => {
     const t = inTown()
     const after = apply(t, { kind: 'descend' })
-    expect(after.where).toBe('dungeon')
-    expect(after.depth).toBe(t.depth + 1)
-    expect(after.portal).toBeNull()
+    expect([after.where, after.depth, after.portal]).toEqual(['town', t.depth, t.portal])
   })
 
   test('clicking open ground walks there; a building cannot be walked into', async () => {
@@ -1253,13 +1251,10 @@ describe('the boss of every fifth depth', () => {
     expect(['rare', 'epic', 'legendary']).toContain(found[0]!.rarity)
   })
 
-  test('a task done in town with a guardian waiting: back through the portal and to the stairs, where it rises', async () => {
-    const town = apply(atDepth(5), { kind: 'portal' })
+  test('a task done in town leaves the hero in town, the window open, until the portal is taken', async () => {
+    const town = { ...apply(atDepth(5), { kind: 'portal' }), panel: 'shop' as const }
     const g = apply(town, { kind: 'descend' })
-    const stairs = levelOf(g).stairs
-    expect([g.where, g.depth, g.x, g.y, g.foe?.boss]).toEqual(['dungeon', 5, stairs.x, stairs.y, true])
-    // Through the portal and down at once: no walk for the town's screen to play.
-    expect(g.walked).toEqual([])
+    expect([g.where, g.depth, g.panel, g.x, g.y]).toEqual(['town', 5, 'shop', town.x, town.y])
   })
 
   test('an answer finished walks the hero the way to the stairs, then down, the walk kept to be played', async () => {

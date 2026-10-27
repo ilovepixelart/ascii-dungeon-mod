@@ -37,7 +37,7 @@ const rowsOf = (g: Game, sound: SoundSettings, ui: SettingsUi): Key[][] => ui.pa
   ? [
       [{ key: 'N', label: 'NEW GAME', does: 'new' }, { key: 'H', label: 'HELP', does: 'help' }],
       [{ key: 'E', label: sound.effects ? 'SOUND ON' : 'SOUND OFF', does: 'effects' }, { key: 'M', label: sound.music ? 'MUSIC ON' : 'MUSIC OFF', does: 'music' }],
-      [{ key: 'L', label: `VOL ${(100 * sound.volume) / VOLUME_STEPS}`, does: 'volume' }],
+      [{ key: 'L', label: `VOL ${(100 * sound.volume) / VOLUME_STEPS}`, does: 'volume' }, { key: 'Y', label: orderWord(g, 'play'), does: 'play' }],
     ]
   : [[{ key: 'D', label: orderWord(g, 'drink'), does: 'drink' }], [{ key: 'F', label: orderWord(g, 'smoke'), does: 'smoke' }], [{ key: 'K', label: orderWord(g, 'leave'), does: 'leave' }]]
 
@@ -73,10 +73,11 @@ export const orderWord = (g: Pick<Game, 'orders'>, which: keyof Orders) => {
   const orders = ordersOf(g)
   if (which === 'drink') return DRINK_WORD[orders.drink]
   if (which === 'smoke') return orders.smoke ? 'SMOKE WHEN LOW' : 'SMOKE NEVER'
+  if (which === 'play') return orders.play === 'hand' ? 'PLAY BY HAND' : 'PLAY BY SESSION'
   return LEAVE_WORD[orders.leave] ?? 'TAKE ALL LOOT'
 }
 
-const isOrder = (does: Does): does is keyof Orders => does === 'drink' || does === 'smoke' || does === 'leave'
+const isOrder = (does: Does): does is keyof Orders => does === 'drink' || does === 'smoke' || does === 'leave' || does === 'play'
 
 /** The sound as saved, or `defaults` when nothing was saved or what was is no sound: each switch on or off, the volume a step of VOLUME_STEPS. */
 export const soundFrom = (saved: unknown, defaults: SoundSettings): SoundSettings => {
@@ -97,7 +98,7 @@ const ABOUT: Readonly<Record<SettingsUi['page'], readonly (readonly [string, str
     ['New game', ' opens the start screen for a new hero; the codex and the stash are kept.'],
     ['Help', ' opens How it plays.'],
     ['Sound', ' turns the effects on or off, Music the tune.'],
-    ['Volume', ' steps a quarter at a time, for every sound.'],
+    ['Volume', ' steps a quarter; Play by hand: only your keys move the hero.'],
   ],
   orders: [
     ['', 'What the hero does on their own while you work.'],

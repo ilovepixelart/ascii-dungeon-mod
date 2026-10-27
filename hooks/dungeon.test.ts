@@ -150,6 +150,27 @@ const storeIn = (on: On, kept = new Map<string, unknown>()) => {
   return kept
 }
 
+test('a save the store refuses is said once, not dropped in silence; one that lands again clears it', async ($, on) => {
+  const said = toasts(on)
+  let isFull = true
+  on('store.get', () => ({ value: undefined }) as never)
+  on('store.set', () => {
+    if (isFull) throw new Error('full')
+    return { value: undefined } as never
+  })
+  on('tool.call', () => ({ result: { file: { content: '' } } as never }))
+  for (let i = 0; i < 3; i += 1) await $.tool.call({ tool: 'Read', file_path: `/src/${i}.ts` })
+  // The host's reason in the middle: a hook that throws is skipped, and the store then has no answer.
+  const refused = said.filter(t => t.startsWith('The game could not be saved: '))
+  expect(refused).toHaveLength(1)
+  expect(refused[0]).toMatch(/^The game could not be saved: .+\. Play goes on; it is tried again on every change\.$/)
+  isFull = false
+  await $.tool.call({ tool: 'Read', file_path: '/src/ok.ts' })
+  isFull = true
+  await $.tool.call({ tool: 'Read', file_path: '/src/again.ts' })
+  expect(said.filter(t => t.startsWith('The game could not be saved'))).toHaveLength(2)
+})
+
 test('a sound setting changed is saved', async ($, on) => {
   const kept = storeIn(on)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
@@ -842,6 +863,7 @@ test('a wide terminal pane of the best size draws the pixel strip alone under th
 
 test('what a click comes to shows as a toast: a belt slot drinks, and the empty slot says so', async ($, on) => {
   const said = toasts(on)
+  on('store.set', () => ({ value: undefined }) as never)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   await clickDash(ui, { x: dashBeltX(WIDE.props.bodyColumns, 0) + 5, y: BELT_Y + 5 })
   await clickDash(ui, { x: dashBeltX(WIDE.props.bodyColumns, 0) + 5, y: BELT_Y + 5 })
@@ -892,6 +914,7 @@ test('the desktop keeps the text dashboard, with no strip', async $ => {
 test('a click on the pixel map reaches the game through the click layer', async ($, on) => {
   const clock = mock.clock(on)
   const said = toasts(on)
+  on('store.set', () => ({ value: undefined }) as never)
   on('ui.blit', () => ({ value: {} }))
   // Tall enough that the map window shows ground beyond the starting room.
   const ui = await $.ui.mount({ ...WIDE, props: { ...WIDE.props, scroll: { offset: 0, bodyRows: 80 } }, surface: 'terminal' })
@@ -1199,6 +1222,7 @@ test('on a wide terminal the inventory takes the whole pane while it is open, an
 
 test('with the mouse: gear is taken off, dragged back on, and a bag item destroyed from its menu after a second click', async ($, on) => {
   const said = toasts(on)
+  on('store.set', () => ({ value: undefined }) as never)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   await clickDash(ui, iconAt('bag'))
   // A cell (x, y) of the click layer is the screen pixels x and 2y, 2y + 1; a pointer there lands on 2y + 1.
@@ -1335,6 +1359,7 @@ test('the pane asks to dock wide enough for the pixel inventory window', async (
 
 test('the portal slot takes the hero to town and back, the map and the toasts saying where he is', async ($, on) => {
   const said = toasts(on)
+  on('store.set', () => ({ value: undefined }) as never)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   const map = await ui.find({ type: 'Raster', key: 'map' })
   const columns = map?.props.columns as number

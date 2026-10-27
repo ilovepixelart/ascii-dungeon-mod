@@ -16,7 +16,8 @@ lets the foe hit back, and real work pays.
 | A push or a PR | A cache of loot |
 | An answer finished | The stairs down |
 
-The same list is in the game, under How it plays. What stays yours: the gear, the talents, and the standing orders in
+The same list is in the game, under How it plays. The hero follows the main session alone: a subagent's tool calls
+play no part. What stays yours: the gear, the talents, and the standing orders in
 settings (when to drink, when to throw smoke, what loot to leave). Through the portal is the town: a merchant, a smith,
 a healer, a stash, an elder with quests, a mystic with fortunes, a villager with sealed packs and a guard who trades
 three spare pieces for one better.

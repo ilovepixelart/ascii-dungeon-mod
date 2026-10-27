@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- The recap waits out the death window: a click on it kept nothing of what happened unseen, so after a fall the
+  recap never showed. The first click after the death window closes opens it.
 - The standing orders (drink, smoke, loot) carry over to a retired hero's successor and to a new game: each new hero
   started on the defaults.
 - A finished answer leaves a hero in town where they are: it took them through the portal and down a depth, closing

@@ -102,7 +102,7 @@ Every window keeps these; review them as a real session draws them with `tools/s
 
 ## The recap
 
-- What the tool calls came to since the player last clicked or pressed a key (`Game.recap`, counted by `noted` in `hooks/recap.ts` in `apply`, for tool-driven actions only). The next click or key is a look (`isRecapShown` in `register.tsx`): after `RECAP_CALLS` calls or more it opens the `recap` panel instead of doing what was asked; after fewer, what was counted is forgotten. It never opens on its own, and never over the death window.
+- What the tool calls came to since the player last clicked or pressed a key (`Game.recap`, counted by `noted` in `hooks/recap.ts` in `apply`, for tool-driven actions only). The next click or key is a look (`isRecapShown` in `register.tsx`): after `RECAP_CALLS` calls or more it opens the `recap` panel instead of doing what was asked; after fewer, what was counted is forgotten. It never opens on its own, and never over the death window: a look there keeps the count, and the first look after the window closes opens it.
 - Drawn by `hooks/recapwindow.ts`: the hero's portrait and beside it the tool calls, depth and level from and to, kills, champions, gold gained and deaths, and the work done (green test runs, commits, pushes, pull requests); under it the best find of Rare or better in its box, its name beside it. What has nothing to say is left out. Play on (`p`, framed white) and the close box close it; closing it, or any window opened over it, forgets what it told.
 
 ## The codex

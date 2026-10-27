@@ -17,7 +17,7 @@ Three shops face a cobbled square across its north side: the merchant (red roof,
 
 | Event | In town |
 |---|---|
-| a tool call that would explore, summon or bring an ally | the hero rests; no foe follows |
+| a tool call that would explore, summon or bring an ally | the log says the hero rests, and nothing else comes of it: no foe follows and no HP comes back |
 | a tool call's outcome | no fight; work is rewarded as in the dungeon (`pacing.md`, Work), a commit marking the depth the portal leads back to |
 | attack | "No foes here." |
 | explore, descend by hand | the stairs are in the dungeon: take the portal back |

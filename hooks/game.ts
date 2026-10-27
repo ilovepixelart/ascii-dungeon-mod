@@ -1641,7 +1641,7 @@ const buyTab = (g: Game, tab: StashTab) => {
 }
 
 
-/** What the merchant sells and asks for it, in shelf order: gold's one way out besides the smith. */
+/** What the merchant sells and asks for it, in shelf order. */
 export const SHOP_PRICES = { health1: 25, health2: 50, health3: 80, regen1: 45, fury1: 50, ward1: 50, ward2: 75, smoke1: 35, smoke3: 60 } as const satisfies Partial<Record<Ware, number>>
 const PRICES: Readonly<Partial<Record<Ware, number>>> = SHOP_PRICES
 /** A ware's price, a fifth less for a Haggler; one the merchant does not sell has none. */

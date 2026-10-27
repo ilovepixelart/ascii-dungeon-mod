@@ -1,6 +1,6 @@
 # Pacing
 
-What keeps a session from being the same fight over and over, and how it is judged. `tools/feel.ts` measures it from simulated games, a class each: deaths and close calls per 100 tool calls, bosses won, notable moments per 100 calls, the longest stretch without one, foe kinds per depth, the share of calls spent below depths already reached. The numbers below are its, over 100 games a class of 1,000 steps (about 320 tool calls).
+What keeps a session from being the same fight over and over, and how it is judged. `tools/feel.ts` measures it from simulated games, a class each: deaths and close calls per 100 tool calls, bosses won, notable moments per 100 calls, the longest stretch without one, foe kinds per depth, the share of calls spent below depths already reached. The numbers below are its, over 100 games a class of 1,000 steps (about 320 tool calls). Its player never trains an attribute (`playerMove` in `hooks/sim.ts`), so a player who spends their points dies less than these numbers say.
 
 ## Which foes
 

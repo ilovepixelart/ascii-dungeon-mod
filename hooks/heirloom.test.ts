@@ -43,6 +43,14 @@ describe('passing an item down', () => {
 })
 
 describe('retiring', () => {
+  test("the hero's standing orders carry over to the next hero, retired or started anew", async () => {
+    const orders = { drink: 50 as const, smoke: true, leave: 'uncommon' as const }
+    const retired = apply({ ...veteran(piece('steelHelm')), orders }, { kind: 'retire', slot: 'helm' })
+    expect(retired.orders).toEqual(orders)
+    expect(apply(retired, { kind: 'restart' }).orders).toEqual(orders)
+    expect(apply({ ...plainHero(3), orders }, { kind: 'restart' }).orders).toEqual(orders)
+  })
+
   test('not before a big boss is slain, said; nor passing down an empty slot', async () => {
     const helm = piece('steelHelm')
     expect(whyNotRetire(veteran(helm, { bossSlain: 5 }), 'helm')).toBe('A hero retires once they have slain a big boss.')

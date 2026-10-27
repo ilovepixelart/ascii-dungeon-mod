@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- The standing orders (drink, smoke, loot) carry over to a retired hero's successor and to a new game: each new hero
+  started on the defaults.
 - A finished answer leaves a hero in town where they are: it took them through the portal and down a depth, closing
   the shop, the smith or any window mid-visit and dropping the smith's Keep old. The portal is the way back.
 

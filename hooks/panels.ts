@@ -317,8 +317,8 @@ export const logRuns = (g: Game, n = LOG_SHOWN): Run[] => {
 }
 
 export const ATTRIBUTES: readonly { stat: Attribute; label: string; effect: (g: Game) => string }[] = [
-  { stat: 'might', label: 'Might  ', effect: g => `+${attackBonus(g)} attack (half Might + gear)` },
-  { stat: 'focus', label: 'Focus  ', effect: g => `${critChance(g)}% critical hit chance` },
+  { stat: 'might', label: 'Might  ', effect: g => `+${attackBonus(g)} attack (Might + gear)` },
+  { stat: 'focus', label: 'Focus  ', effect: g => `${critChance(g)}% critical hit chance, +${g.stats.focus * 5}% critical damage` },
   { stat: 'vigor', label: 'Vigor  ', effect: () => '+3 max HP per point' },
-  { stat: 'insight', label: 'Insight', effect: g => `+${g.stats.insight * 10}% XP from kills` },
+  { stat: 'insight', label: 'Insight', effect: g => `+${g.stats.insight * 5}% XP from kills` },
 ]

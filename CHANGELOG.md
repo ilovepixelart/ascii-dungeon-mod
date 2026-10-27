@@ -14,6 +14,10 @@ release may change behaviour.
 
 ### Changed
 
+- The attributes rebalanced, each worth a point: Might gives a point of attack a point (half before), Focus 5% more
+  critical damage a point besides its 3% crit chance, Insight 5% more XP a point (10% before). Foes have 6 HP a
+  depth (4 before), so a kill still takes 2 to 3 hits. A hero putting every point in Might or Focus died three to
+  four times as often as one in Vigor, and one in Insight levelled twice as fast as any other.
 - The green upgrade mark counts a set's two-piece bonus, and never marks a piece that would break a whole set or
   replace a worn Legendary with a piece without a power. It weighed the two items' own stats alone, so a plain
   blade a point better was marked over a whole set's.

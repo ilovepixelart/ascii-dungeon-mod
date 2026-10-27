@@ -6,8 +6,17 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-27
+
+Saves from 0.5.0 load as they are: the save stays at version 14, and the deep's fates chosen so far are the Abyss's.
+Nothing needs doing.
+
 ### Changed
 
+- The deep is the Abyss, its tab ABYSS among the hero's tabs: every ten depths past 50 is a circle with a name (the
+  Hollow Halls, the Sunken Vaults and on, past the tenth the Nameless Dark) and a warden, the big boss on its last
+  depth. A fork offers the next circle's blessing, the easier mark, or its curse, the harder that pays more. The
+  marks and their rules are as they were.
 - The hero has no dark outline on the map: the floor shows right up to its sprite again. Nor does the town's art:
   its townsfolk, trees, fountain, portal, stash, anvil, lamps, signs and the rest.
 - The town redrawn: the merchant wears a hat and the smith a cap, with two eyes over his beard; the fountain is a
@@ -15,6 +24,14 @@ release may change behaviour.
   the grass.
 - The stash is the dungeon's wooden chest and stands on the smith's forge floor, past the anvil, instead of on the
   square's west side. The villager's hint says so.
+- The Rotking is a kobold under a red toadstool cap in a purple robe; it read as scattered pink dots.
+- The dog stands from the top of its tile to the bottom, with an ear, an eye, a nose and a raised tail.
+- The dash's bag button is a tied sack and the settings gear has a tooth on each side and corner.
+- The talents taken are named each in its family's ink.
+- Settings name each button bright in the box under them and what it does dimmed; the loot order reads Loot:.
+- Windows keep one gap of 2 px over their box and one between buttons; cards and the worn slots line up with the
+  boxes and frames beside them; the chosen worn piece is framed white over its tier's frame.
+- Each Legendary's codex box is its piece's size; the codex keeps one height on both pages, Card listed on Finds.
 
 ### Fixed
 
@@ -23,6 +40,7 @@ release may change behaviour.
   the map runs past it, its last rows shown above the dash.
 - In town, the view past the town's bottom edge, shown above the dash, was empty black. The forest goes on there,
   the road from the gate running south through it.
+- An orb's number showed a lighter box behind it where the liquid's lit surface line cut through its text cell.
 
 ## [0.5.0] - 2026-10-23
 

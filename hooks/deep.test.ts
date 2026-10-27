@@ -197,7 +197,8 @@ describe('what each mark does', () => {
   })
 
   test('Lean: healing potions drop about a quarter as often', async () => {
-    const drops = (mark: Mark) => SEEDS.filter(seed => killConsumable({ ...marked(mark, {}, seed), seed, potionChance: 40 })?.kind === 'health').length
+    // At the full chance, so a quarter of a quarter of 300 kills still drops enough to count.
+    const drops = (mark: Mark) => SEEDS.filter(seed => killConsumable({ ...marked(mark, {}, seed), seed, potionChance: 100 })?.kind === 'health').length
     expect(drops('lean')).toBeGreaterThan(drops('steady') * 0.15)
     expect(drops('lean')).toBeLessThan(drops('steady') * 0.4)
   })

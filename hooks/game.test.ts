@@ -1266,12 +1266,13 @@ describe('the boss of every fifth depth', () => {
     expect([ten.depth, ten.foe?.boss]).toEqual([10, true])
   })
 
-  test('a boss leaves five times the gold, an Elixir and an item of Rare or better', async () => {
+  test('a boss leaves five times the gold, a Greater Health Potion and an item of Rare or better', async () => {
     const met = apply(atDepth(5), { kind: 'descend' })
     const before = { ...met, foe: { ...met.foe!, hp: 1 }, gold: 0, belt: [null, null, null, null, null] }
     const slain = apply(before, { kind: 'attack' })
     expect([25, 50, 75]).toContain(slain.gold)
-    expect(slain.belt[0]).toEqual({ kind: 'health', tiers: [0, 0, 1] })
+    expect(slain.belt[0]).toEqual({ kind: 'health', tiers: [0, 1, 0] })
+    expect(slain.log).toContain('Loot: Greater Health Potion.')
     const found = slain.bag.filter(item => !before.bag.some(b => b.id === item.id))
     expect(found).toHaveLength(1)
     expect(['rare', 'epic', 'legendary']).toContain(found[0]!.rarity)

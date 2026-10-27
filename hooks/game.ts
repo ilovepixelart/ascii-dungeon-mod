@@ -1939,7 +1939,8 @@ const townStash = (game: Game): Pick<Game, 'stashed' | 'stashSets' | 'stashLegen
 /** The hero retired: counted in the codex, the piece in `slot` the heirloom, the stash kept, and a new hero to choose on the start screen. */
 const retiredFrom = (g: Game, slot: Slot): Game => {
   const codex = g.codex ?? firstCodex(g)
-  return { ...newGame(g.seed, g.cls), ...townStash(g), ...keptOrders(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start' }
+  const legacy = Math.floor(g.gold / 2)
+  return { ...newGame(g.seed, g.cls), ...townStash(g), ...keptOrders(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start', ...(legacy > 0 ? { legacy } : {}) }
 }
 
 /** The standing orders, the player's and not the hero's: kept from hero to hero. */
@@ -1965,6 +1966,10 @@ const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegen
 const newHero = (game: Game, cls: HeroClass): Game => {
   const g: Game = { ...newGame(game.seed, cls), ...keptOrders(game), codex: game.codex ?? firstCodex(normalize(game)) }
   restash(g, normalize(game))
+  if (game.legacy !== undefined) {
+    Object.assign(g, { gold: game.legacy, banked: game.legacy })
+    say(g, `Your predecessor left you ${game.legacy} gold, safe in town.`)
+  }
   if (game.heirloom === undefined) return g
   const item = { ...game.heirloom, id: g.nextId }
   g.heirloom = game.heirloom

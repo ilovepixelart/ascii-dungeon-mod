@@ -16,6 +16,8 @@ release may change behaviour.
 
 ### Changed
 
+- Retiring passes half the hero's gold, rounded down, to the next hero, banked in town and said: retiring wiped it
+  all. A new game begun from settings still starts with none.
 - Fewer free potions, so the merchant has more to sell: a kill leaves healing at a quarter of its potion chance (half
   before), and a boss leaves a Greater Health Potion, a big boss still an Elixir. Over 30 games a class of 6,000
   steps, potions bought go from 0.7 to 1.2 a game and deaths per 1,000 steps from 1.19 to 1.31; most healing still

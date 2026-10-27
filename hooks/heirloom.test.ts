@@ -56,8 +56,8 @@ describe('retiring', () => {
     expect(whyNotRetire(veteran(helm, { bossSlain: 5 }), 'helm')).toBe('A hero retires once they have slain a big boss.')
     expect(whyNotRetire(veteran(helm), 'ring')).toBe('Choose a piece you wear to pass down.')
     expect(whyNotRetire(veteran(helm), 'helm')).toBeUndefined()
-    // The veteran's talent already offered, so the talent window does not open on the refusal.
-    const refused = apply(veteran(helm, { bossSlain: 5, talentOffered: 1 }), { kind: 'retire', slot: 'helm' })
+    // The veteran's two talents, at level 14, already offered, so the talent window does not open on the refusal.
+    const refused = apply(veteran(helm, { bossSlain: 5, talentOffered: 2 }), { kind: 'retire', slot: 'helm' })
     expect([refused.level, refused.panel, refused.heirloom]).toEqual([14, 'none', undefined])
     expect(refused.log.at(-1)).toBe('A hero retires once they have slain a big boss.')
   })

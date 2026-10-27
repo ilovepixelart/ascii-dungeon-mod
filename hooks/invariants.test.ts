@@ -225,9 +225,9 @@ describe('each rule speaks up when broken', () => {
 
   test('a talent twice, or more talents than levels earned', async () => {
     const rule = 'talents each once, no more than earned'
-    expect(broke({ ...g, level: 20, talents: ['grudge', 'opener'] })).not.toContain(rule)
-    expect(broke({ ...g, level: 20, talents: ['grudge', 'grudge'] })).toContain(rule)
-    expect(broke({ ...g, level: 19, talents: ['grudge', 'opener'] })).toContain(rule)
+    expect(broke({ ...g, level: 10, talents: ['grudge', 'opener'] })).not.toContain(rule)
+    expect(broke({ ...g, level: 10, talents: ['grudge', 'grudge'] })).toContain(rule)
+    expect(broke({ ...g, level: 9, talents: ['grudge', 'opener'] })).toContain(rule)
   })
 
   test('a set piece not Epic, with a trigger, or not one of its set', async () => {

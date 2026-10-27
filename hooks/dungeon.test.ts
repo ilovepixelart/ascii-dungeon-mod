@@ -455,14 +455,14 @@ test('on a wide pane the retire window\'s Back, clicked, goes back to the sheet'
 })
 
 test('a talent owed: the session opens on it, it is picked and saved, and the window then says when the next comes', async ($, on) => {
-  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 10 }]]))
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 5 }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await ui.find({ type: 'Text', text: 'Level 10: choose a talent' })).toBeDefined()
-  const first = offer({ ...newGame(), level: 10 })[0]!
+  expect(await ui.find({ type: 'Text', text: 'Level 5: choose a talent' })).toBeDefined()
+  const first = offer({ ...newGame(), level: 5 })[0]!
   await ui.press({ key: `talent-${first}` })
   expect((kept.get('save') as Game).talents).toEqual([first])
   // The only one owed taken, the window closes; opened from the sheet, it says when the next comes.
@@ -470,12 +470,12 @@ test('a talent owed: the session opens on it, it is picked and saved, and the wi
   await ui.press({ key: 'sheet' })
   expect(await ui.find({ type: 'Button', key: 'sheet-talent', text: 'Talent' })).toBeDefined()
   await ui.press({ key: 'sheet-talent' })
-  expect(await ui.find({ type: 'Text', text: /^Talents: .+\. The next at level 20\.$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^Talents: .+\. The next at level 10\.$/ })).toBeDefined()
   await ui.unmount()
 })
 
 test('on a wide pane a session with a talent owed opens on the cards; a card clicked is chosen, clicked again taken', async ($, on) => {
-  const saved = { ...newGame(), level: 10 }
+  const saved = { ...newGame(), level: 5 }
   const kept = storeIn(on, new Map<string, unknown>([['save', saved]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
@@ -682,7 +682,7 @@ test('on a wide pane a click on Card on the codex window\'s Finds saves the card
 })
 
 test('a session begun with talents owed says so in the log', async ($, on) => {
-  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 91 }]]))
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 45 }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -693,7 +693,7 @@ test('a session begun with talents owed says so in the log', async ($, on) => {
 })
 
 test('a session begun with nothing waiting says nothing of it', async ($, on) => {
-  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 5 }]]))
+  const kept = storeIn(on, new Map<string, unknown>([['save', { ...newGame(), level: 4 }]]))
   on('command.register', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))

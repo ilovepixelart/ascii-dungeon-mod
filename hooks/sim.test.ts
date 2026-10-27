@@ -28,9 +28,10 @@ const firstRun = (steps: number, reached: (run: ReturnType<typeof simulate>) => 
   [1, 2, 3, 4, 5, 6].map(seed => simulate(seed, steps, 'knight')).find(reached)
 
 test('the simulated player picks a talent once one is owed', { timeoutMs: 20000 }, async () => {
-  const run = firstRun(1500, r => r.final.level >= 10)!
+  const run = firstRun(1500, r => r.final.level >= 5)!
   expect(run).toBeDefined()
-  expect(run.final.talents?.length).toBe(Math.floor(run.final.level / 10))
+  // One every fifth level.
+  expect(run.final.talents?.length).toBe(Math.floor(run.final.level / 5))
 })
 
 test('the simulated player chooses a mark at every fork it reaches', { timeoutMs: 60000 }, async () => {

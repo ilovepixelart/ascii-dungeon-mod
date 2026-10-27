@@ -80,7 +80,7 @@ describe('the character sheet', () => {
   test('the talents\' tab is marked in gold while one is owed; the deep\'s while a fork waits', async () => {
     // The mark: two gold pixels at the tab's top right, above its label, clear of the next tab.
     const marked = (g: Game, i: number) => sheetPixels(g)[1]![TABS[i]![1] - 1] === GOLD_INK
-    expect([marked(hero({ level: 10 }), 2), marked(hero({ level: 9 }), 2)]).toEqual([true, false])
+    expect([marked(hero({ level: 5 }), 2), marked(hero({ level: 4 }), 2)]).toEqual([true, false])
     expect([marked(hero({ bossSlain: 60, deepest: 60 }), 3), marked(hero({ bossSlain: 60, deepest: 60, marks: { 2: 'mild' } }), 3)]).toEqual([true, false])
   })
 

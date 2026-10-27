@@ -25,10 +25,10 @@ const dealt = (g: Game) => Number(g.log.find(l => /^You (CRITICALLY )?hit /.test
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 describe('earning and picking', () => {
-  test('one is owed at every tenth level, none before; those picked are no longer owed', async () => {
-    expect([9, 10, 19, 20, 35].map(level => owed({ level }))).toEqual([0, 1, 1, 2, 3])
-    expect(owed({ level: 25, talents: ['grudge'] })).toBe(1)
-    expect(owed({ level: 25, talents: ['grudge', 'opener'] })).toBe(0)
+  test('one is owed at every fifth level, none before; those picked are no longer owed', async () => {
+    expect([4, 5, 9, 10, 17].map(level => owed({ level }))).toEqual([0, 1, 1, 2, 3])
+    expect(owed({ level: 12, talents: ['grudge'] })).toBe(1)
+    expect(owed({ level: 12, talents: ['grudge', 'opener'] })).toBe(0)
   })
 
   test('never more owed than there are talents left to pick', async () => {
@@ -37,25 +37,25 @@ describe('earning and picking', () => {
   })
 
   test('three are offered, none picked, the same three each time; none while none is owed', async () => {
-    const g = { ...plainHero(3), level: 20, talents: ['grudge' as const] }
+    const g = { ...plainHero(3), level: 10, talents: ['grudge' as const] }
     const offered = offer(g)
     expect(offered.length).toBe(3)
     expect(new Set(offered).size).toBe(3)
     expect(offered).not.toContain('grudge')
     expect(offer({ ...g })).toEqual(offered)
-    expect(offer({ ...g, level: 19 })).toEqual([])
+    expect(offer({ ...g, level: 9 })).toEqual([])
   })
 
   test('the offer changes with the world and with each pick', async () => {
-    const offers = SEEDS.map(world => offer({ level: 10, world }).join())
+    const offers = SEEDS.map(world => offer({ level: 5, world }).join())
     expect(new Set(offers).size).toBeGreaterThan(1)
-    const g = { ...plainHero(3), level: 30 }
+    const g = { ...plainHero(3), level: 15 }
     const first = offer(g)
     expect(offer({ ...g, talents: [first[0]!] })).not.toContain(first[0])
   })
 
   test('a pick from the offer is learned and said; one not offered, or none owed, is refused and said', async () => {
-    const g = { ...plainHero(3), level: 10 }
+    const g = { ...plainHero(3), level: 5 }
     const t = offer(g)[0]!
     const learned = apply(g, { kind: 'talent', talent: t })
     expect(learned.talents).toEqual([t])
@@ -63,14 +63,14 @@ describe('earning and picking', () => {
     const other = ALL.find(x => !offer(g).includes(x))!
     const refused = apply(g, { kind: 'talent', talent: other })
     expect([refused.talents, refused.log.at(-1)]).toEqual([undefined, `${TALENTS[other].name} is not on offer.`])
-    const early = apply({ ...g, level: 9 }, { kind: 'talent', talent: t })
-    expect([early.talents, early.log.at(-1)]).toEqual([undefined, 'No talent to choose until level 10.'])
+    const early = apply({ ...g, level: 4 }, { kind: 'talent', talent: t })
+    expect([early.talents, early.log.at(-1)]).toEqual([undefined, 'No talent to choose until level 5.'])
   })
 
-  test('reaching a tenth level says a talent is waiting', async () => {
-    const g = { ...plainHero(3), level: 9, xp: xpToLevel(9) - 1 }
+  test('reaching a fifth level says a talent is waiting', async () => {
+    const g = { ...plainHero(3), level: 4, xp: xpToLevel(4) - 1 }
     const to10 = apply({ ...g, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, opened: true, xp: 10 }) }, { kind: 'outcome', ok: true, what: 'Edit' })
-    expect(to10.level).toBeGreaterThanOrEqual(10)
+    expect(to10.level).toBeGreaterThanOrEqual(5)
     expect(to10.log).toContain('A talent to choose: open the character sheet.')
   })
 })
@@ -192,7 +192,7 @@ describe('what each talent does', () => {
 
 describe('the talent window', () => {
   const tap = (p: { x: number; y: number }): Gesture => ({ type: 'release', from: { x: p.x + 0.5, y: p.y / 2 + 0.25 }, at: { x: p.x + 0.5, y: p.y / 2 + 0.25 }, button: 'left' })
-  const g = { ...plainHero(3), level: 10, panel: 'talent' as const }
+  const g = { ...plainHero(3), level: 5, panel: 'talent' as const }
   const ui = (chosen: number) => ({ chosen })
   const middle = (r: { x: number; y: number; w: number; h: number }) => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })
 
@@ -265,26 +265,26 @@ describe('the talent window', () => {
   })
 
   test('with none owed, a box says when the next comes and each talent taken with what it does; with all taken, says so', async () => {
-    const done = { ...g, level: 25, talents: ['grudge', 'haggler'] as Talent[] }
+    const done = { ...g, level: 12, talents: ['grudge', 'haggler'] as Talent[] }
     expect(talentCards(done)).toEqual([])
     const said = (x: Game) => talentOverlay(x, ui(0))[0]!.lines.map(l => l.map(r => r.text).join(''))
-    expect(said(done)).toEqual(['The next talent comes at level 30.', `Grudge: ${TALENTS.grudge.does}`, `Haggler: ${TALENTS.haggler.does}`])
+    expect(said(done)).toEqual(['The next talent comes at level 15.', `Grudge: ${TALENTS.grudge.does}`, `Haggler: ${TALENTS.haggler.does}`])
     const all = { ...g, level: 200, talents: ALL }
     expect(said(all)[0]).toBe('Every talent is taken.')
     // Coding's own talents are named in green.
-    expect(talentOverlay({ ...g, level: 15, talents: ['testDriven'] as Talent[] }, ui(0))[0]!.lines[1]![0]!.color).toBe(FAMILIES.work.ink)
+    expect(talentOverlay({ ...g, level: 7, talents: ['testDriven'] as Talent[] }, ui(0))[0]!.lines[1]![0]!.color).toBe(FAMILIES.work.ink)
     expect(talentHeight(all)).toBeLessThanOrEqual(82)
     expect(talentPixels(all).length).toBe(talentHeight(all))
   })
 })
 
 describe('the talent window opening on its own', () => {
-  const at9 = { ...plainHero(3), level: 9, xp: xpToLevel(9) - 1 }
+  const at9 = { ...plainHero(3), level: 4, xp: xpToLevel(4) - 1 }
   const slay = (g: Game) => apply({ ...g, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, xp: 999 }) }, { kind: 'attack' })
 
   test('the blow that earns a talent, its foe slain, opens it, once', async () => {
     const up = slay(at9)
-    expect([up.level >= 10, up.panel, up.talentOffered]).toEqual([true, 'talent', 1])
+    expect([up.level >= 5 && up.level < 10, up.panel, up.talentOffered]).toEqual([true, 'talent', 1])
     const later = apply(up, { kind: 'panel', panel: 'talent' })
     expect(later.panel).toBe('none')
     // Later, it stays closed through what follows until the next talent is earned.
@@ -293,7 +293,7 @@ describe('the talent window opening on its own', () => {
   })
 
   test('not while a foe is alive or another window is open; once they are not, it opens', async () => {
-    const g = { ...at9, level: 10, xp: xpToLevel(10) }
+    const g = { ...at9, level: 5, xp: xpToLevel(5) }
     const fighting = apply({ ...g, foe: foeAhead(g, 2, { hp: 99, maxHp: 99, atk: 0 }) }, { kind: 'explore', steps: 0 })
     expect(fighting.panel).toBe('none')
     const inBag = apply({ ...g, panel: 'bag' }, { kind: 'explore', steps: 0 })
@@ -302,7 +302,7 @@ describe('the talent window opening on its own', () => {
   })
 
   test('the next talent earned opens it again; the last owed taken closes it', async () => {
-    const g = { ...at9, level: 20, talents: ['grudge'] as Talent[], talentOffered: 1 }
+    const g = { ...at9, level: 10, talents: ['grudge'] as Talent[], talentOffered: 1 }
     const opened = apply(g, { kind: 'explore', steps: 0 })
     expect([opened.panel, opened.talentOffered]).toEqual(['talent', 2])
     const taken = apply(opened, { kind: 'talent', talent: offer(opened)[0]! })
@@ -312,7 +312,7 @@ describe('the talent window opening on its own', () => {
 
 describe('the talents taken', () => {
   test('each is named in its family\'s ink, as its card\'s ribbon is', async () => {
-    const g = { ...newGame(3), level: 35, talents: ['testDriven', 'opener', 'haggler'] as Talent[] }
+    const g = { ...newGame(3), level: 17, talents: ['testDriven', 'opener', 'haggler'] as Talent[] }
     const box = talentOverlay(g, TALENT_UI)[0]!
     const inks = box.lines.slice(1).map(l => l[0]!.color)
     expect(inks).toEqual([FAMILIES.work.ink, FAMILIES.fight.ink, FAMILIES.road.ink])

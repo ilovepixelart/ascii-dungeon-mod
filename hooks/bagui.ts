@@ -9,7 +9,7 @@ import { BAG_H, BAG_W, POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGG
 import { heroTabAt, heroTabsHot } from './herotabs'
 import { wrap } from './talk'
 import type { Pos } from './map'
-import { beltCountsAt, beltSlotRect, clearOf, clickable, gridBox, itemOutline } from './pieces'
+import { CARD_FRAME, beltCountsAt, beltSlotRect, clearOf, clickable, gridBox, itemOutline } from './pieces'
 import { CLICK_SLOP, KEEP, WINDOW_TOP, WINDOW_W, boxShape, bracketed, clearance, isInside, pixel, place, remembered, uncovered } from './window'
 import type { Gesture, OverlayBox as Box, Rect } from './window'
 import { INK, SURFACE } from './ui/tokens'
@@ -133,7 +133,7 @@ const cardsOver = (g: Game, ui: BagUi): OverlayBox[] => {
     return box
   }
   if (worn !== undefined) put('worn', card(g, worn, 'Equipped', false), WORN_BORDER, wornRect)
-  const mine = put('item', card(g, item, worn === undefined ? 'Nothing worn here' : undefined, true), RARITY_COLOR[item.rarity], own)
+  const mine = put('item', card(g, item, worn === undefined ? 'Nothing worn here' : undefined, true), CARD_FRAME[item.rarity], own)
   if (ui.menu?.id === item.id) put('menu', menuLines(g, item, ui.menu.confirm), CURSOR, { x: mine.x, y: (mine.y + mine.h) * 2, w: mine.w, h: 2 })
   return boxes
 }

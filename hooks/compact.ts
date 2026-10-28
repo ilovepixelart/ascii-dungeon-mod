@@ -11,7 +11,7 @@ import { CELL } from './icons'
 import { card } from './bagui'
 import type { BagUi } from './bagui'
 import { BAG_UI_IDLE } from './bagui'
-import { CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline } from './pieces'
+import { CARD_FRAME, CURSOR, OFF_CLASS, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline } from './pieces'
 import { CLICK_SLOP, WINDOW_TOP, boxShape, cardWithMenu, closeBoxOf, drawBox, isInside, pixel, remembered, uncovered, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -77,7 +77,7 @@ export const compactOverlay = remembered((g: Game, ui: BagUi): OverlayBox[] => {
   const counts = beltCountsAt(g, BELT_X, WINDOW_TOP + BELT_Y)
   if (item === undefined || ui.drag !== null) return [...counts, list]
   const menu = ui.menu?.id === item.id ? boxShape('menu', menuLines(g, item, ui.menu.confirm), CURSOR) : undefined
-  const over = cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), menu, COMPACT_W)
+  const over = cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), CARD_FRAME[item.rarity]), menu, COMPACT_W)
   return [...clearOf(counts, over), list, ...over]
 })
 

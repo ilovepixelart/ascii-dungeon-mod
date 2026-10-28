@@ -8,11 +8,11 @@ import { SHOP_PRICES, priceOfWare } from './game'
 import { CONSUMABLES, hasRoom, heldOf, wareOf } from './consumables'
 import type { Ware } from './consumables'
 import { consumableIcon } from './icons'
-import { BAG_H, BAG_W, RARITY_COLOR, canWear, classLabel, priceOf } from './items'
+import { BAG_H, BAG_W, canWear, classLabel, priceOf } from './items'
 import { canvas } from './canvas'
 import { BAG_X, BAG_Y, BELT_X, BELT_Y, INV_H, beltHot } from './inventory'
 import { card } from './bagui'
-import { CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
+import { CARD_FRAME, CURSOR, OFF_CLASS, TAG_H, TAG_W, belt, beltCountsAt, beltSlotRect, cellBox, clearOf, gridBox, clickable, itemGrid, itemOutline, warePrice, wareTag } from './pieces'
 import { CLICK_SLOP, CLOSE_BOX, WINDOW_TOP, WINDOW_W, boxShape, cardWithMenu, drawBox, isInside, pixel, remembered, uncovered, windowPixels } from './window'
 import type { Gesture, OverlayBox, Rect, Weighted } from './window'
 import type { Pos } from './map'
@@ -94,11 +94,11 @@ export const shopOverlay = remembered((g: Game, ui: ShopUi): OverlayBox[] => {
 const cardsOver = (g: Game, ui: ShopUi): OverlayBox<'card' | 'menu'>[] => {
   if (ui.ware !== null) {
     const near = wareRect(WARES.indexOf(ui.ware))
-    return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), RARITY_COLOR.common), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)
+    return cardWithMenu(ROWS, shown(g), near, boxShape('card', wareCard(g, ui.ware), CARD_FRAME.common), ui.menu ? boxShape('menu', wareMenu(g, ui.ware), CURSOR) : undefined)
   }
   const item = chosenItem(g, ui)
   if (item === undefined) return []
-  return cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), ui.menu ? boxShape('menu', itemMenu(g, item), CURSOR) : undefined)
+  return cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), CARD_FRAME[item.rarity]), ui.menu ? boxShape('menu', itemMenu(g, item), CURSOR) : undefined)
 }
 
 const rectArgs = (r: Rect) => [r.x, r.y, r.w, r.h] as const

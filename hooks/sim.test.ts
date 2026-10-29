@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { apply, newGame } from './game'
+import { apply, gambleCost, newGame } from './game'
 import type { Consumable, Game } from '../types'
 import { KINDS } from './consumables'
-import { foeAhead, plainHero } from './fixtures'
-import { beltAid, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate } from './sim'
+import { foeAhead, fullTab, plainHero } from './fixtures'
+import { beltAid, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate, townMove } from './sim'
 import { MARKS, tierOf } from './deep'
 import { bfs, isFloor, roomAt, visibleFrom } from './map'
 import { TOWN_SPOTS, pathBeside } from './town'
@@ -88,6 +88,32 @@ test('the simulated player uses herbs and runes as well as potions', { timeoutMs
   const used = (key: 'potionsUsed' | 'herbsUsed' | 'scrollsUsed' | 'wardsUsed' | 'bombsUsed') => runs.reduce((n, s) => n + s[key], 0)
   // Bombs only once healing has run out and fury only against a deadly foe, which short runs may not meet; both rules are held above.
   expect([used('potionsUsed') > 0, used('herbsUsed') > 0, used('wardsUsed') > 0]).toEqual([true, true, true])
+})
+
+test('in town with a full bag and gold for packs, the simulated player still goes back down', async () => {
+  // Every cell of the bag holds a locked ring, so no pack fits and the guard takes none; no gear, so the smith has no
+  // work; a fortune already read, a quest under way and healing enough. What is left is the villager, who refuses a
+  // pack to a full bag every time.
+  const town = apply(newGame(4), { kind: 'portal' })
+  const bag = fullTab(500).map(i => ({ ...i, locked: true }))
+  const belt = town.belt.map((s, i) => (i === 0 ? { kind: 'health' as const, tiers: [5, 0, 0] as [number, number, number] } : s))
+  let g: Game = {
+    ...town,
+    bag,
+    belt,
+    gear: {},
+    gold: 3 * gambleCost(town) + 1,
+    panel: 'villager',
+    fortune: { kind: 'luck', depth: town.depth },
+    quest: { kind: 'slay', depth: 1, need: 5, have: 0 },
+  }
+  let seed = 7
+  const d = (n: number) => {
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    return (seed % n) + 1
+  }
+  for (let move = 0; move < 300 && g.where === 'town'; move += 1) g = apply(g, townMove(g, d)!)
+  expect(g.where).toBe('dungeon')
 })
 
 describe('moves the pane can play', () => {

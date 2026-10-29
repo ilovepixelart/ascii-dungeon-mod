@@ -4,7 +4,7 @@ import type { Attribute, Consumable, Game, HeroClass } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
 import { BIG_BOSSES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, priceOfWare, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
-import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, isUpgrade, temperCost, worth } from './items'
+import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, fit, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same, shapeCut } from './map'
 import type { Level, Pos, Room } from './map'
 import { violations } from './invariants'
@@ -202,10 +202,11 @@ const errands = (g: Game, d: Dice): Action | undefined => {
   return deals(g, d)
 }
 
-/** Three spare pieces to the guard for one better; with three packs' gold, a pack from the villager. */
+/** Three spare pieces to the guard for one better; with three packs' gold and room in the bag for the largest piece a
+ * pack can hold (2 by 3), a pack from the villager, who refuses one to a full bag. */
 const deals = (g: Game, d: Dice): Action | undefined => {
   if (tradeInOf(g).length === 3) return g.panel === 'guard' ? { kind: 'tradeIn' } : d(2) === 1 ? { kind: 'goto', ...TOWN_SPOTS.guard } : undefined
-  if (g.gold < 3 * gambleCost(g)) return undefined
+  if (g.gold < 3 * gambleCost(g) || fit(g.bag, 2, 3) === null) return undefined
   return g.panel === 'villager' ? { kind: 'gamble' } : d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.villager } : undefined
 }
 
@@ -220,7 +221,7 @@ const smithing = (g: Game, d: Dice): Action | undefined => {
 }
 
 /** In town: to the healer when hurt, its errands, the smith, a wander now and then, otherwise back through the portal. */
-const townMove = (g: Game, d: Dice): Action | undefined => {
+export const townMove = (g: Game, d: Dice): Action | undefined => {
   const chosen = mendInTown(g) ?? errands(g, d) ?? smithing(g, d)
   if (chosen !== undefined) return chosen
   if (d(3) === 1) return { kind: 'goto', x: d(TOWN_W) - 1, y: d(TOWN_H) - 1 }

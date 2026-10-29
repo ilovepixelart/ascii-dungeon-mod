@@ -71,10 +71,10 @@ describe('the settings window', () => {
 
   test('each order button says the order as it stands', async () => {
     const said = (orders: Game['orders']) => buttonsIn(settingsOverlay(hero({ orders }), ON, ORDERS)).map(b => b.text)
-    const base = { drink: 25, smoke: false, leave: 'common' } as const
+    const base = { drink: 25, smoke: false, leave: 'common', play: 'session' } as const
     expect(said(undefined)).toEqual(['DRINK AT QUARTER HP', 'SMOKE NEVER', 'TAKE ALL LOOT'])
     expect(said(base)).toEqual(said(undefined))
-    expect(said({ drink: 50, smoke: true, leave: 'rare' })).toEqual(['DRINK AT HALF HP', 'SMOKE WHEN LOW', 'LEAVE BELOW RARE'])
+    expect(said({ drink: 50, smoke: true, leave: 'rare', play: 'session' })).toEqual(['DRINK AT HALF HP', 'SMOKE WHEN LOW', 'LEAVE BELOW RARE'])
   })
 
   test('the volume steps a quarter up, from full back round to a quarter; effects and music flip and flip back', async () => {

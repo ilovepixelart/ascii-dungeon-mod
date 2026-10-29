@@ -53,7 +53,7 @@ describe('retiring', () => {
   })
 
   test("the hero's standing orders carry over to the next hero, retired or started anew", async () => {
-    const orders = { drink: 50 as const, smoke: true, leave: 'uncommon' as const }
+    const orders = { drink: 50 as const, smoke: true, leave: 'uncommon' as const, play: 'session' as const }
     const retired = apply({ ...veteran(piece('steelHelm')), orders }, { kind: 'retire', slot: 'helm' })
     expect(retired.orders).toEqual(orders)
     expect(apply(retired, { kind: 'restart' }).orders).toEqual(orders)

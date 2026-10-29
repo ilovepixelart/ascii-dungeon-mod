@@ -195,7 +195,7 @@ describe('each rule speaks up when broken', () => {
 
   test('orders outside their choices', async () => {
     const rule = 'orders among their choices'
-    const o = { drink: 25, smoke: false, leave: 'common' } as const
+    const o = { drink: 25, smoke: false, leave: 'common', play: 'session' } as const
     expect(broke({ ...g, orders: o })).not.toContain(rule)
     expect(broke({ ...g, orders: { ...o, drink: 30 as never } })).toContain(rule)
     expect(broke({ ...g, orders: { ...o, leave: 'epic' } })).toContain(rule)

@@ -115,7 +115,7 @@ describe('what each talent does', () => {
 
   test('Second Wind: once a depth a killing blow leaves the hero at 1 HP, said; the next on that depth kills', async () => {
     // Drinking off: at 1 HP the drink order would otherwise take a potion.
-    const g = knowing({ ...plainHero(3), hp: 3, depth: 3, deepest: 3, orders: { drink: 0, smoke: false, leave: 'common' } }, 'secondWind')
+    const g = knowing({ ...plainHero(3), hp: 3, depth: 3, deepest: 3, orders: { drink: 0, smoke: false, leave: 'common', play: 'session' } }, 'secondWind')
     const saved = failed({ ...g, foe: tough(g, { atk: 99 }) })
     expect([saved.deaths, saved.hp, saved.wind]).toEqual([0, 1, 3])
     expect(saved.log).toContain('Second wind: you stand, at 1 HP.')

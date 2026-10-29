@@ -5,7 +5,7 @@ import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { BAG_H, BAG_W, RARITY_COLOR, SLOTS, baseOf, canWear, classLabel, fitsAt } from './items'
 import { wrap } from './talk'
-import { beltHot, removable } from './inventory'
+import { beltHot } from './inventory'
 import { canvas } from './canvas'
 import { CELL } from './icons'
 import { card } from './bagui'
@@ -75,7 +75,11 @@ export const compactOverlay = remembered((g: Game, ui: BagUi): OverlayBox[] => {
   const list: OverlayBox = { role: 'worn', ...LIST, border: SURFACE.frame, lines: listLines(g) }
   const item = g.bag.find(i => i.id === g.cursor)
   const counts = beltCountsAt(g, BELT_X, WINDOW_TOP + BELT_Y)
-  if (item === undefined || ui.drag !== null) return [...counts, list]
+  if (ui.drag !== null) return [...counts, list]
+  if (item === undefined) {
+    const over = ui.worn === undefined ? [] : wornCard(g, ui.worn)
+    return [...clearOf(counts, over), list, ...over]
+  }
   const menu = ui.menu?.id === item.id ? boxShape('menu', menuLines(g, item, ui.menu.confirm), CURSOR) : undefined
   const over = cardWithMenu(ROWS, shown(g), itemRect(item), boxShape('card', card(g, item, undefined, true), CARD_FRAME[item.rarity]), menu, COMPACT_W)
   return [...clearOf(counts, over), list, ...over]
@@ -89,6 +93,12 @@ export const compactPixels = (g: Game, boxes: readonly OverlayBox[] = []): strin
   const c = windowPixels({ title: 'INVENTORY', gold: g.gold }, body.px, COMPACT_W)
   for (const b of boxes) if (b.role !== 'label') drawBox(c, b)
   return c.px
+}
+
+/** A worn piece's card alone, beside its row of the list: what a click on the row shows. */
+const wornCard = (g: Game, slot: Slot): OverlayBox[] => {
+  const piece = g.gear[slot]
+  return piece === undefined ? [] : cardWithMenu(ROWS, shown(g), wornRow(SLOTS.indexOf(slot)), boxShape('card', card(g, piece, undefined, false), SURFACE.frame), undefined, COMPACT_W)
 }
 
 /** What lies under a screen pixel (and the cell it is in, for the list): a bag item, a worn row, a belt slot, the close box. */
@@ -138,32 +148,33 @@ export const compactGesture = (g: Game, ui: BagUi, gesture: Gesture): Outcome =>
 }
 
 /**
- * A click on what lies under it: a bag item selected, or its menu opened (a second click, or a right-click); worn gear
- * taken off; a belt slot used; the close box; anywhere else lets the selection go.
+ * A click on what lies under it: a bag item selected, or its menu opened (a second click, or a right-click); worn gear's
+ * card shown, or a right-click takes it off; a belt slot used; the close box; anywhere else lets the selection go. A worn
+ * piece's card lasts until the next click.
  */
-const clickOn = (g: Game, ui: BagUi, h: ReturnType<typeof hit>, isRight: boolean): Outcome => {
+const clickOn = (g: Game, before: BagUi, h: ReturnType<typeof hit>, isRight: boolean): Outcome => {
+  const ui: BagUi = { menu: before.menu, drag: before.drag }
   if (h?.kind === 'bag') {
     const menu = { id: h.item.id, confirm: false }
     if (isRight) return { ui: { ...ui, menu }, actions: [{ kind: 'select', id: h.item.id }] }
     return h.item.id === g.cursor ? { ui: { ...ui, menu }, actions: [] } : { ui, actions: [{ kind: 'select', id: h.item.id }] }
   }
-  if (h?.kind === 'worn') return { ui, actions: [{ kind: 'unequip', slot: h.slot }] }
+  if (h?.kind === 'worn') return isRight ? { ui, actions: [{ kind: 'unequip', slot: h.slot }] } : { ui: { ...ui, worn: h.slot }, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
   if (h?.kind === 'belt') return { ui, actions: [{ kind: 'use', slot: h.slot }] }
   if (h?.kind === 'close') return { ui, actions: [{ kind: 'panel', panel: 'bag' }] }
   return { ui, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
 }
 
-/** A worn slot's two rows of the list, in window pixels: where a click takes its piece off. */
+/** A worn slot's two rows of the list, in window pixels: where a click shows its piece's card. */
 const wornRow = (i: number): Rect => ({ x: LIST.x + 1, y: (LIST.y + 1 + 2 * i) * 2, w: LIST.w - 2, h: 4 })
 
-/** What a click acts on, in window pixels: the bag's items, the worn rows whose piece can come off, the belt. */
+/** What a click acts on, in window pixels: the bag's items, the worn rows with a piece, the belt. */
 export const compactHot = (g: Game, ui: BagUi): Rect[] => {
   // With a menu open a click anywhere but on the menu only closes it.
   if (ui.menu !== null) return []
-  const off = removable(g)
   const hot = [
     ...g.bag.map(i => itemOutline(i, BAG_X, WINDOW_TOP + BAG_Y)),
-    ...SLOTS.flatMap((s, i) => (off.gear[s] === undefined ? [] : [wornRow(i)])),
+    ...SLOTS.flatMap((s, i) => (g.gear[s] === undefined ? [] : [wornRow(i)])),
     ...beltHot(g, BELT_X, WINDOW_TOP + BELT_Y),
   ]
   return uncovered(hot, clickable(compactOverlay(g, ui)).filter(b => b.role !== 'worn'))

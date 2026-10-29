@@ -30,7 +30,8 @@ Colors keep one meaning each: white is "this one, and where it goes"; red is "ca
 |---|---|
 | click a bag item | selects it |
 | click the selected item, or right-click any item | opens its menu: Equip, then Destroy |
-| click worn gear | takes it off into the bag |
+| click worn gear | shows its card, until the next click |
+| right-click worn gear | takes it off into the bag |
 | click a belt slot | uses it |
 | click the close box | closes the inventory |
 | click another of the hero's tabs | opens that window in the bag's place |

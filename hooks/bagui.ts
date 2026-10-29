@@ -3,7 +3,7 @@
 import type { Game, Item, Slot } from '../types'
 import type { Action, Run } from './game'
 import { CELL } from './icons'
-import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, beltHot, dropTarget, removable, wornOutlines } from './inventory'
+import { BAG_X, BAG_Y, BELT_STEP, BELT_X, BELT_Y, CLOSE_BOX, CURSOR, INV_H, INV_TOP, OFF_CLASS, UPGRADE, WORN_SLOTS, beltHot, dropTarget, wornOutlines } from './inventory'
 import type { Drag } from './inventory'
 import { BAG_H, BAG_W, POWERS, RARITY_COLOR, RARITY_NAME, SETS, SET_COLOR, TRIGGERS, canWear, classLabel, deltaLines, describe, isTriggerWornElsewhere, priceOf, setWorn } from './items'
 import { heroTabAt, heroTabsHot } from './herotabs'
@@ -18,7 +18,8 @@ import { countText } from './names'
 export type { Gesture } from './window'
 
 /** What the screen shows beyond the game: an open menu (and whether Destroy is armed), an item being dragged. */
-export type BagUi = { menu: { id: number; confirm: boolean } | null; drag: Drag | null }
+/** `worn`: the worn piece whose card a click showed, until the next click. */
+export type BagUi = { menu: { id: number; confirm: boolean } | null; drag: Drag | null; worn?: Slot }
 export const BAG_UI_IDLE: BagUi = { menu: null, drag: null }
 
 /** A framed text box over the panel, in cells from the panel's top-left. */
@@ -118,7 +119,8 @@ export const bagOverlay = remembered((g: Game, ui: BagUi): OverlayBox[] => {
  */
 const cardsOver = (g: Game, ui: BagUi): OverlayBox[] => {
   const item = g.bag.find(i => i.id === g.cursor)
-  if (item === undefined || ui.drag !== null) return []
+  if (ui.drag !== null) return []
+  if (item === undefined) return ui.worn === undefined ? [] : wornCard(g, ui.worn)
   const own: Rect = { x: BAG_X + item.x * CELL, y: INV_TOP + BAG_Y + item.y * CELL, w: item.w * CELL, h: item.h * CELL }
   const worn = g.gear[item.slot]
   const [wx, wy, ww, wh] = WORN_SLOTS[item.slot]
@@ -136,6 +138,16 @@ const cardsOver = (g: Game, ui: BagUi): OverlayBox[] => {
   const mine = put('item', card(g, item, worn === undefined ? 'Nothing worn here' : undefined, true), CARD_FRAME[item.rarity], own)
   if (ui.menu?.id === item.id) put('menu', menuLines(g, item, ui.menu.confirm), CURSOR, { x: mine.x, y: (mine.y + mine.h) * 2, w: mine.w, h: 2 })
   return boxes
+}
+
+/** A worn piece's card alone, near its slot: what a click on it shows. */
+const wornCard = (g: Game, slot: Slot): OverlayBox[] => {
+  const piece = g.gear[slot]
+  if (piece === undefined) return []
+  const [x, y, w, h] = WORN_SLOTS[slot]
+  const near: Rect = { x, y: INV_TOP + y, w, h }
+  const shape = boxShape('worn', card(g, piece, undefined, false), WORN_BORDER)
+  return [{ ...shape, ...place(coverage(g, [near]), ROWS, [], near, shape.w, shape.h) }]
 }
 
 /** What lies under a screen pixel: a bag item, worn gear, a belt slot, the close box, or nothing. */
@@ -186,7 +198,9 @@ const menuClick = (g: Game, ui: BagUi, at: Pos): { ui: BagUi; actions: Action[] 
   return ui.menu?.confirm === true ? { ui: BAG_UI_IDLE, actions: [{ kind: 'destroy' }] } : { ui: { ...ui, menu: { id: item.id, confirm: true } }, actions: [] }
 }
 
-const click = (g: Game, ui: BagUi, at: Pos, button: string): { ui: BagUi; actions: Action[] } => {
+const click = (g: Game, before: BagUi, at: Pos, button: string): { ui: BagUi; actions: Action[] } => {
+  // A worn piece's card lasts until the next click.
+  const ui: BagUi = { menu: before.menu, drag: before.drag }
   if (ui.menu !== null) return menuClick(g, ui, at)
   // A click on a popover lands on the box, not on what it covers.
   if (clickable(bagOverlay(g, ui)).some(b => isInside(at, b.x, b.y, b.w, b.h))) return { ui, actions: [] }
@@ -198,7 +212,7 @@ const click = (g: Game, ui: BagUi, at: Pos, button: string): { ui: BagUi; action
     if (button === 'right') return { ui: { ...ui, menu }, actions: [{ kind: 'select', id: h.item.id }] }
     return h.item.id === g.cursor ? { ui: { ...ui, menu }, actions: [] } : { ui, actions: [{ kind: 'select', id: h.item.id }] }
   }
-  if (h?.kind === 'worn') return { ui, actions: [{ kind: 'unequip', slot: h.slot }] }
+  if (h?.kind === 'worn') return button === 'right' ? { ui, actions: [{ kind: 'unequip', slot: h.slot }] } : { ui: { ...ui, worn: h.slot }, actions: g.cursor === null ? [] : [{ kind: 'deselect' }] }
   if (h?.kind === 'belt') return { ui, actions: [{ kind: 'use', slot: h.slot }] }
   if (h?.kind === 'close') return { ui, actions: [{ kind: 'panel', panel: 'bag' }] }
   // Empty space lets go of what is selected.
@@ -217,9 +231,9 @@ export const bagGesture = (g: Game, ui: BagUi, gesture: Gesture): { ui: BagUi; a
 }
 
 /**
- * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces that can come off, the belt,
+ * What a click acts on in the inventory, in window pixels: the bag's items, the worn pieces, the belt,
  * the hero's other tabs.
  * With a menu open, nothing: a click anywhere but on the menu only closes it.
  */
 export const inventoryHot = (g: Game, ui: BagUi): Rect[] =>
-  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(removable(g), INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y), ...heroTabsHot(g, 'bag')], clickable(bagOverlay(g, ui)))
+  ui.menu !== null ? [] : uncovered([...g.bag.map(i => itemOutline(i, BAG_X, INV_TOP + BAG_Y)), ...wornOutlines(g, INV_TOP), ...beltHot(g, BELT_X, INV_TOP + BELT_Y), ...heroTabsHot(g, 'bag')], clickable(bagOverlay(g, ui)))

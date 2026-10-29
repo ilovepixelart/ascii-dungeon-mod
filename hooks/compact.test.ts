@@ -56,12 +56,16 @@ describe('the compact inventory', () => {
     expect(rows.filter(r => r.length > list.w - 4)).toEqual([])
   })
 
-  test('a click on a worn row takes that piece off; on an empty slot\'s, nothing', async () => {
+  test("a click on a worn row shows that piece's card; a right click takes it off; on an empty slot's, nothing", async () => {
     const g = knight()
     const list = cards(g, BAG_UI_IDLE)[0]!
     SLOTS.forEach((slot, i) => {
-      const out = compactGesture(g, BAG_UI_IDLE, tap(list.x + 3.5, list.y + 1 + 2 * i + 1.5))
-      expect(out.actions).toEqual(g.gear[slot] === undefined ? (g.cursor === null ? [] : [{ kind: 'deselect' }]) : [{ kind: 'unequip', slot }])
+      const at = (button: 'left' | 'right') => compactGesture(g, BAG_UI_IDLE, tap(list.x + 3.5, list.y + 1 + 2 * i + 1.5, button))
+      const none = g.cursor === null ? [] : [{ kind: 'deselect' }]
+      expect(at('left').actions).toEqual(none)
+      expect(at('right').actions).toEqual(g.gear[slot] === undefined ? none : [{ kind: 'unequip', slot }])
+      const card = cards(g, at('left').ui).filter(b => b.role === 'card').map(b => b.lines[0]!.map(r => r.text).join('').trim())
+      expect(card).toEqual(g.gear[slot] === undefined ? [] : [g.gear[slot]!.name])
     })
   })
 

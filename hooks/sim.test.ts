@@ -95,7 +95,7 @@ test('in town with a full bag and gold for packs, the simulated player still goe
   // work; a fortune already read, a quest under way and healing enough. What is left is the villager, who refuses a
   // pack to a full bag every time.
   const town = apply(newGame(4), { kind: 'portal' })
-  const bag = fullTab(500).map(i => ({ ...i, locked: true }))
+  const bag = fullTab(500).map(i => ({ ...i, locked: true as const }))
   const belt = town.belt.map((s, i) => (i === 0 ? { kind: 'health' as const, tiers: [5, 0, 0] as [number, number, number] } : s))
   let g: Game = {
     ...town,
@@ -211,5 +211,43 @@ describe('the sight check catches what sight must not show', () => {
     const inRoom = { ...before, x: 14, y: 6, seen: reveal(FOG, visibleFrom(level, { x: 14, y: 6 })) }
     expect(roomAt(level, { x: 14, y: 6 })?.x).toBe(10)
     expect(sightBreaks(inRoom, { ...inRoom, seen: reveal(inRoom.seen, [{ x: 48, y: 3 }]) })).toEqual([{ x: 48, y: 3 }])
+  })
+})
+
+describe('the simulator played another way', () => {
+  test('with a build, every point the hero trains goes to that attribute', { timeoutMs: 20000 }, async () => {
+    const start = newGame(3, 'knight').stats
+    const { final } = simulate(3, 1500, 'knight', { build: 'might' })
+    expect(final.level).toBeGreaterThan(3)
+    expect({ focus: final.stats.focus, vigor: final.stats.vigor, insight: final.stats.insight }).toEqual({ focus: start.focus, vigor: start.vigor, insight: start.insight })
+    expect(final.stats.might).toBeGreaterThan(start.might)
+  })
+
+  test('by hand, the game is set to hand play and no tool call or answer comes, yet the hero goes down', { timeoutMs: 20000 }, async () => {
+    const { records, final } = simulate(5, 1500, 'rogue', { byHand: true })
+    const session = records.filter(r => ['explore', 'summon', 'ally', 'outcome', 'descend', 'quest'].includes(r.action.kind))
+    expect(session).toEqual([])
+    expect(final.orders?.play).toBe('hand')
+    expect(final.deepest).toBeGreaterThan(1)
+  })
+
+  test('given talents, the hero has them from the first step', async () => {
+    const { final } = simulate(2, 5, 'mage', { talents: ['secondWind', 'opener'] })
+    expect(final.talents).toEqual(['secondWind', 'opener'])
+  })
+
+  test('with calls per answer set, each answer has that many tool calls', { timeoutMs: 20000 }, async () => {
+    const { records } = simulate(4, 600, 'knight', { calls: { least: 2, most: 2 } })
+    const perAnswer: number[] = []
+    let calls = 0
+    for (const r of records) {
+      if (r.action.kind === 'outcome') calls += 1
+      if (r.action.kind === 'descend') {
+        perAnswer.push(calls)
+        calls = 0
+      }
+    }
+    expect(perAnswer.length).toBeGreaterThan(5)
+    expect(new Set(perAnswer)).toEqual(new Set([2]))
   })
 })

@@ -102,6 +102,7 @@ Options in the plugin's config: `sound` (effects) and `music` (the town's tune),
 | `claude plugin validate .` | what the engine would refuse |
 | `bun tools/simulate.ts <out> --games 100 --steps 1000` | plays games through the rules, every invariant checked each step, and reports balance |
 | `bun tools/feel.ts 100 1000` | danger, pace and variety per class: deaths and close calls per 100 tool calls, quiet stretches, foe kinds |
+| `bun tools/curve.ts 6 15000` | the power curve, depth by depth: the hero's level, attack, defense, crit and max HP, hits a kill, the blow taken as a share of max HP and how many such blows the hero stands |
 | `uv run --with pillow python tools/shots/shoot.py <out> [name...]` | every window as a real Claude Code session draws it: a copy of the mod in a private tmux, each scene of `tools/shots/scenes.ts` opened, captured cell for cell and painted as Ghostty shows it, into `<out>/gallery.html` |
 | `bun tools/readme.ts` | the README's pictures, into `docs/img/` |
 | `python3 tools/sounds.py` | builds the sound clips into `sounds/` and `hooks/clips.ts` |

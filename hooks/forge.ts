@@ -7,7 +7,7 @@ import { keptChoice, reforgeCost } from './game'
 import { POWERS, RARITY_COLOR, SETS, SET_COLOR, SLOTS, TEMPER_MAX, TRIGGERS, describe, setWorn, temperCost, temperStat } from './items'
 import { WORN_END, WORN_SLOTS, wornOutlines, wornSlots } from './inventory'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, OFF_CLASS, buttonFace, buttonW, runX, wideButtonBox } from './pieces'
+import { BUTTON_H, CARD_FRAME, CURSOR, OFF_CLASS, buttonFace, buttonW, runX, wideButtonBox } from './pieces'
 import type { ButtonState } from './pieces'
 import { GRID, canvas, fill, frame } from './canvas'
 import { WINDOW_TOP, CLICK_SLOP, CLOSE_BOX, WINDOW_W, drawBox, isInside, pixel, windowPixels } from './window'
@@ -93,7 +93,7 @@ const layout = (g: Game, ui: ForgeUi) => {
   const slot = chosenSlot(g, ui)
   const item = slot === undefined ? undefined : g.gear[slot]
   const lines = item === undefined ? [[{ text: 'You wear nothing for the smith to work on.', dim: true }]] : workCard(g, item)
-  const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : RARITY_COLOR[item.rarity], lines }
+  const box: OverlayBox<'card'> = { role: 'card', x: WORK_X, y: (WINDOW_TOP + 2) / 2, w: WORK_W, h: lines.length + 2, border: item === undefined ? SURFACE.frame : CARD_FRAME[item.rarity], lines }
   // The jobs stand one under another, each as wide as the widest of them, the stack centred under the card.
   const w = Math.max(...['TEMPER', 'REFORGE', ...(canKeepOld(g, slot) ? ['KEEP OLD'] : [])].map(l => buttonW(l)))
   const x = runX(w, box.x, box.x + box.w)

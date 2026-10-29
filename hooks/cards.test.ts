@@ -5,6 +5,12 @@ import { apply, newGame } from './game'
 import { BG } from './canvas'
 import { CHEST_UI_IDLE, chestOverlay, chestPixels } from './chest'
 import { SHOP_UI_IDLE, shopOverlay, shopPixels } from './shop'
+import { BAG_UI_IDLE, bagOverlay } from './bagui'
+import { compactOverlay } from './compact'
+import { FORGE_UI_IDLE, forgeOverlay } from './forge'
+import { RARITY_COLOR, RARITY_RANK, plainItem } from './items'
+import { INK, SURFACE } from './ui/tokens'
+import type { Game, Rarity } from '../types'
 import type { OverlayBox } from './window'
 
 /** The boxes about an item: a card, what is worn, its menu. */
@@ -43,6 +49,33 @@ describe('a card about an item', () => {
       }
     }
     expect(seen.length).toBeGreaterThan(80)
+  })
+
+  // Common's tier white sits a step from the focus white that marks what is chosen and armed, so a Common card framed
+  // in it looked selected. A Common card wears the plain frame instead; every other tier keeps its colour.
+  test('is framed in its tier\'s colour, a Common one in the plain frame, never in the focus white, in every window', async () => {
+    const town = { ...apply(newGame(4), { kind: 'portal' }), gold: 300, where: 'town' as const }
+    const want = (r: Rarity) => (r === 'common' ? SURFACE.frame : RARITY_COLOR[r])
+    const frames = (rarity: Rarity) => {
+      const g: Game = structuredClone(town)
+      const item = { ...plainItem(g, 'ring', rarity), x: 0, y: 0 }
+      const worn = { ...plainItem(g, 'ring', rarity), x: 0, y: 0 }
+      const bag = { ...g, bag: [item], gear: { ring: worn }, cursor: item.id }
+      const stash = { ...bag, stashed: [[]] }
+      const of = (boxes: readonly OverlayBox[], role: string) => boxes.find(b => b.role === role)?.border
+      return {
+        bag: of(bagOverlay(bag, BAG_UI_IDLE), 'item'),
+        compact: of(compactOverlay(bag, BAG_UI_IDLE), 'card'),
+        chest: of(chestOverlay(stash, CHEST_UI_IDLE), 'card'),
+        shop: of(shopOverlay(bag, SHOP_UI_IDLE), 'card'),
+        forge: of(forgeOverlay(bag, { ...FORGE_UI_IDLE, slot: 'ring' }), 'card'),
+      }
+    }
+    for (const r of RARITY_RANK) {
+      const w = want(r)
+      expect([r, frames(r)]).toEqual([r, { bag: w, compact: w, chest: w, shop: w, forge: w }])
+    }
+    expect(want('common')).not.toBe(INK.focus)
   })
 })
 

@@ -17,6 +17,9 @@ export const GHOST_INK = INK.ghost
 export const OFF_CLASS = INK.wrong
 export const UPGRADE = INK.good
 export const CURSOR = INK.focus
+/** An item card's frame: its tier's colour, but a Common card's is the plain frame, since Common's white would read as
+ * the focus white of what is chosen. */
+export const CARD_FRAME: Record<Rarity, string> = { ...RARITY_COLOR, common: SURFACE.frame }
 /** A locked item's mark in its bottom-right corner: a small padlock. */
 export const LOCK_INK = INK.text
 const LOCK_MARK: readonly string[] = ['.w.', 'w.w', 'www', 'www']

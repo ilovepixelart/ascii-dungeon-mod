@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed
+
+- A Common item's card, in the bag, the stash, the merchant's and the smith's, is framed in the plain frame rather
+  than Common's white, which sat a step from the focus white and made the card look chosen.
+
 ## [0.7.0] - 2026-10-27
 
 Saves from 0.6.0 load as they are: the save stays at version 14, and the new fields (the play order, the gold banked,

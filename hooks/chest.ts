@@ -9,11 +9,11 @@ import type { Game, Item } from '../types'
 import type { Action, Run } from './game'
 import { LEGEND_PLACES, SET_PLACES, specialTabOf, tabItems, tabName, tabPrice, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
-import { BAG_H, BAG_W, RARITY_COLOR, baseOf, fit, fitsAt } from './items'
+import { BAG_H, BAG_W, baseOf, fit, fitsAt } from './items'
 import { GRID, SLOT_BG, art, canvas, fill, frame } from './canvas'
 import { CELL, ICONS } from './icons'
 import { card } from './bagui'
-import { BUTTON_H, CURSOR, GHOST_INK, OFF_CLASS, button, buttonBox, buttonW, cellBox, centered, drawItem, gridBox, itemArt, itemGrid, runX, itemOutline, onCell } from './pieces'
+import { BUTTON_H, CARD_FRAME, CURSOR, GHOST_INK, OFF_CLASS, button, buttonBox, buttonW, cellBox, centered, drawItem, gridBox, itemArt, itemGrid, runX, itemOutline, onCell } from './pieces'
 import { glow } from './ui/kit'
 import type { Pos } from './map'
 import type { ButtonState } from './pieces'
@@ -160,12 +160,12 @@ export const chestOverlay = remembered((g: Game, ui: ChestUi): OverlayBox[] => {
   const stored = chosenStored(g, ui)
   if (stored !== undefined) {
     const menu = ui.menu ? boxShape('menu', [entry('t', 'Take', whyNotTake(g, stored))], CURSOR) : undefined
-    return [...panel, ...cardWithMenu(ROWS, shown(g, ui), placeRect(g, ui, stored), boxShape('card', card(g, stored, 'In your stash', true), RARITY_COLOR[stored.rarity]), menu, WINDOW_W, others)]
+    return [...panel, ...cardWithMenu(ROWS, shown(g, ui), placeRect(g, ui, stored), boxShape('card', card(g, stored, 'In your stash', true), CARD_FRAME[stored.rarity]), menu, WINDOW_W, others)]
   }
   const item = chosenBag(g, ui)
   if (item === undefined) return panel
   const menu = ui.menu ? boxShape('menu', [entry('s', 'Store', whyNotStore(g, item, ui.tab))], CURSOR) : undefined
-  return [...panel, ...cardWithMenu(ROWS, shown(g, ui), bagRect(item), boxShape('card', card(g, item, undefined, true), RARITY_COLOR[item.rarity]), menu, WINDOW_W, others)]
+  return [...panel, ...cardWithMenu(ROWS, shown(g, ui), bagRect(item), boxShape('card', card(g, item, undefined, true), CARD_FRAME[item.rarity]), menu, WINDOW_W, others)]
 })
 
 /** A board: each slot framed as the bag's cells are, its piece in its tier's box (the chosen one bracketed), or its

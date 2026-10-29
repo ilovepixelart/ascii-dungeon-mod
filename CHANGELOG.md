@@ -11,8 +11,13 @@ release may change behaviour.
 - A click on worn gear in the inventory shows its card until the next click; a right click takes it off, where a
   click did. Dragging it into the bag still takes it off.
 - Armor lets a share of each blow through rather than taking its defense off: `K / (K + defense)`, `K` being 0.9 of
-  the depth plus 10, never under a quarter. Foe attack no longer grows faster than depth past depth 10; foe HP still
-  does. Past depth 100 a blow took a fifth to two fifths of max HP; it now takes about a seventh at every depth.
+  the depth plus 10, never under a quarter. Foe attack no longer grows faster than depth past depth 10.
+  Past depth 100 a blow took a fifth to two fifths of max HP; it now takes about a seventh at every depth.
+- Might lifts every blow by a share of its points, and Focus gives crit chance by the same share: 0.6 of the points
+  over the points plus 20, so 20 points give 30%. A critical is twice a blow (three times with Segfault) and Focus's
+  share more, at most 2.6 times; Focus raised crit damage 5% a point without bound. Might no longer adds attack
+  points. Foe HP grows as depth does, at 0.8 of its plain sum, where it grew half a percent more a depth past depth
+  10. Every point on Focus slew deep foes in 1.6 blows and every point on Might in up to 4; both now take 1.7 to 3.5.
 - A Common item's card, in the bag, the stash, the merchant's and the smith's, is framed in the plain frame rather
   than Common's white, which sat a step from the focus white and made the card look chosen.
 

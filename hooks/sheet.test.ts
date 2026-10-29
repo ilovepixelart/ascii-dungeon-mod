@@ -116,8 +116,8 @@ describe('the character sheet', () => {
   test('says who the hero is, how they stand, what Vigor and Insight give, and what they have to spend', async () => {
     const g = hero({ level: 5, points: 3 })
     const head = sheetOverlay(g)[0]!.lines.map(l => l.map(r => r.text).join(''))
-    // A new knight: its 3 Might and the Short Sword's 2; a 3% crit.
-    expect(head).toEqual([`Level 5 Knight   HP ${g.hp}/${g.maxHp}`, `Attack +5  Defense ${head[1]!.match(/Defense (\d+)/)![1]}  Crit 3%`, 'Vigor +3 max HP a point, Insight +0% XP', '3 points to spend'])
+    // A new knight: the Short Sword's 2 (Might lifts the blow, not attack); its 1 Focus a 3% crit, 60 / 21 rounded.
+    expect(head).toEqual([`Level 5 Knight   HP ${g.hp}/${g.maxHp}`, `Attack +2  Defense ${head[1]!.match(/Defense (\d+)/)![1]}  Crit 3%`, 'Vigor +3 max HP a point, Insight +0% XP', '3 points to spend'])
     expect(sheetOverlay(hero({ points: 1 }))[0]!.lines[3]![0]!.text).toBe('1 point to spend')
   })
 

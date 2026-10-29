@@ -47,8 +47,8 @@ export const SHEET_H = RETIRE_RECT.y + RETIRE_RECT.h + 2
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-/** Who the hero is, how they stand, what Vigor and Insight give (Might's and Focus's are the attack and the crit), what
- * they have to spend. */
+/** Who the hero is, how they stand, what Vigor and Insight give (Focus's is the crit; Might's share of every blow the
+ * text sheet says), what they have to spend. */
 const headLines = (g: Game): Run[][] => [
   [{ text: `Level ${g.level} ${CLASS_NAME[g.cls]}`, bold: true }, { text: `   HP ${Math.max(0, g.hp)}/${g.maxHp}`, dim: true }],
   [{ text: `Attack +${attackBonus(g)}  Defense ${defense(g)}  Crit ${critChance(g)}%`, dim: true }],

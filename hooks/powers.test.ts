@@ -22,7 +22,8 @@ const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 describe('Segfault, the Null Blade', () => {
   test('a critical hit deals three times the blow where it would deal two', async () => {
     for (const seed of [1, 2, 3]) {
-      const g = plainHero(seed)
+      // No Might nor Focus, whose shares would round the two blows apart.
+      const g = { ...plainHero(seed), stats: { ...plainHero(seed).stats, might: 0, focus: 0 } }
       const blade = { ...legendary('sword', 'tripleCrit'), atk: 1 }
       const plain = critFor(ok({ ...g, foe: tough(g) }, 'tests'))
       const triple = critFor(ok(wearing({ ...g, foe: tough(g) }, blade), 'tests'))

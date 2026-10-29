@@ -25,15 +25,20 @@ const begin = async ($: Engine, on: On, saved: Game) => {
 }
 
 /** A player by hand alone: a potion when low, a better piece put on, points trained, a foe fought, the stairs taken,
- * else a step toward them. */
-const better = (g: Game) => g.bag.find(i => isUpgrade(g, i))
+ * else a step toward them. A piece the game would not put on (the bag too full for what is worn) is not tried again. */
 const playByHand = (g0: Game, actions: number) => {
   let g = g0
+  const refused = new Set<number>()
+  const better = (h: Game) => h.bag.find(i => isUpgrade(h, i) && !refused.has(i.id))
   for (let i = 0; i < actions; i += 1) {
     const stairs = levelOf(g).stairs
     if (g.panel !== 'none') g = apply(g, { kind: 'panel', panel: g.panel })
     else if (g.hp < g.maxHp * 0.4 && healingSlot(g) >= 0) g = apply(g, { kind: 'use', slot: healingSlot(g) })
-    else if (better(g) !== undefined) g = apply(apply(g, { kind: 'select', id: better(g)!.id }), { kind: 'equip' })
+    else if (better(g) !== undefined) {
+      const piece = better(g)!
+      g = apply(apply(g, { kind: 'select', id: piece.id }), { kind: 'equip' })
+      if (g.bag.some(b => b.id === piece.id)) refused.add(piece.id)
+    }
     else if (g.points > 0) g = apply(g, { kind: 'train', stat: 'vigor' })
     else if (g.foe !== null) g = apply(g, { kind: 'attack' })
     else if (g.x === stairs.x && g.y === stairs.y) g = apply(g, { kind: 'stairs' })

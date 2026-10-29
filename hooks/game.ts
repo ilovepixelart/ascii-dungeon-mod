@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, armorShare, foeAtk, foeHp, foeXp, heroDamage, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -110,10 +110,14 @@ export const BESTIARY = [
   { glyph: 'D', name: 'dragon' },
 ]
 
-/** Bonus melee damage: a point a point of Might, plus every worn item's attack. */
-export const attackBonus = (g: Game) => g.stats.might + gearBonus(g, 'atk')
+/** Bonus melee damage: every worn item's attack. */
+export const attackBonus = (g: Game) => gearBonus(g, 'atk')
+/** A critical blow's times: twice (Segfault's three times) and Focus's share. */
+export const critTimes = (g: Game) => (wornPower(g, 'tripleCrit') === undefined ? CRIT_TIMES : 3) + statShare(g.stats.focus)
+/** What Might lifts every blow by. */
+export const mightTimes = (g: Game) => 1 + statShare(g.stats.might)
 export const defense = (g: Game) => gearBonus(g, 'def')
-export const critChance = (g: Game) => Math.min(60, g.stats.focus * 3 + gearBonus(g, 'crit') + (g.fortune?.kind === 'luck' ? LUCK_CRIT : 0))
+export const critChance = (g: Game) => Math.min(60, Math.round(100 * statShare(g.stats.focus)) + gearBonus(g, 'crit') + (g.fortune?.kind === 'luck' ? LUCK_CRIT : 0))
 export const xpGain = (g: Game, xp: number) => {
   const gained = Math.floor(xp * (1 + g.stats.insight / 20 + gearBonus(g, 'xp') / 100))
   return g.fortune?.kind === 'insight' ? Math.floor(gained * FORTUNE_MORE) : gained
@@ -827,8 +831,7 @@ const swing = (g: Game, foe: Foe, isSure: boolean) => {
   if (isCrit && !isChained && wornPower(g, 'chainCrit') !== undefined) g.chain = true
   const isFury = g.effects.fury > 0
   if (isFury) g.effects = { ...g.effects, fury: g.effects.fury - 1 }
-  const critTimes = (wornPower(g, 'tripleCrit') === undefined ? 2 : 3) + g.stats.focus / 20
-  const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * (isCrit ? critTimes : 1) * (isFury ? 2 : 1))
+  const blow = heroBlowOn(g, foe, heroDamage(g.level, roll(g, 4), attackBonus(g)) * mightTimes(g) * (isCrit ? critTimes(g) : 1) * (isFury ? 2 : 1))
   return { blow, isCrit, opened: isAmbush ? openingPlayed(g, foe) : {} }
 }
 

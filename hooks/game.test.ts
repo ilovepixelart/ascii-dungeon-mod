@@ -1246,8 +1246,9 @@ describe('the boss of every fifth depth', () => {
     const g = apply(atDepth(5), { kind: 'descend' })
     expect(g.depth).toBe(5)
     // Its attack: (5 + 3 + 4 + 1) times 1.2 is 15.6, rounded to 16; times BOSS_ATK 1.45 is 23.2, rounded up to 24.
-    // Its HP: 6, 6 a depth, 2 a tier (the wraith is tier 6) and the d4 at 4, times BOSS_HP 2.5: 52 times 2.5 is 130.
-    expect(g.foe).toMatchObject({ glyph: 'W', name: 'wraith overlord', hp: 130, maxHp: 130, atk: 24, xp: 108, boss: true })
+    // Its HP: 6, 6 a depth, 2 a tier (the wraith is tier 6) and the d4 at 4, 52, times FOE_HP_SCALE 0.8 is 41.6, so
+    // 42, times BOSS_HP 2.5: 105.
+    expect(g.foe).toMatchObject({ glyph: 'W', name: 'wraith overlord', hp: 105, maxHp: 105, atk: 24, xp: 108, boss: true })
     expect(g.log.at(-1)).toBe('The wraith overlord (W) rises to bar the way down!')
     expect(apply(g, { kind: 'descend' }).log.at(-1)).toBe('The wraith overlord guards the stairs.')
   })
@@ -1393,6 +1394,17 @@ describe('class abilities', () => {
     expect(twice.log.find(l => l.includes(`the ${g.foe!.name} for`))).toMatch(/^You hit /)
     const knight = { ...fight('knight'), gear: {}, stats: { ...fight('knight').stats, focus: 0 } }
     expect(apply(knight, { kind: 'attack' }).log.find(l => l.includes(`the ${knight.foe!.name} for`))).toMatch(/^You hit /)
+  })
+
+  test("a critical is twice a blow and Focus's share more, 0.3 at 20 points; Might lifts every blow by its share", async () => {
+    const rogue = (stats: Partial<Game['stats']>) => ({ ...fight('rogue'), gear: {}, stats: { ...fight('rogue').stats, might: 0, focus: 0, ...stats } })
+    const dealt = (g: Game) => Number(apply(g, { kind: 'attack' }).log.find(l => l.includes(`the ${g.foe!.name} for`))?.match(/for (\d+)\.$/)?.[1])
+    // The ambush is a sure critical: twice 1 + a d4 with no gear, so even; at 20 Focus 2.3 times, at 180 Focus 2.54.
+    const plain = dealt(rogue({}))
+    expect(plain % 2).toBe(0)
+    expect(dealt(rogue({ focus: 20 }))).toBe(Math.round((plain / 2) * 2.3))
+    expect(dealt(rogue({ focus: 180 }))).toBe(Math.round((plain / 2) * 2.54))
+    expect(dealt(rogue({ might: 20 }))).toBe(Math.round(plain * 1.3))
   })
 
   test('the mage draws a fifth of max HP from every kill, never past max', async () => {

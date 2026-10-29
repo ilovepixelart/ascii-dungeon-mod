@@ -76,8 +76,8 @@ describe('equipment', () => {
     expect(after.gear.weapon?.name).toBe('Sword')
     expect(after.bag.map(i => i.name)).toEqual(['Short Sword'])
     expect(after.cursor).toBe(900)
-    // The Sword's 5 and a point of the plain hero's 1 Might.
-    expect(attackBonus(after)).toBe(6)
+    // The Sword's 5; Might lifts the blow, not attack.
+    expect(attackBonus(after)).toBe(5)
   })
 
   test('an HP item raises max HP while worn and lowers it again when taken off', async () => {
@@ -145,11 +145,14 @@ describe('character stats', () => {
     expect(after.log.at(-1)).toBe('No stat points to spend. Level up first.')
   })
 
-  test('might adds its value to attack, focus 3% crit each up to 60%', async () => {
+  test("attack is the gear's alone; focus's crit chance is its share, rounded, gear's crit beside it, up to 60%", async () => {
     const g = { ...plainHero(), stats: { might: 5, focus: 4, vigor: 1, insight: 0 } }
-    expect(attackBonus(g)).toBe(5 + 1)
-    expect(critChance(g)).toBe(12)
-    expect(critChance({ ...g, stats: { ...g.stats, focus: 50 } })).toBe(60)
+    expect(attackBonus(g)).toBe(1)
+    // 60 x 4 / 24 is 10; 60 x 50 / 70 is 42.9; with 30 crit worn, 73, held at 60.
+    expect(critChance(g)).toBe(10)
+    expect(critChance({ ...g, stats: { ...g.stats, focus: 50 } })).toBe(43)
+    const ring = { ...plainHero().gear.weapon!, slot: 'ring' as const, atk: 0, crit: 30, id: 902 }
+    expect(critChance({ ...g, stats: { ...g.stats, focus: 50 }, gear: { ...g.gear, ring } })).toBe(60)
   })
 
   test('insight adds 5% XP per point to kills, rounded down', async () => {

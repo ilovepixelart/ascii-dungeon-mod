@@ -3,15 +3,16 @@
 // max HP, and living) about every 100, and a boss won about two times in three, by the simulated player, who spends
 // its points at random.
 
-/** Past DEEP_FROM, foes grow DEEP_GROWTH more HP a depth: the hero's damage outgrows a plain depth's worth. Attack has
- * no such growth: the hero's defense and max HP grow as depth does, and an attack growing faster outran them, from
- * depth 150 an ordinary blow taking a fifth of max HP (`tools/curve.ts`). */
-export const DEEP_FROM = 10
-export const DEEP_GROWTH = 0.005
-export const deepGrowth = (depth: number) => 1 + Math.max(0, depth - DEEP_FROM) * DEEP_GROWTH
+/**
+ * How much of the plain sum a foe's HP is, which grows as depth does and no faster: with criticals at twice a blow and
+ * Might a share of it, the hero's damage grows as the gear does, about as depth does. At the whole sum a kill took 4 to
+ * 5 blows from depth 5 on; with half a percent more a depth past depth 10, as when Focus raised crit damage without
+ * bound, a kill at depth 150 took 4.2 blows where one at depth 25 took 2.5 (`tools/curve.ts`).
+ */
+export const FOE_HP_SCALE = 0.8
 
 /** A monster's hit points: its depth and its tier in the bestiary (0 rat .. 7 dragon), plus a d4. */
-export const foeHp = (depth: number, tier: number, d4: number) => Math.round((6 + depth * 6 + tier * 2 + d4) * deepGrowth(depth))
+export const foeHp = (depth: number, tier: number, d4: number) => Math.round((6 + depth * 6 + tier * 2 + d4) * FOE_HP_SCALE)
 
 /** How much harder than the plain sum foes hit: at 1 the hero died about once in 550 tool calls. */
 export const FOE_ATK_SCALE = 1.2
@@ -50,7 +51,22 @@ export const HP_PER_LEVEL = 5
  */
 export const HEALING_DROP_SHARE = 0.25
 
-/** The hero's base damage before crits and fury: half the level, a d4, and the attack bonus from Might and gear. */
+/**
+ * What Might and Focus give, from their points: STAT_MAX of them over them plus STAT_HALF, so the first points give
+ * about 3 in 100 each and 20 points half the most. Might's share lifts every blow; Focus's is crit chance, and adds to
+ * a critical's times. Focus raised crit damage 5 in 100 a point with no bound: a hero spending on it alone hit deep
+ * foes for about 8 times an even blow, and slew them in 1.6 blows where others took 2.5. With criticals at a plain
+ * twice a blow, a knight or rogue spending on it alone died two to three times as often as one on Might: the rogue's
+ * ambush is a sure critical whatever its chance (`tools/curve.ts`).
+ */
+export const STAT_MAX = 0.6
+export const STAT_HALF = 20
+export const statShare = (points: number) => (STAT_MAX * points) / (points + STAT_HALF)
+
+/** A critical blow's times, Triple Crit's aside, before Focus's share. */
+export const CRIT_TIMES = 2
+
+/** The hero's base damage before Might, crits and fury: half the level, a d4, and the gear's attack. */
 export const heroDamage = (level: number, d4: number, attackBonus: number) => 1 + Math.floor(level / 2) + d4 + attackBonus
 
 /** By hand, the percent chance a tile walked meets a foe, and the most a walk can: about a foe every few tiles, as the

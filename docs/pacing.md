@@ -56,27 +56,22 @@ Only real outcomes pay: an amend, a cherry-pick or a comment on a pull request d
 
 ## Deeper
 
-Past depth 10 foes grow `DEEP_GROWTH` (half a percent) more HP a depth (`deepGrowth` in `hooks/balance.ts`): with a plain depth's worth alone the hero's levels and gear outgrew them, and depths 11 to 100 slew the hero 0 to 0.29 times in 100 tool calls. The table below is from when attack grew so too; it no longer does (armor, below). Over 30 games of 6,000 steps (10 a class), deaths per 100 tool calls by band of ten depths:
+Foes grow as depth does and no faster, HP (`foeHp`, `FOE_HP_SCALE` of the plain sum) and attack (`foeAtk`) alike, and so does the hero: gear's attack and defense, and max HP. Two things keep that level however deep.
 
-| Depths | Plain | Growing |
-|---|---|---|
-| 1 to 10 | 0.50 | 0.50 |
-| 11 to 30 | 0 to 0.07 | 0 to 0.10 |
-| 31 to 50 | 0.05 to 0.18 | 0.49 to 0.93 |
-| 51 to 90 | 0.05 to 0.29 | 0.27 to 0.96 |
+- Armor lets a share of a blow through, `K / (K + defense)` with `K` 0.9 of the depth plus 10, never under a quarter (`armorShare`). Armor that took its defense off a blow drifted from the foes' attack: past depth 100 a blow took a fifth to two fifths of max HP.
+- Might and Focus give a share of their points, 0.6 of them over them plus 20 (`statShare`): Might lifts every blow by it; Focus's is crit chance (with gear's, at most 60%) and adds to a critical's times, twice a blow (`critTimes`). Focus raising crit damage 5% a point without bound made a hero spending on it alone slay deep foes in 1.6 blows, and foe HP had to grow faster than depth to keep up, leaving every other hero behind. With a critical at a plain twice a blow, a knight or rogue spending on Focus alone died two to three times as often as one on Might.
 
-At 2% a depth, depths 51 to 70 slew the hero nearly 4 times in 100 calls and almost none came past 70.
+`tools/curve.ts`, 18 games of 15,000 steps (6 a class), a hero spending its points at random, and every point on Might or on Focus:
 
-Armor lets a share of a blow through, `K / (K + defense)` with `K` 0.9 of the depth plus 10, never under a quarter (`armorShare`), and foe attack grows as depth does. The hero's defense and max HP grow about as depth does, so the share a blow takes stays level however deep. When armor took its defense off a blow, a foe's attack (with the deep growth, outgrowing depth) drifted away from the hero's defense: past depth 100 a blow took a fifth to two fifths of max HP. `tools/curve.ts`, 18 games of 15,000 steps (6 a class), the simulated player spending points at random:
-
-| Depths | Blow, share of max HP: before | Now | Blows the hero stands: before | Now | Hits a kill: before | Now |
+| Depths | Hits a kill: at random | Might | Focus | Blow, share of max HP: at random | Might | Focus |
 |---|---|---|---|---|---|---|
-| 41 to 50 | 16% | 14% | 6.2 | 7.4 | 2.6 | 2.9 |
-| 81 to 90 | 18% | 18% | 5.7 | 5.5 | 2.4 | 3.0 |
-| 141 to 150 | 28% | 14% | 3.6 | 7.1 | 2.1 | 2.6 |
-| 221 to 230 | 40% | 13% | 2.5 | 7.7 | 1.8 | 2.6 |
+| 21 to 25 | 2.5 | 2.5 | 2.3 | 12% | 15% | 15% |
+| 41 to 50 | 2.5 | 3.5 | 2.8 | 13% | 19% | 19% |
+| 81 to 90 | 2.5 | 2.9 | 3.2 | 16% | 21% | 19% |
+| 141 to 150 | 1.9 | 2.3 | 2.4 | 14% | 21% | 21% |
+| 221 to 230 | 2.0 | 1.7 | 2.1 | 14% | 17% | 20% |
 
-Shallower, over 60 games of 1,000 steps (`tools/simulate.ts`), damage taken a kill rose from 15.9 to 19.8 and potions drunk a game from 7.3 to 9.6; deaths per 1,000 steps went from 1.45 to 1.52 and deaths to a boss a game from 0.42 to 0.28.
+A hero all Might or all Focus buys no HP and no defense, so takes the bigger share. Over the same games, deaths a game, knights, mages and rogues: every point on Might 139, 35 and 93; on Focus 109, 68 and 235; on Vigor 127, 6 and 106. The rogue's ambush is a sure critical whatever its chance, so Focus does the least for it.
 
 ## Where it stands
 

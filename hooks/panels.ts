@@ -1,6 +1,6 @@
 import type { Attribute, Game, Item } from '../types'
 import { countOf, slotOf } from './consumables'
-import { attackBonus, bar, critChance, defense, levelOf, runsOf, sightOf, threat, xpToLevel } from './game'
+import { attackBonus, bar, critChance, critTimes, defense, levelOf, mightTimes, runsOf, sightOf, threat, xpToLevel } from './game'
 import type { Run } from './game'
 import { BAG_H, BAG_W, GLYPH, RARITY_COLOR, RARITY_RANK, itemAt } from './items'
 import { MAP_H, MAP_W, OPENED_GLYPH, cellId, floorThing, isFloor, roomAt, same, visibleFrom } from './map'
@@ -317,8 +317,8 @@ export const logRuns = (g: Game, n = LOG_SHOWN): Run[] => {
 }
 
 export const ATTRIBUTES: readonly { stat: Attribute; label: string; effect: (g: Game) => string }[] = [
-  { stat: 'might', label: 'Might  ', effect: g => `+${attackBonus(g)} attack (Might + gear)` },
-  { stat: 'focus', label: 'Focus  ', effect: g => `${critChance(g)}% critical hit chance, +${g.stats.focus * 5}% critical damage` },
+  { stat: 'might', label: 'Might  ', effect: g => `+${Math.round(100 * (mightTimes(g) - 1))}% damage` },
+  { stat: 'focus', label: 'Focus  ', effect: g => `${critChance(g)}% critical hit chance, criticals x${critTimes(g).toFixed(2)}` },
   { stat: 'vigor', label: 'Vigor  ', effect: () => '+3 max HP per point' },
   { stat: 'insight', label: 'Insight', effect: g => `+${g.stats.insight * 5}% XP from kills` },
 ]

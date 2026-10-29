@@ -1,8 +1,8 @@
 // Simulation: plays whole games through the real rules with a scripted coding session and a simple player,
 // records every step, and checks every invariant after each one. Pure: no files, no clock; seeds make it replayable.
-import type { Attribute, Consumable, Game, HeroClass } from '../types'
+import type { Attribute, Consumable, Game, HeroClass, Talent } from '../types'
 import { countOf, healingSlot, slotOf } from './consumables'
-import { BIG_BOSSES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, tradeInOf, onToolStart, priceOfWare, reforgeCost, sightOf, threat } from './game'
+import { BIG_BOSSES, alongTheWay, apply, isOnlyAWalk, fortuneCost, gambleCost, keptChoice, ordersOf, tradeInOf, onToolStart, priceOfWare, reforgeCost, sightOf, threat } from './game'
 import type { Action } from './game'
 import { BAG_H, BAG_W, SLOTS, TEMPER_MAX, fit, isUpgrade, temperCost, worth } from './items'
 import { MAP_H, MAP_W, cellId, chestAt, floorThing, isFloor, roomAt, same, shapeCut } from './map'
@@ -296,13 +296,13 @@ const chooseMark = (g: Game, d: Dice): Action | undefined => {
   return tier === undefined || !isForkOpen(g) ? undefined : { kind: 'mark', mark: pairOf(g.world, tier)[d(2) - 1]! }
 }
 
-/** A point to spend, on one of the four attributes at random: each is trained by some game. */
+/** A point to spend: on `build`, or on one of the four attributes at random, so each is trained by some game. */
 const TRAINED: readonly Attribute[] = ['might', 'focus', 'vigor', 'insight']
-const trainPoint = (g: Game, d: Dice): Action | undefined => (g.points > 0 ? { kind: 'train', stat: TRAINED[d(TRAINED.length) - 1]! } : undefined)
+const trainPoint = (g: Game, d: Dice, build?: Attribute): Action | undefined => (g.points > 0 ? { kind: 'train', stat: build ?? TRAINED[d(TRAINED.length) - 1]! } : undefined)
 
 /** What the simulated player does on its own before the next tool call, if anything. */
-const playerMove = (g: Game, d: Dice): Action | undefined => {
-  const trained = trainPoint(g, d)
+const playerMove = (g: Game, d: Dice, build?: Attribute): Action | undefined => {
+  const trained = trainPoint(g, d, build)
   if (trained !== undefined) return trained
   const learnt = learnTalent(g, d)
   if (learnt !== undefined) return learnt
@@ -339,20 +339,59 @@ function* byHand(g: () => Game, own: Action): Generator<Action> {
   else yield own
 }
 
+/** How a simulated game is played, beyond its seed, length and class. */
+export type SimOptions = {
+  /** Each step's frame built and timed, as the pane would draw it at the best size's map. */
+  timeFrames?: boolean
+  /** Every point trained on this attribute, not one at random. */
+  build?: Attribute
+  /** Played by hand: no tool call nor answer, the player's clicks and keys alone. */
+  byHand?: boolean
+  /** Talents the hero has from the first step. */
+  talents?: Talent[]
+  /** The tool calls an answer takes, from least to most: 4 to 13 by default. */
+  calls?: { least: number; most: number }
+}
+
+const CALLS = { least: 4, most: 13 }
+
+/** The player's own moves before the next tool call or click, up to six. */
+function* ownMoves(g: () => Game, d: Dice, build?: Attribute): Generator<Action> {
+  for (let guard = 0; guard < 6; guard += 1) {
+    const own = playerMove(g(), d, build)
+    if (own === undefined) break
+    yield* byHand(g, own)
+  }
+}
+
 /** The session's next actions: a tool call is its start then its outcome; a turn ends by taking the stairs. */
-function* session(g: () => Game, d: (n: number) => number): Generator<Action> {
+function* session(g: () => Game, d: Dice, { build, calls: { least, most } = CALLS }: SimOptions): Generator<Action> {
   for (;;) {
     yield { kind: 'quest', text: 'fix the failing build' }
-    const calls = 3 + d(10)
+    const calls = least + d(most - least + 1) - 1
     for (let i = 0; i < calls; i += 1) {
-      for (let guard = 0; guard < 6; guard += 1) {
-        const own = playerMove(g(), d)
-        if (own === undefined) break
-        yield* byHand(g, own)
-      }
+      yield* ownMoves(g, d, build)
       yield* toolCall(d)
     }
     yield { kind: 'descend' }
+  }
+}
+
+/**
+ * Played by hand, with no tool call nor answer: the player's own moves, then a click. In town, back through the portal
+ * once its errands are done; in the dungeon, at a foe in sight, down the stairs when on them, to the stairs once seen
+ * (two times in three), otherwise where a click on the map would go.
+ */
+function* handPlay(g: () => Game, d: Dice, { build }: SimOptions): Generator<Action> {
+  for (;;) {
+    yield* ownMoves(g, d, build)
+    const now = g()
+    const level = levelOf(now)
+    if (now.where === 'town') yield* byHand(g, { kind: 'portal' })
+    else if (now.foe !== null) yield* byHand(g, { kind: 'goto', x: now.foe.x, y: now.foe.y })
+    else if (same(now, level.stairs)) yield* byHand(g, { kind: 'stairs' })
+    else if (now.seen[cellId(level.stairs)] === '1' && d(3) !== 1) yield* byHand(g, { kind: 'goto', ...level.stairs })
+    else yield* byHand(g, clickTarget(now, d))
   }
 }
 
@@ -529,11 +568,18 @@ const check = (c: ReturnType<typeof newChecks>, before: Game, g: Game, action: A
   c.frameMs.push(performance.now() - t)
 }
 
-/** With `timeFrames`, each step's frame is built and timed, as the pane would draw it at the best size's map. */
-export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight', timeFrames = false): SimResult => {
-  let g = newGame(seed, cls)
+/** The game a simulation starts from: a new one, with the talents `options` give and set to hand play when by hand. */
+export const startOf = (seed: number, cls: HeroClass, { byHand = false, talents }: SimOptions = {}): Game => {
+  const g = newGame(seed, cls)
+  return { ...g, ...(talents === undefined ? {} : { talents: [...talents] }), ...(byHand ? { orders: { ...ordersOf(g), play: 'hand' as const } } : {}) }
+}
+
+/** A game of `steps` actions, played as a session would by default, or as `options` say. */
+export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight', options: SimOptions = {}): SimResult => {
+  const { timeFrames = false, byHand = false } = options
+  let g = startOf(seed, cls, options)
   const d = dice(seed)
-  const actions = session(() => g, d)
+  const actions = byHand ? handPlay(() => g, d, options) : session(() => g, d, options)
   const records: StepRecord[] = []
   let turns = 0
   const checks = newChecks()

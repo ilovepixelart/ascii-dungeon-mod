@@ -1,18 +1,20 @@
 // Simulator: plays many games through the real rules, checks every invariant after every step, and reports balance.
 // Usage: bun tools/simulate.ts <out-dir> [--games 30] [--steps 1000] [--class knight|mage|rogue|all] [--frames]
+//          [--build might|focus|vigor|insight] [--hand] [--talents a,b] [--calls least:most]
 //        --frames builds and times each step's frame as the pane draws it, and reports the times and the slowest steps.
+//        --build trains every point on one attribute; --hand plays by hand, with no tool call nor answer; --talents
+//        gives the hero those talents from the first step; --calls sets the tool calls an answer takes (4:13 by default).
 //        bun tools/simulate.ts <out-dir> --replay <class>:<seed>:<step>   (the steps up to <step>, and a picture of it)
 // Writes summary.json and, for any game that broke a rule, trace-<class>-<seed>.jsonl and break-<class>-<seed>.png.
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { Game, HeroClass } from '../types'
+import type { Attribute, Game, HeroClass, Talent } from '../types'
 import { apply } from '../hooks/game'
 import { mapRows } from '../hooks/panels'
 import { frameOf } from '../hooks/pixels'
-import { simulate } from '../hooks/sim'
-import type { SimResult, StepRecord } from '../hooks/sim'
-import { newGame } from '../hooks/world'
+import { simulate, startOf } from '../hooks/sim'
+import type { SimOptions, SimResult, StepRecord } from '../hooks/sim'
 import { png } from './png'
 
 const args = process.argv.slice(2)
@@ -24,6 +26,13 @@ const flag = (name: string, fallback: string) => {
   return at >= 0 ? (args[at + 1] ?? fallback) : fallback
 }
 const CLASSES: HeroClass[] = flag('class', 'all') === 'all' ? ['knight', 'mage', 'rogue'] : [flag('class', 'knight') as HeroClass]
+const calls = flag('calls', '').split(':').map(Number)
+const play: SimOptions = {
+  ...(flag('build', '') === '' ? {} : { build: flag('build', '') as Attribute }),
+  ...(args.includes('--hand') ? { byHand: true } : {}),
+  ...(flag('talents', '') === '' ? {} : { talents: flag('talents', '').split(',') as Talent[] }),
+  ...(calls.length === 2 ? { calls: { least: calls[0]!, most: calls[1]! } } : {}),
+}
 
 /** The board as pixels and as the 1x text map, so a moment can be judged by eye and by text alike. */
 const picture = (g: Game, file: string) => {
@@ -42,9 +51,8 @@ const describeStep = (r: StepRecord) =>
 const replay = flag('replay', '')
 if (replay !== '') {
   const [cls, seed, step] = replay.split(':')
-  const result = simulate(Number(seed), Number(step) + 1, cls as HeroClass)
-  let g = newGame(Number(seed), cls as HeroClass)
-  for (const r of result.records) g = apply(g, r.action)
+  const result = simulate(Number(seed), Number(step) + 1, cls as HeroClass, play)
+  const g = result.final
   console.log(result.records.slice(-25).map(describeStep).join('\n'))
   const file = join(out, `replay-${cls}-${seed}-${step}.png`)
   console.log(`\n${picture(g, file).join('\n')}\n\npicture: ${file}`)
@@ -55,7 +63,7 @@ const games = Number(flag('games', '30'))
 const steps = Number(flag('steps', '1000'))
 const results: SimResult[] = []
 const timeFrames = args.includes('--frames')
-for (const cls of CLASSES) for (let seed = 1; seed <= games; seed += 1) results.push(simulate(seed, steps, cls, timeFrames))
+for (const cls of CLASSES) for (let seed = 1; seed <= games; seed += 1) results.push(simulate(seed, steps, cls, { ...play, timeFrames }))
 
 const sum = (f: (r: SimResult) => number) => results.reduce((n, r) => n + f(r), 0)
 const said = (re: RegExp) => sum(r => r.records.reduce((n, s) => n + s.said.filter(l => re.test(l)).length, 0))
@@ -80,6 +88,7 @@ const summary = {
   frames: frameTimes(),
   games: results.length,
   stepsEach: steps,
+  play,
   classes: CLASSES,
   rulesBroken: broken.map(r => ({ cls: r.cls, seed: r.seed, step: r.firstBreak?.step, broke: r.firstBreak?.broke, replay: `bun tools/simulate.ts ${out} --replay ${r.cls}:${r.seed}:${r.firstBreak?.step}` })),
   balance: {
@@ -131,7 +140,7 @@ await Bun.write(join(out, 'summary.json'), JSON.stringify(summary, null, 2))
 for (const r of broken) {
   await Bun.write(join(out, `trace-${r.cls}-${r.seed}.jsonl`), r.records.map(s => JSON.stringify(s)).join('\n'))
   const at = r.firstBreak!
-  let g = newGame(r.seed, r.cls)
+  let g = startOf(r.seed, r.cls, play)
   for (const s of r.records.slice(0, at.step + 1)) g = apply(g, s.action)
   picture(g, join(out, `break-${r.cls}-${r.seed}.png`))
 }

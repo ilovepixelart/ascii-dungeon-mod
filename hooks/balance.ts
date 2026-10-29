@@ -3,8 +3,9 @@
 // max HP, and living) about every 100, and a boss won about two times in three, by the simulated player, who spends
 // its points at random.
 
-/** Past DEEP_FROM, foes grow DEEP_GROWTH more a depth, HP and attack alike: the hero's levels and gear outgrow a
- * plain depth's worth. */
+/** Past DEEP_FROM, foes grow DEEP_GROWTH more HP a depth: the hero's damage outgrows a plain depth's worth. Attack has
+ * no such growth: the hero's defense and max HP grow as depth does, and an attack growing faster outran them, from
+ * depth 150 an ordinary blow taking a fifth of max HP (`tools/curve.ts`). */
 export const DEEP_FROM = 10
 export const DEEP_GROWTH = 0.005
 export const deepGrowth = (depth: number) => 1 + Math.max(0, depth - DEEP_FROM) * DEEP_GROWTH
@@ -16,7 +17,7 @@ export const foeHp = (depth: number, tier: number, d4: number) => Math.round((6 
 export const FOE_ATK_SCALE = 1.2
 
 /** A monster's attack: mostly depth, a little tier, and a swing of 3 or 5 so some monsters hit hard. */
-export const foeAtk = (depth: number, tier: number, d2: number) => Math.round((depth + Math.floor(tier / 2) + d2 * 2 + 1) * FOE_ATK_SCALE * deepGrowth(depth))
+export const foeAtk = (depth: number, tier: number, d2: number) => Math.round((depth + Math.floor(tier / 2) + d2 * 2 + 1) * FOE_ATK_SCALE)
 
 /**
  * The pacing: tension builds with every blow the hero takes (its share of max HP, in percent) and KILL_TENSION a
@@ -59,6 +60,20 @@ export const HAND_FOE_MAX = 60
 
 /** The least share of a blow armor lets through: deep heroes stack defense past what foes hit for. */
 export const ARMOR_FLOOR = 0.25
+
+/** Armor's measure at a depth, per depth plus ARMOR_FROM: defense of this much halves a blow there. */
+export const ARMOR_PER_DEPTH = 0.9
+export const ARMOR_FROM = 10
+
+/**
+ * The share of a blow that defense `def` lets through at `depth`: K / (K + def), K being ARMOR_PER_DEPTH of the depth
+ * plus ARMOR_FROM, never under ARMOR_FLOOR. A share and not a sum taken off: the hero's defense and the foes' attack
+ * both grow with depth, and their difference drifted, every blow at the floor or armor worth nothing.
+ */
+export const armorShare = (def: number, depth: number) => {
+  const k = ARMOR_PER_DEPTH * (depth + ARMOR_FROM)
+  return Math.max(ARMOR_FLOOR, k / (k + def))
+}
 
 /** The share of defense a piercing blow leaves standing, rounded down. */
 export const PIERCED_DEF = 0.5

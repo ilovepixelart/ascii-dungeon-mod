@@ -1261,7 +1261,7 @@ test('on a wide terminal the inventory takes the whole pane while it is open, an
   await ui.unmount()
 })
 
-test('with the mouse: gear is taken off, dragged back on, and a bag item destroyed from its menu after a second click', async ($, on) => {
+test('with the mouse: worn gear shows its card on a click and comes off on a right click, is dragged back on, and a bag item destroyed from its menu after a second click', async ($, on) => {
   const said = toasts(on)
   on('store.set', () => ({ value: undefined }) as never)
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
@@ -1274,7 +1274,11 @@ test('with the mouse: gear is taken off, dragged back on, and a bag item destroy
   }
   const [x, y, w, h] = WORN_SLOTS.weapon
   const slot = at(x + Math.floor(w / 2), INV_TOP + y + Math.floor(h / 2))
+  const boxesOf = async () => ((await ui.find({ type: 'Client', key: 'bag-clicks' }))?.props.props as { boxes: { role: string; x: number; y: number }[] }).boxes
   await tap(slot)
+  expect((await boxesOf()).filter(b => b.role === 'worn').length).toBe(1)
+  expect(await ui.find({ type: 'Text', text: /^> You take off/ })).toBeUndefined()
+  await tap(slot, 'right')
   expect(await ui.find({ type: 'Text', text: /^> You take off the (.+)\.$/ })).toBeDefined()
   // Taken off, it lands in the bag's first free spot, the top-left cell: drag it back onto the slot.
   const first = at(BAG_X + 3, INV_TOP + BAG_Y + 4)
@@ -1283,10 +1287,9 @@ test('with the mouse: gear is taken off, dragged back on, and a bag item destroy
   await ui.pointer({ type: 'up', ...slot, button: 'left', in: 'bag-clicks' })
   expect(await ui.find({ type: 'Text', text: /^> You equip the (.+)\.$/ })).toBeDefined()
   // Off again, then its menu by a right click: Destroy needs a second click.
-  await tap(slot)
+  await tap(slot, 'right')
   await tap(first, 'right')
-  const boxes = (await ui.find({ type: 'Client', key: 'bag-clicks' }))?.props.props as { boxes: { role: string; x: number; y: number }[] }
-  const menu = boxes.boxes.find(b => b.role === 'menu')!
+  const menu = (await boxesOf()).find(b => b.role === 'menu')!
   const destroy = { x: menu.x + 3, y: menu.y + 2 }
   await tap(destroy)
   expect(await ui.find({ type: 'Text', text: /^> You destroy/ })).toBeUndefined()
@@ -1871,8 +1874,9 @@ const swordToTheStash = async ($: Engine, on: On) =>
     await clickDash(ui, iconAt('bag'))
     const [x, y, w, h] = WORN_SLOTS.weapon
     const slot = { x: x + Math.floor(w / 2), y: Math.floor((INV_TOP + y + Math.floor(h / 2)) / 2) }
-    await ui.pointer({ type: 'down', ...slot, button: 'left', in: 'bag-clicks' })
-    await ui.pointer({ type: 'up', ...slot, button: 'left', in: 'bag-clicks' })
+    // A right click takes the sword off into the bag.
+    await ui.pointer({ type: 'down', ...slot, button: 'right', in: 'bag-clicks' })
+    await ui.pointer({ type: 'up', ...slot, button: 'right', in: 'bag-clicks' })
     await ui.press({ key: 'bag' })
   })
 

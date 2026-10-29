@@ -22,7 +22,7 @@ import { WINDOW_TOP } from './window'
 import { arrive } from './world'
 
 /** A click on window pixel (`x`, `y`). */
-const tap = (x: number, y: number): Gesture => ({ type: 'release', from: { x: x + 0.5, y: y / 2 + 0.25 }, at: { x: x + 0.5, y: y / 2 + 0.25 }, button: 'left' })
+const tap = (x: number, y: number, button: 'left' | 'right' = 'left'): Gesture => ({ type: 'release', from: { x: x + 0.5, y: y / 2 + 0.25 }, at: { x: x + 0.5, y: y / 2 + 0.25 }, button })
 const centre = (r: Rect) => ({ x: r.x + Math.floor(r.w / 2), y: r.y + Math.floor(r.h / 2) })
 const lit = (hot: readonly Rect[], p: { x: number; y: number }) => hot.some(r => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h)
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
@@ -40,22 +40,23 @@ describe('the hover lights what a click acts on', () => {
     expect([lit(inventoryHot(g, BAG_UI_IDLE), centre(held)), lit(inventoryHot(g, BAG_UI_IDLE), centre(empty))]).toEqual([true, false])
   })
 
-  test('the bag: a worn piece is lit while there is room to take it off, not with the bag full', async () => {
+  test('the bag: every worn piece is lit, the bag full or not: a click shows its card', async () => {
     const g = { ...plainHero(3), bag: [] }
     // Every worn piece's outline, lit with room in the bag: what is lit under the title bar beside the bag's items and the belt.
     const belt = beltHot(g, BELT_X, INV_TOP + BELT_Y)
     const worn = inventoryHot(g, BAG_UI_IDLE).slice(g.bag.length).filter(r => r.y >= INV_TOP && !belt.some(b => same(b, r)))
     expect(worn.length).toBe(Object.keys(g.gear).length)
-    expect(inventoryHot({ ...g, bag: fullBag() }, BAG_UI_IDLE).filter(r => worn.some(w => same(w, r)))).toEqual([])
+    expect(inventoryHot({ ...g, bag: fullBag() }, BAG_UI_IDLE).filter(r => worn.some(w => same(w, r))).length).toBe(worn.length)
   })
 
-  test('the compact bag: a filled belt slot and a worn row that can come off are lit; a full bag\'s worn rows are not', async () => {
+  test('the compact bag: a filled belt slot and a worn row are lit, a full bag\'s too; a click shows the piece, a right click takes it off', async () => {
     const g = { ...plainHero(3), bag: [] }
     const list = compactOverlay(g, BAG_UI_IDLE).find(b => b.role === 'worn')!
     // The weapon's row: the list's first slot, its second row, in window pixels.
     const row = { x: list.x + 3, y: (list.y + 2) * 2 + 1 }
-    expect(compactGesture(g, BAG_UI_IDLE, tap(row.x, row.y)).actions).toEqual([{ kind: 'unequip', slot: 'weapon' }])
-    expect([lit(compactHot(g, BAG_UI_IDLE), row), lit(compactHot({ ...g, bag: fullBag() }, BAG_UI_IDLE), row)]).toEqual([true, false])
+    expect(compactGesture(g, BAG_UI_IDLE, tap(row.x, row.y)).actions).toEqual([])
+    expect(compactGesture(g, BAG_UI_IDLE, tap(row.x, row.y, 'right')).actions).toEqual([{ kind: 'unequip', slot: 'weapon' }])
+    expect([lit(compactHot(g, BAG_UI_IDLE), row), lit(compactHot({ ...g, bag: fullBag() }, BAG_UI_IDLE), row)]).toEqual([true, true])
     const held = g.belt.findIndex(s => s !== null)
     const unused = compactHot({ ...g, belt: g.belt.map(() => null) }, BAG_UI_IDLE)
     expect(compactHot(g, BAG_UI_IDLE).length - unused.length).toBe(held >= 0 ? 1 : 0)

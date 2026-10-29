@@ -178,8 +178,5 @@ export const beltLabel = (g: Game, i: number) => {
 export const wornOutlines = (g: Game, top: number): Rect[] =>
   (Object.entries(WORN_SLOTS) as [Slot, readonly [number, number, number, number]][]).filter(([slot]) => g.gear[slot] !== undefined).map(([, [x, y, w, h]]) => ({ x: x - 1, y: top + y - 1, w: w + 2, h: h + 2 }))
 
-/** What is worn that the bag has room to take off into: a worn piece is clicked off, or dragged, only so far. */
-export const removable = (g: Game): Game => ({ ...g, gear: Object.fromEntries(Object.entries(g.gear).filter(([, i]) => i !== undefined && fit(g.bag, i.w, i.h) !== null)) })
-
 /** The belt slots holding something, in window pixels for a belt whose top left is at `x`, `y`: a click uses one. */
 export const beltHot = (g: Game, x: number, y: number): Rect[] => g.belt.flatMap((s, i) => (s === null ? [] : [beltSlotRect(x, y, i)]))

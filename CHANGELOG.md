@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A click on worn gear in the inventory shows its card until the next click; a right click takes it off, where a
+  click did. Dragging it into the bag still takes it off.
 - Armor lets a share of each blow through rather than taking its defense off: `K / (K + defense)`, `K` being 0.9 of
   the depth plus 10, never under a quarter. Foe attack no longer grows faster than depth past depth 10; foe HP still
   does. Past depth 100 a blow took a fifth to two fifths of max HP; it now takes about a seventh at every depth.

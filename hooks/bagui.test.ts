@@ -50,12 +50,24 @@ describe('clicks', () => {
     expect(r.ui.menu).toEqual({ id: helm.id, confirm: false })
   })
 
-  test('worn gear is taken off; an empty worn slot does nothing', async () => {
+  test("a click on worn gear shows its card and takes nothing off; a right click takes it off; an empty slot does nothing", async () => {
     const g = knight()
     const [x, y, w, h] = WORN_SLOTS.weapon
-    expect(click(g, BAG_UI_IDLE, { x: x + w - 1, y: INV_TOP + y + h - 1 }).actions).toEqual([{ kind: 'unequip', slot: 'weapon' }])
+    const at = { x: x + w - 1, y: INV_TOP + y + h - 1 }
+    const left = click(g, BAG_UI_IDLE, at)
+    expect(left.actions).toEqual([])
+    expect(bagOverlay(g, left.ui).filter(b => b.role === 'worn').map(b => b.lines[0]!.map(r => r.text).join('').trim())).toEqual([g.gear.weapon!.name])
+    expect(click(g, BAG_UI_IDLE, at, 'right').actions).toEqual([{ kind: 'unequip', slot: 'weapon' }])
     const [rx, ry] = WORN_SLOTS.ring
     expect(click(g, BAG_UI_IDLE, { x: rx, y: INV_TOP + ry }).actions).toEqual([])
+  })
+
+  test("a worn piece's card goes with the next click elsewhere, and with a bag item chosen", async () => {
+    const g = knight()
+    const [x, y] = WORN_SLOTS.weapon
+    const shown = click(g, BAG_UI_IDLE, { x, y: INV_TOP + y }).ui
+    const away = click(g, shown, { x: BELT_X + 7, y: INV_TOP + BELT_Y + 7 })
+    expect(bagOverlay(g, away.ui).filter(b => b.role === 'worn')).toEqual([])
   })
 
   test('a belt slot is used; the close box closes the inventory', async () => {

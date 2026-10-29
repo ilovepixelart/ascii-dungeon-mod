@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- Armor lets a share of each blow through rather than taking its defense off: `K / (K + defense)`, `K` being 0.9 of
+  the depth plus 10, never under a quarter. Foe attack no longer grows faster than depth past depth 10; foe HP still
+  does. Past depth 100 a blow took a fifth to two fifths of max HP; it now takes about a seventh at every depth.
 - A Common item's card, in the bag, the stash, the merchant's and the smith's, is framed in the plain frame rather
   than Common's white, which sat a step from the focus white and made the card look chosen.
 

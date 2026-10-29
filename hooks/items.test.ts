@@ -100,8 +100,9 @@ describe('equipment', () => {
     // The knight's shield already spent on the fight's first blow.
     const foe = { ...weakling(plainHero()), opened: true as const }
     const coat = item({ slot: 'armor', def: 2 })
-    expect(apply({ ...plainHero(), foe, gear: { armor: coat } }, { kind: 'outcome', ok: false, what: 'Bash' }).hp).toBe(19)
-    const plate = item({ slot: 'armor', def: 10 })
+    // The rat's 3 at depth 1, K 9.9: 2 defense lets 9.9 / 11.9 through, 2.5 rounded to 2; 100 defense its quarter, 0.75.
+    expect(apply({ ...plainHero(), foe, gear: { armor: coat } }, { kind: 'outcome', ok: false, what: 'Bash' }).hp).toBe(18)
+    const plate = item({ slot: 'armor', def: 100 })
     expect(apply({ ...plainHero(), foe, gear: { armor: plate } }, { kind: 'outcome', ok: false, what: 'Bash' }).hp).toBe(19)
   })
 

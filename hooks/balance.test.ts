@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { deepGrowth, foeAtk, foeHp, heroDamage, xpToLevel } from './balance'
+import { armorShare, deepGrowth, foeAtk, foeHp, heroDamage, xpToLevel } from './balance'
 import { simulate } from './sim'
 
 describe('the balance formulas', () => {
@@ -14,10 +14,20 @@ describe('the balance formulas', () => {
     expect([foeHp(10, 7, 1), foeHp(10, 7, 4)]).toEqual([81, 84])
     expect([foeAtk(10, 7, 1), foeAtk(10, 7, 2)]).toEqual([19, 22])
   })
-  test('past depth 10 foes grow half a percent more a depth: a depth-30 rat 10% over the plain sum, a depth-110 one half again', async () => {
+  test('past depth 10 foes grow half a percent more HP a depth: a depth-30 rat 10% over the plain sum, a depth-110 one half again', async () => {
     expect([1, 10, 11, 30, 110].map(deepGrowth)).toEqual([1, 1, 1.005, 1.1, 1.5])
-    // The plain sums: 6 + 180 + 0 + 1 is 187, and (30 + 0 + 2 + 1) times 1.2 is 39.6; a tenth more, rounded: 206 and 44.
-    expect([foeHp(30, 0, 1), foeAtk(30, 0, 1)]).toEqual([206, 44])
+    // The plain sum 6 + 180 + 0 + 1 is 187; a tenth more, rounded: 206.
+    expect(foeHp(30, 0, 1)).toBe(206)
+  })
+  test('foe attack grows as depth does, with no deep growth: (30 + 3) and (200 + 3) times 1.2 are 39.6 and 243.6', async () => {
+    expect([foeAtk(30, 0, 1), foeAtk(200, 0, 1)]).toEqual([40, 244])
+  })
+  test("the share of a blow armor lets through: K over K plus defense, K being 0.9 of the depth plus 10, never under a quarter", async () => {
+    // Depth 30: K is 36, so 52 defense lets 36 / 88 through; depth 1 with none lets all of it; depth 190: K 180, 286 defense.
+    expect([armorShare(52, 30), armorShare(0, 1), armorShare(286, 190)].map(s => Math.round(s * 1e6) / 1e6)).toEqual([0.409091, 1, 0.386266])
+    // Defense equal to K halves a blow; ten times K would let 1/11 through, held at the floor.
+    expect(armorShare(36, 30)).toBe(0.5)
+    expect(armorShare(360, 30)).toBe(0.25)
   })
 
   test('hero damage grows half a point a level', async () => {

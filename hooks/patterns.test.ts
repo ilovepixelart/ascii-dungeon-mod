@@ -32,14 +32,15 @@ describe("each kind's trait", () => {
     expect([0, 1, 2].map(turn => foeTurn(plainHero(), foe('W', { turn })).pierces)).toEqual([false, false, true])
   })
 
-  test("a blow through armor takes a knight's half defense off, rounded down, and none of another class's", async () => {
+  test("a blow through armor meets a knight's half defense, rounded down, and none of another class's", async () => {
     const taken = (cls: 'knight' | 'rogue', turn: number) => {
       const g = { ...plainHero(), cls, hp: 100, maxHp: 100 }
       const armored = { ...g, gear: { ...g.gear, armor: { ...plainItem({ nextId: 901 }, 'plate'), def: 11 } } }
       return 100 - apply({ ...armored, foe: foe('W', { atk: 21, turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
     }
-    // Defense 11 takes 11 off the plain blow of 21; through armor a knight keeps 5 of it, a rogue none.
-    expect([taken('knight', 0), taken('knight', 2), taken('rogue', 0), taken('rogue', 2)]).toEqual([10, 16, 10, 21])
+    // Depth 1, K 9.9: defense 11 lets 9.9 / 20.9 of the plain 21 through, 9.9; through armor a knight keeps 5 of it,
+    // 9.9 / 14.9 of 21 being 14.0, and a rogue none.
+    expect([taken('knight', 0), taken('knight', 2), taken('rogue', 0), taken('rogue', 2)]).toEqual([10, 14, 10, 21])
   })
 
   test('a dragon draws breath on its second turn of three and breathes on the third, half again as hard; an overlord two and a half times', async () => {
@@ -87,7 +88,8 @@ describe('the traits in a fight', () => {
   test("a wraith's chill ignores a rogue's armor; a plain blow does not", async () => {
     const armored = { ...plainHero(), cls: 'rogue' as const, gear: { ...plainHero().gear, armor: { ...plainHero().gear.weapon!, slot: 'armor' as const, atk: 0, def: 4, id: 901 } } }
     const hit = (turn: number) => armored.hp - apply({ ...armored, foe: foe('W', { turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
-    expect([hit(0), hit(2)]).toEqual([6, 10])
+    // Depth 1, K 9.9: 4 defense lets 9.9 / 13.9 of the wraith's 10 through, 7.1; the chill all of it.
+    expect([hit(0), hit(2)]).toEqual([7, 10])
   })
 
   test('a dragon breathes for half again its attack', async () => {

@@ -93,15 +93,16 @@ describe('combat', () => {
     expect(apply({ ...g, foe: foeAhead(g, 1, { opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp).toBe(17)
   })
 
-  test('armor takes its defense off a blow, but lets a quarter of it through, rounded up, however thick', async () => {
+  test('armor lets K / (K + defense) of a blow through, K being 0.9 of the depth plus 10, never under a quarter', async () => {
     // The plain hero wears only a blade; the plate is all their defense.
     const g = plainHero()
     const taken = (def: number) => {
       const armored = { ...g, gear: { ...g.gear, armor: { ...plainItem({ nextId: 901 }, 'plate'), def } } }
       return g.hp - apply({ ...armored, foe: foeAhead(g, 1, { atk: 21, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
     }
-    // 21 less 10 is 11; less 15 is 6, the quarter 5.25 rounded up; less 16 or 30 would be 5 or less, so the quarter, 6.
-    expect([taken(10), taken(15), taken(16), taken(30)]).toEqual([11, 6, 6, 6])
+    // Depth 1: K is 9.9. 21 times 9.9 / 19.9 is 10.4, / 24.9 is 8.3, / 25.9 is 8.0; at 30 defense, 9.9 / 39.9 is under
+    // a quarter, so the quarter, 5.25.
+    expect([taken(10), taken(15), taken(16), taken(30)]).toEqual([10, 8, 8, 5])
   })
 
   test('a failure with no foe is an imp hitting for the depth', async () => {

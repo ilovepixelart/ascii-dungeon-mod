@@ -1955,7 +1955,7 @@ const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegen
   const fresh = (items: readonly Item[]) =>
     items.map(item => {
       g.nextId += 1
-      return { ...heirloomOf(item), id: g.nextId - 1, ...(item.locked === true ? { locked: true } : {}), ...(item.junk === true ? { junk: true } : {}) }
+      return { ...heirloomOf(item), id: g.nextId - 1, ...(item.locked === true ? { locked: true as const } : {}), ...(item.junk === true ? { junk: true } : {}) }
     })
   g.stashed = kept.stashed.map(fresh)
   if (kept.stashSets !== undefined) g.stashSets = fresh(kept.stashSets)

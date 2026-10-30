@@ -373,7 +373,7 @@ function* session(g: () => Game, d: Dice, { build, calls: { least, most } = CALL
       yield* ownMoves(g, d, build)
       yield* toolCall(d)
     }
-    yield { kind: 'descend' }
+    yield { kind: 'answer' }
   }
 }
 
@@ -525,7 +525,7 @@ export const isJump = (before: Game, next: Game, action: Action) => {
   // A death wakes the hero where it wakes him, walk or none.
   if (next.deaths !== before.deaths) return false
   if (isSamePlace) return (next.x !== before.x || next.y !== before.y) && (end === undefined || end.x !== next.x || end.y !== next.y)
-  const isWalked = action.kind === 'goto' || (action.kind === 'descend' && before.where === 'dungeon')
+  const isWalked = action.kind === 'goto' || ((action.kind === 'descend' || action.kind === 'answer') && before.where === 'dungeon')
   return isWalked && next.walked.length === 0 && !isAtTheWayOut(before)
 }
 
@@ -585,7 +585,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight',
   const checks = newChecks()
   for (let step = 0; step < steps; step += 1) {
     const action = actions.next().value as Action
-    if (action.kind === 'descend') turns += 1
+    if (action.kind === 'answer') turns += 1
     const from = { x: g.x, y: g.y }
     const before = g
     g = apply(g, action)

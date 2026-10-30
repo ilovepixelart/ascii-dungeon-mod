@@ -54,7 +54,7 @@ describe('playing by hand', () => {
     const hand = apply(g, { kind: 'order', order: 'play' })
     expect(isByHand(hand)).toBe(true)
     expect(hand.log.at(-1)).toBe('You play by hand: the session no longer moves you, and foes find you as you walk.')
-    expect(apply(hand, { kind: 'order', order: 'play' }).log.at(-1)).toBe('The session plays: every tool call moves you, every answer takes the stairs.')
+    expect(apply(hand, { kind: 'order', order: 'play' }).log.at(-1)).toBe('The session plays: every tool call moves you, an answer takes the stairs once a depth has seen 3 tool calls.')
     expect(ordersOf({ orders: { drink: 50, smoke: true, leave: 'rare' } as never })).toEqual({ drink: 50, smoke: true, leave: 'rare', play: 'session' })
   })
 

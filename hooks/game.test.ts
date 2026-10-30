@@ -120,6 +120,17 @@ describe('combat', () => {
     expect(same(after, route[2] ?? g)).toBe(true)
   })
 
+  test('an answer takes the stairs once the depth has seen 3 tool calls; before, the hero stays and the log says why', async () => {
+    const g = plainHero()
+    const call = (h: Game) => apply(h, { kind: 'outcome', ok: true, what: 'Read' })
+    const early = apply(call(g), { kind: 'answer' })
+    expect(early.depth).toBe(1)
+    expect(early.log.at(-1)).toBe('The stairs wait: 1 of 3 tool calls on this depth.')
+    expect(apply(call(call(call(g))), { kind: 'answer' }).depth).toBe(2)
+    // Calls counted on another depth count for nothing here.
+    expect(apply({ ...g, worked: { depth: 4, calls: 9 } }, { kind: 'answer' }).depth).toBe(1)
+  })
+
   test('crossing the XP threshold levels up and restores HP', async () => {
     const g = plainHero()
     const after = apply({ ...g, hp: 4, xp: 15, foe: foeAhead(g, 1, { hp: 1 }) }, { kind: 'outcome', ok: true, what: 'Edit' })

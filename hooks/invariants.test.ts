@@ -193,6 +193,14 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, recap: { ...r, level: g.level + 1 } })).toContain(rule)
   })
 
+  test('work counted on a depth not reached, or a count that is no count', async () => {
+    const rule = 'work counted on a depth reached'
+    expect(broke({ ...g, worked: { depth: g.depth, calls: 3 } })).not.toContain(rule)
+    expect(broke({ ...g, worked: { depth: g.deepest + 1, calls: 3 } })).toContain(rule)
+    expect(broke({ ...g, worked: { depth: g.depth, calls: -1 } })).toContain(rule)
+    expect(broke({ ...g, worked: { depth: g.depth, calls: 1.5 } })).toContain(rule)
+  })
+
   test('orders outside their choices', async () => {
     const rule = 'orders among their choices'
     const o = { drink: 25, smoke: false, leave: 'common', play: 'session' } as const

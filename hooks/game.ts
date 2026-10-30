@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -30,6 +30,7 @@ export type Action =
   | { kind: 'outcome'; ok: boolean; what: string; work?: Work }
   | { kind: 'quest'; text: string }
   | { kind: 'descend' }
+  | { kind: 'answer' }
   | { kind: 'attack' }
   | { kind: 'potion' }
   | { kind: 'walk' }
@@ -231,7 +232,7 @@ const order = (g: Game, which: keyof Orders) => {
   const orders = ordersOf(g)
   const steps = ORDER_STEPS[which] as readonly unknown[]
   g.orders = { ...orders, [which]: steps[(steps.indexOf(orders[which]) + 1) % steps.length] }
-  if (which === 'play') say(g, isByHand(g) ? 'You play by hand: the session no longer moves you, and foes find you as you walk.' : 'The session plays: every tool call moves you, every answer takes the stairs.')
+  if (which === 'play') say(g, isByHand(g) ? 'You play by hand: the session no longer moves you, and foes find you as you walk.' : 'The session plays: every tool call moves you, an answer takes the stairs once a depth has seen 3 tool calls.')
 }
 
 /** Furnishings: braziers, shelves, reeds and embers, nothing to take. */
@@ -1088,6 +1089,7 @@ const summon = (g: Game, name: string) => {
  * foe's hit. Tests that pass make the blow a sure critical; other work is rewarded after (`reward`).
  */
 const outcome = (g: Game, ok: boolean, what: string, work: Work | undefined) => {
+  g.worked = { depth: g.depth, calls: (g.worked?.depth === g.depth ? g.worked.calls : 0) + 1 }
   if (ok) {
     if (work === 'tests') greenBuild(g)
     strike(g, work === 'tests')
@@ -1280,6 +1282,13 @@ const walkDown = (g: Game) => {
   descendAfterWalk(g)
 }
 
+/** An answer finished: the walk down (`walkDown`) once this depth has seen DESCEND_CALLS tool calls; until then, a word why not. */
+const answered = (g: Game) => {
+  const calls = g.worked?.depth === g.depth ? g.worked.calls : 0
+  if (calls >= DESCEND_CALLS) walkDown(g)
+  else say(g, `The stairs wait: ${calls} of ${DESCEND_CALLS} tool calls on this depth.`)
+}
+
 /**
  * Whether an action's walk is only a walk: its end is the same game as walking its tiles, so it can be cut anywhere.
  * One that ends in more (a blow, a visit, the stairs, a word from someone) is not.
@@ -1330,6 +1339,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
     if (quest !== undefined) say(g, `A new quest: "${quest}"`)
   },
   descend: g => walkDown(g),
+  answer: g => answered(g),
   attack: g => attack(g),
   potion: g => quaff(g),
   walk: g => step(g, 1),
@@ -1820,6 +1830,7 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
   moveStashed: (g, a) => moveStashed(g, a.id, a.x, a.y),
   // A task done in town leaves the hero there, mid-visit: the portal is the way back.
   descend: () => {},
+  answer: () => {},
 }
 
 /**
@@ -1995,7 +2006,7 @@ const newHero = (game: Game, cls: HeroClass): Game => {
 const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['restart', 'panel', 'zoom'])
 
 /** What tool calls do, counted for the recap; the player's own clicks and keys are not. */
-const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend'])
+const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend', 'answer'])
 
 /**
  * A talent newly earned opens the talent window on its own, once nothing else is open and no foe is alive: once for

@@ -23,7 +23,7 @@ describe('the how it plays window', () => {
       ['Tests that pass', 'A sure critical'],
       ['A commit', 'A shrine and full HP'],
       ['A push or a PR', 'A cache of loot'],
-      ['An answer finished', 'The stairs down'],
+      ['An answer finished', 'The stairs down, after 3 calls'],
     ])
     const lines = helpOverlay()[0]!.lines
     HELP_ROWS.forEach((r, i) => {

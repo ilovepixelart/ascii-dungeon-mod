@@ -2335,7 +2335,7 @@ export const register: Register = (on, options) => {
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.reason === 'answer' && !isPaused && !isByHand(await current($))) {
-      await act($, { kind: 'descend' })
+      await act($, { kind: 'answer' })
       if (!isSaveHeld) await $.store.set(SAVE, savable(await read($, game)))
     }
 

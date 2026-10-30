@@ -120,6 +120,7 @@ A Rare or Epic may carry a trigger, a rule it changes while worn (`TRIGGERS` in 
 | Quick Study | a passing test run gives 1 XP a depth | `greenBuild` |
 | Fresh Start | a commit's shrine also gives 1 blow of fury | `shrine` |
 
+- Played by hand no tool call comes, so nothing that needs one is found or offered: the triggers marked `work` (Quick Study, Fresh Start), the Legendaries marked `work` (the Mantle of the Monorepo, the Aegis of Green Builds, the Staff of Stack Traces) and the talents marked `work` (`offer` in `hooks/talents.ts`). In session play every one comes up as before.
 - A new item's trigger is drawn from its id and the world (`hash`), not the game's dice, so every roll after it falls as it did before triggers existed. A reforge rolls it anew with the dice; an heirloom keeps it. A trigger adds 3 to an item's worth when sold.
 - The card shows its name in the item's tier color and what it does wrapped under it (`triggerLines` in `hooks/bagui.ts`); as text, on one line.
 - Balance: each trigger forced on from the first step (60 simulated games a class, 3,000 steps), deaths a depth reached are 0.125 with none, 0.110 Thorns, 0.117 Bulwark and Quick Study, 0.119 Executioner and Fresh Start, 0.125 Leeching, 0.127 Momentum, 0.130 Prospector; rolled as they drop, 0.120.

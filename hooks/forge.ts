@@ -35,7 +35,7 @@ export const chosenSlot = (g: Game, ui: ForgeUi): Slot | undefined => (ui.slot !
 /** Why the smith cannot temper or reforge a piece now, or undefined when they can. */
 export const whyNotTemper = (g: Game, item: Item) => ((item.temper ?? 0) >= TEMPER_MAX ? 'tempered as far as it goes' : g.gold < temperCost(item, g.deepest) ? 'not enough gold' : undefined)
 export const whyNotReforge = (g: Game, item: Item) =>
-  item.rarity === 'common' ? 'a Common has no affixes' : item.rarity === 'legendary' ? 'a Legendary stays as it was made' : g.gold < reforgeCost(g) ? 'not enough gold' : undefined
+  item.rarity === 'common' ? 'a Common has no affixes' : item.rarity === 'legendary' ? 'a Legendary stays as it was made' : g.gold < reforgeCost(g, item) ? 'not enough gold' : undefined
 
 const cost = (label: string, price: number | undefined, why: string | undefined): Run[] =>
   why === undefined || why === 'not enough gold'
@@ -79,7 +79,7 @@ const workCard = (g: Game, item: Item): Run[][] => {
     ...traitLines(g, item),
     ...(from !== undefined && from.item.id === item.id ? beforeLines(from.item) : []),
     temperRuns(g, item),
-    cost('Reforge', reforgeCost(g), whyNotReforge(g, item)),
+    cost('Reforge', reforgeCost(g, item), whyNotReforge(g, item)),
   ]
 }
 

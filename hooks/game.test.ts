@@ -1155,12 +1155,20 @@ describe('the smith', () => {
     const once = apply(g, { kind: 'reforge', slot: 'weapon' })
     const after = once.gear.weapon!
     expect({ base: after.base, rarity: after.rarity, id: after.id, slot: after.slot }).toEqual({ base: before.base, rarity: before.rarity, id: before.id, slot: before.slot })
-    expect(once.gold).toBe(1000 - reforgeCost(g))
-    expect(once.log.at(-1)).toBe(`The smith reforges your ${before.name} into ${after.name} for ${reforgeCost(g)} gold.`)
-    expect(reforgeCost(once)).toBeGreaterThan(reforgeCost(g))
-    // Worked by hand: 40 gold, then 40 more for each reforge before, plus 10 a depth.
-    expect(reforgeCost({ ...g, reforges: 0, depth: 1 })).toBe(50)
-    expect(reforgeCost({ ...g, reforges: 2, depth: 3 })).toBe(150)
+    expect(once.gold).toBe(1000 - reforgeCost(g, before))
+    expect(once.log.at(-1)).toBe(`The smith reforges your ${before.name} into ${after.name} for ${reforgeCost(g, before)} gold.`)
+    expect(reforgeCost(once, after)).toBeGreaterThan(reforgeCost(g, before))
+  })
+
+  test("a reforge is priced by the item's tier and the deepest depth reached, 40 more for each one before", async () => {
+    const at = (rarity: 'uncommon' | 'rare' | 'epic', deepest: number, reforges: number, depth = deepest) => {
+      const g: Pick<Game, 'reforges' | 'deepest' | 'depth'> = { reforges, deepest, depth }
+      return reforgeCost(g, { rarity })
+    }
+    // 60 times the tier (an Uncommon 1, a Rare 2, an Epic 4) times 1 and a tenth of the deepest depth, rounded down.
+    expect([at('uncommon', 1, 0), at('rare', 3, 2), at('epic', 50, 0)]).toEqual([60, 200, 1440])
+    // The deepest depth, not the one the hero stands on: back up at depth 3, an Epic is priced as at 50.
+    expect(at('epic', 50, 0, 3)).toBe(1440)
   })
 
   test('cannot reforge a Common (no affixes) or a Legendary (fixed), nor without the gold', async () => {

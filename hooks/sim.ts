@@ -217,7 +217,7 @@ const smithing = (g: Game, d: Dice): Action | undefined => {
   if (cheapest !== undefined && g.gold >= temperCost(g.gear[cheapest]!, g.deepest) + priceOfWare('health1', g)) return { kind: 'temper', slot: cheapest }
   const weapon = g.gear.weapon
   const isReforgeable = weapon !== undefined && weapon.rarity !== 'common' && weapon.rarity !== 'legendary'
-  return isReforgeable && g.gold >= 2 * reforgeCost(g) && d(3) === 1 ? { kind: 'reforge', slot: 'weapon' } : undefined
+  return isReforgeable && g.gold >= 2 * reforgeCost(g, weapon) && d(3) === 1 ? { kind: 'reforge', slot: 'weapon' } : undefined
 }
 
 /** In town: to the healer when hurt, its errands, the smith, a wander now and then, otherwise back through the portal. */

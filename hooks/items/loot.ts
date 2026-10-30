@@ -2,7 +2,7 @@
 import type { ClassSet, Game, HeroClass, Item, Rarity, Trigger } from '../../types'
 import { hash, pick, roll } from '../rng'
 import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, RARE_TRIGGER_SHARE, SETS, STARTING_KIT, SUFFIXES, TRIGGERS, baseOf } from './catalog'
-import type { Base } from './catalog'
+import type { Affix, Base } from './catalog'
 import { NO_STATS, STAT_KEYS, plus } from './stats'
 import type { Stats } from './stats'
 import { stashedItems } from '../stash'
@@ -61,13 +61,22 @@ const scaled = (base: Base, depth: number): Partial<Stats> => {
   return Object.fromEntries(STAT_KEYS.map(k => [k, (base[k] ?? 0) > 0 ? (base[k] ?? 0) + (k === 'hp' ? bonus * 2 : bonus) : 0]))
 }
 
+/**
+ * An affix at a depth: its stats times 1 and an AFFIX_DEPTHS-th a depth, rounded. Flat, an affix was a few points
+ * beside a base that grows a point every three depths: at depth 150 an Epic was worth 12% over a Common, where at depth
+ * 5 it was worth over three times one.
+ */
+export const AFFIX_DEPTHS = 50
+export const affixAt = (affix: Affix, depth: number): Affix =>
+  ({ ...affix, ...Object.fromEntries(STAT_KEYS.filter(k => (affix[k] ?? 0) !== 0).map(k => [k, Math.round((affix[k] ?? 0) * (1 + depth / AFFIX_DEPTHS))])) })
+
 /** "Prefix Base of Suffix": one affix names one side, two or more name both. */
 const affixed = (g: Game, base: Base, count: number): { name: string; stats: Stats } => {
   let stats = plus(NO_STATS, scaled(base, g.depth))
   const prefix = count >= 2 || (count === 1 && roll(g, 2) === 1) ? pick(g, PREFIXES) : undefined
   const suffix = count >= 2 || (count === 1 && prefix === undefined) ? pick(g, SUFFIXES) : undefined
-  for (const affix of [prefix, suffix]) if (affix !== undefined) stats = plus(stats, affix)
-  for (let extra = 2; extra < count; extra += 1) stats = plus(stats, pick(g, [...PREFIXES, ...SUFFIXES]))
+  for (const affix of [prefix, suffix]) if (affix !== undefined) stats = plus(stats, affixAt(affix, g.depth))
+  for (let extra = 2; extra < count; extra += 1) stats = plus(stats, affixAt(pick(g, [...PREFIXES, ...SUFFIXES]), g.depth))
   const name = [prefix?.name, base.name, suffix?.name].filter(Boolean).join(' ')
   return { name, stats }
 }

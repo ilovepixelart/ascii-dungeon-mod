@@ -2,8 +2,9 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Foe, Game, HeroClass, Item } from '../types'
 import { SAVE_VERSION, apply, attackBonus, critChance, newGame, normalize } from './game'
-import { BAG_H, BAG_W, BASES, fit, priceOf, stash } from './items'
+import { affixAt, BAG_H, BAG_W, BASES, fit, makeItem, PREFIXES, priceOf, stash } from './items'
 import { foeAhead, plainHero } from './fixtures'
+import { worth } from './items/stats'
 import { bagRows } from './panels'
 
 const item = (over: Partial<Item>): Item => ({
@@ -210,5 +211,29 @@ describe('each class\'s pool', () => {
     for (const cls of ['knight', 'mage', 'rogue'] as const) {
       expect(['weapon', 'offhand', 'helm', 'armor', 'boots'].map(slot => own(cls, slot))).toEqual([3, 3, 3, 3, 1])
     }
+  })
+})
+
+describe('affixes grow with depth', () => {
+  test('an affix is 1 and a 50th a depth times its stats, rounded: Sharp +2, +4 at depth 50, +8 at 150; Hearty +5, +13 at 75', async () => {
+    const sharp = PREFIXES.find(a => a.name === 'Sharp')!
+    const hearty = PREFIXES.find(a => a.name === 'Hearty')!
+    expect([0, 50, 150].map(d => affixAt(sharp, d).atk)).toEqual([2, 4, 8])
+    // 5 times 2.5 is 12.5, rounded to 13.
+    expect(affixAt(hearty, 75).hp).toBe(13)
+    expect(affixAt(sharp, 150).name).toBe('Sharp')
+  })
+
+  test('deep, an Epic is worth half again a Common and more; shallow the tiers stand as they did', async () => {
+    const mean = (depth: number, rarity: 'common' | 'epic') => {
+      const ws: number[] = []
+      for (let i = 0; i < 400 && ws.length < 60; i += 1) {
+        const item = makeItem({ ...plainHero(i + 1), depth, deepest: depth, nextId: 7000 + i }, rarity)
+        if (item.rarity === rarity) ws.push(worth(item))
+      }
+      return ws.reduce((a, b) => a + b, 0) / ws.length
+    }
+    expect(mean(150, 'epic') / mean(150, 'common')).toBeGreaterThan(1.5)
+    expect(mean(5, 'epic') / mean(5, 'common')).toBeGreaterThan(3)
   })
 })

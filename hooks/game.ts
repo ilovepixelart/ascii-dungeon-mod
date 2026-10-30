@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -1424,6 +1424,7 @@ const leaveTown = (g: Game) => {
   // The merchant and the smith stay in town.
   if (TOWN_PANELS.has(g.panel)) g.panel = 'none'
   Object.assign(g, { where: 'dungeon', ...(g.portal ?? levelOf(g).start), portal: null, mended: 0, lastSold: null, reforgedFrom: null })
+  delete g.idle
   say(g, 'You step back through the portal.')
   // Back on the tile, as a step onto it: a cache earned in town lies here.
   pickUpFloor(g)
@@ -1794,7 +1795,20 @@ const townMove = (g: Game, dx: number, dy: number) => {
   else say(g, 'A wall.')
 }
 
-const rest = (g: Game) => say(g, 'You rest in town.')
+/**
+ * A tool call in town: a rest. With no window open the call counts, and the TOWN_IDLE_CALLS-th in a row takes the
+ * hero back through the portal; with one open, the player is busy in town and the count starts over.
+ */
+const rest = (g: Game) => {
+  const idle = g.panel === 'none' ? (g.idle ?? 0) + 1 : 0
+  if (idle < TOWN_IDLE_CALLS) {
+    g.idle = idle
+    say(g, 'You rest in town.')
+    return
+  }
+  leaveTown(g)
+  g.toast = 'Back to the dungeon: the work goes on.'
+}
 const NO_STAIRS = 'The stairs are in the dungeon: take the portal back (t).'
 
 /** What happens differently in town: no foes, no stairs; the rest of the rules are the dungeon's. */

@@ -12,6 +12,8 @@ Three shops face a cobbled square across its north side: the merchant (red roof,
 - `t` again, or clicking the town's portal, leads back to that tile. A click walks the hero up to the portal first, the walk drawn in town, and only its end steps through (`isWalkThrough` in `register.tsx`).
 - A finished task (the turn ending) leaves a hero in town where they are, any window open kept open: only the portal leads
   back.
+- A tool call in town is a rest. With no window open it counts (`idle`), and the `TOWN_IDLE_CALLS`-th (5) in a row takes
+  the hero back through the portal, with a toast; a window open starts the count over, the player busy in town.
 
 ## In town
 

@@ -3,7 +3,8 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 import type { Game } from '../types'
-import { DEFAULT_ORDERS, apply, isByHand, levelOf, newGame, ordersOf } from './game'
+import { BESTIARY, DEFAULT_ORDERS, apply, isByHand, levelOf, newGame, ordersOf } from './game'
+import { foeAtk } from './balance'
 import { healingSlot } from './consumables'
 import { isUpgrade } from './items'
 
@@ -76,6 +77,16 @@ describe('playing by hand', () => {
       expect(g.deepest).toBeGreaterThan(5)
     })
   }
+
+  test("a foe met by hand hits twice as hard as its kind would: a session's foe has a blow of its own on every failed call", async () => {
+    let g: Game = { ...byHand(newGame(1, 'knight')), panel: 'none' }
+    for (let i = 0; i < 200 && g.foe === null; i += 1) g = apply(g, { kind: 'walk' })
+    const foe = g.foe!
+    expect(foe).not.toBeNull()
+    const tier = BESTIARY.findIndex(k => k.glyph === foe.glyph)
+    // Its kind's attack at the depth, a swing of 1 or 2, times HAND_FOE_ATK 2.
+    expect([1, 2].map(d2 => 2 * foeAtk(g.depth, tier, d2))).toContain(foe.atk)
+  })
 
   test('the session playing, a walk by hand meets no foe', async () => {
     let g: Game = { ...newGame(1, 'knight'), panel: 'none' }

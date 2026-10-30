@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, KNIGHT_ARMOR, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_ATK, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, KNIGHT_ARMOR, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -2082,10 +2082,14 @@ const offerTalent = (g: Game) => {
 /** The player's own steps: by hand, each walk may meet a foe, as a tool call would summon one. */
 const HAND_STEPS: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['move', 'goto', 'walk'])
 
-/** A walk by hand in the dungeon with no foe about: a foe met, HAND_FOE_TILE percent a tile walked, at most HAND_FOE_MAX. */
+/** A walk by hand in the dungeon with no foe about: a foe met, HAND_FOE_TILE percent a tile walked, at most HAND_FOE_MAX, hitting HAND_FOE_ATK times its kind. */
 const handFoe = (g: Game) => {
   if (!isByHand(g) || g.where !== 'dungeon' || g.foe !== null || g.hp <= 0 || g.walked.length === 0) return
-  if (roll(g, 100) <= Math.min(HAND_FOE_MAX, HAND_FOE_TILE * g.walked.length)) summon(g, 'the depths')
+  if (roll(g, 100) > Math.min(HAND_FOE_MAX, HAND_FOE_TILE * g.walked.length)) return
+  summon(g, 'the depths')
+  // Read past the guard above: summon may have set it.
+  const met = g.foe as Foe | null
+  if (met !== null) g.foe = { ...met, atk: met.atk * HAND_FOE_ATK }
 }
 
 /** In town all the gold carried is banked; elsewhere what is spent comes off the banked first, and what is earned is

@@ -137,9 +137,25 @@ export { xpToLevel } from './balance'
 export type Threat = 'easy' | 'tough' | 'deadly'
 
 /** How dangerous the foe is: by the hits it needs to drop the hero from full health. */
+/** How many turns ahead a foe's threat looks for its heaviest blow: every kind's turns come round within 4. */
+const THREAT_TURNS = 4
+
+/**
+ * How hard the foe is: the blows of max HP its plain one takes through armor (3 or fewer deadly, 6 or fewer tough), and
+ * deadly too when a heavy blow within THREAT_TURNS could take the hero's HP now.
+ */
 export const threat = (g: Game): Threat => {
-  const hits = Math.ceil(g.maxHp / Math.max(1, (g.foe?.atk ?? 0) - defense(g)))
-  if (hits <= 3) return 'deadly'
+  const foe = g.foe
+  if (foe === null) return 'easy'
+  const hits = Math.ceil(g.maxHp / blowAgainst(g, foe.atk, false, false))
+  let ahead = foe
+  let heaviest = 0
+  for (let i = 0; i < THREAT_TURNS; i += 1) {
+    const turn = foeTurn(g, ahead)
+    if (turn.times > 1) heaviest = Math.max(heaviest, blowAgainst(g, foe.atk * turn.times, turn.pierces, true))
+    ahead = turn.foe
+  }
+  if (hits <= 3 || heaviest >= g.hp) return 'deadly'
   return hits <= 6 ? 'tough' : 'easy'
 }
 
@@ -966,6 +982,15 @@ const counter = (g: Game, what: string) => {
   if (g.foe?.champion === 'vampiric') g.foe = drink(g.foe, dmg)
   hurt(g, dmg, by)
   landed(g, dmg)
+  if (turn !== undefined && turn.times <= 1) warnHeavy(g)
+}
+
+/** A heavy blow coming next turn, told now with about what it will take: a turn to ward, drink or step back. */
+const warnHeavy = (g: Game) => {
+  const foe = g.foe
+  if (foe === null || g.hp <= 0) return
+  const next = foeTurn(g, foe)
+  if (next.times > 1 && next.strikes) say(g, `${TheFoe(foe)}'s next blow lands for about ${blowAgainst(g, foe.atk * next.times, next.pierces, true)}.`)
 }
 
 /** What the log adds to a blow halved once or twice. */
@@ -980,14 +1005,19 @@ const armorAgainst = (g: Game, pierces: boolean) => (!pierces ? defense(g) : g.c
  * for the first of a fight to land with Bulwark worn, and for the knight's braced shield: with the whole Oathbound set
  * the shield turns the first blow and halves the second, which spends the opening.
  */
+/** A blow of `raw` through the hero's armor (`armorShare`), a heavy one at most HEAVY_BLOW_MAX of max HP. */
+const blowAgainst = (g: Game, raw: number, pierces: boolean, isHeavy: boolean) => {
+  const blow = Math.max(1, Math.round(raw * armorShare(armorAgainst(g, pierces), g.depth)))
+  return isHeavy ? Math.min(blow, Math.ceil(g.maxHp * HEAVY_BLOW_MAX)) : blow
+}
+
 const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
   const lust = modHere(g) === 'bloodlust' ? BLOODLUST : 1
   const raw = Math.round((g.foe?.atk ?? g.depth) * (turn?.times ?? 1) * lust)
-  const blow = Math.max(1, Math.round(raw * armorShare(armorAgainst(g, turn?.pierces === true), g.depth)))
+  const heavy = blowAgainst(g, raw, turn?.pierces === true, (turn?.times ?? 1) > 1)
   const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
   const isBraced = g.cls === 'knight' && g.foe?.braced === true && g.foe.opened === undefined
   if (isBraced && g.foe !== null) g.foe = { ...g.foe, opened: true }
-  const heavy = (turn?.times ?? 1) > 1 ? Math.min(blow, Math.ceil(g.maxHp * HEAVY_BLOW_MAX)) : blow
   const once = isBulwark ? Math.ceil(heavy / 2) : heavy
   return { dmg: isBraced ? Math.ceil(once / 2) : once, halved: (isBulwark ? 1 : 0) + (isBraced ? 1 : 0) }
 }

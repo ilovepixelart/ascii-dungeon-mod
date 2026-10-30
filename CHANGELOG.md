@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- The turn before a heavy blow, the log says about what it will take. A foe's threat counts its blows through armor
+  as they land, and is deadly when a heavy blow coming could take the hero's HP; it took defense off a blow, which
+  armor no longer does, and called deep foes easy.
 - A heavy blow (a breath, a frost nova, a greatsword, a rage) takes at most 60% of max HP. A hero spending every
   point on Might took them up to 78% of max HP and met 42 of its 114 deaths on one; now 38 of 97.
 - The click or key that opens the recap does what it says too, the recap opening over it; it opened the recap

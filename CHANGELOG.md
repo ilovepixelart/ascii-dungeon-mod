@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how
+  many it has seen. Every answer took them: answers of 0 to 2 tool calls died about ten times as often as longer
+  ones. Simulated with 0 to 2 calls an answer, deaths per 1,000 steps fall from 15.8 to 5.4.
 - A hero more than 5 levels over a depth's level (3 and 0.4 a depth) takes less of a kill's XP: 81, 62, 43 and 24 in
   100 at 6 to 9 levels over, 5 in 100 from 10 over. Played by hand, a hero ran 12 levels ahead of its depth; now 7.
 - A click on worn gear in the inventory shows its card until the next click; a right click takes it off, where a

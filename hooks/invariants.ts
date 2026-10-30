@@ -73,6 +73,11 @@ const RULES: Readonly<Record<string, Rule>> = {
     if (!counts.every(n => Number.isInteger(n) && n >= 0) || r.champions > r.kills) return `recap counts ${counts.join(', ')}`
     return r.depth >= 1 && r.depth <= g.deepest && r.level >= 1 && r.level <= g.level ? undefined : `recap from depth ${r.depth}, level ${r.level}`
   },
+  'work counted on a depth reached': g => {
+    const w = g.worked
+    if (w === undefined) return undefined
+    return Number.isInteger(w.calls) && w.calls >= 0 && w.depth >= 1 && w.depth <= g.deepest ? undefined : `${w.calls} tool calls counted on depth ${w.depth}, deepest ${g.deepest}`
+  },
   'orders among their choices': g => {
     const o = g.orders
     if (o === undefined) return undefined

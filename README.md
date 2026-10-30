@@ -14,7 +14,7 @@ lets the foe hit back, and real work pays.
 | Tests that pass | A sure critical |
 | A commit | A shrine and full HP |
 | A push or a PR | A cache of loot |
-| An answer finished | The stairs down |
+| An answer finished | The stairs down, once the depth has seen 3 tool calls |
 
 The same list is in the game, under How it plays. The hero follows the main session alone: a subagent's tool calls
 play no part. To play by hand instead, set Play by hand in settings: the session then leaves the hero be, and foes

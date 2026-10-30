@@ -225,7 +225,7 @@ describe('the simulator played another way', () => {
 
   test('by hand, the game is set to hand play and no tool call or answer comes, yet the hero goes down', { timeoutMs: 20000 }, async () => {
     const { records, final } = simulate(5, 1500, 'rogue', { byHand: true })
-    const session = records.filter(r => ['explore', 'summon', 'ally', 'outcome', 'descend', 'quest'].includes(r.action.kind))
+    const session = records.filter(r => ['explore', 'summon', 'ally', 'outcome', 'descend', 'answer', 'quest'].includes(r.action.kind))
     expect(session).toEqual([])
     expect(final.orders?.play).toBe('hand')
     expect(final.deepest).toBeGreaterThan(1)
@@ -242,7 +242,7 @@ describe('the simulator played another way', () => {
     let calls = 0
     for (const r of records) {
       if (r.action.kind === 'outcome') calls += 1
-      if (r.action.kind === 'descend') {
+      if (r.action.kind === 'answer') {
         perAnswer.push(calls)
         calls = 0
       }

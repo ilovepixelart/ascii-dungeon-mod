@@ -163,6 +163,8 @@ export type Game = {
   dryKills: number
   /** Kills since the last Rare or better dropped: the RARE_KILLS-th kill leaves one, whatever it would have left. */
   sinceRare: number
+  /** The tool calls settled on a depth: an answer takes the stairs only after DESCEND_CALLS on this one (absent, none). */
+  worked?: { depth: number; calls: number }
   /** Reforges the smith has done: each makes the next dearer. */
   reforges: number
   /** The deepest boss depth whose guardian is slain; 0 before the first. */

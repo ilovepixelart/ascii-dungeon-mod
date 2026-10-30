@@ -89,7 +89,8 @@ export const curveOf = (classes: readonly HeroClass[], seeds: number, steps: num
   }
   for (const cls of classes)
     for (let seed = 1; seed <= seeds; seed += 1) {
-      const result: SimResult = simulate(seed, steps, cls, play)
+      // Only played: the simulator's own tests hold every step to the rules.
+      const result: SimResult = simulate(seed, steps, cls, { ...play, checks: false })
       let g = startOf(seed, cls, play)
       let depth = g.depth
       for (const r of result.records) {

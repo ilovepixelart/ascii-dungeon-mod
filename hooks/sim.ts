@@ -351,6 +351,8 @@ export type SimOptions = {
   talents?: Talent[]
   /** The tool calls an answer takes, from least to most: 4 to 13 by default. */
   calls?: { least: number; most: number }
+  /** Each step held to the rules (`violations`, the walk and sight checks); off, only played, in about two thirds the time. */
+  checks?: boolean
 }
 
 const CALLS = { least: 4, most: 13 }
@@ -576,7 +578,7 @@ export const startOf = (seed: number, cls: HeroClass, { byHand = false, talents 
 
 /** A game of `steps` actions, played as a session would by default, or as `options` say. */
 export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight', options: SimOptions = {}): SimResult => {
-  const { timeFrames = false, byHand = false } = options
+  const { timeFrames = false, byHand = false, checks: isChecked = true } = options
   let g = startOf(seed, cls, options)
   const d = dice(seed)
   const actions = byHand ? handPlay(() => g, d, options) : session(() => g, d, options)
@@ -589,7 +591,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight',
     const from = { x: g.x, y: g.y }
     const before = g
     g = apply(g, action)
-    check(checks, before, g, action, timeFrames)
+    if (isChecked) check(checks, before, g, action, timeFrames)
     records.push({
       step,
       action,
@@ -597,7 +599,7 @@ export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight',
       hero: { x: g.x, y: g.y, hp: g.hp, maxHp: g.maxHp, depth: g.depth, level: g.level },
       foe: g.foe === null ? null : { name: g.foe.name, hp: g.foe.hp, x: g.foe.x, y: g.foe.y },
       said: g.log.slice(g.log.length - g.fresh),
-      broke: violations(g),
+      broke: isChecked ? violations(g) : [],
     })
   }
   const loot: Record<string, number> = {}

@@ -4,15 +4,12 @@
 // its points at random.
 
 /**
- * How much of the plain sum a foe's HP is, which grows as depth does and no faster: with criticals at twice a blow and
- * Might a share of it, the hero's damage grows as the gear does, about as depth does. At the whole sum a kill took 4 to
- * 5 blows from depth 5 on; with half a percent more a depth past depth 10, as when Focus raised crit damage without
- * bound, a kill at depth 150 took 4.2 blows where one at depth 25 took 2.5 (`tools/curve.ts`).
+ * A monster's hit points: its depth and its tier in the bestiary (0 rat .. 7 dragon), plus a d4, growing as depth does
+ * and no faster, as the hero's damage does (the gear's attack; Might and criticals a share of it). At 0.8 of this sum,
+ * a simulated session's kills took about 2.5 blows and it died almost only on depths 1 to 5 (0.11 times in 100 tool
+ * calls): longer fights, not harder blows, put the danger back deeper.
  */
-export const FOE_HP_SCALE = 0.8
-
-/** A monster's hit points: its depth and its tier in the bestiary (0 rat .. 7 dragon), plus a d4. */
-export const foeHp = (depth: number, tier: number, d4: number) => Math.round((6 + depth * 6 + tier * 2 + d4) * FOE_HP_SCALE)
+export const foeHp = (depth: number, tier: number, d4: number) => 6 + depth * 6 + tier * 2 + d4
 
 /** How much harder than the plain sum foes hit: at 1 the hero died about once in 550 tool calls. */
 export const FOE_ATK_SCALE = 1.2

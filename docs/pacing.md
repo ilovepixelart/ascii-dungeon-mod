@@ -56,7 +56,7 @@ Only real outcomes pay: an amend, a cherry-pick or a comment on a pull request d
 
 ## Deeper
 
-Foes grow as depth does and no faster, HP (`foeHp`, `FOE_HP_SCALE` of the plain sum) and attack (`foeAtk`) alike, and so does the hero: gear's attack and defense, and max HP. Two things keep that level however deep.
+Foes grow as depth does and no faster, HP (`foeHp`) and attack (`foeAtk`) alike, and so does the hero: gear's attack and defense, and max HP. Two things keep that level however deep.
 
 - Armor lets a share of a blow through, `K / (K + defense)` with `K` 0.9 of the depth plus 10, never under a quarter (`armorShare`). Armor that took its defense off a blow drifted from the foes' attack: past depth 100 a blow took a fifth to two fifths of max HP.
 - Might and Focus give a share of their points, 0.6 of them over them plus 20 (`statShare`): Might lifts every blow by it; Focus's is crit chance (with gear's, at most 60%) and adds to a critical's times, twice a blow (`critTimes`). Focus raising crit damage 5% a point without bound made a hero spending on it alone slay deep foes in 1.6 blows, and foe HP had to grow faster than depth to keep up, leaving every other hero behind. With a critical at a plain twice a blow, a knight or rogue spending on Focus alone died two to three times as often as one on Might.
@@ -65,13 +65,13 @@ Foes grow as depth does and no faster, HP (`foeHp`, `FOE_HP_SCALE` of the plain 
 
 | Depths | Hits a kill: at random | Might | Focus | Blow, share of max HP: at random | Might | Focus |
 |---|---|---|---|---|---|---|
-| 21 to 25 | 2.5 | 2.5 | 2.3 | 12% | 15% | 15% |
-| 41 to 50 | 2.5 | 3.5 | 2.8 | 13% | 19% | 19% |
-| 81 to 90 | 2.5 | 2.9 | 3.2 | 16% | 21% | 19% |
-| 141 to 150 | 1.9 | 2.3 | 2.4 | 14% | 21% | 21% |
-| 221 to 230 | 2.0 | 1.7 | 2.1 | 14% | 17% | 20% |
+| 21 to 25 | 3.2 | 3.0 | 3.1 | 12% | 15% | 14% |
+| 41 to 50 | 3.5 | 3.7 | 3.7 | 15% | 18% | 19% |
+| 81 to 90 | 3.1 | 4.6 | 3.3 | 14% | 19% | 19% |
+| 141 to 150 | 2.3 | 2.2 | 2.7 | 14% | 18% | 20% |
+| 221 to 230 | 2.0 | 2.0 | 2.2 | 12% | 18% | 18% |
 
-A hero all Might or all Focus buys no HP and no defense, so takes the bigger share. Over the same games, deaths a game, knights, mages and rogues: every point on Might 139, 35 and 93; on Focus 109, 68 and 235; on Vigor 127, 6 and 106. The rogue's ambush is a sure critical whatever its chance, so Focus does the least for it.
+Foe HP is the plain sum: at 0.8 of it kills took about 2.5 blows and a simulated session died almost only on depths 1 to 5, 0.09 times in 100 tool calls over 30 games of 6,000 steps; at the whole sum, 0.23 times, with close calls (under a quarter of max HP, and living) from 0.16 to 0.44 in 100 calls. Harder blows were the other way to that: armor at 2.8 of the depth plus 45 came to 0.49 deaths in 100 calls, but a hero all Might or all Focus took a mean blow over 30% of max HP at most depths. A hero all Might or all Focus buys no HP and no defense, so takes the bigger share. Over the same games, deaths a game, knights, mages and rogues: every point on Might 139, 35 and 93; on Focus 109, 68 and 235; on Vigor 127, 6 and 106. The rogue's ambush is a sure critical whatever its chance, so Focus does the least for it.
 
 ## Levels
 

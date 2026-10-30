@@ -5,7 +5,7 @@ import type { Consumable, Game } from '../types'
 import { KINDS } from './consumables'
 import { foeAhead, fullTab, plainHero } from './fixtures'
 import { beltAid, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate, townMove } from './sim'
-import { MARKS, tierOf } from './deep'
+import { forkTier, MARKS, tierOf } from './deep'
 import { bfs, isFloor, roomAt, visibleFrom } from './map'
 import { TOWN_SPOTS, pathBeside } from './town'
 import { FOG, arrive, levelOf, reveal } from './world'
@@ -39,7 +39,9 @@ test('the simulated player chooses a mark at every fork it reaches', { timeoutMs
   // A run that reached a second tier and took a harder mark there: the stairs alone take only the easier.
   const run = firstRun(8000, r => tierOf(r.final.deepest) >= 2 && Object.values(r.final.marks ?? {}).some(m => MARKS[m].hard === true))!
   expect(run).toBeDefined()
-  expect(Object.keys(run.final.marks ?? {}).map(Number)).toEqual(Array.from({ length: tierOf(run.final.deepest) }, (_, i) => i + 1))
+  // Every circle reached has its mark, and so has the next when its fork opened, the deepest circle's warden slain.
+  const reached = Math.max(tierOf(run.final.deepest), forkTier(run.final) ?? 0)
+  expect(Object.keys(run.final.marks ?? {}).map(Number)).toEqual(Array.from({ length: reached }, (_, i) => i + 1))
   // The stairs take only the easier: a harder one was chosen.
   expect(Object.values(run.final.marks ?? {}).some(m => MARKS[m].hard === true)).toBe(true)
 })

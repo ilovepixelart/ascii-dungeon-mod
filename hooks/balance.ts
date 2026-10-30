@@ -97,6 +97,14 @@ export const heroDamage = (level: number, d4: number, attackBonus: number) => 1 
 export const HAND_FOE_TILE = 15
 export const HAND_FOE_MAX = 60
 
+/**
+ * How much harder than its kind a foe met by hand hits. In session play a failed tool call is the foe's blow with none
+ * back, and every exchange by hand is a blow each way, the player choosing when to drink: by hand a kill took 11.9 HP
+ * where a session's took about 20, and over 18 games of 3,000 steps the hero died 0.07 times in 1,000 steps where a
+ * session's died 0.87 times. At twice its kind's attack, 0.61.
+ */
+export const HAND_FOE_ATK = 2
+
 /** The least share of a blow armor lets through: deep heroes stack defense past what foes hit for. */
 export const ARMOR_FLOOR = 0.25
 

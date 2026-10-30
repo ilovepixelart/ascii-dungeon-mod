@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A foe met by hand hits twice as hard as its kind. Played by hand the hero almost never died (0.07 times in 1,000
+  steps, where a session's dies 0.87 times); now 0.61, as many fights as before.
 - A knight's defense counts half again against every blow, half of that through armor. Knights reached depth 71 on
   average where mages and rogues reached 98 to 102, dying most; now 83, dying least.
 - Foe HP is the whole of its plain sum, where it was 0.8 of it: about 3 hits a kill, where it was 2.5. Simulated

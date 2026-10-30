@@ -77,6 +77,10 @@ Foe HP is the plain sum: at 0.8 of it kills took about 2.5 blows and a simulated
 
 A depth has a level, 3 and 0.4 a depth (`levelFor`), the simulated hero's within a level from depth 10 to 250. A hero more than 5 levels over it takes less of a kill's XP (`xpShare`): 81, 62, 43 and 24 in 100 at 6 to 9 over, 5 in 100 from 10 over; one under it takes the whole. In session play the hero keeps to its depth's level and nothing changes. Played by hand, over 60 games of 3,000 steps, the hero stood at level 30 by depth 37, 12 over it; it now stands at 25.
 
+## By hand
+
+Played by hand, a walk meets a foe `HAND_FOE_TILE` (15) in 100 a tile, and it hits `HAND_FOE_ATK` (2) times as hard as its kind (`handFoe`): in session play a failed tool call is the foe's blow with none back, where by hand every exchange is a blow each way and the player chooses when to drink. Over 18 games of 3,000 steps, by hand the hero died 0.07 times in 1,000 steps where a session's died 0.87; now 0.61. Fewer foes was the other way, and an emptier game: at 3 in 100 a tile, 193 kills a game where 378, and still 0.13 deaths.
+
 ## Where it stands
 
 | | Before | Now |

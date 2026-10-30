@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A boss depth's guardian is one of its theme's favorite kinds, strongest first and the next at each later visit,
+  each fighting as its kind does; every guardian past depth 5 was a dragon overlord.
 - A heavy blow (a breath, a frost nova, a greatsword, a rage) takes at most 60% of max HP. A hero spending every
   point on Might took them up to 78% of max HP and met 42 of its 114 deaths on one; now 38 of 97.
 - The click or key that opens the recap does what it says too, the recap opening over it; it opened the recap

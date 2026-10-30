@@ -1289,6 +1289,15 @@ describe('the boss of every fifth depth', () => {
     expect(apply(g, { kind: 'descend' }).log.at(-1)).toBe('The wraith overlord guards the stairs.')
   })
 
+  test("a guardian is one of its theme's favorite kinds, the strongest first, the next at each later visit", async () => {
+    const guardian = (depth: number) => apply(atDepth(depth), { kind: 'descend' }).foe?.glyph
+    // By tier, strongest first: crypt W s r, fungal k g r, forge D o g, flooded T k r, frozen W s o. Depths 5 to 45 take
+    // each theme's first; 55 the crypt's second, 105 its third.
+    expect([5, 15, 25, 35, 45, 55, 105].map(guardian)).toEqual(['W', 'k', 'D', 'T', 'W', 's', 'r'])
+    // The same depth, the same guardian.
+    expect(guardian(15)).toBe(guardian(15))
+  })
+
   test('once it falls the way down is open, and it does not rise again', async () => {
     const met = apply(atDepth(5), { kind: 'descend' })
     const slain = apply({ ...met, foe: { ...met.foe!, hp: 1 } }, { kind: 'attack' })

@@ -48,11 +48,12 @@ describe('the balance formulas', () => {
 })
 
 describe('the feel of a session', () => {
-  // Alone the 18 games take under a second; beside the other test files they can pass the 5 s default.
+  // The 18 games take about 2 s alone, more beside the other test files: past the 5 s default. They are only played
+  // (`checks: false`): the simulator's own tests hold every step to the rules.
   test('fights cost something: about 3 hits a kill, potions get drunk, and the hero can die', { timeoutMs: 60000 }, async () => {
     // 18 games of about 325 tool calls: a death every 150 to 200 calls is 1.6 to 2.2 per 1,000 steps. The band is
     // wider for the sample's spread; under 0.8 is the game gone easy again, over 3.5 a hero dying every 90 calls.
-    const runs = (['knight', 'mage', 'rogue'] as const).flatMap(cls => [1, 2, 3, 4, 5, 6].map(seed => simulate(seed, 1000, cls)))
+    const runs = (['knight', 'mage', 'rogue'] as const).flatMap(cls => [1, 2, 3, 4, 5, 6].map(seed => simulate(seed, 1000, cls, { checks: false })))
     const steps = runs.length * 1000
     const deaths = runs.reduce((n, r) => n + r.stats.deaths, 0)
     const potions = runs.reduce((n, r) => n + r.stats.potionsUsed, 0) / runs.length

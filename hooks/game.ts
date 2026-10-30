@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -976,7 +976,7 @@ const armorAgainst = (g: Game, pierces: boolean) => (!pierces ? defense(g) : g.c
 
 /**
  * The foe's blow (an imp's with no foe), the share of it the hero's defense (`armorAgainst`) lets through (`armorShare`),
- * its turn and the depth's twist, halved (rounded up)
+ * its turn and the depth's twist, a heavy one (its turn makes it harder) at most HEAVY_BLOW_MAX of max HP, halved (rounded up)
  * for the first of a fight to land with Bulwark worn, and for the knight's braced shield: with the whole Oathbound set
  * the shield turns the first blow and halves the second, which spends the opening.
  */
@@ -987,7 +987,8 @@ const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
   const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
   const isBraced = g.cls === 'knight' && g.foe?.braced === true && g.foe.opened === undefined
   if (isBraced && g.foe !== null) g.foe = { ...g.foe, opened: true }
-  const once = isBulwark ? Math.ceil(blow / 2) : blow
+  const heavy = (turn?.times ?? 1) > 1 ? Math.min(blow, Math.ceil(g.maxHp * HEAVY_BLOW_MAX)) : blow
+  const once = isBulwark ? Math.ceil(heavy / 2) : heavy
   return { dmg: isBraced ? Math.ceil(once / 2) : once, halved: (isBulwark ? 1 : 0) + (isBraced ? 1 : 0) }
 }
 

@@ -35,10 +35,12 @@ export const earned = (g: Pick<Game, 'level'>) => Math.min(Math.floor(g.level / 
 export const owed = (g: Pick<Game, 'level' | 'talents'>) => Math.max(0, earned(g) - (g.talents?.length ?? 0))
 
 /** The three talents offered now, none already picked: by the world and the picks so far; none when none is owed. */
-export const offer = (g: Pick<Game, 'level' | 'talents' | 'world'>): Talent[] => {
+export const offer = (g: Pick<Game, 'level' | 'talents' | 'world' | 'orders'>): Talent[] => {
   if (owed(g) === 0) return []
   const picked = g.talents?.length ?? 0
-  return ALL.filter(t => !hasTalent(g, t))
+  // Played by hand no tool call comes: a talent that needs one is not offered.
+  const isHand = g.orders?.play === 'hand'
+  return ALL.filter(t => !hasTalent(g, t) && !(isHand && TALENTS[t].work === true))
     .map((t, i) => ({ t, rank: hash(g.world, picked, i) * 100 + i }))
     .sort((a, b) => a.rank - b.rank)
     .slice(0, OFFERED)

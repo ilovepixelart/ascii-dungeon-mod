@@ -113,15 +113,21 @@ export const reforgeItem = (g: Game, item: Item): Item => {
   // A set piece keeps its name, and its set is its power: no trigger.
   if (item.set !== undefined) return { ...item, ...tempered }
   const { trigger: _trigger, ...kept } = item
-  const trigger = triggerFor(item.rarity, roll(g, 100) - 1, roll(g, ALL_TRIGGERS.length) - 1)
+  const trigger = triggerFor(g, item.rarity, roll(g, 100) - 1, roll(g, ALL_TRIGGERS.length) - 1)
   return { ...kept, name, ...tempered, ...(trigger === undefined ? {} : { trigger }) }
 }
 
 const ALL_TRIGGERS = Object.keys(TRIGGERS) as Trigger[]
+const HAND_TRIGGERS = ALL_TRIGGERS.filter(t => TRIGGERS[t].work !== true)
+
+/** Played by hand: no tool call comes, so nothing that needs one is found. Read off the orders, as `isByHand` does. */
+const isHand = (g: Pick<Game, 'orders'>) => g.orders?.play === 'hand'
 
 /** A tier's trigger by two draws, 0 to 99 and an index: every Epic's, a Rare's RARE_TRIGGER_SHARE times in a hundred, no other's. */
-const triggerFor = (rarity: Rarity, share: number, which: number): Trigger | undefined =>
-  rarity === 'epic' || (rarity === 'rare' && share < RARE_TRIGGER_SHARE) ? ALL_TRIGGERS[which % ALL_TRIGGERS.length] : undefined
+const triggerFor = (g: Game, rarity: Rarity, share: number, which: number): Trigger | undefined => {
+  const triggers = isHand(g) ? HAND_TRIGGERS : ALL_TRIGGERS
+  return rarity === 'epic' || (rarity === 'rare' && share < RARE_TRIGGER_SHARE) ? triggers[which % triggers.length] : undefined
+}
 
 /** About three drops in four are for the hero's class (or any class); the rest are any base at all. */
 const pickBase = (g: Game) => {
@@ -150,7 +156,7 @@ const rarityFor = (g: Game, atLeast: Rarity, rolls: number): Rarity => {
 
 /** A Legendary: its fixed powers, and stats that grow with depth as any item's do. */
 const legendaryOf = (g: Game): Item => {
-  const { base, name, power, ...stats } = pick(g, LEGENDARIES)
+  const { base, name, power, work: _work, ...stats } = pick(g, isHand(g) ? LEGENDARIES.filter(l => l.work !== true) : LEGENDARIES)
   const bonus = Math.floor(g.depth / 3)
   const grown = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, typeof v === 'number' && v > 0 && STAT_KEYS.includes(k as never) ? v + (k === 'hp' ? bonus * 2 : bonus) : v]))
   return { ...plainItem(g, base, 'legendary'), name, power, ...plus(NO_STATS, grown) }
@@ -176,6 +182,6 @@ export const makeItem = (g: Game, atLeast: Rarity = 'common', rolls = 1): Item =
   const { name, stats } = affixed(g, base, AFFIX_COUNT[rarity])
   const item = { ...plainItem(g, base.key, rarity), name, ...stats }
   // Drawn from the item's own id, not the game's dice, so every roll after it falls as it did before triggers.
-  const trigger = triggerFor(rarity, hash(item.id, g.world, 29), hash(item.id, g.world, 31))
+  const trigger = triggerFor(g, rarity, hash(item.id, g.world, 29), hash(item.id, g.world, 31))
   return trigger === undefined ? item : { ...item, trigger }
 }

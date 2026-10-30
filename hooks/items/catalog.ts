@@ -21,7 +21,8 @@ export const CLASS_NAME: Record<HeroClass, string> = { knight: 'Knight', mage: '
 
 export type Base = Partial<Stats> & { key: string; name: string; slot: Slot; w: number; h: number; cls?: HeroClass }
 export type Affix = Partial<Stats> & { name: string }
-export type Legendary = Partial<Stats> & { base: string; name: string; power: string }
+/** `work`: its power needs a tool call, so it is never found played by hand. */
+export type Legendary = Partial<Stats> & { base: string; name: string; power: string; work?: true }
 
 /** Every base, keyed by its icon; `cls` absent means any class wears it. */
 export const BASES: readonly Base[] = [
@@ -93,10 +94,10 @@ export const SUFFIXES: readonly Affix[] = [
 export const LEGENDARIES: readonly Legendary[] = [
   { base: 'sword', name: 'Segfault, the Null Blade', atk: 8, power: 'tripleCrit' },
   { base: 'amulet', name: 'Rubber Duck of Insight', atk: 2, def: 2, hp: 10, xp: 50, power: 'duck' },
-  { base: 'chain', name: 'Mantle of the Monorepo', def: 6, hp: 10, power: 'failHeal' },
+  { base: 'chain', name: 'Mantle of the Monorepo', def: 6, hp: 10, power: 'failHeal', work: true },
   { base: 'ring', name: 'Band of the Endless Loop', atk: 4, hp: 4, power: 'loopHeal' },
-  { base: 'kite', name: 'Aegis of Green Builds', def: 4, power: 'greenBlock' },
-  { base: 'staff', name: 'Staff of Stack Traces', atk: 6, power: 'stackTrace' },
+  { base: 'kite', name: 'Aegis of Green Builds', def: 4, power: 'greenBlock', work: true },
+  { base: 'staff', name: 'Staff of Stack Traces', atk: 6, power: 'stackTrace', work: true },
   { base: 'dagger', name: 'Whisper of the Linter', atk: 5, power: 'chainCrit' },
 ]
 

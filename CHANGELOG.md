@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- Played by hand, no talent, trigger or Legendary that needs a tool call is offered or found (Test Driven, Clean
+  Commit, Ship It, Rubber Ducking; Quick Study, Fresh Start; the Mantle, the Aegis and the Staff of Stack Traces).
 - A foe met by hand hits twice as hard as its kind. Played by hand the hero almost never died (0.07 times in 1,000
   steps, where a session's dies 0.87 times); now 0.61, as many fights as before.
 - A knight's defense counts half again against every blow, half of that through armor. Knights reached depth 71 on

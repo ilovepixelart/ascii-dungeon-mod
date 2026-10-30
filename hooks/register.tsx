@@ -25,7 +25,8 @@ import { DEEP_FROM, MARKS, circleSaid, fateOf, forkTier, isForkOpen, markOf, pai
 import type { RetireUi } from './retirewindow'
 import { SETTINGS_H, SETTINGS_UI, VOLUME_STEPS, nextSound, orderWord, settingsGesture, settingsWord, settingsHot, settingsOverlay, settingsPixels, soundFrom, volumeShare } from './settings'
 import type { SettingsUi } from './settings'
-import { HELP_ROWS, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
+import { HELP_PAGES, helpGesture, helpHeight, helpOverlay, helpPixels } from './helpwindow'
+import type { HelpPage } from './helpwindow'
 import { logGesture, logHeight, logOverlay, logPixels } from './logwindow'
 import type { SoundSettings } from './settings'
 import { INV_H, INV_TOP, INV_W, beltLabel, inventoryScreenPixels, itemCard } from './inventory'
@@ -125,8 +126,14 @@ let talentUi: TalentUi = TALENT_UI
 let codexUi: CodexUi = CODEX_UI
 /** The settings window's page. */
 let settingsUi: SettingsUi = SETTINGS_UI
-/** The how-it-plays window, open over whatever the pane shows: it closes back to that. */
+/** The how-it-plays window, open over whatever the pane shows: it closes back to that; and the page it shows. */
 let isHelpOpen = false
+let helpPage: HelpPage = 'coding'
+/** The how-it-plays window opened, on its first page. */
+const openHelp = () => {
+  isHelpOpen = true
+  helpPage = 'coding'
+}
 /** The log window: the pane's own, as the help is, opened over whatever is open and closed back to it. */
 let isLogOpen = false
 /** The pointer over a window, in its pixels, by the window's key; and what each window drawn last can be clicked on. */
@@ -201,8 +208,9 @@ const SHEET_ROWS = 3 + ATTRIBUTES.length
 const TEXT_STASH_ROWS = 10
 const PANEL_ROWS: Partial<Record<Game['panel'], number>> = { sheet: SHEET_ROWS, shop: 3 + WARES.length, forge: 2 + SLOTS.length, stash: 3 + TEXT_STASH_ROWS, healer: 3, elder: 5, mystic: 4, guard: 3, villager: 3, dog: 4 }
 
-/** The how-it-plays window's rows as text: its head, a line a rule, where things are, the close key. */
-const HELP_TEXT_ROWS = HELP_ROWS.length + 3
+/** The how-it-plays window's rows as text: its pages' keys, its head, a line a rule of its longest page, where things
+ * are, the close key. */
+const HELP_TEXT_ROWS = Math.max(...Object.values(HELP_PAGES).map(page => page.rows.length)) + 4
 /** The log as text: its head, every line kept, and Close. */
 const LOG_TEXT_ROWS = LOG_KEPT + 3
 
@@ -1031,7 +1039,7 @@ const onStartClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
   const outcome = startGesture(g, startUi ?? { cls: g.cls }, data as Gesture)
   startUi = outcome.ui
-  if (outcome.isHelp === true) isHelpOpen = true
+  if (outcome.isHelp === true) openHelp()
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
 }
@@ -1131,7 +1139,7 @@ const onSettingsClick = async ($: EngineInterface, data: unknown) => {
   const g = await current($)
   const outcome = settingsGesture(g, soundSettings, settingsUi, data as Gesture)
   settingsUi = outcome.ui
-  if (outcome.isHelp === true) isHelpOpen = true
+  if (outcome.isHelp === true) openHelp()
   setSound($, g, outcome.sound)
   await actAll($, outcome.actions)
   $.ui.invalidate('ui.render')
@@ -1196,7 +1204,11 @@ const onClick = async ($: EngineInterface, element: string, data: unknown) => {
       $.ui.invalidate('ui.render')
       return true
     case 'help-clicks':
-      if (helpGesture(data as Gesture)) isHelpOpen = false
+      {
+        const did = helpGesture(data as Gesture)
+        if (did === 'close') isHelpOpen = false
+        else if (did !== undefined) helpPage = did
+      }
       $.ui.invalidate('ui.render')
       return true
     case 'settings-clicks':
@@ -1402,7 +1414,7 @@ const settingsKeys = (p: Pane, isWindow = false) => {
 
 /** Help: the how-it-plays window, over whatever is open. A pixel window's key says its button's word. */
 const helpKey = ({ Button, redraw, isWindowWide }: Pane, hotkey?: string) => (
-  <Button key="help-open" label={isWindowWide && hotkey !== undefined ? 'Help' : 'How it plays'} hotkey={hotkey} plain onPress={() => { isHelpOpen = true; redraw() }} />
+  <Button key="help-open" label={isWindowWide && hotkey !== undefined ? 'Help' : 'How it plays'} hotkey={hotkey} plain onPress={() => { openHelp(); redraw() }} />
 )
 /** The log's latest line under the map, a button that opens the whole log (g, unless a window open answers to it). */
 const logLine = ({ Button, Text, redraw }: Pane, entry: Run | undefined, taken: ReadonlySet<string>) => (
@@ -1428,14 +1440,20 @@ const helpClose = ({ Button, redraw }: Pane, hotkey?: string) => (
   <Button key="help-close" label="Close" hotkey={hotkey} plain onPress={() => { isHelpOpen = false; redraw() }} />
 )
 
-/** The how-it-plays window as text: a line a rule, then where things are. */
+/** The how-it-plays window as text: its pages' keys, the page's head, a line a rule, then where things are. */
 const textHelp = (p: Pane) => {
-  const { Box, Text } = p
+  const { Box, Text, Button, redraw } = p
+  const page = HELP_PAGES[helpPage]
   return (
     <Box flexDirection="column">
-      <Text bold>How it plays: your coding plays the hero</Text>
-      {HELP_ROWS.map(r => <Text key={`help-${r.icon}`} color={r.work === true ? INK.good : undefined}>{`${r.when}: ${r.does.toLowerCase()}.`}</Text>)}
-      <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text>
+      <Box columnGap={2}>
+        {(Object.keys(HELP_PAGES) as HelpPage[]).map(key => (
+          <Button key={`help-page-${key}`} label={HELP_PAGES[key].label} plain dimColor={key !== helpPage} onPress={() => { helpPage = key; redraw() }} />
+        ))}
+      </Box>
+      <Text bold>{`How it plays: ${page.head.charAt(0).toLowerCase()}${page.head.slice(1, -1)}`}</Text>
+      {page.rows.map((r, i) => <Text key={`help-${helpPage}-${i}`} color={r.work === true ? INK.good : undefined}>{`${r.when}: ${r.does.charAt(0).toLowerCase()}${r.does.slice(1)}.`}</Text>)}
+      {helpPage === 'coding' ? <Text dimColor>You pick the gear and talents and set the orders: the bag (i), the character sheet (c), settings.</Text> : null}
       <Box columnGap={2}>{helpClose(p)}</Box>
     </Box>
   )
@@ -1785,7 +1803,7 @@ const talkWindow = (p: Pane, who: Speaker) => {
  */
 const FULL_WINDOWS: readonly { is: (p: Pane, l: Layout) => boolean; draw: (p: Pane, l: Layout) => RenderElement }[] = [
   { is: p => isLogOpen && p.isWindowWide, draw: p => pixelWindow(p, 'log', logHeight(p.g), logPixels(p.g), logOverlay(p.g), [logClose(p, 'c')]) },
-  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(), helpOverlay(), [helpClose(p, 'c')]) },
+  { is: p => isHelpOpen && p.isWindowWide, draw: p => pixelWindow(p, 'help', helpHeight(), helpPixels(helpPage), helpOverlay(helpPage), [helpClose(p, 'c')]) },
   { is: (_, l) => l.isPixelBag, draw: pixelBag },
   { is: p => p.g.panel === 'shop' && p.isWindowWide, draw: pixelShop },
   { is: p => p.g.panel === 'start', draw: startScreen },

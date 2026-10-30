@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- How it plays has four pages, a tab each: Coding as before, By hand, Town and Growth (talents, guardians, big
+  bosses, the Abyss, the codex).
 - Played by hand, no talent, trigger or Legendary that needs a tool call is offered or found (Test Driven, Clean
   Commit, Ship It, Rubber Ducking; Quick Study, Fresh Start; the Mantle, the Aegis and the Staff of Stack Traces).
 - A foe met by hand hits twice as hard as its kind. Played by hand the hero almost never died (0.07 times in 1,000

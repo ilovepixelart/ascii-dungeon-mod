@@ -9,7 +9,7 @@ import { SPACE } from './ui/tokens'
  * stash, the shop, and the compact bag, narrower. The strip and the dash are no windows. */
 const GRID_WINDOWS = /^(inventory|compact|forge|retire|chest|shop|strip|dash)/
 /** Windows whose page tabs hang from the title bar: no room over them. */
-const TABBED = /^(codex|settings)/
+const TABBED = /^(codex|settings|help)/
 
 /** How far a window's content stands from each edge: its pixels and its boxes' frames, under the title bar. */
 const margins = (px: string[][], boxes: readonly { role: string; x: number; y: number; w: number; h: number; border: string }[]) => {

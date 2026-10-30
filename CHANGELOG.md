@@ -6,44 +6,60 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-30
+
+Saves from 0.7.0 load as they are: the save stays at version 14, and the two new fields (the tool calls on a depth,
+the calls idle in town) start empty. What changes on loading: Might and Focus give a share of their points rather
+than an attack point and crit damage a point, so a hero's numbers on the sheet read differently, and the game plays
+harder: foes have their whole HP and the middle depths kill again. Nothing needs doing.
+
 ### Changed
+
+Combat and balance:
+
+- Armor lets a share of each blow through rather than taking its defense off: `K / (K + defense)`, `K` being 0.9 of
+  the depth plus 10, never under a quarter. Foe attack and HP no longer grow faster than depth past depth 10. Past
+  depth 100 a blow took a fifth to two fifths of max HP; it now takes about a seventh at every depth.
+- Might lifts every blow by a share of its points, and Focus gives crit chance by the same share: 0.6 of the points
+  over the points plus 20, so 20 points give 30%. A critical is twice a blow (three times with Segfault) and Focus's
+  share more, at most 2.6 times; Focus raised crit damage 5% a point without bound, and Might added an attack point.
+  Every point on Focus slew deep foes in 1.6 blows and every point on Might in up to 4; both now take 2 to 4.6.
+- Foe HP is the plain sum: about 3 hits a kill. Simulated sessions die 0.23 times in 100 tool calls, with deaths past
+  depth 5 again, where they came almost only on depths 1 to 5.
+- A heavy blow (a breath, a frost nova, a greatsword, a rage) takes at most 60% of max HP. A hero spending every
+  point on Might took them up to 78% of max HP and met 42 of its 114 deaths on one; now 38 of 97.
+- The turn before a heavy blow, the log says about what it will take. A foe's threat counts its blows through armor
+  as they land, and is deadly when a heavy blow coming could take the hero's HP.
+- A boss depth's guardian is one of its theme's favorite kinds, strongest first and the next at each later visit,
+  each fighting as its kind does; every guardian past depth 5 was a dragon overlord.
+- A knight's defense counts half again against every blow, half of that through armor. Knights reached depth 71 on
+  average where mages and rogues reached 98 to 102, dying most; now 83, dying least.
+- A hero more than 5 levels over a depth's level (3 and 0.4 a depth) takes less of a kill's XP: 81, 62, 43 and 24 in
+  100 at 6 to 9 levels over, 5 in 100 from 10 over.
+
+Pacing:
+
+- An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how
+  many it has seen. Answers of 0 to 2 tool calls died about ten times as often as longer ones; simulated with 0 to 2
+  calls an answer, deaths per 1,000 steps fall from 15.8 to 5.4.
+- A hero left in town goes back through the portal on the fifth tool call in a row with no window open, with a
+  toast; a tool call in town earned nothing. A window open starts the count over.
+- The click or key that opens the recap does what it says too, the recap opening over it; it opened the recap
+  instead, and the click or key had to be made again.
+
+Play by hand:
+
+- A foe met by hand hits twice as hard as its kind. Played by hand the hero almost never died (0.07 times in 1,000
+  steps, where a session's dies 0.87 times); now 0.61, as many fights as before.
+- No talent, trigger or Legendary that needs a tool call is offered or found by hand (Test Driven, Clean Commit, Ship
+  It, Rubber Ducking; Quick Study, Fresh Start; the Mantle, the Aegis and the Staff of Stack Traces).
+
+Windows:
 
 - How it plays has four pages, a tab each: Coding as before, By hand, Town and Growth (talents, guardians, big
   bosses, the Abyss, the codex).
-- Played by hand, no talent, trigger or Legendary that needs a tool call is offered or found (Test Driven, Clean
-  Commit, Ship It, Rubber Ducking; Quick Study, Fresh Start; the Mantle, the Aegis and the Staff of Stack Traces).
-- A foe met by hand hits twice as hard as its kind. Played by hand the hero almost never died (0.07 times in 1,000
-  steps, where a session's dies 0.87 times); now 0.61, as many fights as before.
-- A knight's defense counts half again against every blow, half of that through armor. Knights reached depth 71 on
-  average where mages and rogues reached 98 to 102, dying most; now 83, dying least.
-- Foe HP is the whole of its plain sum, where it was 0.8 of it: about 3 hits a kill, where it was 2.5. Simulated
-  sessions die 0.23 times in 100 tool calls, where they died 0.09, almost only on depths 1 to 5.
-- The turn before a heavy blow, the log says about what it will take. A foe's threat counts its blows through armor
-  as they land, and is deadly when a heavy blow coming could take the hero's HP; it took defense off a blow, which
-  armor no longer does, and called deep foes easy.
-- A boss depth's guardian is one of its theme's favorite kinds, strongest first and the next at each later visit,
-  each fighting as its kind does; every guardian past depth 5 was a dragon overlord.
-- A heavy blow (a breath, a frost nova, a greatsword, a rage) takes at most 60% of max HP. A hero spending every
-  point on Might took them up to 78% of max HP and met 42 of its 114 deaths on one; now 38 of 97.
-- The click or key that opens the recap does what it says too, the recap opening over it; it opened the recap
-  instead, and the click or key had to be made again.
-- A hero left in town goes back through the portal on the fifth tool call in a row with no window open, with a
-  toast; a tool call in town earned nothing. A window open starts the count over.
-- An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how
-  many it has seen. Every answer took them: answers of 0 to 2 tool calls died about ten times as often as longer
-  ones. Simulated with 0 to 2 calls an answer, deaths per 1,000 steps fall from 15.8 to 5.4.
-- A hero more than 5 levels over a depth's level (3 and 0.4 a depth) takes less of a kill's XP: 81, 62, 43 and 24 in
-  100 at 6 to 9 levels over, 5 in 100 from 10 over. Played by hand, a hero ran 12 levels ahead of its depth; now 7.
 - A click on worn gear in the inventory shows its card until the next click; a right click takes it off, where a
   click did. Dragging it into the bag still takes it off.
-- Armor lets a share of each blow through rather than taking its defense off: `K / (K + defense)`, `K` being 0.9 of
-  the depth plus 10, never under a quarter. Foe attack no longer grows faster than depth past depth 10.
-  Past depth 100 a blow took a fifth to two fifths of max HP; it now takes about a seventh at every depth.
-- Might lifts every blow by a share of its points, and Focus gives crit chance by the same share: 0.6 of the points
-  over the points plus 20, so 20 points give 30%. A critical is twice a blow (three times with Segfault) and Focus's
-  share more, at most 2.6 times; Focus raised crit damage 5% a point without bound. Might no longer adds attack
-  points. Foe HP grows as depth does, at 0.8 of its plain sum, where it grew half a percent more a depth past depth
-  10. Every point on Focus slew deep foes in 1.6 blows and every point on Might in up to 4; both now take 1.7 to 3.5.
 - A Common item's card, in the bag, the stash, the merchant's and the smith's, is framed in the plain frame rather
   than Common's white, which sat a step from the focus white and made the card look chosen.
 

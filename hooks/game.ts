@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, KNIGHT_ARMOR, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -1007,8 +1007,12 @@ const warnHeavy = (g: Game) => {
 /** What the log adds to a blow halved once or twice. */
 const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned'] as const
 
-/** The defense a blow meets: all of it; through armor, a knight's PIERCED_DEF of it, rounded down, and no one else's. */
-const armorAgainst = (g: Game, pierces: boolean) => (!pierces ? defense(g) : g.cls === 'knight' ? Math.floor(defense(g) * PIERCED_DEF) : 0)
+/** The defense a blow meets: all of it, a knight's KNIGHT_ARMOR times; through armor, a knight's PIERCED_DEF of that, rounded down, and no one else's. */
+const armorAgainst = (g: Game, pierces: boolean) => {
+  if (g.cls !== 'knight') return pierces ? 0 : defense(g)
+  const def = defense(g) * KNIGHT_ARMOR
+  return pierces ? Math.floor(def * PIERCED_DEF) : def
+}
 
 /**
  * The foe's blow (an imp's with no foe), the share of it the hero's defense (`armorAgainst`) lets through (`armorShare`),

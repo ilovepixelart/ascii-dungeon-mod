@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A knight's defense counts half again against every blow, half of that through armor. Knights reached depth 71 on
+  average where mages and rogues reached 98 to 102, dying most; now 83, dying least.
 - Foe HP is the whole of its plain sum, where it was 0.8 of it: about 3 hits a kill, where it was 2.5. Simulated
   sessions die 0.23 times in 100 tool calls, where they died 0.09, almost only on depths 1 to 5.
 - The turn before a heavy blow, the log says about what it will take. A foe's threat counts its blows through armor

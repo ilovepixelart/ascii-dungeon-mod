@@ -94,8 +94,8 @@ describe('combat', () => {
   })
 
   test('armor lets K / (K + defense) of a blow through, K being 0.9 of the depth plus 10, never under a quarter', async () => {
-    // The plain hero wears only a blade; the plate is all their defense.
-    const g = plainHero()
+    // The plain hero wears only a blade; the plate is all their defense. A rogue: a knight's defense counts more.
+    const g = { ...plainHero(), cls: 'rogue' as const }
     const taken = (def: number) => {
       const armored = { ...g, gear: { ...g.gear, armor: { ...plainItem({ nextId: 901 }, 'plate'), def } } }
       return g.hp - apply({ ...armored, foe: foeAhead(g, 1, { atk: 21, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
@@ -103,6 +103,17 @@ describe('combat', () => {
     // Depth 1: K is 9.9. 21 times 9.9 / 19.9 is 10.4, / 24.9 is 8.3, / 25.9 is 8.0; at 30 defense, 9.9 / 39.9 is under
     // a quarter, so the quarter, 5.25.
     expect([taken(10), taken(15), taken(16), taken(30)]).toEqual([10, 8, 8, 5])
+  })
+
+  test("a knight's defense counts half again against every blow", async () => {
+    const g = plainHero()
+    const taken = (def: number) => {
+      const armored = { ...g, gear: { ...g.gear, armor: { ...plainItem({ nextId: 901 }, 'plate'), def } } }
+      return g.hp - apply({ ...armored, foe: foeAhead(g, 1, { atk: 21, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
+    }
+    // Depth 1, K 9.9: 10, 15, 16 and 30 defense count as 15, 22.5, 24 and 45: 21 times 9.9 / 24.9 is 8.3, / 32.4 is 6.4,
+    // / 33.9 is 6.1; 9.9 / 54.9 is under a quarter, so the quarter, 5.25.
+    expect([taken(10), taken(15), taken(16), taken(30)]).toEqual([8, 6, 6, 5])
   })
 
   test('a failure with no foe is an imp hitting for the depth', async () => {

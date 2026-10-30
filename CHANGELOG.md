@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A boss depth's guardian is one of its theme's favorite kinds, strongest first and the next at each later visit,
+  each fighting as its kind does; every guardian past depth 5 was a dragon overlord.
 - A hero left in town goes back through the portal on the fifth tool call in a row with no window open, with a
   toast; a tool call in town earned nothing. A window open starts the count over.
 - An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how

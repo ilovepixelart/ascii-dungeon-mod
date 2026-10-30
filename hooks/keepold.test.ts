@@ -19,7 +19,7 @@ describe('keeping the old roll', () => {
   test('after a reforge the piece as it was can be worn again; the gold stays paid', async () => {
     const { g, helm } = inTown()
     const reforged = apply(g, { kind: 'reforge', slot: 'helm' })
-    const paid = g.gold - reforgeCost(g)
+    const paid = g.gold - reforgeCost(g, helm)
     expect(reforged.gold).toBe(paid)
     expect(keptChoice(reforged)).toEqual({ slot: 'helm', item: helm })
     const kept = apply(reforged, { kind: 'keepOld' })

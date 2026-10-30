@@ -1739,16 +1739,25 @@ const buy = (g: Game, ware: Ware) => {
 }
 
 /** The smith's price: 40 gold, 40 more for every reforge done before, and 10 for each depth reached. */
-export const reforgeCost = (g: Pick<Game, 'reforges' | 'depth'>) => 40 + 40 * g.reforges + 10 * g.depth
+/**
+ * A reforge's price: REFORGE_PRICE times the item's tier (an Uncommon 1, a Rare 2, an Epic 4) times 1 and a tenth of the
+ * deepest depth, as tempering's is, and 40 more for each reforge before. A reforge remakes the item for the depth it is
+ * done at, its base's stats and new affixes as found there: an item's way to grow. Priced by the depth the hero stood on
+ * and not the item, it cost an Epic made new at depth 50 290 gold, where tempering it once cost 360.
+ */
+export const REFORGE_PRICE = 60
+const REFORGE_TIER: Readonly<Partial<Record<Rarity, number>>> = { uncommon: 1, rare: 2, epic: 4 }
+export const reforgeCost = (g: Pick<Game, 'reforges' | 'deepest'>, item: Pick<Item, 'rarity'>) =>
+  REFORGE_PRICE * (REFORGE_TIER[item.rarity] ?? 1) * (1 + Math.floor(g.deepest / 10)) + 40 * g.reforges
 
 const reforge = (g: Game, slot: Slot) => {
   const item = g.gear[slot]
   if (item === undefined) say(g, 'Nothing worn there to reforge.')
   else if (item.rarity === 'common') say(g, 'The smith has nothing to reforge on a Common item.')
   else if (item.rarity === 'legendary') say(g, 'A Legendary is as it was made: the smith will not touch it.')
-  else if (g.gold < reforgeCost(g)) say(g, `Not enough gold: reforging costs ${reforgeCost(g)}.`)
+  else if (g.gold < reforgeCost(g, item)) say(g, `Not enough gold: reforging costs ${reforgeCost(g, item)}.`)
   else {
-    const cost = reforgeCost(g)
+    const cost = reforgeCost(g, item)
     const made = reforgeItem(g, item)
     g.gold -= cost
     g.reforges += 1

@@ -1908,7 +1908,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
     <Box flexDirection="column">
       <Text>
         <Text bold>The smith</Text>
-        <Text dimColor>{`  Temper: +1 to the main stat, up to ${TEMPER_MAX} times. Reforge: new affixes, ${reforgeCost(g)} gold`}</Text>
+        <Text dimColor>{`  Temper: +1 to the main stat, up to ${TEMPER_MAX} times. Reforge: made anew for this depth, new affixes`}</Text>
         <Text color={INK.gold}>{`  Gold ${countText(g.gold)}`}</Text>
       </Text>
       {worn.length === 0 && <Text dimColor>You wear nothing for the smith to work on.</Text>}
@@ -1923,7 +1923,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
               ? <Button key={`temper-${slot}`} label={`Temper: ${temperCost(item, g.deepest)} gold`} plain dimColor={g.gold < temperCost(item, g.deepest)} onPress={press({ kind: 'temper', slot })} />
               : <Text dimColor>Fully tempered</Text>}
             {isReforgeable && <Text>{'  '}</Text>}
-            {isReforgeable && <Button key={`reforge-${slot}`} label="Reforge" plain dimColor={g.gold < reforgeCost(g)} onPress={press({ kind: 'reforge', slot })} />}
+            {isReforgeable && <Button key={`reforge-${slot}`} label={`Reforge: ${reforgeCost(g, item)} gold`} plain dimColor={g.gold < reforgeCost(g, item)} onPress={press({ kind: 'reforge', slot })} />}
           </Box>
         )
       })}

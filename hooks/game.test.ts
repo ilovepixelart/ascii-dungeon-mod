@@ -130,6 +130,14 @@ describe('combat', () => {
     expect(after.toast).toBe('Level up! You are now level 2.')
   })
 
+  test("a hero far over the depth's level takes less of a kill's XP: level 9 at depth 1, 6 over its 3, takes 81 in 100", async () => {
+    const kill = (level: number) => {
+      const g = { ...plainHero(), level, xp: 0, maxHp: 99, hp: 99 }
+      return apply({ ...g, foe: foeAhead(g, 1, { hp: 1, xp: 100, opened: true }) }, { kind: 'outcome', ok: true, what: 'Edit' }).xp
+    }
+    expect([kill(8), kill(9), kill(13)]).toEqual([100, 81, 5])
+  })
+
   test('dying sends the hero to the start of the theme\'s first depth: depth 14 to 11, depth 6 to 6, depth 5 to 1', async () => {
     const at = (depth: number) => {
       const g = { ...plainHero(5), depth, deepest: depth, hp: 2 }

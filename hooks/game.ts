@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, HAND_FOE_MAX, HAND_FOE_TILE, HP_PER_LEVEL, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -772,7 +772,7 @@ const killPay = (g: Game, foe: Foe) => {
   const paid = Math.floor(found * (mod === 'gloom' ? MOD_MORE : 1) * (mark === 'mild' ? MILD_GOLD : mark === 'lean' ? LEAN_GOLD : 1))
   const prospected = wornTrigger(g, 'prospector') ? Math.floor(paid * PROSPECTOR) : paid
   const coins = (g.fortune?.kind === 'riches' ? Math.floor(prospected * FORTUNE_MORE) : prospected) + (foe.stolen ?? 0)
-  const xp = Math.floor(xpGain(g, foe.xp) * (mod === 'horde' ? MOD_MORE : 1))
+  const xp = Math.floor(xpGain(g, foe.xp) * xpShare(g.level, g.depth) * (mod === 'horde' ? MOD_MORE : 1))
   return { coins, xp }
 }
 

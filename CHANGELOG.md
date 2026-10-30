@@ -10,6 +10,8 @@ release may change behaviour.
 
 - A heavy blow (a breath, a frost nova, a greatsword, a rage) takes at most 60% of max HP. A hero spending every
   point on Might took them up to 78% of max HP and met 42 of its 114 deaths on one; now 38 of 97.
+- The click or key that opens the recap does what it says too, the recap opening over it; it opened the recap
+  instead, and the click or key had to be made again.
 - A hero left in town goes back through the portal on the fifth tool call in a row with no window open, with a
   toast; a tool call in town earned nothing. A window open starts the count over.
 - An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how

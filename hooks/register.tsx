@@ -11,6 +11,7 @@ import type { FrameSummary, TickStats } from './frames'
 import { OVER_ROWS, isDash, isMapUnder, mapCovered, orbPhase, overMapBoxes, overMapGesture, stripBeltMenu, stripBoxes, stripGesture, stripHeight, stripHot, stripOverMap, stripPixels } from './strip'
 import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
+import { look } from './recap'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
 import { CODEX_UI, codexGesture, codexHeight, codexHot, codexOverlay, codexPixels } from './codexwindow'
 import type { CodexUi } from './codexwindow'
@@ -487,9 +488,21 @@ const save = ($: EngineInterface, g: Game) => {
     })
 }
 
+/**
+ * The player's click or key done, a look at the pane: when enough happened unseen, the recap opens over what was asked.
+ * A window the action opened is left open, the recap waiting for a later look.
+ */
+const seen = (g: Game, byHand: boolean) => {
+  if (!byHand || g.recap === undefined || g.panel !== 'none') return g
+  // A look alone, not an action: the lines the click came to stay the fresh ones.
+  const looked = { ...g }
+  look(looked)
+  return looked
+}
+
 const commit = async ($: EngineInterface, action: Action, byHand: boolean, isWalkShown: boolean, shown?: Game) => {
   const before = normalize(await read($, game))
-  const next = normalize(await update($, game, g => apply(g, action)))
+  const next = normalize(await update($, game, g => seen(apply(g, action), byHand)))
   if (next !== before) save($, next)
   followWalk($, before, next, isWalkShown)
   const hits = hitsBetween(before, next)
@@ -673,8 +686,6 @@ const startAmbient = ($: EngineInterface) => {
 const act = async ($: EngineInterface, action: Action, byHand = false) => {
   // Paused, the coding goes on without the game: nothing it does moves the hero.
   if (isPaused) return
-  // A click or a key is a look at the pane: when enough happened unseen, the recap opens instead of what was asked.
-  if (byHand && (await isRecapShown($))) return
   void loadClips($)
   lastActive = await nowOr($, lastActive)
   startAmbient($)
@@ -883,14 +894,6 @@ const syncMusic = ($: EngineInterface, g: Game) => {
 }
 
 /** Each action in turn, as the player's own. */
-/** Looks at the pane, when tool calls have been counted since the last look: whether the recap opened. */
-const isRecapShown = async ($: EngineInterface) => {
-  const g = await current($)
-  if (g.recap === undefined || g.panel === 'recap') return false
-  await act($, { kind: 'look' })
-  return (await current($)).panel === 'recap'
-}
-
 const actAll = async ($: EngineInterface, actions: readonly Action[]) => {
   for (const action of actions) await act($, action, true)
 }

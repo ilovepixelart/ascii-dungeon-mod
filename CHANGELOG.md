@@ -6,6 +6,12 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed
+
+- An affix's stats grow with depth, 1 and a 50th a depth times what it gives: Sharp's +2 attack is +4 at depth
+  50 and +8 at 150. An Epic was worth 12% more than a Common at depth 150; now 63% more. Deep heroes are a little
+  stronger: simulated sessions die 0.14 times in 100 tool calls, where they died 0.20.
+
 ## [0.8.0] - 2026-10-30
 
 Saves from 0.7.0 load as they are: the save stays at version 14, and the two new fields (the tool calls on a depth,

@@ -61,6 +61,10 @@ export const xpToLevel = (level: number) => Math.round(20 * level ** 1.5)
  */
 export const DESCEND_CALLS = 3
 
+/** The tool calls in a row in town with no window open that take the hero back through the portal: a hero left in
+ * town earned nothing from the work going on. */
+export const TOWN_IDLE_CALLS = 5
+
 /** Max HP gained per level. */
 export const HP_PER_LEVEL = 5
 

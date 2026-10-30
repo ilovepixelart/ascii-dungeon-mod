@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Foe } from '../types'
-import { apply, newGame } from './game'
+import { apply, newGame, threat } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { foeTurn, heroBlowOn } from './patterns'
 import { plainItem } from './items'
@@ -98,6 +98,29 @@ describe('the traits in a fight', () => {
     const taken = (over: Partial<Foe>) => Number(/strikes you for (\d+)\./.exec(apply({ ...g, foe: foe('D', { opened: true, ...over }) }, { kind: 'outcome', ok: false, what: 'Bash' }).log.join('\n'))?.[1])
     // No defense, all of it: a plain 80; a breath of 1.5 times 50 is 75, held at 60; an overlord's 2.5 times 40, 100, too.
     expect([taken({ atk: 80, turn: 0 }), taken({ atk: 50, turn: 2 }), taken({ atk: 40, turn: 2, boss: true })]).toEqual([80, 60, 60])
+  })
+
+  test('a blow its next turn makes heavier is told the turn before, with about what it will take', async () => {
+    const g = { ...plainHero(), hp: 100, maxHp: 100 }
+    // Turn 2 draws breath; turn 3 breathes, 1.5 times 30 with no defense: 45.
+    const after = apply({ ...g, foe: foe('D', { atk: 30, turn: 1, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect(after.log).toContain('The D-foe draws a deep breath...')
+    expect(after.log.at(-1)).toBe("The D-foe's next blow lands for about 45.")
+    // A plain turn next: nothing told.
+    const plain = apply({ ...g, foe: foe('D', { atk: 30, turn: 3, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect(plain.log.some(l => l.includes('next blow'))).toBe(false)
+  })
+
+  test("a foe's threat counts its blows through armor as they land, and its next heavy one against the hero's HP now", async () => {
+    // Depth 100: K is 99, so 99 defense halves a blow; a foe of 60 lands 30, 4 blows to 100 HP: tough. Taking defense
+    // off, 60 less 99 left 1 a blow: easy.
+    const armor = { ...plainItem({ nextId: 901 }, 'plate'), def: 99 }
+    const deep = { ...plainHero(), depth: 100, deepest: 100, hp: 100, maxHp: 100, gear: { ...plainHero().gear, armor } }
+    expect(threat({ ...deep, foe: foe('o', { atk: 60 }) })).toBe('tough')
+    // A dragon overlord whose next turn breathes: 2.5 times 30 is 75, held at 60 of 100, enough to slay a hero at 50.
+    const g = { ...plainHero(), hp: 50, maxHp: 100 }
+    expect(threat({ ...g, foe: foe('D', { atk: 30, turn: 2, boss: true }) })).toBe('deadly')
+    expect(threat({ ...g, hp: 100, foe: foe('D', { atk: 30, turn: 2, boss: true }) })).toBe('tough')
   })
 
   test('a dragon breathes for half again its attack', async () => {

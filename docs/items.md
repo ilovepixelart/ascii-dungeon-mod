@@ -184,7 +184,7 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
 | Furnace Wyrm (forge) | draws a breath, then fire at two and a half times its attack, every third turn | every other turn |
 
   Over 90 simulated games of 3,000 steps (`tools/simulate.ts`, `bigMet`, `bigSlain`, `bigDeaths`) a big boss slew the hero 0.35 times a meeting, against 0.25 for an overlord, with deaths per 1,000 steps and the deepest depth reached level with overlords in their place.
-- How each kind fights (`foeTurn` and `heroBlowOn` in `hooks/patterns.ts`), one trait a kind, the heavy blows announced a turn before. A heavy blow (a breath, a nova, a greatsword, a rage: any blow its turn makes harder) takes at most `HEAVY_BLOW_MAX` (60%) of max HP, before Bulwark and the knight's shield halve it:
+- How each kind fights (`foeTurn` and `heroBlowOn` in `hooks/patterns.ts`), one trait a kind, the heavy blows announced a turn before. A heavy blow (a breath, a nova, a greatsword, a rage: any blow its turn makes harder) takes at most `HEAVY_BLOW_MAX` (60%) of max HP, before Bulwark and the knight's shield halve it; the turn before, the log says about what it will take (`warnHeavy`). A foe's threat (`threat`) counts its plain blows through armor to max HP (3 or fewer deadly, 6 or fewer tough) and is deadly too when a heavy blow within 4 turns could take the hero's HP now:
 
 | Kind | Trait |
 |---|---|

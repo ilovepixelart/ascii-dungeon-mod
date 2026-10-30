@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- The turn before a heavy blow, the log says about what it will take. A foe's threat counts its blows through armor
+  as they land, and is deadly when a heavy blow coming could take the hero's HP; it took defense off a blow, which
+  armor no longer does, and called deep foes easy.
 - A boss depth's guardian is one of its theme's favorite kinds, strongest first and the next at each later visit,
   each fighting as its kind does; every guardian past depth 5 was a dragon overlord.
 - A heavy blow (a breath, a frost nova, a greatsword, a rage) takes at most 60% of max HP. A hero spending every

@@ -554,8 +554,19 @@ const bigBossOf = (g: Game): Foe => {
   return { glyph: '&', name: b.name, hp: maxHp, maxHp, atk: Math.ceil(foeAtk(g.depth, tier, 2) * BIG_ATK), xp: foeXp(g.depth, tier) * 8, ...foeSpot(g), boss: true, big: b.key }
 }
 
+/**
+ * The guardian's kind on a boss depth: one of its theme's favorites, strongest first, the next at each later visit to
+ * the theme (every BOSS_ROUND depths), within the kinds the depth has unlocked. Every guardian past depth 5 was the top
+ * kind, a dragon breathing two and a half times as hard every third turn.
+ */
+const BOSS_ROUND = 50
+const guardianTier = (depth: number) => {
+  const tiers = [...FAVORED[themeOf(depth)]].map(glyph => BESTIARY.findIndex(k => k.glyph === glyph)).filter(t => t <= depth + 1).sort((a, b) => b - a)
+  return tiers[Math.floor(depth / BOSS_ROUND) % tiers.length] ?? Math.min(BESTIARY.length - 1, depth + 1)
+}
+
 const bossOf = (g: Game): Foe => {
-  const tier = Math.min(BESTIARY.length - 1, g.depth + 1)
+  const tier = guardianTier(g.depth)
   const kind = BESTIARY[tier] ?? { glyph: '?', name: 'horror' }
   const maxHp = foeHp(g.depth, tier, 4) * BOSS_HP
   return { glyph: kind.glyph, name: `${kindName(kind.glyph, g.depth)} overlord`, hp: maxHp, maxHp, atk: Math.ceil(foeAtk(g.depth, tier, 2) * BOSS_ATK), xp: foeXp(g.depth, tier) * 4, ...foeSpot(g), boss: true }

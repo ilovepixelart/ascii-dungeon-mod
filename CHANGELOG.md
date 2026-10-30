@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- A reforge, the smith making an item anew for the depth it is done at, is priced by the item's tier and the
+  deepest depth: 60 gold an Uncommon, 120 a Rare, 240 an Epic, times 1 and a tenth of the deepest depth, 40 more for
+  each reforge before. It cost the same for any tier, by the depth stood on: an Epic made new at depth 50, 290 gold.
 - An affix's stats grow with depth, 1 and a 50th a depth times what it gives: Sharp's +2 attack is +4 at depth
   50 and +8 at 150. An Epic was worth 12% more than a Common at depth 150; now 63% more. Deep heroes are a little
   stronger: simulated sessions die 0.14 times in 100 tool calls, where they died 0.20.

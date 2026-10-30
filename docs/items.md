@@ -8,7 +8,7 @@ The hero is one of three classes, picked when a game starts: the character sheet
 
 | Class | Plays as | Stat lean | Starting kit | Wears (class items) |
 |---|---|---|---|---|
-| Knight | tank: blocks and outlasts, keeping half its defense against a blow through armor | +2 Might, +1 Vigor | Short Sword, Buckler, Tunic, Hood | swords, maces, axes; bucklers, kite and tower shields; hoods and helms; tunics, chain and plate |
+| Knight | tank: blocks and outlasts, its defense counting half again (`KNIGHT_ARMOR`), and half of that against a blow through armor | +2 Might, +1 Vigor | Short Sword, Buckler, Tunic, Hood | swords, maces, axes; bucklers, kite and tower shields; hoods and helms; tunics, chain and plate |
 | Mage | glass cannon: grows fast | +3 Insight, +1 Focus | Ash Staff, Tome of Sparks, Robe, Pointed Hat | staves, wands, scepters; tomes, orbs, grimoires; hats, circlets, hoods; robes, vestments, mantles |
 | Rogue | crits and escapes | +3 Focus, +1 Might, +1 Vigor | Dagger, Parrying Dagger, Leather Coat, Cowl | daggers, short bows, rapiers; off-hand daggers, throwing knives, quivers; cowls, masks, bandanas; leather, cloaks and jerkins |
 

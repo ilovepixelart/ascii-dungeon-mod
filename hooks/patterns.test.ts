@@ -38,9 +38,9 @@ describe("each kind's trait", () => {
       const armored = { ...g, gear: { ...g.gear, armor: { ...plainItem({ nextId: 901 }, 'plate'), def: 11 } } }
       return 100 - apply({ ...armored, foe: foe('W', { atk: 21, turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp
     }
-    // Depth 1, K 9.9: defense 11 lets 9.9 / 20.9 of the plain 21 through, 9.9; through armor a knight keeps 5 of it,
-    // 9.9 / 14.9 of 21 being 14.0, and a rogue none.
-    expect([taken('knight', 0), taken('knight', 2), taken('rogue', 0), taken('rogue', 2)]).toEqual([10, 14, 10, 21])
+    // Depth 1, K 9.9: a rogue's 11 defense lets 9.9 / 20.9 of the plain 21 through, 9.9, and none of it holds through
+    // armor. A knight's counts as 16.5: 9.9 / 26.4 of 21 is 7.9; through armor it keeps 8 of it, 9.9 / 17.9 of 21 11.6.
+    expect([taken('knight', 0), taken('knight', 2), taken('rogue', 0), taken('rogue', 2)]).toEqual([8, 12, 10, 21])
   })
 
   test('a dragon draws breath on its second turn of three and breathes on the third, half again as hard; an overlord two and a half times', async () => {

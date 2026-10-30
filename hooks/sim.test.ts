@@ -24,8 +24,9 @@ describe('what the map draws against what the strip and log tell', () => {
 })
 
 /** The first of a few seeds whose run gets as far as `reached` says: any one shows what the player does there. */
+/** The first of six knights' games to reach a state: only played (`checks: false`), the walk test above holding them to the rules. */
 const firstRun = (steps: number, reached: (run: ReturnType<typeof simulate>) => boolean) =>
-  [1, 2, 3, 4, 5, 6].map(seed => simulate(seed, steps, 'knight')).find(reached)
+  [1, 2, 3, 4, 5, 6].map(seed => simulate(seed, steps, 'knight', { checks: false })).find(reached)
 
 test('the simulated player picks a talent once one is owed', { timeoutMs: 20000 }, async () => {
   const run = firstRun(1500, r => r.final.level >= 5)!
@@ -84,7 +85,7 @@ describe('the rest of the belt, as the simulated player reaches for it', () => {
 })
 
 test('the simulated player uses herbs and runes as well as potions', { timeoutMs: 60000 }, async () => {
-  const runs = (['knight', 'mage', 'rogue'] as const).flatMap(cls => [1, 2, 3].map(seed => simulate(seed, 2000, cls).stats))
+  const runs = (['knight', 'mage', 'rogue'] as const).flatMap(cls => [1, 2, 3].map(seed => simulate(seed, 2000, cls, { checks: false }).stats))
   const used = (key: 'potionsUsed' | 'herbsUsed' | 'scrollsUsed' | 'wardsUsed' | 'bombsUsed') => runs.reduce((n, s) => n + s[key], 0)
   // Bombs only once healing has run out and fury only against a deadly foe, which short runs may not meet; both rules are held above.
   expect([used('potionsUsed') > 0, used('herbsUsed') > 0, used('wardsUsed') > 0]).toEqual([true, true, true])

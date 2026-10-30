@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 
+import { helpTabRects } from './helpwindow'
 import type { On } from 'claude-code'
 import type { OverlayBox } from './window'
 import { INK } from './ui/tokens'
@@ -785,6 +786,15 @@ test('How it plays opens from settings over it, and closes back to settings', as
   expect([1, 4, 7, 10, 13, 16, 19].map(i => (rules.children[i] as Drawn).children)).toEqual(Array(7).fill([' ']))
   expect(rules.props.left).toBe(12)
   expect(await ui.find({ type: 'Raster', key: 'settings' })).toBeUndefined()
+  // A tab shows its page: the head of By hand over its rules.
+  const tab = helpTabRects()[1]!
+  const onTab = { x: tab.x + 1, y: Math.floor((tab.y + 1) / 2) }
+  await ui.pointer({ type: 'down', ...onTab, button: 'left', in: 'help-clicks' } as never)
+  await ui.pointer({ type: 'up', ...onTab, button: 'left', in: 'help-clicks' } as never)
+  expect(await ui.find({ type: 'Raster', key: 'help' })).toBeDefined()
+  // The click layer draws the page's text: its head now By hand's.
+  const page = JSON.stringify(await ui.drawn({ in: 'help-clicks' } as never))
+  expect([page.includes('You play the hero yourself.'), page.includes('Your coding plays the hero.')]).toEqual([true, false])
   const close = { x: CLOSE_BOX[0] + 1, y: Math.floor((CLOSE_BOX[1] + 1) / 2) }
   await ui.pointer({ type: 'down', ...close, button: 'left', in: 'help-clicks' } as never)
   await ui.pointer({ type: 'up', ...close, button: 'left', in: 'help-clicks' } as never)
@@ -873,11 +883,15 @@ test('the compact inventory says how to reach its keys, and its hint fits the na
   await ui.unmount()
 })
 
-test('as text, How it plays lists the rules and closes', async $ => {
+test('as text, How it plays lists the rules, shows each page by its key, and closes', async $ => {
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'settings' })
   await ui.press({ key: 'help-open' })
   expect(await ui.find({ type: 'Text', text: 'Tests that pass: a sure critical.' })).toBeDefined()
+  await ui.press({ key: 'help-page-hand' })
+  expect(await ui.find({ type: 'Text', text: 'A foe met: hits twice as hard as its kind.' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'Tests that pass: a sure critical.' })).toBeUndefined()
+  await ui.press({ key: 'help-page-coding' })
   await ui.press({ key: 'help-close' })
   expect(await ui.find({ type: 'Text', text: 'Tests that pass: a sure critical.' })).toBeUndefined()
   await ui.unmount()

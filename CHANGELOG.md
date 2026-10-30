@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- The click or key that opens the recap does what it says too, the recap opening over it; it opened the recap
+  instead, and the click or key had to be made again.
 - An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how
   many it has seen. Every answer took them: answers of 0 to 2 tool calls died about ten times as often as longer
   ones. Simulated with 0 to 2 calls an answer, deaths per 1,000 steps fall from 15.8 to 5.4.

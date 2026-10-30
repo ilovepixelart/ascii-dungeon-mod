@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { Foe, Game, Item, Rarity, Trigger, Work } from '../types'
+import type { Foe, Game, Item, Rarity, Talent, Trigger, Work } from '../types'
 import { apply, xpToLevel } from './game'
 import { foeAhead, plainHero } from './fixtures'
-import { PRICE, TRIGGERS, heirloomOf, makeItem, plainItem, priceOf, reforgeItem } from './items'
+import { LEGENDARIES, PRICE, TRIGGERS, heirloomOf, makeItem, plainItem, priceOf, reforgeItem } from './items'
+import { TALENTS, offer } from './talents'
 import { card } from './bagui'
 import { itemCard } from './inventory'
 
@@ -191,5 +192,33 @@ describe('on the item card', () => {
   test('as text, on one line', async () => {
     const item = { ...plainItem(g, 'chain', 'rare'), trigger: 'bulwark' as const, x: 0, y: 0 }
     expect(text(itemCard({ ...g, bag: [item], cursor: item.id }))).toContain('Bulwark: The first blow that lands each fight is halved.')
+  })
+})
+
+describe('played by hand, no offer needs a tool call', () => {
+  const byHand = (g: Game): Game => ({ ...g, orders: { drink: 25, smoke: false, leave: 'common', play: 'hand' } })
+  const rolled = (hand: boolean, n: number, rarity: 'epic' | 'legendary') =>
+    Array.from({ length: n }, (_, i) => makeItem((hand ? byHand : (g: Game) => g)({ ...plainHero(i + 1), nextId: 5000 + i * 7 }), rarity))
+
+  test('an Epic by hand never carries a trigger that needs a tool call; in session play some do', async () => {
+    const work = (Object.keys(TRIGGERS) as Trigger[]).filter(t => TRIGGERS[t].work === true)
+    expect(rolled(true, 300, 'epic').filter(i => i.trigger !== undefined && work.includes(i.trigger))).toEqual([])
+    expect(rolled(false, 300, 'epic').some(i => i.trigger !== undefined && work.includes(i.trigger))).toBe(true)
+  })
+
+  test('a Legendary by hand never has a power that needs a tool call; in session play some do', async () => {
+    const work = LEGENDARIES.filter(l => l.work === true).map(l => l.name)
+    expect(work.sort()).toEqual(['Aegis of Green Builds', 'Mantle of the Monorepo', 'Staff of Stack Traces'])
+    expect(rolled(true, 200, 'legendary').filter(i => work.includes(i.name))).toEqual([])
+    expect(rolled(false, 200, 'legendary').some(i => work.includes(i.name))).toBe(true)
+    // The mark stays out of the item's stats.
+    expect(rolled(false, 50, 'legendary').some(i => 'work' in i)).toBe(false)
+  })
+
+  test('the talents offered by hand are never those that need a tool call; in session play they come up', async () => {
+    const work = (Object.keys(TALENTS) as Talent[]).filter(t => TALENTS[t].work === true)
+    const offers = (play: 'hand' | 'session') => Array.from({ length: 40 }, (_, world) => offer({ level: 5, talents: [], world, orders: { drink: 25, smoke: false, leave: 'common', play } })).flat()
+    expect(offers('hand').filter(t => work.includes(t))).toEqual([])
+    expect(offers('session').some(t => work.includes(t))).toBe(true)
   })
 })

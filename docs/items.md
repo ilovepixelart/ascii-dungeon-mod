@@ -36,6 +36,8 @@ Five tiers. Each tier owns its color and nothing else in the game uses it (gold 
 | Epic | purple `#a85cf0` | double frame | 3 affixes | 4% |
 | Legendary | orange `#ff8a1f` | frame that shimmers | fixed stats and one fixed power, no affixes | 1% |
 
+An affix's stats grow with depth: 1 and a 50th a depth times what it gives (`affixAt` in `hooks/items/loot.ts`), Sharp's +2 attack +4 at depth 50 and +8 at 150, as a base's stats grow a point every three depths. So a tier stands over the one under it at every depth: an Epic is worth 3.6 times a Common at depth 5, 1.9 times at 50 and 1.6 times at 150, a Legendary over an Epic throughout.
+
 Each depth moves 1 point of weight from Common toward the higher tiers, down to a floor of 30% (`tierWeights` in `hooks/items/loot.ts`). A kill leaves an item 35% of the time plus 1% a depth, at most 55% (`itemChance`). Legendaries keep their stats' shape but grow with depth like any item. Selling pays 2, 5, 6, 12 and 20 per point of worth by tier. Names: "Prefix Base of Suffix" up to Epic; Legendaries have hand-written names.
 
 ## Wearables

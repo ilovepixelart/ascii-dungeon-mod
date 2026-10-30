@@ -27,7 +27,7 @@ export const HELP_ROWS: readonly { icon: keyof typeof MARK; when: string; does: 
   { icon: 'xp', when: 'Tests that pass', does: 'A sure critical', work: true },
   { icon: 'regen', when: 'A commit', does: 'A shrine and full HP', work: true },
   { icon: 'coin', when: 'A push or a PR', does: 'A cache of loot', work: true },
-  { icon: 'stairs', when: 'An answer finished', does: 'The stairs down' },
+  { icon: 'stairs', when: 'An answer finished', does: 'The stairs down, after 3 calls' },
 ]
 
 /** The box, in cells: the head, each rule, what happens bold (green for the work it rewards) over what it comes to,

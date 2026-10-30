@@ -116,18 +116,18 @@ test('a failing test run is no sure blow, and a commit the host does not report 
   expect(await ui.find({ type: 'Text', text: /^> The tests pass/ })).toBeUndefined()
 })
 
-test('after ten tool calls unseen, the next key opens the recap instead; Play on closes it and the key works again', async ($, on) => {
+test('after ten tool calls unseen, the next key does what it says and the recap opens over it; Play on closes it', async ($, on) => {
+  const kept = storeIn(on)
   on('tool.call', () => ({ result: { file: { content: '' } } as never }))
   for (let i = 0; i < 10; i += 1) await $.tool.call({ tool: 'Read', file_path: `/src/${i}.ts` })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  const sprites = { type: 'Text', text: /d\[#\]-\+/ } as const
   await ui.press({ key: 'zoom' })
+  // The zoom the key asked for is done, a new game's 3 stepping to 1, under the recap.
+  expect((kept.get('save') as Game | undefined)?.zoom).toBe(1)
   expect(await ui.find({ type: 'Text', text: 'While you worked' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^10 tool calls, depth 1 to 1, level 1 to 1\./ })).toBeDefined()
   await ui.press({ key: 'recap-play' })
   expect(await ui.find({ type: 'Text', text: 'While you worked' })).toBeUndefined()
-  await ui.press({ key: 'zoom' })
-  expect(await ui.find(sprites)).toBeUndefined()
   await ui.unmount()
 })
 

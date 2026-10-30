@@ -92,6 +92,14 @@ describe('the traits in a fight', () => {
     expect([hit(0), hit(2)]).toEqual([7, 10])
   })
 
+  test('a heavy blow, a breath or any blow a turn makes harder, takes at most 60% of max HP; a plain blow is as hard as it is', async () => {
+    const g = { ...plainHero(), hp: 100, maxHp: 100 }
+    // The blow as told: the hero's standing orders drink a potion after a big one.
+    const taken = (over: Partial<Foe>) => Number(/strikes you for (\d+)\./.exec(apply({ ...g, foe: foe('D', { opened: true, ...over }) }, { kind: 'outcome', ok: false, what: 'Bash' }).log.join('\n'))?.[1])
+    // No defense, all of it: a plain 80; a breath of 1.5 times 50 is 75, held at 60; an overlord's 2.5 times 40, 100, too.
+    expect([taken({ atk: 80, turn: 0 }), taken({ atk: 50, turn: 2 }), taken({ atk: 40, turn: 2, boss: true })]).toEqual([80, 60, 60])
+  })
+
   test('a dragon breathes for half again its attack', async () => {
     const g = plainHero()
     const hit = (turn: number) => g.hp - apply({ ...g, hp: 99, maxHp: 99, foe: foe('D', { turn, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' }).hp - (g.hp - 99)

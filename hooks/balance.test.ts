@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { armorShare, foeAtk, foeHp, heroDamage, statShare, xpToLevel } from './balance'
+import { armorShare, foeAtk, foeHp, heroDamage, levelFor, statShare, xpShare, xpToLevel } from './balance'
 import { simulate } from './sim'
 
 describe('the balance formulas', () => {
@@ -31,6 +31,15 @@ describe('the balance formulas', () => {
 
   test("an attribute's share: 0.6 of its points over its points plus 20, so 20 points give 0.3 and 60 give 0.45", async () => {
     expect([0, 1, 20, 60, 180].map(p => Math.round(statShare(p) * 1e6) / 1e6)).toEqual([0, 0.028571, 0.3, 0.45, 0.54])
+  })
+
+  test("a depth's level is 3 and 0.4 a depth, rounded: 3 at depth 1, 7 at 10, 43 at 100, 103 at 250", async () => {
+    expect([1, 10, 100, 250].map(levelFor)).toEqual([3, 7, 43, 103])
+  })
+
+  test("a kill's XP share: whole up to 5 levels over the depth's, then 81, 62, 43, 24 in 100, and 5 from 10 over", async () => {
+    // Depth 10's level is 7: levels 1 to 12 take it whole, 13 to 16 the steps, 17 and over 5 in 100.
+    expect([1, 7, 12, 13, 14, 15, 16, 17, 40].map(level => xpShare(level, 10))).toEqual([1, 1, 1, 0.81, 0.62, 0.43, 0.24, 0.05, 0.05])
   })
 
   test('hero damage grows half a point a level', async () => {

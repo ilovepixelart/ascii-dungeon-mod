@@ -73,6 +73,10 @@ Foes grow as depth does and no faster, HP (`foeHp`, `FOE_HP_SCALE` of the plain 
 
 A hero all Might or all Focus buys no HP and no defense, so takes the bigger share. Over the same games, deaths a game, knights, mages and rogues: every point on Might 139, 35 and 93; on Focus 109, 68 and 235; on Vigor 127, 6 and 106. The rogue's ambush is a sure critical whatever its chance, so Focus does the least for it.
 
+## Levels
+
+A depth has a level, 3 and 0.4 a depth (`levelFor`), the simulated hero's within a level from depth 10 to 250. A hero more than 5 levels over it takes less of a kill's XP (`xpShare`): 81, 62, 43 and 24 in 100 at 6 to 9 over, 5 in 100 from 10 over; one under it takes the whole. In session play the hero keeps to its depth's level and nothing changes. Played by hand, over 60 games of 3,000 steps, the hero stood at level 30 by depth 37, 12 over it; it now stands at 25.
+
 ## Where it stands
 
 | | Before | Now |

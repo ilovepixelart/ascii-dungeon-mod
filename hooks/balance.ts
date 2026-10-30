@@ -36,6 +36,21 @@ export const CALM_HEAL = 0.1
 /** XP for killing a monster. */
 export const foeXp = (depth: number, tier: number) => 4 + tier * 3 + depth
 
+/** The level a hero has at a depth, simulated: 3 and 0.4 a depth, from depth 10 to 250 within a level of the median. */
+export const levelFor = (depth: number) => Math.round(3 + 0.4 * depth)
+
+/**
+ * The share of a kill's XP a hero takes, by how far its level is over the depth's (`levelFor`): whole up to XP_LEEWAY
+ * over, then each level more a step down XP_FALLOFF, the last step for any more. A hero under the depth's level takes
+ * it whole. A hero staying on shallow depths stops outgrowing them.
+ */
+export const XP_LEEWAY = 5
+export const XP_FALLOFF = [0.81, 0.62, 0.43, 0.24, 0.05] as const
+export const xpShare = (level: number, depth: number) => {
+  const over = level - levelFor(depth) - XP_LEEWAY
+  return over <= 0 ? 1 : XP_FALLOFF[Math.min(over, XP_FALLOFF.length) - 1]!
+}
+
 /** XP from one level to the next: grows faster than the kills do, so the hero levels a little behind depth. */
 export const xpToLevel = (level: number) => Math.round(20 * level ** 1.5)
 

@@ -4,7 +4,7 @@ import type { Game } from '../types'
 import { DEPTH_MODS, MOD_SAID, apply, bandOf, depthMod, isBossDepth, levelOf } from './game'
 import { chestAt, floorThing, generate, isFloor } from './map'
 import type { DepthMod } from './game'
-import { foeAtk, foeHp } from './balance'
+import { foeAtk, foeHp, levelFor } from './balance'
 import { foeAhead, plainHero } from './fixtures'
 import { arrive } from './world'
 
@@ -110,7 +110,8 @@ describe('what each does', () => {
     const kill = apply({ ...at(gd, { gold: 0 }), foe: foeAhead(at(gd), 1, { hp: 1, maxHp: 1, glyph: 'o' }) }, { kind: 'attack' })
     expect([1, 2, 3].map(k => Math.floor(k * gd * 1.5))).toContain(kill.gold)
     const hd = depthWith('horde')
-    const g = at(hd, { xp: 0, level: 30 })
+    // At the depth's own level: one far over it takes less of a kill's XP.
+    const g = at(hd, { xp: 0, level: levelFor(hd) })
     const won = apply({ ...g, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, glyph: 'o', xp: 20 }) }, { kind: 'attack' })
     // The plain hero's Insight adds nothing at 0: 20 XP, half again 30.
     expect(won.xp).toBe(30)

@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A hero more than 5 levels over a depth's level (3 and 0.4 a depth) takes less of a kill's XP: 81, 62, 43 and 24 in
+  100 at 6 to 9 levels over, 5 in 100 from 10 over. Played by hand, a hero ran 12 levels ahead of its depth; now 7.
 - A click on worn gear in the inventory shows its card until the next click; a right click takes it off, where a
   click did. Dragging it into the bag still takes it off.
 - Armor lets a share of each blow through rather than taking its defense off: `K / (K + defense)`, `K` being 0.9 of

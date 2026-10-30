@@ -131,6 +131,23 @@ describe('combat', () => {
     expect(apply({ ...g, worked: { depth: 4, calls: 9 } }, { kind: 'answer' }).depth).toBe(1)
   })
 
+  test('in town, the fifth tool call in a row with no window open takes the hero back through the portal', async () => {
+    const town = { ...apply(plainHero(), { kind: 'portal' }), panel: 'none' as const }
+    const calls = (g: Game, n: number) => Array.from({ length: n }).reduce<Game>(h => apply(h, { kind: 'explore', steps: 3 }), g)
+    const four = calls(town, 4)
+    expect(four.where).toBe('town')
+    // The log folds the repeats: four rests read as one line, times 4.
+    expect(four.log.at(-1)).toBe('You rest in town. (x4)')
+    const five = calls(town, 5)
+    expect(five.where).toBe('dungeon')
+    expect(five.idle).toBeUndefined()
+    expect(five.toast).toBe('Back to the dungeon: the work goes on.')
+    // A window open is a player in town: its calls rest, and the count starts over.
+    const shopping = calls({ ...calls(town, 4), panel: 'shop' }, 3)
+    expect(shopping.where).toBe('town')
+    expect(calls({ ...shopping, panel: 'none' }, 4).where).toBe('town')
+  })
+
   test('crossing the XP threshold levels up and restores HP', async () => {
     const g = plainHero()
     const after = apply({ ...g, hp: 4, xp: 15, foe: foeAhead(g, 1, { hp: 1 }) }, { kind: 'outcome', ok: true, what: 'Edit' })

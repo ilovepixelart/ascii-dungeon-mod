@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A hero left in town goes back through the portal on the fifth tool call in a row with no window open, with a
+  toast; a tool call in town earned nothing. A window open starts the count over.
 - An answer takes the stairs only once the depth has seen 3 tool calls; before, the hero stays and the log says how
   many it has seen. Every answer took them: answers of 0 to 2 tool calls died about ten times as often as longer
   ones. Simulated with 0 to 2 calls an answer, deaths per 1,000 steps fall from 15.8 to 5.4.

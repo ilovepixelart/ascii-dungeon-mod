@@ -201,6 +201,14 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, worked: { depth: g.depth, calls: 1.5 } })).toContain(rule)
   })
 
+  test('idle calls counted out of town, or past the count that takes the hero back', async () => {
+    const rule = 'idle counted only in town'
+    const town = { ...g, where: 'town' as const }
+    expect(broke({ ...town, idle: 4 })).not.toContain(rule)
+    expect(broke({ ...g, idle: 1 })).toContain(rule)
+    expect(broke({ ...town, idle: 5 })).toContain(rule)
+  })
+
   test('orders outside their choices', async () => {
     const rule = 'orders among their choices'
     const o = { drink: 25, smoke: false, leave: 'common', play: 'session' } as const

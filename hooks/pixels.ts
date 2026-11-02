@@ -11,7 +11,7 @@ import { TOWN_H, TOWN_W } from './town'
 import { TOWN_PX_H, TOWN_PX_W, townImage, wildsPixel } from './townpixels'
 import { BOSS_HOLD, BOSS_KEYS, FOE_HOLD, FOE_KEYS, HERO_HOLD, HERO_KEYS, HERO_REST, bossFall, fallDim, foeFall, heroFall } from './fall'
 import type { Pixel } from './fall'
-import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, GROUND, TERRAIN, pillarShaft, THING_ART, BOSS_ART, UNKNOWN_ART, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
+import { MONSTER_ART, PAL, POPUP_OUTLINE, PX, foeArtOf, GROUND, TERRAIN, pillarShaft, THING_ART, UNKNOWN_ART, bigArtOf, dropShadow, heroArt, lightPixel, textMask, torch, wallOcclusion } from './pixelart'
 
 const HALF_BLOCK = 0x2580
 const SPACE = 0x20
@@ -363,7 +363,7 @@ const foeArt = (g: Game): readonly string[] => (g.foe === null ? UNKNOWN_ART : f
  * its feet on its tile's bottom edge, half a tile out each side and a tile up; any other foe fills its tile.
  */
 const foeSprite = (g: Game): { art: readonly string[]; dx: number; dy: number } =>
-  g.foe?.big !== undefined ? { art: BOSS_ART[g.foe.big], dx: -PX / 2, dy: -PX } : { art: foeArt(g), dx: 0, dy: 0 }
+  g.foe?.big !== undefined ? { art: bigArtOf({ ...g.foe, big: g.foe.big }), dx: -PX / 2, dy: -PX } : { art: foeArt(g), dx: 0, dy: 0 }
 
 /** A big boss over the ground, lit as the hero is: drawn after the ground, so the tiles round it do not cut it off. */
 const drawBigBoss = (frame: Uint32Array, g: Game, width: number, height: number, origin: Pos, isLit: boolean) => {
@@ -904,7 +904,7 @@ const putPixel = (frame: Uint32Array, width: number, height: number, x: number, 
 
 /** A slain foe falling where it stood: a big boss bursting over its two tiles, any other crumbling on its own. */
 const drawSlain = (frame: Uint32Array, width: number, height: number, g: Game, slain: Foe, hitFrame: number, left: number, top: number) => {
-  if (slain.big !== undefined) drawFall(frame, width, height, bossFall(BOSS_ART[slain.big], Math.floor(hitFrame / BOSS_HOLD), litKey), left - PX / 2, top - PX)
+  if (slain.big !== undefined) drawFall(frame, width, height, bossFall(bigArtOf({ ...slain, big: slain.big }), Math.floor(hitFrame / BOSS_HOLD), litKey), left - PX / 2, top - PX)
   else drawFall(frame, width, height, foeFall(foeArtOf(slain, themeOf(g.depth)), Math.floor(hitFrame / FOE_HOLD), litKey), left, top)
 }
 

@@ -1,5 +1,6 @@
 import type { Foe, Game, HeroClass, Talent } from '../types'
 import type { Theme } from './map'
+import { wardenOf } from './deep'
 
 /** Pixels per tile edge: a tile is PX columns by PX / 2 rows of half-block cells, square on screen. */
 export const PX = 8
@@ -519,9 +520,17 @@ export const UNKNOWN_ART: readonly string[] = [
   '........',
 ]
 
+/** A big boss's art: a warden's in its circle's colors, key for key. */
+export const bigArtOf = (foe: Pick<Foe, 'big' | 'warden'> & { big: NonNullable<Foe['big']> }): readonly string[] => {
+  const art = BOSS_ART[foe.big]
+  if (foe.warden === undefined) return art
+  const { swap } = wardenOf(foe.warden)
+  return art.map(row => [...row].map(k => swap[k] ?? k).join(''))
+}
+
 /** A foe's art on a theme's depth: a big boss or a named foe its own, else its kind as the theme draws it. */
-export const foeArtOf = (foe: Pick<Foe, 'glyph' | 'unique' | 'big'>, theme: string): readonly string[] =>
-  (foe.big !== undefined ? BOSS_ART[foe.big] : foe.unique !== undefined ? UNIQUE_ART[foe.unique] : monsterArt(foe.glyph, theme)) ?? UNKNOWN_ART
+export const foeArtOf = (foe: Pick<Foe, 'glyph' | 'unique' | 'big' | 'warden'>, theme: string): readonly string[] =>
+  (foe.big !== undefined ? bigArtOf({ ...foe, big: foe.big }) : foe.unique !== undefined ? UNIQUE_ART[foe.unique] : monsterArt(foe.glyph, theme)) ?? UNKNOWN_ART
 
 /** Things lying on the floor, drawn small so the floor shows around them. */
 export const THING_ART: Readonly<Record<string, readonly string[]>> = {

@@ -8,6 +8,11 @@ release may change behaviour.
 
 ### Changed
 
+- Each Abyss circle has a warden of its own: its theme's big boss remade with the circle's name, its colors and one
+  champion rule, tough (half again the HP), savage (a tenth harder), shielded (a blow turned, and again as it rages)
+  or vampiric, for a quarter more XP: the Hollow Queen, the Vault Lich, the Rotting King and on to the Last Wyrm; past
+  the tenth circle, the Nameless King, Queen, Mother, Lich and Wyrm. The Abyss window names each and its rule. The
+  wardens were the five theme bosses, met again every fifty depths.
 - Each talent has a second rank. Once all 12 are taken, by level 60, every fifth level offers them again, each twice
   what it gave: Opener and Grudge half again the damage, Haggler two fifths off, Pathfinder three tiles, Second Wind
   a quarter of max HP. All 24 are taken by level 120; talents stopped at 12, at level 60.

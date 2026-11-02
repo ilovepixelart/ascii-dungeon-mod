@@ -303,6 +303,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     await ui.press({ key: 'attack' })
     expect(await ui.find({ type: 'Text', text: 'You swing at the darkness.' })).toBeDefined()
+    await ui.press({ key: 'brace' })
+    expect(await ui.find({ type: 'Text', text: 'No heavy blow is coming.' })).toBeDefined()
     await ui.unmount()
   })
 }

@@ -2204,7 +2204,7 @@ const hotkeysIn = (n: RenderChildren): string[] => {
 }
 
 /**
- * The text dashboard's keys: the windows, the hero's moves, the view, a new game, settings. A key a window open under
+ * The text dashboard's keys: the windows, the hero's moves (a brace among them), the view, a new game, settings. A key a window open under
  * them answers to is its alone (`taken`): the dashboard's button keeps its place, to be clicked.
  */
 const dashKeys = ({ g, Box, Text, Button, press }: Pane, taken: ReadonlySet<string>) => {
@@ -2220,6 +2220,7 @@ const dashKeys = ({ g, Box, Text, Button, press }: Pane, taken: ReadonlySet<stri
       <Text dimColor>|</Text>
       <Button key="attack" label="attack" hotkey={free('a')} plain onPress={press({ kind: 'attack' })} />
       <Button key="potion" label="potion" hotkey={free('p')} plain onPress={press({ kind: 'potion' })} />
+      <Button key="brace" label="brace" hotkey={free('b')} plain onPress={press({ kind: 'brace' })} />
       <Button key="walk" label="explore" hotkey={free('w')} plain onPress={press({ kind: 'walk' })} />
       <Button key="stairs" label="descend" hotkey={free('d')} plain onPress={press({ kind: 'stairs' })} />
       <Button key="portal" label={g.where === 'town' ? 'leave town' : 'portal'} hotkey={free('t')} plain onPress={press({ kind: 'portal' })} />

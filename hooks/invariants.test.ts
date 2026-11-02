@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { Game } from '../types'
+import type { Game, Talent } from '../types'
 import { foeAhead } from './fixtures'
 import { apply, levelOf, newGame } from './game'
 import { plainItem } from './items'
 import { violations } from './invariants'
 import { pairOf } from './deep'
 import { simulate } from './sim'
+import { TALENTS } from './talents'
 
 const broke = (g: Game) => violations(g).map(v => v.split(':')[0])
 
@@ -248,11 +249,19 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, heirloom: { ...h, junk: true } })).toContain(rule)
   })
 
-  test('a talent twice, or more talents than levels earned', async () => {
-    const rule = 'talents each once, no more than earned'
+  test('a talent thrice, a second rank while a talent found by hand is untaken, or more talents than levels earned', async () => {
+    const rule = 'talents at most twice, a second once all found by hand are taken, no more than earned'
     expect(broke({ ...g, level: 10, talents: ['grudge', 'opener'] })).not.toContain(rule)
     expect(broke({ ...g, level: 10, talents: ['grudge', 'grudge'] })).toContain(rule)
     expect(broke({ ...g, level: 9, talents: ['grudge', 'opener'] })).toContain(rule)
+    // All twelve by level 60, then a second Grudge at 65, as the offers go; a third is never offered.
+    const all = Object.keys(TALENTS) as Talent[]
+    expect(broke({ ...g, level: 65, talents: [...all, 'grudge'] })).not.toContain(rule)
+    expect(broke({ ...g, level: 70, talents: [...all, 'grudge', 'grudge'] })).toContain(rule)
+    // By hand the four work talents are never offered: the other eight, then their second ranks.
+    const byHand = all.filter(t => TALENTS[t].work !== true)
+    expect(broke({ ...g, level: 45, talents: [...byHand, 'grudge'] })).not.toContain(rule)
+    expect(broke({ ...g, level: 45, talents: [...byHand.filter(t => t !== 'opener'), 'grudge'] })).toContain(rule)
   })
 
   test('a set piece not Epic, with a trigger, or not one of its set', async () => {

@@ -62,6 +62,16 @@ export const DESCEND_CALLS = 3
  * town earned nothing from the work going on. */
 export const TOWN_IDLE_CALLS = 5
 
+/**
+ * A line's legacy: each retiring hero adds a point for every LEGACY_DEPTHS of its deepest depth, up to LEGACY_MAX in
+ * all, kept in the codex; each point lifts the HP levels give and the gold kills pay LEGACY_SHARE more. The gold a
+ * hero hands down is half what it carries, at most LEGACY_GOLD times 1 and a tenth of its deepest depth.
+ */
+export const LEGACY_DEPTHS = 25
+export const LEGACY_MAX = 25
+export const LEGACY_SHARE = 0.02
+export const LEGACY_GOLD = 1000
+
 /** Max HP gained per level. */
 export const HP_PER_LEVEL = 5
 

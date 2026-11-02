@@ -38,7 +38,7 @@ describe('wares', () => {
     const { ui, actions } = shopGesture(g, SHOP_UI_IDLE, onWare(WARES.indexOf('health1')))
     expect(ui).toEqual({ ware: 'health1', menu: false })
     expect(actions).toEqual([])
-    expect(text(g, ui, 'card')).toEqual(['Health Potion', 'Restores 35% of your HP.', 'Price 25   On your belt: 3'])
+    expect(text(g, ui, 'card')).toEqual(['Health Potion', 'Restores 10 HP, 1 more a depth.', 'Price 25   On your belt: 3'])
     expect(text(g, ui, 'menu')).toBeUndefined()
   })
 

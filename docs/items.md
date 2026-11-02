@@ -157,6 +157,8 @@ Five kinds, each with a fixed belt slot (`KINDS` in `hooks/consumables.ts`, keys
 
 Each kind is one form, its own icon, so no form is split across two slots: every potion is in slot 1, every scroll in slot 3.
 
+Healing potions heal set amounts (`POTION_HEAL`, `POTION_PER_DEPTH` in `hooks/consumables.ts`): a Health Potion 10 HP and 1 a depth, a Greater twice that, an Elixir all. They grow slower than the hero, about 35% of max HP at the start and 21% deep, so a deep hero leans on Vigor and gear. As a share of max HP they grew with the hero, and a player away from the pane died 0.17 times in 100 tool calls on depths 61 to 100; now 0.29.
+
 Tier I does what each kind did before tiers, so a belt saved before them (version 7, `toVersion7` in `hooks/save.ts`) keeps its strength: the old Greater Health Potion became an Elixir, and the Scroll of Mapping a Passage Bomb.
 
 ## Finding things

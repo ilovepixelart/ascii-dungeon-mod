@@ -198,8 +198,9 @@ describe('combat', () => {
     expect(after.foe).toBeNull()
   })
 
-  test('a Health Potion heals 35% of max HP, rounded up, capped at max', async () => {
-    expect(apply({ ...plainHero(), hp: 5 }, { kind: 'potion' }).hp).toBe(12)
+  test('a Health Potion heals 10 HP and 1 a depth, capped at max', async () => {
+    // Depth 1: 11.
+    expect(apply({ ...plainHero(), hp: 5 }, { kind: 'potion' }).hp).toBe(16)
     const capped = apply({ ...plainHero(), hp: 18 }, { kind: 'potion' })
     expect(capped.hp).toBe(20)
     expect(capped.belt[0]).toBeNull()

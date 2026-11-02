@@ -18,7 +18,7 @@ type Seen = { before: Game; next: Game; hits: readonly Hit[]; said: (test: (line
 const PICKUP: Readonly<Record<Consumable, Sound>> = { health: 'potionUp', regen: 'herbUp', fury: 'scrollUp', ward: 'runeUp', smoke: 'bombUp' }
 const KIND_OF_NAME = new Map(KINDS.flatMap(kind => TIERS.map(tier => [nameOf(kind, tier), kind] as const)))
 const TWIST = new RegExp(`^(${Object.values(MOD_NAME).join('|')}): `)
-const DENIED = /^(Your belt is full|Your bag is full|No room|Not enough gold|Your stash is full|Your belt has no room|Your belt holds no|Belt slot \d+ is empty|You have no |No stat points|Nothing worn there|There is no reforge|A Legendary is as it was made|The smith has nothing|The merchant has no|The portal will not open|You can't get there|No way on)|is locked: |is tempered as far as it will go/
+const DENIED = /^(Your belt is full|Your bag is full|No room|Not enough gold|Your stash is full|Your belt has no room|Your belt holds no|Belt slot \d+ is empty|You have no |No stat points|Nothing worn there|There is no reforge|The smith has nothing|The merchant has no|The portal will not open|You can't get there|No way on)|is locked: |is tempered as far as it will go/
 
 /** A consumable picked up, by the line that tells it: the floor's potion, a drop, the lectern's scroll, a thing gathered. */
 const pickupOf = (line: string): Sound | undefined => {

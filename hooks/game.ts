@@ -686,13 +686,12 @@ export const championOf = (foe: Foe, mod: ChampionMod): Foe => {
 }
 
 /**
- * Toasts a drop worth hearing about: a Legendary or an Epic by name, else a champion's prize; lesser drops are
- * left to the bag, so the toasts stay rare enough to matter.
+ * Toasts a drop worth hearing about: a Legendary or an Epic by name; lesser drops, a champion's among them, are left
+ * to the log and the bag, so the toasts stay rare enough to matter.
  */
-const announce = (g: Game, item: Item, champion?: string) => {
+const announce = (g: Game, item: Item) => {
   if (item.rarity === 'legendary') g.toast = `Legendary! ${item.name}`
   else if (item.rarity === 'epic') g.toast = `Epic! ${item.name}`
-  else if (champion !== undefined) g.toast = `Champion slain: ${champion} left ${item.name}.`
 }
 
 /** The percent chance a kill leaves an item: 35 and 1 a depth, at most 55. */
@@ -759,8 +758,8 @@ const dropConsumable = (g: Game, isBarren: boolean) => {
 }
 
 /**
- * What a kill leaves: maybe a potion or scroll, and maybe an item; a champion always leaves one of Uncommon or better,
- * `champion` its name, which the item's toast gives.
+ * What a kill leaves: maybe a potion or scroll, and maybe an item; a champion (`champion`, its name) always leaves one
+ * of Uncommon or better.
  */
 const loot = (g: Game, at: Pos, champion?: string) => {
   const isChampion = champion !== undefined
@@ -779,7 +778,7 @@ const loot = (g: Game, at: Pos, champion?: string) => {
     say(g, `You leave the ${item.name} (${RARITY_NAME[item.rarity]}).`)
     return
   }
-  announce(g, item, champion)
+  announce(g, item)
   stashOrLeave(g, item, at)
 }
 
@@ -1181,7 +1180,6 @@ const summon = (g: Game, name: string) => {
     g.foe = foe.champion !== undefined ? foe : championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
     g.tension = 0
     g.calm = CALM_CALLS
-    g.toast = 'Something strong is near.'
     say(g, 'The air grows heavy. Something strong is near.')
   } else g.foe = foe
   say(g, `A ${g.foe.name} (${g.foe.glyph}) emerges from the dark!`)
@@ -1292,9 +1290,16 @@ const REWARDS: Readonly<Record<Exclude<Work, 'tests'>, (g: Game) => void>> = {
   pr: g => cache(g, 'Your pull request opens a hoard.', 'epic'),
 }
 
-/** Work's reward, once a depth for each kind: tests are their blow alone. */
+/** Each kind of work as the log names it. */
+const WORK_SAID: Readonly<Record<Exclude<Work, 'tests'>, string>> = { commit: 'a commit', push: 'a push', pr: 'a pull request' }
+
+/** Work's reward, once a depth for each kind, said when the depth has paid already: tests are their blow alone. */
 const reward = (g: Game, work: Work | undefined) => {
-  if (work === undefined || work === 'tests' || g.boons?.[work]?.includes(g.depth) === true) return
+  if (work === undefined || work === 'tests') return
+  if (g.boons?.[work]?.includes(g.depth) === true) {
+    say(g, `This depth has already paid for ${WORK_SAID[work]}.`)
+    return
+  }
   g.boons = { ...g.boons, [work]: [...(g.boons?.[work] ?? []), g.depth] }
   REWARDS[work](g)
 }
@@ -2152,6 +2157,23 @@ const newHero = (game: Game, cls: HeroClass): Game => {
 /** What the start screen lets through: the dungeon waits behind it, whatever the tool calls do. */
 const ON_THE_START_SCREEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['restart', 'panel', 'zoom'])
 
+/** A game under way, worth going back to: anything won since a new game. */
+export const isUnderWay = (g: Game) => g.level > 1 || g.xp > 0 || g.deepest > 1 || g.deaths > 0 || g.gold > 0
+/** A first game: nothing played, and no codex yet from an earlier hero. */
+export const isFirstGame = (g: Game) => g.codex === undefined && !isUnderWay(g)
+
+/** The tool calls a first game's start screen waits before a Knight sets out, so a session nobody clicks still plays. */
+export const START_WAIT_CALLS = 5
+/** A tool call on the start screen: on a first game it is counted, and the last of START_WAIT_CALLS starts a Knight. */
+const waitedOn = (game: Game, action: Action): Game => {
+  if (!TOOL_DRIVEN.has(action.kind) || !isFirstGame(game)) return game
+  const waited = (game.startWaited ?? 0) + 1
+  if (waited < START_WAIT_CALLS) return { ...game, startWaited: waited }
+  const g = { ...newHero(game, 'knight'), toast: 'You set out as a Knight.' }
+  say(g, 'The dungeon would not wait: you set out as a Knight. Settings, then New game, picks another hero.')
+  return g
+}
+
 /** What tool calls do, counted for the recap; the player's own clicks and keys are not. */
 const TOOL_DRIVEN: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['explore', 'summon', 'ally', 'outcome', 'descend', 'answer'])
 
@@ -2190,7 +2212,7 @@ const bank = (before: Game, g: Game) => {
 export const apply = (game: Game, action: Action): Game => {
   // A new hero keeps the codex and the heirloom: they are the save's, not one hero's.
   if (action.kind === 'restart') return newHero(game, action.cls ?? game.cls ?? 'knight')
-  if (game.panel === 'start' && !ON_THE_START_SCREEN.has(action.kind)) return game
+  if (game.panel === 'start' && !ON_THE_START_SCREEN.has(action.kind)) return waitedOn(game, action)
   const before = normalize(game)
   if (action.kind === 'retire' && whyNotRetire(before, action.slot) === undefined) return retiredFrom(before, action.slot)
   const g: Game = { ...before, log: [...game.log], toast: null, fresh: 0, walked: [] }

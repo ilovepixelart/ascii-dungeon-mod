@@ -58,7 +58,8 @@ To try it from a clone without installing: `claude --plugin-dir /path/to/ascii-d
 
 ## Playing
 
-`/dungeon` opens the pane. The pixel view needs a terminal that draws truecolor half blocks, and the mouse needs the
+The pane opens as a session starts, and `/dungeon` opens it again; the plugin's `autoOpen` option (on by default)
+turned off leaves it to `/dungeon`. The pixel view needs a terminal that draws truecolor half blocks, and the mouse needs the
 fullscreen layout (`/tui fullscreen`).
 
 | Pane | Shows |

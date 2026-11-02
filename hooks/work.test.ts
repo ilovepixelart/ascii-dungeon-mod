@@ -88,10 +88,11 @@ describe('a commit', () => {
     expect(fall({ ...hurtOn(14), waypoint: 8 }).depth).toBe(11)
   })
 
-  test('is rewarded once a depth: a second on the same depth heals nothing', async () => {
+  test('is rewarded once a depth: a second on the same depth heals nothing, and says so', async () => {
     const first = done(hurtOn(13), 'commit')
     const second = done({ ...first, hp: 5 }, 'commit')
     expect(second.hp).toBe(5)
+    expect(second.log.at(-1)).toBe('This depth has already paid for a commit.')
     expect(done({ ...second, depth: 14, deepest: 14 }, 'commit').hp).toBe(20)
   })
 
@@ -141,6 +142,8 @@ describe('a push and a pull request', () => {
   test('each is rewarded once a depth, apart from the other', async () => {
     const pushed = done(hurtOn(7), 'push')
     expect(found(pushed, 'push')).toEqual([])
+    expect(done(pushed, 'push').log.at(-1)).toBe('This depth has already paid for a push.')
+    expect(done(done(pushed, 'pr'), 'pr').log.at(-1)).toBe('This depth has already paid for a pull request.')
     expect(found(pushed, 'pr').length).toBe(1)
     expect(found({ ...pushed, depth: 8, deepest: 8 }, 'push').length).toBe(1)
   })

@@ -124,6 +124,8 @@ let startUi: StartUi | null = null
 let talentUi: TalentUi = TALENT_UI
 /** The codex's page. */
 let codexUi: CodexUi = CODEX_UI
+/** Whether a session opens the pane as it starts (the `autoOpen` option). */
+let isAutoOpen = true
 /** The settings window's page. */
 let settingsUi: SettingsUi = SETTINGS_UI
 /** The how-it-plays window, open over whatever the pane shows: it closes back to that; and the page it shows. */
@@ -400,15 +402,17 @@ export const framesReport = (s: TickStats, repaint: FrameSummary, redraw: FrameS
 
 /**
  * What to toast after an action: the game's own news first; with no log on screen, also what a click of the player's
- * came to, and a new foe with its threat.
+ * came to, and a new foe that matters (a champion, a unique, a nemesis, a boss, or any deadly one) with its threat.
  */
 export const toastFor = (before: Game, next: Game, byHand: boolean, hasLog: boolean): string | null => {
   if (next.toast !== null) return next.toast
   if (hasLog) return null
   if (byHand && next.fresh > 0) return next.log.at(-1) ?? null
   const foe = next.foe
-  if (foe !== null && (before.foe?.name !== foe.name || before.foe.maxHp !== foe.maxHp)) return `A ${foe.name} emerges: ${threat(next)}.`
-  return null
+  if (foe === null || (before.foe?.name === foe.name && before.foe.maxHp === foe.maxHp)) return null
+  const said = threat(next)
+  const isNotable = foe.champion !== undefined || foe.unique !== undefined || foe.nemesis === true || foe.boss === true || said === 'deadly'
+  return isNotable ? `A ${foe.name} emerges: ${said}.` : null
 }
 
 /** A click the hero is walking to carry out: the rules take it when the walk ends, not when it is made. */
@@ -1272,7 +1276,7 @@ const beginSession = async ($: EngineInterface) => {
   const opening = openingGame(await read($, game), version, saved)
   if (opening !== undefined) await update($, game, () => opening)
   await act($, { kind: 'greet' })
-  void $.ui.open(OPEN)
+  if (isAutoOpen) void $.ui.open(OPEN)
 }
 
 /** What every part of the pane's drawing works from: the surface's elements, the game as it is, and how a key acts. */
@@ -2310,6 +2314,7 @@ const drawPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
 
 export const register: Register = (on, options) => {
   soundSettings = { effects: options.sound !== false, music: options.music !== false, volume: VOLUME_STEPS }
+  isAutoOpen = options.autoOpen !== false
   on('session.start', async ($, e, next) => {
     await beginSession($)
     return next(e)

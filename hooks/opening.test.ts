@@ -5,24 +5,29 @@ import type { Engine } from 'claude-code/testing'
 import type { Game } from '../types'
 import { SAVE_VERSION, newGame } from './game'
 
-/** The host a session starts in, its store holding `saved`; what the mod writes lands in the map, what it says in `said`. */
+/** The host a session starts in, its store holding `saved`; what the mod writes lands in the map, what it says in
+ * `said`, the panes it opens in `opened`. */
 const hostWith = (on: On, saved: unknown) => {
   const kept = new Map<string, unknown>([['save', saved]])
   const said: string[] = []
+  const opened: string[] = []
   on('store.get', (_$, e) => ({ value: kept.get(e.key) }) as never)
   on('store.set', (_$, e) => {
     kept.set(e.key, e.value)
     return { value: undefined } as never
   })
   on('command.register', () => ({ value: undefined }) as never)
-  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.open', (_$, e) => {
+    opened.push(String((e as { id?: unknown }).id))
+    return { value: { isPlaced: true } } as never
+  })
   on('ui.toast', (_$, e) => {
     said.push(e.text)
     return { value: undefined }
   })
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('tool.call', () => ({ result: { stdout: '', stderr: '', interrupted: false } as never }))
-  return { kept, said }
+  return { kept, said, opened }
 }
 const start = ($: Engine) => $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
 
@@ -61,5 +66,21 @@ describe('the saved game a session opens', () => {
     await start($)
     await $.tool.call({ tool: 'Bash', command: 'ls' })
     expect((kept.get('save') as Game).gold).toBe(77)
+  })
+})
+
+describe('opening the pane', () => {
+  test('a session opens the dungeon pane as it starts', async ($, on) => {
+    const { opened } = hostWith(on, newGame())
+    await start($)
+    expect(opened).toEqual(['dungeon'])
+  })
+
+  test('with auto-open off it does not; /dungeon still opens it', { options: { autoOpen: false } }, async ($, on) => {
+    const { opened } = hostWith(on, newGame())
+    await start($)
+    expect(opened).toEqual([])
+    await $.command.run({ command: 'dungeon', args: '' } as never)
+    expect(opened).toEqual(['dungeon'])
   })
 })

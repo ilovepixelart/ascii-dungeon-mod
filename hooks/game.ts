@@ -10,7 +10,7 @@ import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed } from './talents'
-import { MARKS, circleSaid, fateOf, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
+import { MARKS, WEIGHT_DEF, abyssWeight, circleSaid, fateOf, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { putIn, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
@@ -1007,10 +1007,14 @@ const warnHeavy = (g: Game) => {
 /** What the log adds to a blow halved once or twice. */
 const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned'] as const
 
-/** The defense a blow meets: all of it, a knight's KNIGHT_ARMOR times; through armor, a knight's PIERCED_DEF of that, rounded down, and no one else's. */
+/**
+ * The defense a blow meets: all of it, less the Abyss's weight (`abyssWeight`), a knight's KNIGHT_ARMOR times; through
+ * armor, a knight's PIERCED_DEF of that, rounded down, and no one else's.
+ */
 const armorAgainst = (g: Game, pierces: boolean) => {
-  if (g.cls !== 'knight') return pierces ? 0 : defense(g)
-  const def = defense(g) * KNIGHT_ARMOR
+  const worn = Math.max(0, defense(g) - WEIGHT_DEF * abyssWeight(g))
+  if (g.cls !== 'knight') return pierces ? 0 : worn
+  const def = worn * KNIGHT_ARMOR
   return pierces ? Math.floor(def * PIERCED_DEF) : def
 }
 

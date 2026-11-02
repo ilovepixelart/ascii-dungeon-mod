@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Mark } from '../types'
 import { apply, depthMod } from './game'
-import { MARKS, forkTier, isForkOpen, markHere, pairOf, roman, tierOf, tierStart } from './deep'
+import { MARKS, abyssWeight, forkTier, isForkOpen, markHere, pairOf, roman, tierOf, tierStart } from './deep'
 import { killConsumable } from './consumables'
 import { foeAhead, plainHero } from './fixtures'
 import { arrive } from './world'
@@ -308,5 +308,29 @@ describe('the Abyss window', () => {
       expect(deepHeight(x)).toBeLessThanOrEqual(80)
       expect(deepPixels(x).length).toBe(deepHeight(x))
     }
+  })
+})
+
+describe("the Abyss's weight", () => {
+  test('each harder mark chosen weighs from its circle on: none for a circle still ahead', async () => {
+    const marks = { 1: 'steady', 2: 'ironclad', 3: 'lean' } as const
+    expect([55, 65, 75, 95].map(depth => abyssWeight(deepAt(depth, { marks })))).toEqual([0, 1, 2, 2])
+    expect(abyssWeight(deepAt(75, { marks: { 1: 'mild', 2: 'brittle', 3: 'steady' } }))).toBe(0)
+  })
+
+  test('a step of weight is 30 defense the less against every blow', async () => {
+    // A rogue (a knight's defense counts more) at depth 75, K 76.5, in 100 defense: a plain foe's 100 lands 76.5 /
+    // 176.5 of it, 43; with two harder marks behind it, the 100 counts 40: 76.5 / 116.5, 66.
+    const armor = { ...plainHero().gear.weapon!, slot: 'armor' as const, atk: 0, def: 100, id: 901 }
+    const at = (marks: Game['marks']) => {
+      const g = deepAt(75, { cls: 'rogue', hp: 500, maxHp: 500, marks, gear: { ...plainHero().gear, armor } })
+      const after = apply({ ...g, foe: foeAhead(g, 1, { glyph: 'o', name: 'orc of x', hp: 99, maxHp: 99, atk: 100, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+      return Number(/strikes you for (\d+)\./.exec(after.log.join('\n'))?.[1])
+    }
+    expect([at({ 1: 'steady', 2: 'mild', 3: 'steady' }), at({ 1: 'steady', 2: 'ironclad', 3: 'lean' })]).toEqual([43, 66])
+  })
+
+  test('the harder marks say their weight stays', async () => {
+    for (const mark of ['ironclad', 'frenzied', 'lean'] as const) expect(MARKS[mark].does).toMatch(/Its weight stays: 30 less defense from here on\.$/)
   })
 })

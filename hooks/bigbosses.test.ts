@@ -58,7 +58,7 @@ describe('the big boss of every tenth depth', () => {
 
 describe('its rage', () => {
   test('at half its HP it rages once: a turn spent roaring, no blow', async () => {
-    const t = foeTurn(atDepth(10), big('hive', { hp: 50 }))
+    const t = foeTurn(atDepth(10), big('hive', { name: 'Hive Mother', hp: 50 }))
     expect([t.strikes, t.foe.phase, t.said]).toEqual([false, 2, ['The Hive Mother shrieks, and the swarm boils!']])
     expect(foeTurn(atDepth(10), t.foe).said).not.toContain('The Hive Mother shrieks, and the swarm boils!')
   })
@@ -237,6 +237,12 @@ describe('the Abyss wardens', () => {
     expect(raging.foe.shield).toBe(1)
     expect(raging.said.at(-1)).toBe('The Hollow Queen raises its guard.')
     expect(foeTurn(atDepth(60), big('queen', { hp: 50, shield: 0 })).foe.shield).toBe(0)
+  })
+
+  test('a warden rages in its own name', async () => {
+    const roar = (key: NonNullable<Foe['big']>, name: string) => foeTurn(atDepth(80), big(key, { name, warden: 3, hp: 50 })).said[0]
+    expect(roar('king', 'Rotting King')).toBe('The Rotting King howls, and the dead stir to guard him!')
+    expect(roar('wyrm', 'Ember Wyrm')).toBe('The Ember Wyrm roars, white-hot!')
   })
 
   test('a vampiric warden heals by what it deals, as a vampiric champion does', async () => {

@@ -60,11 +60,11 @@ export const foeTurn = (g: Game, before: Foe): FoeTurn => {
 
 /** What a big boss says as its second phase begins, at half its HP. */
 const RAGE: Readonly<Record<NonNullable<Foe['big']>, string>> = {
-  king: 'The Bone King howls, and the dead stir to guard him!',
-  queen: 'The Drowned Queen calls up the deep!',
-  hive: 'The Hive Mother shrieks, and the swarm boils!',
-  lich: 'The Frost Lich wreathes itself in ice!',
-  wyrm: 'The Furnace Wyrm roars, white-hot!',
+  king: 'howls, and the dead stir to guard him!',
+  queen: 'calls up the deep!',
+  hive: 'shrieks, and the swarm boils!',
+  lich: 'wreathes itself in ice!',
+  wyrm: 'roars, white-hot!',
 }
 
 /**
@@ -114,8 +114,8 @@ const bigTurn = (foe: Foe, plain: FoeTurn, turn: number, share: number): FoeTurn
   const big = foe.big!
   if (foe.phase !== 2 && share <= 0.5) {
     // A shielded warden raises its guard again as it rages.
-    if (wardenRule(foe) === 'shielded') return { ...plain, foe: { ...foe, phase: 2, shield: 1 }, strikes: false, said: [RAGE[big], `${TheFoe(foe)} raises its guard.`] }
-    return { ...plain, foe: { ...foe, phase: 2 }, strikes: false, said: [RAGE[big]] }
+    if (wardenRule(foe) === 'shielded') return { ...plain, foe: { ...foe, phase: 2, shield: 1 }, strikes: false, said: [`${TheFoe(foe)} ${RAGE[big]}`, `${TheFoe(foe)} raises its guard.`] }
+    return { ...plain, foe: { ...foe, phase: 2 }, strikes: false, said: [`${TheFoe(foe)} ${RAGE[big]}`] }
   }
   return MOVES[big](foe, plain, turn, foe.phase === 2)
 }

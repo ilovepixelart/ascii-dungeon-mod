@@ -1,8 +1,9 @@
 // Simulator: plays many games through the real rules, checks every invariant after every step, and reports balance.
 // Usage: bun tools/simulate.ts <out-dir> [--games 30] [--steps 1000] [--class knight|mage|rogue|all] [--frames]
-//          [--build might|focus|vigor|insight] [--hand] [--talents a,b] [--calls least:most]
+//          [--build might|focus|vigor|insight] [--hand] [--away] [--talents a,b] [--calls least:most]
 //        --frames builds and times each step's frame as the pane draws it, and reports the times and the slowest steps.
-//        --build trains every point on one attribute; --hand plays by hand, with no tool call nor answer; --talents
+//        --build trains every point on one attribute; --hand plays by hand, with no tool call nor answer; --away plays
+//        a session whose player uses no belt in a fight, the orders drinking for it, as one away from the pane; --talents
 //        gives the hero those talents from the first step; --calls sets the tool calls an answer takes (4:13 by default).
 //        bun tools/simulate.ts <out-dir> --replay <class>:<seed>:<step>   (the steps up to <step>, and a picture of it)
 // Writes summary.json and, for any game that broke a rule, trace-<class>-<seed>.jsonl and break-<class>-<seed>.png.
@@ -30,6 +31,7 @@ const calls = flag('calls', '').split(':').map(Number)
 const play: SimOptions = {
   ...(flag('build', '') === '' ? {} : { build: flag('build', '') as Attribute }),
   ...(args.includes('--hand') ? { byHand: true } : {}),
+  ...(args.includes('--away') ? { away: true } : {}),
   ...(flag('talents', '') === '' ? {} : { talents: flag('talents', '').split(',') as Talent[] }),
   ...(calls.length === 2 ? { calls: { least: calls[0]!, most: calls[1]! } } : {}),
 }

@@ -262,6 +262,12 @@ const keepAlive = (g: Game): Action | undefined => {
   if (aid !== undefined) return aid
   const isBreathNext = g.foe !== null && (g.log.at(-1) ?? '').includes('draws a deep breath')
   if (isBreathNext && g.foe !== null && g.hp <= g.foe.atk * 2.5 && heal >= 0) return { kind: 'use', slot: heal }
+  return betterGear(g)
+}
+
+/** Better gear put on: the upgrade in the bag selected, then equipped. A player away from the pane does this between
+ * fights and leaves the belt to the orders. */
+const betterGear = (g: Game): Action | undefined => {
   const upgrade = g.bag.find(i => isUpgrade(g, i))
   return upgrade === undefined ? undefined : g.cursor === upgrade.id ? { kind: 'equip' } : { kind: 'cycle' }
 }
@@ -300,8 +306,8 @@ const chooseMark = (g: Game, d: Dice): Action | undefined => {
 const TRAINED: readonly Attribute[] = ['might', 'focus', 'vigor', 'insight']
 const trainPoint = (g: Game, d: Dice, build?: Attribute): Action | undefined => (g.points > 0 ? { kind: 'train', stat: build ?? TRAINED[d(TRAINED.length) - 1]! } : undefined)
 
-/** What the simulated player does on its own before the next tool call, if anything. */
-const playerMove = (g: Game, d: Dice, build?: Attribute): Action | undefined => {
+/** What the simulated player does on its own before the next tool call, if anything; `away`, no fight's belt. */
+const playerMove = (g: Game, d: Dice, build?: Attribute, away = false): Action | undefined => {
   const trained = trainPoint(g, d, build)
   if (trained !== undefined) return trained
   const learnt = learnTalent(g, d)
@@ -309,7 +315,7 @@ const playerMove = (g: Game, d: Dice, build?: Attribute): Action | undefined => 
   const marked = chooseMark(g, d)
   if (marked !== undefined) return marked
   if (g.where === 'town') return townMove(g, d)
-  return leaveWhenClear(g, d) ?? keepAlive(g) ?? clearBag(g, d) ?? fidget(g, d)
+  return leaveWhenClear(g, d) ?? (!away ? keepAlive(g) : g.foe === null ? betterGear(g) : undefined) ?? clearBag(g, d) ?? fidget(g, d)
 }
 
 /** One of `choices`, each as likely as its weight. */
@@ -351,6 +357,9 @@ export type SimOptions = {
   talents?: Talent[]
   /** The tool calls an answer takes, from least to most: 4 to 13 by default. */
   calls?: { least: number; most: number }
+  /** Played by a player away from the pane, as a session's mostly is: no belt used by hand in a fight (the orders drink
+   * and smoke), only better gear put on between fights. */
+  away?: boolean
   /** Each step held to the rules (`violations`, the walk and sight checks); off, only played, in about two thirds the time. */
   checks?: boolean
 }
@@ -358,21 +367,21 @@ export type SimOptions = {
 const CALLS = { least: 4, most: 13 }
 
 /** The player's own moves before the next tool call or click, up to six. */
-function* ownMoves(g: () => Game, d: Dice, build?: Attribute): Generator<Action> {
+function* ownMoves(g: () => Game, d: Dice, build?: Attribute, away = false): Generator<Action> {
   for (let guard = 0; guard < 6; guard += 1) {
-    const own = playerMove(g(), d, build)
+    const own = playerMove(g(), d, build, away)
     if (own === undefined) break
     yield* byHand(g, own)
   }
 }
 
 /** The session's next actions: a tool call is its start then its outcome; a turn ends by taking the stairs. */
-function* session(g: () => Game, d: Dice, { build, calls: { least, most } = CALLS }: SimOptions): Generator<Action> {
+function* session(g: () => Game, d: Dice, { build, calls: { least, most } = CALLS, away = false }: SimOptions): Generator<Action> {
   for (;;) {
     yield { kind: 'quest', text: 'fix the failing build' }
     const calls = least + d(most - least + 1) - 1
     for (let i = 0; i < calls; i += 1) {
-      yield* ownMoves(g, d, build)
+      yield* ownMoves(g, d, build, away)
       yield* toolCall(d)
     }
     yield { kind: 'answer' }

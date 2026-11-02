@@ -5,7 +5,7 @@ import { slain } from './recap'
 import { stashedItems } from './stash'
 
 /** A codex with nothing in it yet, for a hero who has done nothing. */
-export const EMPTY_CODEX: Codex = { uniques: [], bigs: [], legendaries: [], deepest: 1, level: 1, kills: 0, bosses: 0, deaths: 0, gold: 0 }
+export const EMPTY_CODEX: Codex = { uniques: [], bigs: [], legendaries: [], wardens: [], deepest: 1, level: 1, kills: 0, bosses: 0, deaths: 0, gold: 0 }
 
 const owned = (g: Game): Item[] => [...g.bag, ...stashedItems(g), ...Object.values(g.gear).filter((i): i is Item => i !== undefined)]
 const added = <T>(list: readonly T[], x: T | undefined) => (x === undefined || list.includes(x) ? list : [...list, x])
@@ -21,7 +21,7 @@ const foundLegendaries = (c: Codex, before: Game, after: Game) => {
     .reduce<readonly string[]>((names, i) => added(names, i.name), c.legendaries)
 }
 
-/** The codex `c` after an action took `before` to `after`: a foe slain, a fall, a Legendary come to hand, the deepest depth, the top level, gold found in the dungeon. */
+/** The codex `c` after an action took `before` to `after`: a foe slain (a warden by its circle), a fall, a Legendary come to hand, the deepest depth, the top level, gold found in the dungeon. */
 export const recorded = (c: Codex, before: Game, after: Game): Codex => {
   const foe = slain(before, after)
   const inDungeon = before.where === 'dungeon' && after.where === 'dungeon'
@@ -31,6 +31,7 @@ export const recorded = (c: Codex, before: Game, after: Game): Codex => {
     ...c,
     uniques: [...added(c.uniques, foe?.unique)],
     bigs: [...added(c.bigs, foe?.big)],
+    wardens: [...added(c.wardens ?? [], foe?.warden)],
     legendaries: [...foundLegendaries(c, before, after)],
     deepest: Math.max(c.deepest, after.deepest),
     level: Math.max(c.level, after.level),

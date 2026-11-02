@@ -55,6 +55,8 @@ const WARDENS: readonly { name: string; rule: ChampionMod; swap: Readonly<Record
   { name: 'Frozen Mother', rule: 'savage', swap: { P: 'W', p: 'w', v: 'c' } },
   { name: 'Last Wyrm', rule: 'shielded', swap: { R: 'q', y: 'w' } },
 ]
+/** The circles with a warden of their own; past them, the Nameless Dark. */
+export const NAMED_CIRCLES = WARDENS.length
 const NAMELESS_RULES: readonly ChampionMod[] = ['tough', 'savage', 'shielded', 'vampiric']
 const NAMELESS_SWAP = { o: 'x', O: 'P', R: 'K', y: 'p', C: 'P', B: 'x', b: 'P', P: 'x', p: 'P', g: 'x', G: 'K', h: 'P', i: 'p', I: 'P' }
 /** A circle's warden, by tier: its name (none in the Nameless Dark, where it keeps its boss's last word), its rule, its colors. */

@@ -93,7 +93,7 @@ const RULES: Readonly<Record<string, Rule>> = {
     if (c === undefined) return undefined
     const counts = [c.kills, c.bosses, c.deaths, c.gold]
     if (!counts.every(n => Number.isInteger(n) && n >= 0) || c.bosses > c.kills) return `codex counts ${counts.join(', ')}`
-    const twice = [c.uniques, c.bigs, c.legendaries].find(list => new Set<string>(list).size !== list.length)
+    const twice = [c.uniques, c.bigs, c.legendaries, c.wardens ?? []].find(list => new Set<string | number>(list).size !== list.length)
     if (twice !== undefined) return `the codex lists ${twice.join(', ')}`
     return c.deepest >= g.deepest && c.level >= g.level && c.deaths >= g.deaths ? undefined : `codex deepest ${c.deepest}, level ${c.level}, deaths ${c.deaths}; the hero's ${g.deepest}, ${g.level}, ${g.deaths}`
   },

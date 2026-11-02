@@ -13,7 +13,7 @@ import type { BeltMenu } from './hud'
 import { deathGesture, deathHeight, deathHot, deathOverlay, deathPixels, killerName } from './death'
 import { look } from './recap'
 import { recapGesture, recapHeight, recapHot, recapOverlay, recapPixels } from './recapwindow'
-import { CODEX_UI, codexGesture, codexHeight, codexHot, codexOverlay, codexPixels } from './codexwindow'
+import { CODEX_UI, codexGesture, codexHeight, codexHot, codexOverlay, codexPixels, nextPage } from './codexwindow'
 import type { CodexUi } from './codexwindow'
 import { cardPixels, cardText, svgOf } from './herocard'
 import { retireGesture, retireHeight, retireHot, retireOverlay, retirePixels } from './retirewindow'
@@ -2051,10 +2051,10 @@ const textRecap = (p: Pane) => {
 
 /** Card: the hero card saved and copied. */
 const cardKey = ({ Button, shareCard }: Pane, hotkey?: string) => <Button key="codex-card" label="Card" hotkey={hotkey} plain onPress={shareCard} />
-/** The codex's other page: Finds from Foes, Foes from Finds. */
+/** The codex's next page: Finds from Foes, Abyss from Finds, Foes from Abyss. */
 const pageKey = ({ Button, redraw }: Pane) => (
-  <Button key="codex-page" label={codexUi.page === 'foes' ? 'Finds' : 'Foes'} hotkey="p" plain onPress={() => {
-    codexUi = { page: codexUi.page === 'foes' ? 'finds' : 'foes' }
+  <Button key="codex-page" label={{ foes: 'Finds', finds: 'Abyss', abyss: 'Foes' }[codexUi.page]} hotkey="p" plain onPress={() => {
+    codexUi = nextPage(codexUi)
     redraw()
   }} />
 )
@@ -2068,12 +2068,14 @@ const textCodex = (p: Pane) => {
   const uniques = Object.values(UNIQUES)
   const bigs = Object.values(BIG_BOSSES)
   const legendaries = LEGENDARIES.filter(l => c.legendaries.includes(l.name))
+  const wardens = [...(c.wardens ?? [])].sort((a, b) => a - b)
   return (
     <Box flexDirection="column">
       <Text bold>Codex</Text>
       <Text>{`Uniques ${c.uniques.length}/${uniques.length}: ${named(c.uniques, uniques) || 'none yet'}`}</Text>
       <Text>{`Big bosses ${c.bigs.length}/${bigs.length}: ${named(c.bigs, bigs) || 'none yet'}`}</Text>
       <Text>{`Legendaries ${legendaries.length}/${LEGENDARIES.length}: ${legendaries.map(l => l.name).join(', ') || 'none yet'}`}</Text>
+      <Text>{`Wardens ${wardens.length}: ${wardens.length === 0 ? 'none yet' : `circles ${wardens.map(roman).join(', ')}`}`}</Text>
       <Text dimColor>{`Deepest ${c.deepest}, level ${c.level}, ${countText(c.kills)} kills, ${countText(c.bosses)} bosses, ${countText(c.deaths)} deaths, ${countText(c.gold)} gold.`}</Text>
       <Box columnGap={2}>
         {cardKey(p)}

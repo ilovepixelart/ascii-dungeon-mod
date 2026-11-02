@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- The codex has a third page, Abyss: the ten named circles' wardens, circles I to V over VI to X, each lit in its
+  circle's colors once slain and a dark shape until then, with the Nameless Dark's counted under them. `p` turns
+  Foes, Finds, Abyss; the text view lists the circles whose warden fell. A codex from before starts with none.
 - Each Abyss circle has a warden of its own: its theme's big boss remade with the circle's name, its colors and one
   champion rule, tough (half again the HP), savage (a tenth harder), shielded (a blow turned, and again as it rages)
   or vampiric, for a quarter more XP: the Hollow Queen, the Vault Lich, the Rotting King and on to the Last Wyrm; past

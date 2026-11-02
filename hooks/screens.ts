@@ -62,14 +62,14 @@ export const kitted = (cls: HeroClass, rarity: Rarity): Game => {
 
 /** The windows of a hero's long game: the codex, retiring, the talents offered three by three, the deep at every pair of marks. */
 const heroShots = (g: Game): Shot[] => {
-  const codexed: Game = { ...g, codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }
+  const codexed: Game = { ...g, codex: { uniques: ['rot'], bigs: ['king'], legendaries: [], wardens: [1, 3, 4], deepest: 97, level: 60, kills: 4210, bosses: 19, deaths: 12, gold: 98765, retired: 2 } }
   const retiring = { ...g, bossSlain: 10, deepest: 12, gear: { weapon: g.bag[0]! } }
   // The log full: every line it keeps.
   const logged = { ...g, log: Array.from({ length: LOG_KEPT }, (_, i) => `Line ${i + 1} of the log.`) }
   const out: Shot[] = [
     shot('help', helpPixels(), helpOverlay()),
     shot('log', logPixels(logged), logOverlay(logged)),
-    ...(['foes', 'finds'] as const).map(page => shot(`codex-${page}`, codexPixels(codexed, { page }), codexOverlay(codexed, { page }))),
+    ...(['foes', 'finds', 'abyss'] as const).map(page => shot(`codex-${page}`, codexPixels(codexed, { page }), codexOverlay(codexed, { page }))),
     shot('retire', retirePixels(retiring, { slot: 'weapon' }), retireOverlay(retiring, { slot: 'weapon' })),
   ]
   const all = Object.keys(TALENTS) as Talent[]

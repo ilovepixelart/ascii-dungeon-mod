@@ -106,6 +106,11 @@ Fixed names and stats, each with one effect no affix gives (`wornPower` in `hook
 | Aegis of Green Builds | off-hand (Knight) | +4 def | a passing test run wards off the next hit |
 | Staff of Stack Traces | weapon (Mage) | +6 atk | a failed tool call strikes the foe first; a foe it slays hits no more |
 | Whisper of the Linter | weapon (Rogue) | +5 atk | a crit makes the next hit a crit too; that one chains no further |
+| Treads of the Hot Path | boots | +4 def +8 HP | the stairs heal half of max HP, not a quarter |
+| Signet of Force Push | ring | +6 atk | a blow on a big boss or a warden deals a fifth more |
+| Pendant of the Clean Slate | amulet | +3 def +12 HP | the Abyss's weight takes none of the hero's defense |
+
+The last three, marked `deep`, are never an ordinary find: each Abyss warden slain pays one besides its hoard, one the hero holds nowhere (bag, stash or worn) first, which by the depth and the world (`deepLegendary` in `hooks/items/loot.ts`), so no die is cast for it and every other find falls as it would. Joining the ordinary pool instead changed which Legendary every Abyss find was: the band test's all-Focus rogue (seed 1) lost its Rubber Duck and stalled at depth 110.
 
 ## Triggers
 

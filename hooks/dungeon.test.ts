@@ -470,7 +470,7 @@ test('as text the codex says what is in each row and the records, and closes', a
   await ui.press({ key: 'sheet' })
   await ui.press({ key: 'sheet-codex' })
   expect(await ui.find({ type: 'Text', text: 'Uniques 0/5: none yet' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: 'Legendaries 0/7: none yet' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'Legendaries 0/10: none yet' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^Deepest 1, level 1, 0 kills, 0 bosses, 0 deaths, 0 gold\.$/ })).toBeDefined()
   await ui.press({ key: 'codex-close' })
   expect(await ui.find({ type: 'Text', text: /^Uniques / })).toBeUndefined()

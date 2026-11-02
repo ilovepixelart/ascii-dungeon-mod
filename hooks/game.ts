@@ -3,7 +3,7 @@ import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_ATK, HA
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
-import { CLASS_NAME, RARE_KILLS, RARITY_NAME, RARITY_RANK, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, fitsAt, heirloomOf, gearBonus, isSetWhole, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
+import { CLASS_NAME, RARE_KILLS, RARITY_NAME, RARITY_RANK, SET_SHARE, STARTING_KIT, TEMPER_MAX, baseOf, buyBack, arrange, canWear, cycle, destroy, equip, fitsAt, heirloomOf, gearBonus, isSetWhole, deepLegendary, makeItem, priceOf, setOf, setPiece, wornPower, wornTrigger, reforgeItem, selected, sell, sellJunk, stash, take, temperCost, temperItem, temperStat, toggleJunk, toggleLock, unequip, place } from './items'
 import { BIG_EVERY, THEME_DEPTHS, bfs, cellId, chestAt, corridorAhead, floorThing, isFloor, same, themeOf, visibleFrom } from './map'
 import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
@@ -793,6 +793,11 @@ const bossLoot = (g: Game, foe: Foe, isBig = false) => {
   keepPrize(g, item, foe, named => `Loot: ${named}.`)
   if (item.rarity !== 'legendary' && item.rarity !== 'epic') g.toast = `The ${name} falls: ${item.name}. The way down is open.`
   else announce(g, item)
+  // A warden also pays one of the deep Legendaries, which fall nowhere else.
+  if (foe.warden === undefined) return
+  const deep = deepLegendary(g)
+  keepPrize(g, deep, foe, named => `The ${name} leaves ${named}.`)
+  announce(g, deep)
 }
 
 /** Walks the hero up to the foe: false when they fall on the way (a trap), and the fight is over. */
@@ -893,10 +898,12 @@ const BLOODLETTING = 2
 /** Executioner's blow on a foe under a quarter HP; Momentum's after a kill. */
 const EXECUTIONER = 1.5
 const MOMENTUM = 1.25
+/** The Signet of Force Push's blow on a big boss. */
+const FORCE_PUSH = 1.2
 
-/** What the hero's worn triggers multiply a blow on `foe` by. */
+/** What the hero's worn triggers, and the Signet of Force Push, multiply a blow on `foe` by. */
 const triggerTimes = (g: Game, foe: Foe) =>
-  (wornTrigger(g, 'executioner') && foe.hp * 4 < foe.maxHp ? EXECUTIONER : 1) * (g.momentum === true && wornTrigger(g, 'momentum') ? MOMENTUM : 1)
+  (wornTrigger(g, 'executioner') && foe.hp * 4 < foe.maxHp ? EXECUTIONER : 1) * (g.momentum === true && wornTrigger(g, 'momentum') ? MOMENTUM : 1) * (foe.big !== undefined && wornPower(g, 'forcePush') !== undefined ? FORCE_PUSH : 1)
 
 /** What the hero's talents multiply a blow on `foe` by. */
 const talentTimes = (g: Game, foe: Foe) => {
@@ -1029,7 +1036,7 @@ const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned']
  * armor, a knight's PIERCED_DEF of that, rounded down, and no one else's.
  */
 const armorAgainst = (g: Game, pierces: boolean) => {
-  const worn = Math.max(0, defense(g) - WEIGHT_DEF * abyssWeight(g))
+  const worn = Math.max(0, defense(g) - (wornPower(g, 'cleanSlate') === undefined ? WEIGHT_DEF * abyssWeight(g) : 0))
   if (g.cls !== 'knight') return pierces ? 0 : worn
   const def = worn * KNIGHT_ARMOR
   return pierces ? Math.floor(def * PIERCED_DEF) : def
@@ -1089,7 +1096,7 @@ const descend = (g: Game) => {
   const behind = g.floor?.length ?? 0
   if (behind > 0) say(g, `You leave ${behind === 1 ? 'an item' : `${behind} items`} on the floor behind you.`)
   Object.assign(g, arrive(g.world, g.depth + 1), { walked: [], fortune: null, lastSold: null })
-  g.hp = Math.min(g.maxHp, g.hp + Math.ceil(g.maxHp / 4))
+  g.hp = Math.min(g.maxHp, g.hp + Math.ceil(g.maxHp / (wornPower(g, 'hotPath') === undefined ? 4 : 2)))
   if (g.depth > g.deepest) {
     g.deepest = g.depth
     g.toast = `New record: depth ${g.depth}.`

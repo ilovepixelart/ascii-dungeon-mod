@@ -170,10 +170,22 @@ const rarityFor = (g: Game, atLeast: Rarity, rolls: number): Rarity => {
   return rarity
 }
 
-/** A Legendary: its fixed powers, and stats that grow with depth as any item's do. */
-const legendaryOf = (g: Game): Item => {
-  const legend = pick(g, isHand(g) ? LEGENDARIES.filter(l => l.work !== true) : LEGENDARIES)
-  return { ...plainItem(g, legend.base, 'legendary'), name: legend.name, power: legend.power, ...legendaryStatsAt(legend, g.depth) }
+/** A Legendary as found: its fixed power, and stats that grow with depth as any item's do. */
+const legendaryItem = (g: Game, legend: Legendary): Item => ({ ...plainItem(g, legend.base, 'legendary'), name: legend.name, power: legend.power, ...legendaryStatsAt(legend, g.depth) })
+
+/** An ordinary Legendary find: never a deep one, which only wardens pay (`deepLegendary`). */
+const legendaryOf = (g: Game): Item => legendaryItem(g, pick(g, LEGENDARIES.filter(l => l.deep !== true && !(isHand(g) && l.work === true))))
+
+/**
+ * A warden's deep Legendary: one the hero has nowhere (bag, stash or worn) first; which, by the depth and the world,
+ * so no die is cast for it.
+ */
+export const deepLegendary = (g: Game): Item => {
+  const owned = new Set([...g.bag, ...stashedItems(g), ...Object.values(g.gear)].map(i => i?.power))
+  const deep = LEGENDARIES.filter(l => l.deep === true)
+  const missing = deep.filter(l => !owned.has(l.power))
+  const from = missing.length > 0 ? missing : deep
+  return legendaryItem(g, from[hash(g.depth, g.world, 43) % from.length]!)
 }
 
 /** A Legendary's fixed stats as found at a depth: each a point more every three depths, HP two. */

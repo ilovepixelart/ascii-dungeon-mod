@@ -6,7 +6,7 @@ import type { Action } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { BAG_H, BAG_W, LEGENDARIES, plainItem } from './items'
 import { EMPTY_CODEX, recorded } from './codex'
-import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
+import { codexCardRect, codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
 import type { CodexUi } from './codexwindow'
 import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
 import { PAL, UNIQUE_ART, bigArtOf } from './pixelart'
@@ -178,7 +178,7 @@ describe('the codex window', () => {
       'Deaths 9, heroes retired 2, gold found 18,450.',
     ])
     expect(said(shown(told), 'finds')).toEqual([
-      'Legendaries found 2 of 7.',
+      'Legendaries found 2 of 10.',
       'Deepest 34, level 22, kills 1,240, bosses 12.',
       'Deaths 9, heroes retired 2, gold found 18,450.',
     ])
@@ -193,13 +193,13 @@ describe('the codex window', () => {
     expect(said(shown(told), 'abyss')[0]).toBe('Wardens slain 0 of 10, of the Nameless Dark 0.')
   })
 
-  test('is one height on Foes and Finds, so turning between them does not move the window; Abyss its second row taller', async () => {
+  test('each page as tall as its rows, the records under each the same', async () => {
     const g = shown(told)
-    expect(codexHeight(g, FINDS)).toBe(codexHeight(g, FOES))
-    expect(codexOverlay(g, FINDS)[0]!.y).toBe(codexOverlay(g, FOES)[0]!.y)
-    // Abyss's second row of wardens ends 38 under the first row's top, Finds' Card 30 (22 of Legendaries, 2, a button 6
-    // on its cell): 8 px taller, 4 rows of text.
+    // From the first row's top: Foes' big bosses end 30 down (a unique's slot 10, 2, a box 18), Abyss's wardens 38
+    // (a box, 2, a box), Finds' deep Legendaries and Card 40. The box 2 under that: Abyss 8 px taller than Foes,
+    // Finds 10.
     expect(codexHeight(g, ABYSS)).toBe(codexHeight(g, FOES) + 8)
+    expect(codexHeight(g, FINDS)).toBe(codexHeight(g, FOES) + 10)
     for (const ui of [FINDS, ABYSS]) expect(said(g, ui.page).slice(1)).toEqual(said(g, 'foes').slice(1))
   })
 
@@ -223,7 +223,7 @@ describe('the codex window', () => {
     expect(codexLit(shown(told))).toEqual({
       uniques: [true, false, true, true, false],
       bigs: [true, false, false, false, false],
-      legendaries: [false, true, false, false, true, false, false],
+      legendaries: [false, true, false, false, true, false, false, false, false, false],
       wardens: [false, false, false, false, false, false, false, false, false, false],
     })
     expect(codexLit(shown({ ...told, wardens: [1, 4, 12] })).wardens).toEqual([true, false, false, true, false, false, false, false, false, false])
@@ -323,6 +323,19 @@ describe('the codex window', () => {
     expect(tops).toEqual([0, 14, 0, 14, 0, 0, 7])
   })
 
+  test('the deep Legendaries stand in a row of their own under the rest, Card beside them', async () => {
+    // Boots, signet, pendant: 15, 8, 8 wide, 4 apart, then Card 8 past them, 8 wide: 55 across, from x 25. Their
+    // bottom line, and Card's, 40 under the first row's top: at least 22, 2 and the boots' 15, on a cell row (the first
+    // row's top is one). The boots 15 tall, so 25 down, the rings 8; Card 6.
+    const y = WINDOW_TOP + TABS_H + 2
+    const dark = codexPixels(shown(EMPTY_CODEX), FINDS)
+    const starts = [25, 44, 56]
+    expect(starts.map(x => [dark[y + 39]![x - 1], dark[y + 39]![x]])).toEqual(starts.map(() => [BG, SURFACE.line]))
+    const tops = starts.map(x => dark.findIndex((row, ry) => ry >= y + 23 && row[x] === SURFACE.line) - y)
+    expect(tops).toEqual([25, 32, 32])
+    expect(codexCardRect(FINDS)).toEqual({ x: 72, y: y + 34, w: 8, h: 6 })
+  })
+
   test('each row lights on its own: its entries found, the rest of the codex empty, add their colours', async () => {
     const inks = (c: Codex, ui: CodexUi = FOES) => new Set(codexPixels(shown(c), ui).flat()).size
     expect(inks({ ...EMPTY_CODEX, uniques: ['bones', 'mire', 'rot', 'rime', 'ember'] })).toBeGreaterThan(inks(EMPTY_CODEX) + 5)
@@ -331,7 +344,7 @@ describe('the codex window', () => {
   })
 
   test('a name the Legendaries do not hold is not counted', async () => {
-    expect(said(shown({ ...told, legendaries: ['Sword of Long Ago'] }), 'finds')[0]).toBe('Legendaries found 0 of 7.')
+    expect(said(shown({ ...told, legendaries: ['Sword of Long Ago'] }), 'finds')[0]).toBe('Legendaries found 0 of 10.')
   })
 
   test('each page fits in 40 rows, and its close box closes it; a click elsewhere does nothing', async () => {

@@ -6,6 +6,7 @@ import type { Codex, Game } from '../types'
 import type { Action, Run } from './game'
 import { BIG_BOSSES, UNIQUES, firstCodex } from './game'
 import { LEGENDARIES, baseOf } from './items'
+import type { Legendary } from './items/catalog'
 import { CELL, ICONS } from './icons'
 import { BOSS_ART, PAL, bigArtOf, foeArtOf } from './pixelart'
 import { NAMED_CIRCLES, TIER_DEPTHS, tierStart } from './deep'
@@ -66,15 +67,41 @@ const codexOf = (g: Game): Codex => g.codex ?? firstCodex(g)
 const uniques = Object.entries(UNIQUES)
 const bigs = Object.entries(BIG_BOSSES)
 
-/** The Card button, under the Legendaries on Finds: it saves the hero card and copies it as text. */
+/** A Legendary's box: its piece's cells framed, as the bag holds it, w by h cells of CELL and a frame line round them. */
+const legendarySize = (one: Legendary) => ({ w: (baseOf(one.base)?.w ?? 1) * CELL + 1, h: (baseOf(one.base)?.h ?? 1) * CELL + 1 })
+/** The Legendaries in two rows, LEG_GAP apart: the ordinary ones, then the deep ones under them, Card CARD_GAP past
+ * them. The deep row and Card stand on one bottom line, on a cell row as Card must, at least 2 under the first row. */
+const DEEP = LEGENDARIES.filter(l => l.deep === true)
+const DEEP_BOTTOM = onCell(ROW1_Y + LEG_H + 2 + Math.max(...DEEP.map(l => legendarySize(l).h)))
+const CARD_GAP = 2 * LEG_GAP
+/** Each box's x in a row of `widths`, LEG_GAP apart and `tail` more after them, centred in the window. */
+const rowXs = (widths: readonly number[], tail = 0) => {
+  let x = Math.floor((WINDOW_W - (widths.reduce((n, w) => n + w, 0) + LEG_GAP * (widths.length - 1) + tail)) / 2)
+  return widths.map(w => {
+    const at = x
+    x += w + LEG_GAP
+    return at
+  })
+}
+
+/** The Card button, on Finds beside the deep Legendaries: it saves the hero card and copies it as text. */
 export const CARD_KEY = { key: 'K', label: 'CARD' }
-const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 2), w: buttonW(CARD_KEY.label), h: BUTTON_H }
+const CARD_W = buttonW(CARD_KEY.label)
+const CARD_RECT: Rect = (() => {
+  const widths = DEEP.map(l => legendarySize(l).w)
+  const x = (rowXs(widths, CARD_GAP + CARD_W).at(-1) ?? 0) + (widths.at(-1) ?? 0) + CARD_GAP
+  return { x, y: DEEP_BOTTOM - BUTTON_H, w: CARD_W, h: BUTTON_H }
+})()
 /** The wardens two rows of five, circles I to V over VI to X: a circle's theme is the one five circles on, so each
  * column is one big boss remade. */
 const WARDENS_ACROSS = 5
-/** The box under a page stands 2 px under its last row: on Foes and Finds under the lower of the big bosses and Card
- * (the two end on one row), so turning between them keeps the window's size; on Abyss under the second row of wardens. */
-const boxAbove = (ui: CodexUi) => (ui.page === 'abyss' ? ROW1_Y + FOE_STEP + FOE_BOX : Math.max(ROW2_Y + FOE_BOX, CARD_RECT.y + BUTTON_H))
+/** The box under a page stands 2 px under its last row: Foes' big bosses, Finds' deep Legendaries and Card, Abyss's
+ * second row of wardens. */
+const BOX_ABOVE: Readonly<Record<CodexUi['page'], number>> = {
+  foes: ROW2_Y + FOE_BOX,
+  finds: DEEP_BOTTOM,
+  abyss: ROW1_Y + FOE_STEP + FOE_BOX,
+}
 /** The Card button's place, in window pixels, on the page it is on: Finds; none on Foes. */
 export const codexCardRect = (ui: CodexUi = { page: 'finds' }): Rect | undefined => (ui.page === 'finds' ? CARD_RECT : undefined)
 
@@ -102,7 +129,7 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
     [{ text: `Deaths ${countText(c.deaths)}, heroes retired ${c.retired ?? 0}, gold found ${countText(c.gold)}.`, dim: true }],
   ]
   const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []
-  return [{ role: 'about', x: 2, y: Math.ceil((boxAbove(ui) + 2) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
+  return [{ role: 'about', x: 2, y: Math.ceil((BOX_ABOVE[ui.page] + 2) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -137,26 +164,22 @@ const drawFoes = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
   })
 }
 
-/** Each Legendary's art, and its box: the art and a pixel of frame round it across, as in the bag, LEG_H down. */
+/** Each Legendary's art and its box, in the Legendaries' order, in window pixels, each standing on its row's bottom line. */
 const legendaryBoxes = () => {
-  const icons = LEGENDARIES.map(one => ICONS[one.base]?.art ?? [])
-  // Its piece's cells framed, as the bag holds it: w by h cells of CELL, a frame line round them.
-  const sizes = LEGENDARIES.map(one => ({ w: (baseOf(one.base)?.w ?? 1) * CELL + 1, h: (baseOf(one.base)?.h ?? 1) * CELL + 1 }))
-  const across = sizes.reduce((n, s) => n + s.w, 0) + LEG_GAP * (sizes.length - 1)
-  let x = Math.floor((WINDOW_W - across) / 2)
-  return icons.map((icon, i) => {
-    const at = { icon, x, ...sizes[i]! }
-    x += sizes[i]!.w + LEG_GAP
-    return at
+  const first = LEGENDARIES.filter(l => l.deep !== true)
+  const xs = new Map([...zip(first, rowXs(first.map(l => legendarySize(l).w))), ...zip(DEEP, rowXs(DEEP.map(l => legendarySize(l).w), CARD_GAP + CARD_W))])
+  return LEGENDARIES.map(one => {
+    const { w, h } = legendarySize(one)
+    const bottom = one.deep === true ? DEEP_BOTTOM : ROW1_Y + LEG_H
+    return { icon: ICONS[one.base]?.art ?? [], x: xs.get(one)!, y: bottom - h, w, h }
   })
 }
+const zip = <A, B>(as: readonly A[], bs: readonly B[]): [A, B][] => as.map((a, i) => [a, bs[i]!])
 
 const drawFinds = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
-  const y = ROW1_Y - top
-  legendaryBoxes().forEach(({ icon, x, w, h }, i) => {
-    // Each stands on the row's bottom line. A Legendary found sits in its tier's box, as in the bag; one not yet found
-    // is a shape in a plain one.
-    const top = y + LEG_H - h
+  legendaryBoxes().forEach(({ icon, x, y, w, h }, i) => {
+    // A Legendary found sits in its tier's box, as in the bag; one not yet found is a shape in a plain one.
+    const top = y - WINDOW_TOP
     if (lit.legendaries[i]) tierBox(body, x + 1, top + 1, w - 2, h - 2, 'legendary')
     else box(body, x, top, w, h, false)
     art(body, icon, x + 1 + Math.floor((w - 2 - (icon[0]?.length ?? 0)) / 2), top + 1 + Math.floor((h - 2 - icon.length) / 2), lit.legendaries[i] ? undefined : SHADE)

@@ -280,10 +280,15 @@ describe('the stash\'s tabs', () => {
     expect(slots.slice(6).map(s => [s.x, s.y - slots[0]!.y])).toEqual([[14, 24], [45, 24], [76, 24]])
   })
 
-  test('the Legendaries\' tab is a board of seven slots in a row, each its piece\'s size, 4 apart, centred', async () => {
+  test('the Legendaries\' tab is a board of two rows, each slot its piece\'s size, 4 apart, each row centred', async () => {
     const slots = slotsIn(chestPixels({ ...hero(), stashLegends: [] }, on('legends')))
-    // Sword, amulet, chain, ring, kite, staff, dagger: 8, 8, 15, 8, 15, 8, 8 wide, 4 apart: 94 across, from x 5.
-    expect(slots.map(s => [s.x, s.w, s.h])).toEqual([[5, 8, 22], [17, 8, 8], [29, 15, 22], [48, 8, 8], [60, 15, 22], [79, 8, 22], [91, 8, 15]])
+    // Sword, amulet, chain, ring, kite, staff, dagger: 8, 8, 15, 8, 15, 8, 8 wide, 4 apart: 94 across, from x 5. Under
+    // them, 4 under the tallest (22), the deep ones: boots, signet, pendant, 15, 8, 8 wide: 39 across, from x 33.
+    const row1 = slots[0]!.y
+    expect(slots.map(s => [s.x, s.y - row1, s.w, s.h])).toEqual([
+      [5, 0, 8, 22], [17, 0, 8, 8], [29, 0, 15, 22], [48, 0, 8, 8], [60, 0, 15, 22], [79, 0, 8, 22], [91, 0, 8, 15],
+      [33, 26, 15, 15], [52, 26, 8, 8], [64, 26, 8, 8],
+    ])
   })
 
   test('a board\'s empty slot shows its piece\'s shape in the ghost\'s ink; a stored piece sits in its tier\'s box, chosen and taken by a click', async () => {

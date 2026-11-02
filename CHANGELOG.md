@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- Each talent has a second rank. Once all 12 are taken, by level 60, every fifth level offers them again, each twice
+  what it gave: Opener and Grudge half again the damage, Haggler two fifths off, Pathfinder three tiles, Second Wind
+  a quarter of max HP. All 24 are taken by level 120; talents stopped at 12, at level 60.
 - A retiring hero adds to its line's legacy, kept from hero to hero: a point for every 25 depths of its deepest, up
   to 25, each lifting the HP levels give and the gold kills pay 2 in 100. The gold handed down is half what the hero
   carries, at most 1,000 times 1 and a tenth of its deepest depth; it was half, however much.

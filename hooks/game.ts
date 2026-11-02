@@ -9,7 +9,7 @@ import type { ChestKind, Level, Pos, Theme } from './map'
 import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
-import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed } from './talents'
+import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed, rankOf, talentDoes, talentLabel } from './talents'
 import { MARKS, WEIGHT_DEF, abyssWeight, circleSaid, fateOf, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
 import { normalize } from './save'
 import { putIn, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
@@ -220,9 +220,10 @@ const die = (g: Game, killer: string) => {
 const hurt = (g: Game, amount: number, by: string) => {
   g.hp -= amount
   if (g.hp <= 0 && hasTalent(g, 'secondWind') && g.wind !== g.depth) {
-    g.hp = 1
+    // Its second rank: a quarter of max HP, rounded up, where the first leaves 1.
+    g.hp = rankOf(g, 'secondWind') >= 2 ? Math.ceil(g.maxHp / 4) : 1
     g.wind = g.depth
-    say(g, 'Second wind: you stand, at 1 HP.')
+    say(g, `Second wind: you stand, at ${g.hp} HP.`)
   }
   if (g.hp <= 0) die(g, by)
   else obey(g)
@@ -363,7 +364,7 @@ const openChest = (g: Game, kind: ChestKind) => {
 }
 
 /** How far the hero sees in a corridor: a tile around, two with Pathfinder. */
-export const sightOf = (g: Pick<Game, 'talents'>) => (hasTalent(g, 'pathfinder') ? 2 : 1)
+export const sightOf = (g: Pick<Game, 'talents'>) => 1 + rankOf(g, 'pathfinder')
 
 const moveTo = (g: Game, p: Pos) => {
   g.x = p.x
@@ -887,9 +888,10 @@ const triggerTimes = (g: Game, foe: Foe) =>
 /** What the hero's talents multiply a blow on `foe` by. */
 const talentTimes = (g: Game, foe: Foe) => {
   // A nemesis is a champion too.
-  const isGrudge = hasTalent(g, 'grudge') && (foe.champion !== undefined || foe.unique !== undefined)
-  const isOpener = hasTalent(g, 'opener') && foe.hp === foe.maxHp
-  return (isGrudge ? GRUDGE : 1) * (isOpener ? OPENER : 1)
+  const isGrudge = foe.champion !== undefined || foe.unique !== undefined
+  const isOpener = foe.hp === foe.maxHp
+  // Each rank its share more: a quarter at the first, half at the second.
+  return (isGrudge ? 1 + (GRUDGE - 1) * rankOf(g, 'grudge') : 1) * (isOpener ? 1 + (OPENER - 1) * rankOf(g, 'opener') : 1)
 }
 
 const strike = (g: Game, isSure = false) => {
@@ -908,7 +910,7 @@ const strike = (g: Game, isSure = false) => {
   }
   const dmg = Math.round(blow.dmg * (modHere(g) === 'bloodlust' ? BLOODLUST : 1) * talentTimes(g, foe) * triggerTimes(g, foe))
   delete g.momentum
-  if (isCrit && hasTalent(g, 'bloodletting')) g.hp = Math.min(g.maxHp, g.hp + BLOODLETTING)
+  if (isCrit && hasTalent(g, 'bloodletting')) g.hp = Math.min(g.maxHp, g.hp + BLOODLETTING * rankOf(g, 'bloodletting'))
   const left = foe.hp - dmg
   const how = isCrit ? 'CRITICALLY hit' : 'hit'
   if (left > 0) {
@@ -1161,8 +1163,9 @@ const greenBuild = (g: Game) => {
   }
   if (g.foe !== null) say(g, 'The tests pass: your blow is sure.')
   if (hasTalent(g, 'testDriven')) {
-    g.effects = { ...g.effects, fury: g.effects.fury + 2 }
-    say(g, 'Test driven: 2 blows of fury.')
+    const blows = 2 * rankOf(g, 'testDriven')
+    g.effects = { ...g.effects, fury: g.effects.fury + blows }
+    say(g, `Test driven: ${blows} blows of fury.`)
   }
   if (wornTrigger(g, 'quickStudy')) {
     g.xp += g.depth
@@ -1184,8 +1187,9 @@ const fail = (g: Game, what: string) => {
     if (g.foe !== null) counter(g, what)
   } else counter(g, what)
   if (hasTalent(g, 'rubberDucking') && g.deaths === deaths) {
-    g.xp += g.depth
-    say(g, `Rubber ducking: +${g.depth} XP.`)
+    const xp = g.depth * rankOf(g, 'rubberDucking')
+    g.xp += xp
+    say(g, `Rubber ducking: +${xp} XP.`)
     levelUp(g)
   }
   const mantle = wornPower(g, 'failHeal')
@@ -1198,8 +1202,9 @@ const fail = (g: Game, what: string) => {
 const shrine = (g: Game) => {
   g.hp = g.maxHp
   if (hasTalent(g, 'cleanCommit')) {
-    g.effects = { ...g.effects, ward: Math.max(g.effects.ward, 1) }
-    say(g, 'A clean commit: the next blow will be turned.')
+    const turned = rankOf(g, 'cleanCommit')
+    g.effects = { ...g.effects, ward: Math.max(g.effects.ward, turned) }
+    say(g, turned >= 2 ? `A clean commit: the next ${turned} blows will be turned.` : 'A clean commit: the next blow will be turned.')
   }
   if (wornTrigger(g, 'freshStart')) {
     g.effects = { ...g.effects, fury: g.effects.fury + 1 }
@@ -1217,7 +1222,7 @@ const shrine = (g: Game) => {
 /** Found by work: an item of `atLeast` or better, best of two rolls, kept as a prize is. */
 const cache = (g: Game, said: string, atLeast: Rarity) => {
   say(g, said)
-  const item = makeItem(g, atLeast, hasTalent(g, 'shipIt') ? 4 : 2)
+  const item = makeItem(g, atLeast, 2 + 2 * rankOf(g, 'shipIt'))
   keepPrize(g, item, g, named => `Loot: ${named}.`)
   g.toast = `${RARITY_NAME[item.rarity]}! ${item.name}`
 }
@@ -1728,7 +1733,7 @@ const PRICES: Readonly<Partial<Record<Ware, number>>> = SHOP_PRICES
  * merchant does not sell has none. */
 export const priceOfWare = (ware: Ware, g?: Pick<Game, 'talents' | 'deepest'>) => {
   const price = (PRICES[ware] ?? Infinity) * (1 + Math.floor((g?.deepest ?? 1) / 10))
-  return g !== undefined && hasTalent(g, 'haggler') ? Math.ceil(price * 0.8) : price
+  return g !== undefined && hasTalent(g, 'haggler') ? Math.ceil(price * (1 - 0.2 * rankOf(g, 'haggler'))) : price
 }
 
 const buy = (g: Game, ware: Ware) => {
@@ -1957,7 +1962,7 @@ const learn = (g: Game, t: Talent) => {
     return
   }
   g.talents = [...(g.talents ?? []), t]
-  say(g, `You learn ${TALENTS[t].name}: ${TALENTS[t].does}`)
+  say(g, `You learn ${talentLabel(g, t)}: ${talentDoes(g, t)}`)
   // The last owed taken, the window it was taken in closes; with more owed, it offers the next three.
   if (g.panel === 'talent' && owed(g) === 0) g.panel = 'none'
 }

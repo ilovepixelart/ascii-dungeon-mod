@@ -4,7 +4,7 @@
 // the click layer reports whole gestures, this decides the window's next state and the game actions they make.
 import type { Game, Talent } from '../types'
 import type { Action, Run } from './game'
-import { TALENTS, TALENT_EVERY, offer } from './talents'
+import { MAX_RANK, TALENTS, TALENT_EVERY, offer, offerDoes, offerLabel, takenTalents, talentDoes, talentLabel } from './talents'
 import { BUTTON_H, artLabel, button, buttonBox, buttonW, onCell } from './pieces'
 import { canvas, fill, frame, put } from './canvas'
 import { PAL, TALENT_ICON } from './pixelart'
@@ -64,7 +64,7 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
   const offered = offer(g)
   if (offered.length === 0) return [takenBox(g)]
   const t = offered[chosenOf(g, ui)]!
-  const lines: Run[][] = [[{ text: `${TALENTS[t].name}: `, bold: true }, { text: TALENTS[t].does }]]
+  const lines: Run[][] = [[{ text: `${offerLabel(g, t)}: `, bold: true }, { text: offerDoes(g, t) }]]
   return [
     { role: 'about', x: 2, y: Math.floor((takeRect().y + BUTTON_H + 3) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines },
     buttonBox('TAKE', takeRect().x, takeRect().y, 'armed'),
@@ -72,7 +72,7 @@ export const talentOverlay = (g: Game, ui: TalentUi): OverlayBox[] => {
     ...offered.map((o, i) => ribbonLabel(FAMILIES[FAMILY_OF[o]], cardRect(i).x, CARD_W, top + CARD_Y + RIBBON_Y)),
     // Each card's name under its icon, centred, the chosen one's in gold, as the start screen names its heroes.
     ...offered.map((o, i) => {
-      const name = TALENTS[o].name.toUpperCase()
+      const name = offerLabel(g, o).toUpperCase()
       return artLabel(name, cardRect(i).x + Math.floor((CARD_W - name.length) / 2), top + CARD_Y + NAME_Y, i === chosenOf(g, ui) ? INK.gold : INK.text, SURFACE.card)
     }),
   ]
@@ -117,11 +117,11 @@ const offerPixels = (g: Game, ui: TalentUi): string[][] => {
 /** With none owed, the box under the tabs, in cells: when the next talent comes, then each talent taken and what it
  * does, coding's own in green. */
 const takenBox = (g: Game): OverlayBox => {
-  const taken = g.talents ?? []
-  const head = taken.length === Object.keys(TALENTS).length ? 'Every talent is taken.' : `The next talent comes at level ${TALENT_EVERY * (taken.length + 1)}.`
+  const picks = (g.talents ?? []).length
+  const head = picks === Object.keys(TALENTS).length * MAX_RANK ? 'Every talent is taken, twice.' : `The next talent comes at level ${TALENT_EVERY * (picks + 1)}.`
   const lines: Run[][] = [
     [{ text: head, bold: true }],
-    ...taken.map(t => [{ text: `${TALENTS[t].name}: `, bold: true, color: FAMILIES[FAMILY_OF[t]].ink }, { text: TALENTS[t].does, dim: true }]),
+    ...takenTalents(g).map(t => [{ text: `${talentLabel(g, t)}: `, bold: true, color: FAMILIES[FAMILY_OF[t]].ink }, { text: talentDoes(g, t), dim: true }]),
   ]
   return { role: 'about', x: 2, y: top / 2 + 1, w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }
 }

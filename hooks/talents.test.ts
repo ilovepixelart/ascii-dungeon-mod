@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Foe, Game, Talent, Work } from '../types'
 import { apply, priceOfWare, sightOf, xpToLevel } from './game'
 import { foeAhead, plainHero } from './fixtures'
-import { TALENTS, offer, owed } from './talents'
+import { TALENTS, offer, owed, rankOf, talentLabel } from './talents'
 import { killConsumable, slotOf } from './consumables'
 import { MAP_W, isFloor, roomAt, visibleFrom } from './map'
 import { visibleSet } from './panels'
@@ -31,9 +31,11 @@ describe('earning and picking', () => {
     expect(owed({ level: 12, talents: ['grudge', 'opener'] })).toBe(0)
   })
 
-  test('never more owed than there are talents left to pick', async () => {
-    expect(owed({ level: 200 })).toBe(ALL.length)
-    expect(owed({ level: 200, talents: ALL })).toBe(0)
+  test('never more owed than there are ranks left to pick', async () => {
+    // Twelve talents, two ranks each.
+    expect(owed({ level: 200 })).toBe(24)
+    expect(owed({ level: 200, talents: ALL })).toBe(12)
+    expect(owed({ level: 200, talents: [...ALL, ...ALL] })).toBe(0)
   })
 
   test('three are offered, none picked, the same three each time; none while none is owed', async () => {
@@ -269,8 +271,9 @@ describe('the talent window', () => {
     expect(talentCards(done)).toEqual([])
     const said = (x: Game) => talentOverlay(x, ui(0))[0]!.lines.map(l => l.map(r => r.text).join(''))
     expect(said(done)).toEqual(['The next talent comes at level 15.', `Grudge: ${TALENTS.grudge.does}`, `Haggler: ${TALENTS.haggler.does}`])
-    const all = { ...g, level: 200, talents: ALL }
-    expect(said(all)[0]).toBe('Every talent is taken.')
+    const all = { ...g, level: 200, talents: [...ALL, ...ALL] }
+    expect(said(all)[0]).toBe('Every talent is taken, twice.')
+    expect(said(all)[1]).toBe(`${TALENTS[ALL[0]!].name} II: ${TALENTS[ALL[0]!].twice}`)
     // Coding's own talents are named in green.
     expect(talentOverlay({ ...g, level: 7, talents: ['testDriven'] as Talent[] }, ui(0))[0]!.lines[1]![0]!.color).toBe(FAMILIES.work.ink)
     expect(talentHeight(all)).toBeLessThanOrEqual(82)
@@ -316,5 +319,56 @@ describe('the talents taken', () => {
     const box = talentOverlay(g, TALENT_UI)[0]!
     const inks = box.lines.slice(1).map(l => l[0]!.color)
     expect(inks).toEqual([FAMILIES.work.ink, FAMILIES.fight.ink, FAMILIES.road.ink])
+  })
+})
+
+describe('talent ranks', () => {
+  const ALL_TALENTS = Object.keys(TALENTS) as Talent[]
+
+  test('past the 12, each is offered once more, a second rank; then none, all 24 taken by level 120', async () => {
+    const once = { ...plainHero(3), level: 65, talents: [...ALL_TALENTS] }
+    // 13 earned at level 65, 12 taken: one owed, and what is offered is each a talent held once.
+    expect(owed(once)).toBe(1)
+    const offered = offer(once)
+    expect(offered.length).toBe(3)
+    for (const t of offered) expect(rankOf(once, t)).toBe(1)
+    const twice = { ...once, level: 125, talents: [...ALL_TALENTS, ...ALL_TALENTS] }
+    expect([owed(twice), offer(twice)]).toEqual([0, []])
+  })
+
+  test('no second rank is offered while a talent is still untaken', async () => {
+    const left = ALL_TALENTS.at(-1)!
+    const g = { ...plainHero(3), level: 65, talents: [...ALL_TALENTS.slice(0, -1), ALL_TALENTS[0]!] }
+    // 13 earned, 12 picked (one twice), one talent never taken: only it is offered.
+    expect(owed(g)).toBe(1)
+    expect(offer(g)).toEqual([left])
+  })
+
+  test('a second rank is twice the first: Opener half again, Haggler two fifths less, Pathfinder three tiles', async () => {
+    for (const seed of SEEDS.slice(0, 3)) {
+      const g = { ...plainHero(seed), seed, foe: tough(plainHero(seed)) }
+      expect(dealt(ok(knowing(g, 'opener', 'opener')))).toBe(Math.round(dealt(ok(g)) * 1.5))
+    }
+    const g = plainHero(3)
+    // 25 and 50 gold, two fifths less, rounded up: 15 and 30.
+    expect([priceOfWare('health1', knowing(g, 'haggler', 'haggler')), priceOfWare('fury1', knowing(g, 'haggler', 'haggler'))]).toEqual([15, 30])
+    expect([sightOf(knowing(g, 'pathfinder')), sightOf(knowing(g, 'pathfinder', 'pathfinder'))]).toEqual([2, 3])
+  })
+
+  test('Second Wind II leaves the hero at a quarter of max HP, rounded up', async () => {
+    const g = knowing({ ...plainHero(3), hp: 3, maxHp: 30, depth: 3, deepest: 3, orders: { drink: 0, smoke: false, leave: 'common', play: 'session' } }, 'secondWind', 'secondWind')
+    const saved = failed({ ...g, foe: tough(g, { atk: 99 }) })
+    expect([saved.deaths, saved.hp]).toEqual([0, 8])
+    expect(saved.log).toContain('Second wind: you stand, at 8 HP.')
+  })
+
+  test('learning a second rank says so, with what it now does; the lists show it once, as II', async () => {
+    const g = { ...plainHero(3), level: 65, talents: [...ALL_TALENTS] }
+    const t = offer(g)[0]!
+    const learned = apply(g, { kind: 'talent', talent: t })
+    expect(rankOf(learned, t)).toBe(2)
+    expect(learned.log.at(-1)).toBe(`You learn ${TALENTS[t].name} II: ${TALENTS[t].twice}`)
+    expect(talentLabel(learned, t)).toBe(`${TALENTS[t].name} II`)
+    expect(talentLabel(g, t)).toBe(TALENTS[t].name)
   })
 })

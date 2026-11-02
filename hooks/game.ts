@@ -1,5 +1,5 @@
 import type { Attribute, ChampionMod, Codex, Consumable, Foe, Mark, Talent, Fortune, Game, HeroClass, Item, Nemesis, Orders, Panel, Quest, Rarity, Slot, Work } from '../types'
-import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_ATK, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, KNIGHT_ARMOR, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
+import { CALM_CALLS, CALM_HEAL, DESCEND_CALLS, TOWN_IDLE_CALLS, HAND_FOE_ATK, HAND_FOE_MAX, HAND_FOE_TILE, HEAVY_BLOW_MAX, HP_PER_LEVEL, LEGACY_DEPTHS, LEGACY_GOLD, LEGACY_MAX, LEGACY_SHARE, KNIGHT_ARMOR, PIERCED_DEF, KILL_TENSION, PEAK_HP, TENSION_PEAK, CRIT_TIMES, armorShare, foeAtk, foeHp, foeXp, heroDamage, statShare, xpShare, xpToLevel } from './balance'
 import { foeTurn, heroBlowOn } from './patterns'
 import { addToBelt, chooseTier, countOf, healingSlot, killConsumable, nameOf, slotOf, tickEffects, tierAt, useBelt, wareOf } from './consumables'
 import type { Tier, Ware } from './consumables'
@@ -177,7 +177,9 @@ const levelUp = (g: Game) => {
   while (g.xp >= xpToLevel(g.level)) {
     g.xp -= xpToLevel(g.level)
     g.level += 1
-    g.maxHp += HP_PER_LEVEL
+    // The legacy's share of the HP the levels give, the running total rounded, so no level's rounding is lost.
+    const lifted = (level: number) => Math.round(level * HP_PER_LEVEL * legacyShare(g))
+    g.maxHp += HP_PER_LEVEL + lifted(g.level) - lifted(g.level - 1)
     g.hp = g.maxHp
     g.points += POINTS_PER_LEVEL
     g.toast = `Level up! You are now level ${g.level}.`
@@ -794,7 +796,7 @@ const PROSPECTOR = 1.2
 
 /** What a kill pays: gold by the depth and the foe (a boss or unique five times, a champion three), its stolen gold back; XP by its own. The depth's twist and the fortune add theirs. */
 const killPay = (g: Game, foe: Foe) => {
-  const found = roll(g, 3) * g.depth * (foe.boss === true || foe.unique !== undefined ? 5 : foe.champion === undefined ? 1 : 3)
+  const found = Math.floor(roll(g, 3) * g.depth * (foe.boss === true || foe.unique !== undefined ? 5 : foe.champion === undefined ? 1 : 3) * (1 + legacyShare(g)))
   const mod = modHere(g)
   const mark = markHere(g)
   const paid = Math.floor(found * (mod === 'gloom' ? MOD_MORE : 1) * (mark === 'mild' ? MILD_GOLD : mark === 'lean' ? LEAN_GOLD : 1))
@@ -2019,14 +2021,18 @@ export const whyNotRetire = (g: Game, slot: Slot) => {
   return g.gear[slot] === undefined ? 'Choose a piece you wear to pass down.' : undefined
 }
 
+/** What the line's legacy lifts the HP levels give and the gold kills pay by: LEGACY_SHARE a point. */
+const legacyShare = (g: Pick<Game, 'codex'>) => LEGACY_SHARE * (g.codex?.legacy ?? 0)
+
 /** The town's stash of `game`, its tabs and what they hold, as a new game keeps it. */
 const townStash = (game: Game): Pick<Game, 'stashed' | 'stashSets' | 'stashLegends'> => ({ stashed: game.stashed, stashSets: game.stashSets, stashLegends: game.stashLegends })
 
 /** The hero retired: counted in the codex, the piece in `slot` the heirloom, the stash kept, and a new hero to choose on the start screen. */
 const retiredFrom = (g: Game, slot: Slot): Game => {
   const codex = g.codex ?? firstCodex(g)
-  const legacy = Math.floor(g.gold / 2)
-  return { ...newGame(g.seed, g.cls), ...townStash(g), ...keptOrders(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1 }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start', ...(legacy > 0 ? { legacy } : {}) }
+  const legacy = Math.min(Math.floor(g.gold / 2), LEGACY_GOLD * (1 + Math.floor(g.deepest / 10)))
+  const points = Math.min(LEGACY_MAX, (codex.legacy ?? 0) + Math.floor(g.deepest / LEGACY_DEPTHS))
+  return { ...newGame(g.seed, g.cls), ...townStash(g), ...keptOrders(g), codex: { ...codex, retired: (codex.retired ?? 0) + 1, ...(points > 0 ? { legacy: points } : {}) }, heirloom: heirloomOf(g.gear[slot]!), panel: 'start', ...(legacy > 0 ? { legacy } : {}) }
 }
 
 /** The standing orders, the player's and not the hero's: kept from hero to hero. */
@@ -2052,6 +2058,8 @@ const restash = (g: Game, kept: Pick<Game, 'stashed' | 'stashSets' | 'stashLegen
 const newHero = (game: Game, cls: HeroClass): Game => {
   const g: Game = { ...newGame(game.seed, cls), ...keptOrders(game), codex: game.codex ?? firstCodex(normalize(game)) }
   restash(g, normalize(game))
+  const points = g.codex?.legacy ?? 0
+  if (points > 0) say(g, `Your line's legacy, ${points} points: ${Math.round(100 * legacyShare(g))} in 100 more HP from levels and gold from kills.`)
   if (game.legacy !== undefined) {
     Object.assign(g, { gold: game.legacy, banked: game.legacy })
     say(g, `Your predecessor left you ${game.legacy} gold, safe in town.`)

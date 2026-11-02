@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- A retiring hero adds to its line's legacy, kept from hero to hero: a point for every 25 depths of its deepest, up
+  to 25, each lifting the HP levels give and the gold kills pay 2 in 100. The gold handed down is half what the hero
+  carries, at most 1,000 times 1 and a tenth of its deepest depth; it was half, however much.
 - A Health Potion heals 10 HP and 1 more a depth, a Greater twice that; an Elixir still heals all. They healed 35%
   and 70% of max HP, growing with the hero: deep heroes now lean on Vigor and gear, and the deep kills more.
 - A harder mark chosen at an Abyss fork stays as a weight: 30 less defense in its circle and every circle after,

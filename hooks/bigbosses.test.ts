@@ -4,7 +4,7 @@ import type { Foe, Game } from '../types'
 import { SAVE_VERSION, apply, newGame, normalize } from './game'
 import { MAP_H, MAP_W, generate } from './map'
 import { foeTurn } from './patterns'
-import { PX } from './pixelart'
+import { BOSS_ART, PX, bigArtOf } from './pixelart'
 import { frameOf } from './pixels'
 import { SPRITES } from './sprites'
 import { arrive } from './world'
@@ -204,5 +204,56 @@ describe('saves from before the new room shapes', () => {
     expect({ x: at(changed).x, y: at(changed).y, version: at(changed).version }).toEqual({ ...generate(WORLD, changed).start, version: SAVE_VERSION })
     const same = depthWhere(false)
     expect({ x: at(same).x, y: at(same).y }).toEqual(spotOn(same))
+  })
+})
+
+describe('the Abyss wardens', () => {
+  const warden = (depth: number) => met(depth).foe!
+
+  test('each circle has its own, its theme boss remade; the Nameless Dark keeps the boss word; depth 50 is no circle', async () => {
+    expect([50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160].map(d => warden(d).name)).toEqual([
+      'Furnace Wyrm', 'Hollow Queen', 'Vault Lich', 'Rotting King', 'Rime Mother', 'Ember Wyrm',
+      'Choir Queen', 'Drowned Lich', 'Spore King', 'Frozen Mother', 'Last Wyrm', 'Nameless Queen',
+    ])
+    expect(warden(60)).toMatchObject({ big: 'queen', warden: 1 })
+    expect(warden(50).warden).toBeUndefined()
+    expect(met(60).log.at(-1)).toBe('The Hollow Queen (&) rises to bar the way down!')
+  })
+
+  test('a tough warden has half again the HP, and every warden a quarter more XP', async () => {
+    // Depth 70, top kind (tier 7): HP (6 + 420 + 14 + 4) x 4.5 = 1998, x 1.5 = 2997; attack round(78 x 1.2) x 1.5 = 141;
+    // XP (4 + 21 + 70) x 8 = 760, x 1.25 = 950.
+    expect(warden(70)).toMatchObject({ name: 'Vault Lich', maxHp: 2997, hp: 2997, atk: 141, xp: 950 })
+  })
+
+  test('a savage warden hits a tenth harder, its HP as its boss', async () => {
+    // Depth 120: attack round(128 x 1.2) = 154, x 1.5 = 231, x 1.1 = 254.1, up: 255; HP (6 + 720 + 14 + 4) x 4.5 = 3348.
+    expect(warden(120)).toMatchObject({ name: 'Drowned Lich', atk: 255, maxHp: 3348 })
+  })
+
+  test('a shielded warden turns the first blow, and raises its guard again as it rages; its plain boss does not', async () => {
+    expect(warden(60).shield).toBe(1)
+    const raging = foeTurn(atDepth(60), big('queen', { name: 'Hollow Queen', warden: 1, hp: 50, shield: 0 }))
+    expect(raging.foe.shield).toBe(1)
+    expect(raging.said.at(-1)).toBe('The Hollow Queen raises its guard.')
+    expect(foeTurn(atDepth(60), big('queen', { hp: 50, shield: 0 })).foe.shield).toBe(0)
+  })
+
+  test('a vampiric warden heals by what it deals, as a vampiric champion does', async () => {
+    const g = met(80)
+    const hurt = { ...g.foe!, hp: g.foe!.maxHp - 500, hpAtBlow: g.foe!.maxHp, turn: 3, opened: true as const }
+    const after = (foe: Foe) => apply({ ...g, hp: g.maxHp * 50, maxHp: g.maxHp * 50, foe }, { kind: 'attack' })
+    const drank = after(hurt)
+    const plain = after({ ...hurt, warden: undefined })
+    expect(drank.log.some(l => l.startsWith('The Rotting King strikes you for'))).toBe(true)
+    expect(drank.foe!.hp).toBeGreaterThan(plain.foe!.hp)
+  })
+
+  test('a warden is drawn as its boss in its circle colors: the same shape, the swapped keys gone', async () => {
+    const queen = BOSS_ART.queen
+    const hollow = bigArtOf({ big: 'queen', warden: 1 })
+    expect(hollow.map(r => r.replace(/[^.]/g, '#'))).toEqual(queen.map(r => r.replace(/[^.]/g, '#')))
+    expect(hollow.join('')).not.toMatch(/[CbBgG]/)
+    expect(bigArtOf({ big: 'queen' })).toBe(queen)
   })
 })

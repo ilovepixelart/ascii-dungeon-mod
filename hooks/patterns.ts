@@ -2,6 +2,7 @@
 import type { Foe, Game } from '../types'
 import { roll } from './rng'
 import { TheFoe, theFoe } from './names'
+import { wardenRule } from './deep'
 
 /** What the foe's turn comes to before its blow: lines to say, a changed foe, whether it strikes, and how. */
 export type FoeTurn = { foe: Foe; said: string[]; strikes: boolean; times: number; pierces: boolean; steals: boolean }
@@ -111,7 +112,11 @@ const MOVES: Readonly<Record<NonNullable<Foe['big']>, Move>> = {
 
 const bigTurn = (foe: Foe, plain: FoeTurn, turn: number, share: number): FoeTurn => {
   const big = foe.big!
-  if (foe.phase !== 2 && share <= 0.5) return { ...plain, foe: { ...foe, phase: 2 }, strikes: false, said: [RAGE[big]] }
+  if (foe.phase !== 2 && share <= 0.5) {
+    // A shielded warden raises its guard again as it rages.
+    if (wardenRule(foe) === 'shielded') return { ...plain, foe: { ...foe, phase: 2, shield: 1 }, strikes: false, said: [RAGE[big], `${TheFoe(foe)} raises its guard.`] }
+    return { ...plain, foe: { ...foe, phase: 2 }, strikes: false, said: [RAGE[big]] }
+  }
   return MOVES[big](foe, plain, turn, foe.phase === 2)
 }
 

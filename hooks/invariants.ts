@@ -9,7 +9,7 @@ import { LOG_KEPT, LOOP_KILLS, isBossDepth } from './game'
 import { TAB_PRICES, isLaidOut, specialTabOf, stashedItems } from './stash'
 import { CALM_CALLS, LEGACY_MAX, TOWN_IDLE_CALLS } from './balance'
 import { TALENT_EVERY } from './talents'
-import { pairOf, tierStart } from './deep'
+import { pairOf, tierStart, wardenRule } from './deep'
 import { levelOf } from './world'
 
 type Rule = (g: Game) => string | undefined
@@ -27,7 +27,7 @@ const RULES: Readonly<Record<string, Rule>> = {
     const foe = g.foe
     if (foe?.shield === undefined) return undefined
     // The Bone King and the Frost Lich ward themselves as a shielded champion does.
-    const wards = foe.champion === 'shielded' || foe.big === 'king' || foe.big === 'lich'
+    const wards = foe.champion === 'shielded' || wardenRule(foe) === 'shielded' || foe.big === 'king' || foe.big === 'lich'
     return wards && foe.shield >= 0 && foe.shield <= 1 ? undefined : `the ${foe.name} holds ${foe.shield} shield as a ${foe.champion ?? 'plain foe'}`
   },
   'temper within 0 to 3': g => {

@@ -10,7 +10,7 @@ import { hash, roll } from './rng'
 import { look, noted } from './recap'
 import { EMPTY_CODEX, legendariesOwned, recorded } from './codex'
 import { TALENTS, TALENT_EVERY, earned, hasTalent, offer, owed, rankOf, talentDoes, talentLabel } from './talents'
-import { MARKS, WEIGHT_DEF, abyssWeight, circleSaid, fateOf, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierStart } from './deep'
+import { MARKS, WEIGHT_DEF, abyssWeight, circleSaid, fateOf, forkTier, isForkOpen, markHere, markOf, pairOf, roman, tierOf, tierStart, wardenName, wardenOf, wardenRule } from './deep'
 import { normalize } from './save'
 import { putIn, stashedItems, tabName, tabPrice, takeOut, whereToStore, whyNotBuy } from './stash'
 import type { StashTab } from './stash'
@@ -554,7 +554,20 @@ const bigBossOf = (g: Game): Foe => {
   const tier = BESTIARY.length - 1
   const b = BIG_BOSSES[themeOf(g.depth)]
   const maxHp = Math.round(foeHp(g.depth, tier, 4) * BIG_HP)
-  return { glyph: '&', name: b.name, hp: maxHp, maxHp, atk: Math.ceil(foeAtk(g.depth, tier, 2) * BIG_ATK), xp: foeXp(g.depth, tier) * 8, ...foeSpot(g), boss: true, big: b.key }
+  const big: Foe = { glyph: '&', name: b.name, hp: maxHp, maxHp, atk: Math.ceil(foeAtk(g.depth, tier, 2) * BIG_ATK), xp: foeXp(g.depth, tier) * 8, ...foeSpot(g), boss: true, big: b.key }
+  return tierOf(g.depth) > 0 ? wardenFrom(big, tierOf(g.depth)) : big
+}
+
+/** A warden's rule on its stats: tough half again the HP, savage a tenth harder, shielded one blow turned; a quarter more XP. */
+export const WARDEN_HP = 1.5
+export const WARDEN_ATK = 1.1
+export const WARDEN_XP = 1.25
+const wardenFrom = (big: Foe, circle: number): Foe => {
+  const w = wardenOf(circle)
+  const name = wardenName(circle, big.name)
+  const maxHp = w.rule === 'tough' ? Math.round(big.maxHp * WARDEN_HP) : big.maxHp
+  const atk = w.rule === 'savage' ? Math.ceil(big.atk * WARDEN_ATK) : big.atk
+  return { ...big, name, hp: maxHp, maxHp, atk, xp: Math.round(big.xp * WARDEN_XP), warden: circle, ...(w.rule === 'shielded' ? { shield: 1 } : {}) }
 }
 
 /**
@@ -994,7 +1007,7 @@ const counter = (g: Game, what: string) => {
   say(g, `${capitalized(by)} strikes you for ${dmg}${HALVED_SAID[halved]}.`)
   g.tension += Math.round((100 * dmg) / g.maxHp)
   if (turn?.steals === true) steal(g, by)
-  if (g.foe?.champion === 'vampiric') g.foe = drink(g.foe, dmg)
+  if (g.foe !== null && (g.foe.champion === 'vampiric' || wardenRule(g.foe) === 'vampiric')) g.foe = drink(g.foe, dmg)
   hurt(g, dmg, by)
   landed(g, dmg)
   if (turn !== undefined && turn.times <= 1) warnHeavy(g)

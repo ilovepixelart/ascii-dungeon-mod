@@ -14,7 +14,7 @@ import { FRAMES_PER_TILE, frameOf, hitsBetween, originAt, tileCamera, walkingGam
 import { PX } from './pixelart'
 import { levelOf, newGame } from './world'
 import { offer } from './talents'
-import { forkTier, isForkOpen, pairOf } from './deep'
+import { forkTier, isForkOpen, pairOf, wardenNames } from './deep'
 import { TOWN_H, TOWN_SPOTS, TOWN_W, pathBeside } from './town'
 
 export type StepRecord = {
@@ -558,7 +558,7 @@ export const cutVsDrawn = (before: Game, next: Game) => {
   return off
 }
 
-const BIG_NAMES = Object.values(BIG_BOSSES).map(b => b.name).join('|')
+const BIG_NAMES = [...Object.values(BIG_BOSSES).map(b => b.name), ...wardenNames(Object.values(BIG_BOSSES).map(b => b.name))].join('|')
 const count = (records: StepRecord[], re: RegExp) => records.reduce((n, r) => n + r.said.filter(l => re.test(l)).length, 0)
 
 /** Plays `steps` actions of one game and records each. */

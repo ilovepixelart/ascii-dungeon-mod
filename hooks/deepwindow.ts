@@ -5,7 +5,7 @@
 // decides the game actions they make.
 import type { Game, Mark } from '../types'
 import type { Action, Run } from './game'
-import { DEEP_FROM, MARKS, TIER_DEPTHS, circleName, fateOf, forkTier, markOf, pairOf, roman, tierOf, tierStart } from './deep'
+import { DEEP_FROM, MARKS, RULE_SAID, TIER_DEPTHS, circleName, fateOf, forkTier, markOf, pairOf, roman, tierOf, tierStart, wardenName, wardenOf } from './deep'
 import { BIG_BOSSES } from './game'
 import { themeOf } from './map'
 import { canvas } from './canvas'
@@ -45,8 +45,8 @@ const layout = (g: Game) => {
   return { fork, cards, boxY }
 }
 
-/** A circle's warden: the big boss on its last depth, its theme's. */
-const wardenOf = (tier: number) => BIG_BOSSES[themeOf(tierStart(tier) + TIER_DEPTHS - 1)].name
+/** A circle's warden, by name: its theme's big boss on its last depth, remade. */
+const wardenCalled = (tier: number) => wardenName(tier, BIG_BOSSES[themeOf(tierStart(tier) + TIER_DEPTHS - 1)].name)
 
 /** The circle the box is about: the fork's while one waits, else the one the hero is in or last reached. */
 const circleShown = (g: Game, fork: number | undefined) => fork ?? (g.where === 'dungeon' && tierOf(g.depth) > 0 ? tierOf(g.depth) : tierOf(g.deepest))
@@ -56,7 +56,8 @@ const circleLines = (tier: number): Run[][] => {
   const start = tierStart(tier)
   return [
     [{ text: `Circle ${roman(tier)}: ${circleName(tier)}`, bold: true, color: INK.gold }],
-    [{ text: `Depths ${start} to ${start + TIER_DEPTHS - 1}, its warden the ${wardenOf(tier)}.`, dim: true }],
+    [{ text: `Depths ${start} to ${start + TIER_DEPTHS - 1}, its warden the ${wardenCalled(tier)}.`, dim: true }],
+    [{ text: RULE_SAID[wardenOf(tier).rule], dim: true }],
   ]
 }
 

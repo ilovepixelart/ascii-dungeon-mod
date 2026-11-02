@@ -33,6 +33,8 @@ export type Foe = {
   unique?: 'bones' | 'mire' | 'rot' | 'rime' | 'ember'
   /** A big boss, by key: every tenth depth's guardian, its theme's own, twice a foe's size, with its own moves. */
   big?: 'king' | 'queen' | 'hive' | 'lich' | 'wyrm'
+  /** A big boss guarding an Abyss circle's last depth: the circle's tier, which names its warden (`wardenOf`). */
+  warden?: number
   /** A big boss at half its HP or less: its second phase, entered once. */
   phase?: 2
   /** Old Bones has pulled itself back together, as it does once. */

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Mark } from '../types'
 import { apply, depthMod } from './game'
-import { MARKS, abyssWeight, forkTier, isForkOpen, markHere, pairOf, roman, tierOf, tierStart } from './deep'
+import { MARKS, abyssWeight, forkTier, isForkOpen, markHere, pairOf, roman, tierOf, tierStart, wardenNames } from './deep'
 import { killConsumable } from './consumables'
 import { foeAhead, plainHero } from './fixtures'
 import { arrive } from './world'
@@ -227,18 +227,19 @@ describe('the Abyss window', () => {
   const name = (tier: number, i: number) => MARKS[pairOf(W, tier)[i]!].name
 
   test('heads with the circle the hero is in, its depths and its warden, then the fates chosen and where the next fork opens', async () => {
-    // Circle V is depths 91 to 100, the Ember Deeps; depth 100 is the forge's, its warden the Furnace Wyrm.
+    // Circle V is depths 91 to 100, the Ember Deeps; depth 100 is the forge's, its warden the Furnace Wyrm remade, savage.
     expect(said({ ...atFork, depth: 97, bossSlain: 90, deepest: 97 })).toEqual([
       'Circle V: The Ember Deeps',
-      'Depths 91 to 100, its warden the Furnace Wyrm.',
+      'Depths 91 to 100, its warden the Ember Wyrm.',
+      'Savage: hits a tenth harder.',
       `Fates chosen: III Steady, IV ${name(4, 0)}, V ${name(5, 1)}`,
       'The next fork opens at depth 100, when its warden falls.',
     ])
   })
 
   test('while a fork waits, its cards stand above the box, which heads with the circle to choose for', async () => {
-    // Circle VI is depths 101 to 110, the Bone Choir; depth 110 is flooded, its warden the Drowned Queen.
-    expect(said(atFork).slice(0, 2)).toEqual(['Circle VI: The Bone Choir', 'Depths 101 to 110, its warden the Drowned Queen.'])
+    // Circle VI is depths 101 to 110, the Bone Choir; depth 110 is flooded, its warden the Drowned Queen remade, vampiric.
+    expect(said(atFork).slice(0, 3)).toEqual(['Circle VI: The Bone Choir', 'Depths 101 to 110, its warden the Choir Queen.', 'Vampiric: heals by what it deals, up to half of what it took since its last blow.'])
     const cards = deepCards(atFork)
     expect(cards[0]!.rect.y + cards[0]!.rect.h).toBeLessThan(deepOverlay(atFork)[0]!.y * 2)
   })
@@ -257,7 +258,7 @@ describe('the Abyss window', () => {
     const [a, b] = pairOf(atFork.world, 6).map(m => MARKS[m])
     const words = deepOverlay(atFork).filter(x => x.role === 'button').map(x => x.lines[0]!.map(r => r.text).join(''))
     expect(words).toEqual([`BLESSING: ${a!.name.toUpperCase()}`, `CURSE: ${b!.name.toUpperCase()}`])
-    expect(said(atFork).slice(2, 4)).toEqual([`A ${a!.name}, a blessing: ${a!.does}`, `B ${b!.name}, a curse: ${b!.does}`])
+    expect(said(atFork).slice(3, 5)).toEqual([`A ${a!.name}, a blessing: ${a!.does}`, `B ${b!.name}, a curse: ${b!.does}`])
     expect(said(atFork).at(-1)).toBe('Choose its fate: none chosen, the blessing holds.')
     expect(deepGesture(atFork, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 3 }))).toEqual([{ kind: 'mark', mark: cards[1]!.mark }])
   })
@@ -332,5 +333,14 @@ describe("the Abyss's weight", () => {
 
   test('the harder marks say their weight stays', async () => {
     for (const mark of ['ironclad', 'frenzied', 'lean'] as const) expect(MARKS[mark].does).toMatch(/Its weight stays: 30 less defense from here on\.$/)
+  })
+})
+
+describe('warden names', () => {
+  test('every name a warden goes by: the ten circles and a Nameless one of each boss, for the simulator to count them', async () => {
+    expect(wardenNames(['Bone King', 'Furnace Wyrm'])).toEqual([
+      'Hollow Queen', 'Vault Lich', 'Rotting King', 'Rime Mother', 'Ember Wyrm',
+      'Choir Queen', 'Drowned Lich', 'Spore King', 'Frozen Mother', 'Last Wyrm', 'Nameless King', 'Nameless Wyrm',
+    ])
   })
 })

@@ -2,7 +2,7 @@
 // that changes its rules (read with `markHere` where the rule lives). When a tier's big boss falls, the next tier's
 // mark is chosen of two (`pairOf`), one easier and one harder; unchosen when the hero takes the stairs into it, the
 // easier is taken. Pure.
-import type { Game, Mark } from '../types'
+import type { ChampionMod, Foe, Game, Mark } from '../types'
 import { hash } from './rng'
 
 /** The tiers begin past this depth. */
@@ -38,6 +38,41 @@ export const tierStart = (tier: number) => DEEP_FROM + (tier - 1) * TIER_DEPTHS 
 /** The Abyss's circles, a tier each, by name: the first ten their own, the rest the Nameless Dark. */
 const CIRCLES = ['The Hollow Halls', 'The Sunken Vaults', 'The Rotting Gardens', 'The Rime Galleries', 'The Ember Deeps', 'The Bone Choir', 'The Drowned Stair', 'The Spore Throne', 'The Frozen Heart', 'The Last Forge']
 export const circleName = (tier: number) => CIRCLES[tier - 1] ?? 'The Nameless Dark'
+
+/**
+ * Each circle's warden: its theme's big boss remade, named for the circle, with one champion rule and its sprite's
+ * colors swapped (palette key for palette key). Past the tenth, the Nameless Dark's: in shadow, the rules in turn.
+ */
+const WARDENS: readonly { name: string; rule: ChampionMod; swap: Readonly<Record<string, string>> }[] = [
+  { name: 'Hollow Queen', rule: 'shielded', swap: { C: 'e', b: 'E', B: 'q', g: 'W', G: 'E' } },
+  { name: 'Vault Lich', rule: 'tough', swap: { B: 'Y', C: 'y', n: 'N' } },
+  { name: 'Rotting King', rule: 'vampiric', swap: { o: 't', O: 'm', R: 'L' } },
+  { name: 'Rime Mother', rule: 'shielded', swap: { P: 'B', p: 'c', v: 'Z' } },
+  { name: 'Ember Wyrm', rule: 'savage', swap: { R: 'E', y: 'i' } },
+  { name: 'Choir Queen', rule: 'vampiric', swap: { C: 'o', b: 'O', B: 'O', g: 'h', G: 'H' } },
+  { name: 'Drowned Lich', rule: 'savage', swap: { B: 'G', C: 't', w: 'c' } },
+  { name: 'Spore King', rule: 'tough', swap: { o: 'f', O: 'j', R: 'a' } },
+  { name: 'Frozen Mother', rule: 'savage', swap: { P: 'W', p: 'w', v: 'c' } },
+  { name: 'Last Wyrm', rule: 'shielded', swap: { R: 'q', y: 'w' } },
+]
+const NAMELESS_RULES: readonly ChampionMod[] = ['tough', 'savage', 'shielded', 'vampiric']
+const NAMELESS_SWAP = { o: 'x', O: 'P', R: 'K', y: 'p', C: 'P', B: 'x', b: 'P', P: 'x', p: 'P', g: 'x', G: 'K', h: 'P', i: 'p', I: 'P' }
+/** A circle's warden, by tier: its name (none in the Nameless Dark, where it keeps its boss's last word), its rule, its colors. */
+export const wardenOf = (tier: number): { name?: string; rule: ChampionMod; swap: Readonly<Record<string, string>> } =>
+  WARDENS[tier - 1] ?? { rule: NAMELESS_RULES[(tier - WARDENS.length - 1) % NAMELESS_RULES.length]!, swap: NAMELESS_SWAP }
+/** A warden's name, from its boss's (`Bone King`): the circle's own, or in the Nameless Dark the boss's last word. */
+export const wardenName = (tier: number, boss: string) => wardenOf(tier).name ?? `Nameless ${boss.split(' ').at(-1)}`
+/** Every name a warden goes by, from the big bosses' (`Bone King`...): the ten circles' own and the Nameless Dark's. */
+export const wardenNames = (bosses: readonly string[]) => [...WARDENS.map(w => w.name), ...bosses.map(b => wardenName(WARDENS.length + 1, b))]
+/** The champion rule a warden fights by; none for any other foe. */
+export const wardenRule = (foe: Pick<Foe, 'warden'>) => (foe.warden === undefined ? undefined : wardenOf(foe.warden).rule)
+/** What each rule does to a warden, as the Abyss window says it. */
+export const RULE_SAID: Readonly<Record<ChampionMod, string>> = {
+  tough: 'Tough: half again the HP.',
+  savage: 'Savage: hits a tenth harder.',
+  shielded: 'Shielded: turns your first blow aside, and one more when it rages.',
+  vampiric: 'Vampiric: heals by what it deals, up to half of what it took since its last blow.',
+}
 /** A circle as said: its numeral and its name. */
 export const circleSaid = (tier: number) => `circle ${roman(tier)}, ${circleName(tier)}`
 /** What a mark is to the hero: the easier a blessing, the harder a curse that pays more. */

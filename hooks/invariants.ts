@@ -7,7 +7,7 @@ import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
 import { isTownWalkable } from './town'
 import { LOG_KEPT, LOOP_KILLS, isBossDepth } from './game'
 import { TAB_PRICES, isLaidOut, specialTabOf, stashedItems } from './stash'
-import { CALM_CALLS, TOWN_IDLE_CALLS } from './balance'
+import { CALM_CALLS, LEGACY_MAX, TOWN_IDLE_CALLS } from './balance'
 import { TALENT_EVERY } from './talents'
 import { pairOf, tierStart } from './deep'
 import { levelOf } from './world'
@@ -79,6 +79,10 @@ const RULES: Readonly<Record<string, Rule>> = {
     return Number.isInteger(w.calls) && w.calls >= 0 && w.depth >= 1 && w.depth <= g.deepest ? undefined : `${w.calls} tool calls counted on depth ${w.depth}, deepest ${g.deepest}`
   },
   'idle counted only in town': g => (g.idle === undefined || (g.where === 'town' && Number.isInteger(g.idle) && g.idle >= 0 && g.idle < TOWN_IDLE_CALLS) ? undefined : `${g.idle} idle calls counted in the ${g.where}`),
+  'legacy within its cap': g => {
+    const points = g.codex?.legacy
+    return points === undefined || (Number.isInteger(points) && points >= 0 && points <= LEGACY_MAX) ? undefined : `a legacy of ${points} points`
+  },
   'orders among their choices': g => {
     const o = g.orders
     if (o === undefined) return undefined

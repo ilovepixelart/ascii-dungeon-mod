@@ -209,6 +209,15 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...town, idle: 5 })).toContain(rule)
   })
 
+  test("a line's legacy outside 0 to its cap, or no whole number", async () => {
+    const rule = 'legacy within its cap'
+    const codex = (legacy: number) => ({ ...g, codex: { ...(g.codex ?? { uniques: [], bigs: [], legendaries: [], deepest: 1, level: 1, kills: 0, bosses: 0, deaths: 0, gold: 0 }), legacy } })
+    expect(broke(codex(25))).not.toContain(rule)
+    expect(broke(codex(26))).toContain(rule)
+    expect(broke(codex(-1))).toContain(rule)
+    expect(broke(codex(2.5))).toContain(rule)
+  })
+
   test('orders outside their choices', async () => {
     const rule = 'orders among their choices'
     const o = { drink: 25, smoke: false, leave: 'common', play: 'session' } as const

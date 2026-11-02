@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game, Item, Slot } from '../types'
 import { apply, whyNotRetire } from './game'
-import { buttonsIn, plainHero } from './fixtures'
+import { buttonsIn, foeAhead, plainHero } from './fixtures'
 import { BASES, LEGENDARIES, PREFIXES, RARITY_COLOR, SLOTS, SUFFIXES, heirloomOf, plainItem } from './items'
 import { retireBoxes, retireButtons, retireGesture, retireHeight, retireOverlay, retirePixels } from './retirewindow'
 import { CLOSE_BOX, WINDOW_TOP, WINDOW_W } from './window'
@@ -50,6 +50,30 @@ describe('retiring', () => {
     expect(next.log).toContain('Your predecessor left you 450 gold, safe in town.')
     expect(apply(next, { kind: 'restart' }).gold).toBe(0)
     expect(apply({ ...veteran(piece('steelHelm')), gold: 901 }, { kind: 'restart' }).gold).toBe(0)
+  })
+
+  test('a retiring hero adds a legacy point to the line for every 25 depths of its deepest, up to 25 in all', async () => {
+    const retire = (deepest: number, legacy = 0) =>
+      apply({ ...veteran(piece('steelHelm'), { deepest, codex: { ...EMPTY_CODEX, deepest, legacy } }) }, { kind: 'retire', slot: 'helm' }).codex?.legacy
+    expect([retire(12), retire(110), retire(110, 24)]).toEqual([0, 4, 25])
+  })
+
+  test('the gold handed down is half what the hero carries, at most 1,000 times 1 and a tenth of its deepest depth', async () => {
+    // Deepest 12: at most 2,000.
+    const next = apply(apply({ ...veteran(piece('steelHelm')), gold: 100000 }, { kind: 'retire', slot: 'helm' }), { kind: 'restart' })
+    expect(next.gold).toBe(2000)
+  })
+
+  test("a line's legacy lifts the HP levels give and the gold kills pay, 2 in 100 a point, and the new hero is told", async () => {
+    const line = (legacy: number) => ({ ...plainHero(), codex: { ...EMPTY_CODEX, legacy } })
+    const kill = (g: Game) => apply({ ...g, xp: 19, gold: 0, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, xp: 1, opened: true }) }, { kind: 'outcome', ok: true, what: 'Edit' })
+    // Level 2 with 10 points: 5 HP and the 20 in 100 of the 10 two levels give, 2, less the 1 of the first level's 5: 6.
+    expect([kill(line(0)).maxHp - 20, kill(line(10)).maxHp - 20]).toEqual([5, 6])
+    const paid = kill(line(0)).gold
+    expect(paid).toBeGreaterThan(0)
+    expect(kill(line(10)).gold).toBe(Math.floor(paid * 1.2))
+    const retired = apply({ ...veteran(piece('steelHelm'), { deepest: 110, codex: { ...EMPTY_CODEX, deepest: 110 } }) }, { kind: 'retire', slot: 'helm' })
+    expect(apply(retired, { kind: 'restart' }).log).toContain("Your line's legacy, 4 points: 8 in 100 more HP from levels and gold from kills.")
   })
 
   test("the hero's standing orders carry over to the next hero, retired or started anew", async () => {

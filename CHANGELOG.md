@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A harder mark chosen at an Abyss fork stays as a weight: 30 less defense in its circle and every circle after,
+  on top of the mark's own rule and reward. Each mark says so.
 - The smith remakes a Legendary for the depth: its fixed stats grown as they would be found there, its name, power
   and tempering kept, for 480 gold times 1 and a tenth of the deepest depth. The smith would not touch one, so a
   Legendary found early was never worth keeping deep.

@@ -10,14 +10,22 @@ export const DEEP_FROM = 50
 /** Depths a tier. */
 export const TIER_DEPTHS = 10
 
+/**
+ * The Abyss's weight: each harder mark chosen takes WEIGHT_DEF from the hero's defense in its circle and every circle
+ * after, the curse staying when the circle is behind: difficulty the player stacks for the harder marks' rewards, and
+ * that only better gear buys back.
+ */
+export const WEIGHT_DEF = 30
+const WEIGHT_SAID = `Its weight stays: ${WEIGHT_DEF} less defense from here on.`
+
 /** Every mark: its name, what it does, and whether it is the harder kind. */
 export const MARKS: Readonly<Record<Mark, { name: string; does: string; hard?: true }>> = {
   steady: { name: 'Steady', does: 'Nothing changes.' },
   mild: { name: 'Mild', does: 'Foes hit a fifth softer and pay a third less gold.' },
   brittle: { name: 'Brittle', does: 'Foes have a fifth less HP and hit a fifth harder.' },
-  ironclad: { name: 'Ironclad', does: 'Foes have half again the HP and hit a sixth harder, but items roll twice.', hard: true },
-  frenzied: { name: 'Frenzied', does: 'One foe in four is a champion and foes hit a sixth harder.', hard: true },
-  lean: { name: 'Lean', does: 'Healing potions drop a quarter as often, but gold is doubled.', hard: true },
+  ironclad: { name: 'Ironclad', does: `Foes have half again the HP and hit a sixth harder, but items roll twice. ${WEIGHT_SAID}`, hard: true },
+  frenzied: { name: 'Frenzied', does: `One foe in four is a champion and foes hit a sixth harder. ${WEIGHT_SAID}`, hard: true },
+  lean: { name: 'Lean', does: `Healing potions drop a quarter as often, but gold is doubled. ${WEIGHT_SAID}`, hard: true },
 }
 const EASY: readonly Mark[] = ['steady', 'mild', 'brittle']
 const HARD: readonly Mark[] = ['ironclad', 'frenzied', 'lean']
@@ -39,6 +47,10 @@ export const fateOf = (mark: Mark) => (MARKS[mark].hard === true ? 'curse' : 'bl
 export const markOf = (g: Pick<Game, 'marks'>, tier: number): Mark => g.marks?.[tier] ?? 'steady'
 /** The mark where the hero is: none in town or above the tiers. */
 export const markHere = (g: Pick<Game, 'marks' | 'where' | 'depth'>): Mark => (g.where === 'dungeon' && tierOf(g.depth) > 0 ? markOf(g, tierOf(g.depth)) : 'steady')
+
+/** The harder marks chosen for the circles the hero is in or past: each a step of the Abyss's weight. */
+export const abyssWeight = (g: Pick<Game, 'marks' | 'depth'>) =>
+  Object.entries(g.marks ?? {}).filter(([tier, mark]) => Number(tier) <= tierOf(g.depth) && MARKS[mark].hard === true).length
 
 /** The two marks a tier is chosen of, the easier first: fixed by the world. */
 export const pairOf = (world: number, tier: number): [Mark, Mark] => [EASY[hash(world, tier, 13) % EASY.length]!, HARD[hash(world, tier, 17) % HARD.length]!]

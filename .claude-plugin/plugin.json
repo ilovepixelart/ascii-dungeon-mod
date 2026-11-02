@@ -32,6 +32,12 @@
       "title": "Music",
       "description": "Play the town's tune while the hero is in town",
       "default": true
+    },
+    "autoOpen": {
+      "type": "boolean",
+      "title": "Open at start",
+      "description": "Open the dungeon pane when a session starts; /dungeon opens it either way",
+      "default": true
     }
   }
 }

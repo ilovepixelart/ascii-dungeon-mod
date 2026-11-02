@@ -13,7 +13,7 @@ import { BENCH_SEED, IDLE_BEFORE_BOB_MS, ambientAt, framesReport, toastFor } fro
 import { FRAME_MS } from './frames'
 import { OWNER_STALE_MS, isHeldElsewhere } from './save'
 
-import type { Game } from '../types'
+import type { Foe, Game } from '../types'
 import { foeAhead } from './fixtures'
 import { alongTheWay, apply, levelOf, newGame, onToolStart, routeToStairs, threat } from './game'
 import { BAG_X, BAG_Y, INV_H, INV_TOP, INV_W, WORN_SLOTS } from './inventory'
@@ -928,12 +928,27 @@ test('what a click comes to shows as a toast: a belt slot drinks, and the empty 
   await ui.unmount()
 })
 
-test('a foe summoned by a tool call is toasted with its threat; the narrow pane shows it in its log instead', async ($, on) => {
+test('a foe summoned by a tool call that could fell the hero is toasted with its threat', async ($, on) => {
+  const said = toasts(on)
+  // At 3 max HP any blow is a third of it: every foe is deadly (three blows or fewer).
+  storeIn(on, new Map<string, unknown>([['save', { ...newGame(), hp: 3, maxHp: 3 }]]))
+  on('tool.call', () => ({ result: { filePath: '/src/utils.ts' } as never }))
+  on('command.register', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
+  await $.tool.call({ tool: 'Edit', file_path: '/src/utils.ts', old_string: 'a', new_string: 'b' })
+  expect(said.some(t => /^A .* of utils\.ts emerges: deadly\.$/.test(t))).toBe(true)
+  await ui.unmount()
+})
+
+test('a plain foe summoned by a tool call is not toasted; nor is any on the narrow pane, which shows it in its log', async ($, on) => {
   const said = toasts(on)
   on('tool.call', () => ({ result: { filePath: '/src/utils.ts' } as never }))
   const ui = await $.ui.mount({ ...WIDE, surface: 'terminal' })
   await $.tool.call({ tool: 'Edit', file_path: '/src/utils.ts', old_string: 'a', new_string: 'b' })
-  expect(said.some(t => /^A .* of utils\.ts emerges: (easy|tough|deadly)\.$/.test(t))).toBe(true)
+  expect(said.filter(t => /emerges/.test(t))).toEqual([])
   await ui.unmount()
   said.length = 0
   const narrow = await $.ui.mount({ ...PANE, surface: 'terminal' })
@@ -1473,12 +1488,26 @@ describe('what is toasted', () => {
     expect(toastFor(g, said({ fresh: 1, log: ['A wall.'] }), false, false)).toBeNull()
   })
 
-  test('a new foe with its threat, once: not the same foe again', async () => {
-    const foe = foeAhead(g, 3, { name: 'goblin of x', hp: 4, maxHp: 9, atk: 1 })
-    const fighting = { ...said({}), foe }
-    expect(toastFor(g, fighting, false, false)).toBe(`A goblin of x emerges: ${threat(fighting)}.`)
+  test('a new foe that matters, with its threat, once: a champion, a unique, a nemesis, a boss, or any deadly one', async () => {
+    const plain = { name: 'goblin of x', hp: 4, maxHp: 9, atk: 1 }
+    const meet = (over: Partial<Foe>) => ({ ...said({}), foe: foeAhead(g, 3, { ...plain, ...over }) })
+    for (const over of [{ champion: 'savage' }, { unique: 'ember' }, { nemesis: true }, { boss: true }] as const) {
+      const fighting = meet(over)
+      expect(threat(fighting)).toBe('easy')
+      expect(toastFor(g, fighting, false, false)).toBe(`A goblin of x emerges: easy.`)
+      expect(toastFor(fighting, { ...fighting, foe: { ...fighting.foe!, hp: 2 } }, false, false)).toBeNull()
+    }
+    const deadly = meet({ atk: 99 })
+    expect(threat(deadly)).toBe('deadly')
+    expect(toastFor(g, deadly, false, false)).toBe('A goblin of x emerges: deadly.')
+  })
+
+  test('a plain foe that is no danger is not toasted: its bar and its name on the map tell of it', async () => {
+    const fighting = { ...said({}), foe: foeAhead(g, 3, { name: 'goblin of x', hp: 4, maxHp: 9, atk: 1 }) }
     expect(threat(fighting)).toBe('easy')
-    expect(toastFor(fighting, { ...fighting, foe: { ...foe, hp: 2 } }, false, false)).toBeNull()
+    expect(toastFor(g, fighting, false, false)).toBeNull()
+    expect(threat({ ...fighting, foe: { ...fighting.foe!, atk: 6 } })).toBe('tough')
+    expect(toastFor(g, { ...fighting, foe: { ...fighting.foe!, atk: 6 } }, false, false)).toBeNull()
   })
 })
 

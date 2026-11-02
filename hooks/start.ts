@@ -3,7 +3,9 @@
 // Pure: the click layer reports whole gestures, this decides the screen's next state and the game actions to apply.
 import type { Game, HeroClass } from '../types'
 import type { Action, Run } from './game'
-import { classAbout } from './game'
+import { classAbout, isFirstGame, isUnderWay } from './game'
+
+export { isFirstGame, isUnderWay }
 import { canWear } from './items'
 import { canvas } from './canvas'
 import { PX, heroArt } from './pixelart'
@@ -33,16 +35,12 @@ const BUTTON_Y = CARD_Y + CARD_H + 2
 /** The body over the box: the cards and the buttons, the box's top on a whole cell. */
 const BODY_H = BUTTON_Y + BUTTON_H + 2
 
-/** A game under way, worth going back to: anything won since a new game. */
-export const isUnderWay = (g: Game) => g.level > 1 || g.xp > 0 || g.deepest > 1 || g.deaths > 0 || g.gold > 0
 
 const top = WINDOW_TOP
 /** Each card's place, in window pixels. */
 const CARDS_X = Math.floor((WINDOW_W - 3 * CARD_W - 2 * CARD_GAP) / 2)
 export const cardRect = (i: number): Rect => ({ x: CARDS_X + i * (CARD_W + CARD_GAP), y: top + CARD_Y, w: CARD_W, h: CARD_H })
 
-/** A first game: nothing played, and no codex yet from an earlier hero. */
-export const isFirstGame = (g: Game) => g.codex === undefined && !isUnderWay(g)
 
 const BUTTON_GAP = SPACE.gap
 const START_KEY = ['S', 'START'] as const

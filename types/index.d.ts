@@ -215,6 +215,8 @@ export type Game = {
   heirloom?: Item
   /** What every hero of this save has done; absent until the first action after a load, then begun from the game (`firstCodex`). */
   codex?: Codex
+  /** Tool calls come while a first game's start screen waited for a hero: at START_WAIT_CALLS a Knight sets out. */
+  startWaited?: number
   /** The depths each once-a-depth reward for work was given on. */
   boons?: Partial<Record<Exclude<Work, 'tests'>, number[]>>
   deaths: number

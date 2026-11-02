@@ -41,10 +41,14 @@ describe('opening a session', () => {
 })
 
 describe('the dungeon behind it', () => {
-  test('waits: tool calls, fights, walks and descents change nothing while it is open', async () => {
+  test('waits: tool calls, fights, walks and descents change nothing while it is open; a first game counts the calls', async () => {
     const g = onStart()
     for (const action of [{ kind: 'summon', name: 'ls' }, { kind: 'outcome', ok: false, what: 'Bash' }, { kind: 'explore', steps: 3 }, { kind: 'descend' }, { kind: 'portal' }] as const) {
-      expect(apply(g, action)).toBe(g)
+      const { startWaited: _waited, ...after } = apply(g, action)
+      expect(after).toEqual(g)
+      // A game under way is not counted at all: it is left as it was.
+      const underWay = { ...g, xp: 5 }
+      expect(apply(underWay, action)).toBe(underWay)
     }
   })
 
@@ -182,5 +186,32 @@ describe('the screen', () => {
       '+3 Insight, +1 Focus. Ash Staff, Tome of Sparks, Robe, Pointed Hat.',
       'Heirloom: Band of Old Days, worn from the start.',
     ])
+  })
+})
+
+describe('a first game no one starts', () => {
+  const opening = () => openingGame(newGame(4), 0, undefined)!
+  const call = (g: Game) => apply(g, { kind: 'outcome', ok: true, what: 'Edit' })
+  const calls = (g: Game, n: number) => Array.from({ length: n }).reduce<Game>(call, g)
+
+  test('waits on the start screen four tool calls; the fifth sets out as a Knight, said and toasted', async () => {
+    const four = calls(opening(), 4)
+    expect(four.panel).toBe('start')
+    const fifth = call(four)
+    expect([fifth.panel, fifth.cls]).toEqual(['none', 'knight'])
+    expect(fifth.log.at(-1)).toBe('The dungeon would not wait: you set out as a Knight. Settings, then New game, picks another hero.')
+    expect(fifth.toast).toBe('You set out as a Knight.')
+    expect(isUnderWay(fifth)).toBe(false)
+  })
+
+  test('the next tool call plays as any would', async () => {
+    expect(apply(calls(opening(), 5), { kind: 'summon', name: 'ls' }).foe).not.toBeNull()
+  })
+
+  test('a start screen opened over a game, or after a retired hero, waits as long as it is open', async () => {
+    const underWay = { ...newGame(4), xp: 5, panel: 'start' as const }
+    expect(calls(underWay, 8).panel).toBe('start')
+    const retired = { ...newGame(4), codex: { ...newGame(4).codex!, retired: 1 }, panel: 'start' as const }
+    expect(calls(retired, 8).panel).toBe('start')
   })
 })

@@ -72,7 +72,7 @@ Every window keeps these; review them as a real session draws them with `tools/s
 
 ## The start screen
 
-- The `start` panel: a first game opens on it (`openingGame` in `hooks/save.ts`), and New game in settings (or `r` on the text dashboard) opens it. While it is open the dungeon waits: `apply` lets through only a new game, closing it and the view key, so tool calls change nothing.
+- The `start` panel: a first game opens on it (`openingGame` in `hooks/save.ts`), and New game in settings (or `r` on the text dashboard) opens it. While it is open the dungeon waits: `apply` lets through only a new game, closing it and the view key, so tool calls change nothing. A first game counts them (`Game.startWaited`): at the fifth (`START_WAIT_CALLS`) a Knight sets out on its own, said and toasted, so a session nobody clicks still plays.
 - Titled ASCII DUNGEON, a card a hero: its portrait in its starting kit at twice the sprite's size, its name. The chosen card is framed white; the box under the buttons holds its ability, then its lean and kit, then what each attribute does (`STATS_LINE`) or, after a retirement, the heirloom and whether the chosen class wears it or carries it in the bag in its place.
 - A card chooses its hero; the chosen card clicked again, or Start (`s`), begins a new game as it. Help (`h`) opens the how-it-plays window over the screen, framed white on a first game (`isFirstGame`: none under way and no codex yet). Back (`b`) and the close box leave the game as it was; Back shows only with a game under way (`isUnderWay`), since a first game has nothing to go back to. The buttons sit in one centered row. Keys `1` to `3` choose.
 

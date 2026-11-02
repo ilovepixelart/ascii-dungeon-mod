@@ -1064,27 +1064,25 @@ describe('drops worth announcing', () => {
     expect(seen.common ?? null).toBeNull()
   })
 
-  test('a champion slain is toasted with what it left; a level-up it brings is toasted instead', async () => {
-    const g = { ...plainHero(3), bag: [] }
-    const foe = { ...championOf(foeAhead(g, 1, { hp: 1, maxHp: 1 }), 'savage'), xp: 1 }
-    const after = apply({ ...g, foe }, { kind: 'outcome', ok: true, what: 'Edit' })
-    const item = after.bag.at(-1)!
-    expect(after.toast).toMatch(new RegExp(`^(Champion slain: ${foe.name} left ${item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.|Epic! .+|Legendary! .+)$`))
-    const levels = apply({ ...g, foe: { ...foe, xp: 500 } }, { kind: 'outcome', ok: true, what: 'Edit' })
-    expect(levels.toast).toMatch(/^Level up!/)
-  })
-
-  test('a champion slain is toasted with what it left whatever is said after the kill: a siphon, a potion found', async () => {
-    const missed: string[] = []
+  test('a champion slain toasts only an Epic or Legendary it leaves, or a level-up it brings; its prize is in the log', async () => {
+    const lesser: string[] = []
     for (const cls of ['knight', 'mage', 'rogue'] as const) for (let seed = 1; seed <= 60; seed += 1) {
       const g = { ...plainHero(seed), cls, bag: [] }
       const foe = { ...championOf(foeAhead(g, 1, { hp: 1, maxHp: 1 }), 'savage'), xp: 1 }
       const after = apply({ ...g, foe }, { kind: 'outcome', ok: true, what: 'Edit' })
       const item = after.bag.at(-1)
-      if (item === undefined || item.rarity === 'epic' || item.rarity === 'legendary' || after.level !== g.level) continue
-      if (after.toast !== `Champion slain: ${foe.name} left ${item.name}.`) missed.push(`${cls} ${seed}: ${after.toast}`)
+      if (item === undefined || after.level !== g.level) continue
+      if (item.rarity === 'epic' || item.rarity === 'legendary') expect(after.toast).toMatch(/^(Epic|Legendary)! .+$/)
+      else {
+        lesser.push(item.name)
+        expect(after.toast).toBeNull()
+        expect(after.log.some(l => l.includes(item.name))).toBe(true)
+      }
     }
-    expect(missed.slice(0, 4)).toEqual([])
+    expect(lesser.length).toBeGreaterThan(20)
+    const g = { ...plainHero(3), bag: [] }
+    const foe = { ...championOf(foeAhead(g, 1, { hp: 1, maxHp: 1 }), 'savage'), xp: 500 }
+    expect(apply({ ...g, foe }, { kind: 'outcome', ok: true, what: 'Edit' }).toast).toMatch(/^Level up!/)
   })
 })
 
@@ -1659,10 +1657,10 @@ describe('the pacing: tension, a peak, a calm', () => {
     expect(kill.tension).toBe(14)
   })
 
-  test('at the peak the next foe is a champion, announced; the tension starts over and a calm waits behind it', async () => {
+  test('at the peak the next foe is a champion, announced in the log, not toasted; the tension starts over and a calm waits behind it', async () => {
     const g = apply(hero({ tension: 100, hp: 30, maxHp: 40 }), { kind: 'summon', name: 'ls' })
     expect(g.foe?.champion).toBeDefined()
-    expect([g.tension, g.calm, g.toast]).toEqual([0, 2, 'Something strong is near.'])
+    expect([g.tension, g.calm, g.toast]).toEqual([0, 2, null])
     expect(g.log).toContain('The air grows heavy. Something strong is near.')
   })
 

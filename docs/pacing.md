@@ -48,10 +48,12 @@ What a tool call came to, beyond succeeding, is rewarded (`workOf` in `hooks/wor
 
 | Work | Reward | How often |
 |---|---|---|
-| Tests that pass | the blow is a sure critical | every run |
+| Tests that pass | the blow is a sure critical; against a big boss, it staggers and loses its turn | every run; the stagger once a phase |
 | A commit | a shrine: full HP, and the depth marked as the one to wake on after a fall deeper in its band; on a boss depth, the HP alone | once a depth |
 | A push | a cache: an item, Rare or better | once a depth |
 | A pull request opened or merged | a hoard: an item, Epic or better | once a depth |
+
+Work a depth has already paid for says so in the log ("This depth has already paid for a push."), so it never passes unremarked.
 
 Only real outcomes pay: an amend, a cherry-pick or a comment on a pull request does not, and a failure takes nothing away that it did not before. Once a depth keeps a run of commits from being a fountain of HP. Over 60 simulated games a class, with a commit in eleven shell calls, a push in twenty-two and a pull request in ninety: deaths per 1,000 steps 2.30, where they were 2.22. The shrine's HP alone brings them to 1.86; waking deeper brings them back, and the hero gets half a depth deeper. Rare or better is 37% of what drops, where it was 33%.
 

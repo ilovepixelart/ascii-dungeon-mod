@@ -8,6 +8,10 @@ release may change behaviour.
 
 ### Added
 
+- A first game nobody starts sets out as a Knight on the fifth tool call, saying how to pick another hero; the
+  start screen waited for a click however long the session ran.
+- An `autoOpen` option, on by default: turned off, a session no longer opens the pane as it starts, and `/dungeon`
+  opens it.
 - Bracing: while a foe's heavy blow is warned, press `b` or click your hero to brace. Your next blow is held, and the
   heavy blow lands at half. The warning says how.
 - A passing test run staggers a big boss once a phase: after the run's sure blow it loses its turn.
@@ -18,6 +22,10 @@ release may change behaviour.
 
 ### Changed
 
+- Fewer toasts: a champion's coming and the lesser prize it leaves are in the log, not toasted (an Epic or Legendary
+  still is), and the pixel view toasts a new foe only when it matters: a champion, a unique, a nemesis, a boss or a
+  deadly one.
+- A commit, push or pull request on a depth that has already paid for one says so in the log, where it said nothing.
 - The codex has a third page, Abyss: the ten named circles' wardens, circles I to V over VI to X, each lit in its
   circle's colors once slain and a dark shape until then, with the Nameless Dark's counted under them. `p` turns
   Foes, Finds, Abyss; the text view lists the circles whose warden fell. A codex from before starts with none.

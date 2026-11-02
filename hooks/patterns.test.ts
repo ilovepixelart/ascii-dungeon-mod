@@ -105,7 +105,7 @@ describe('the traits in a fight', () => {
     // Turn 2 draws breath; turn 3 breathes, 1.5 times 30 with no defense: 45.
     const after = apply({ ...g, foe: foe('D', { atk: 30, turn: 1, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
     expect(after.log).toContain('The D-foe draws a deep breath...')
-    expect(after.log.at(-1)).toBe("The D-foe's next blow lands for about 45.")
+    expect(after.log.at(-1)).toBe("The D-foe's next blow lands for about 45. Brace (click yourself, or b) to halve it.")
     // A plain turn next: nothing told.
     const plain = apply({ ...g, foe: foe('D', { atk: 30, turn: 3, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
     expect(plain.log.some(l => l.includes('next blow'))).toBe(false)

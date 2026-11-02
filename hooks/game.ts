@@ -32,6 +32,7 @@ export type Action =
   | { kind: 'descend' }
   | { kind: 'answer' }
   | { kind: 'attack' }
+  | { kind: 'brace' }
   | { kind: 'potion' }
   | { kind: 'walk' }
   | { kind: 'move'; dx: number; dy: number }
@@ -917,6 +918,10 @@ const talentTimes = (g: Game, foe: Foe) => {
 const strike = (g: Game, isSure = false) => {
   const foe = g.foe
   if (foe === null || !charge(g, foe)) return
+  if (foe.guard === true) {
+    say(g, 'You hold your guard.')
+    return
+  }
   if ((foe.shield ?? 0) > 0) {
     g.foe = { ...foe, shield: (foe.shield ?? 0) - 1 }
     say(g, `${TheFoe(foe)}'s shield turns your blow.`)
@@ -1025,11 +1030,28 @@ const warnHeavy = (g: Game) => {
   const foe = g.foe
   if (foe === null || g.hp <= 0) return
   const next = foeTurn(g, foe)
-  if (next.times > 1 && next.strikes) say(g, `${TheFoe(foe)}'s next blow lands for about ${blowAgainst(g, foe.atk * next.times, next.pierces, true)}.`)
+  if (isHeavyNext(g, foe)) say(g, `${TheFoe(foe)}'s next blow lands for about ${blowAgainst(g, foe.atk * next.times, next.pierces, true)}. Brace (click yourself, or b) to halve it.`)
+}
+
+const NO_HEAVY = 'No heavy blow is coming.'
+/** Whether the foe's next blow is a heavy one: what the warning tells, and what a brace answers. */
+const isHeavyNext = (g: Game, foe: Foe) => {
+  const next = foeTurn(g, foe)
+  return next.times > 1 && next.strikes
+}
+/** Bracing against a warned heavy blow: the hero's next blow is held, and that heavy blow lands at half. */
+const brace = (g: Game) => {
+  const foe = g.foe
+  if (foe === null || !isHeavyNext(g, foe)) {
+    say(g, NO_HEAVY)
+    return
+  }
+  g.foe = { ...foe, guard: true }
+  say(g, `You brace for ${theFoe(foe)}'s blow.`)
 }
 
 /** What the log adds to a blow halved once or twice. */
-const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned'] as const
+const HALVED_SAID = ['', ', half of it turned', ', three quarters of it turned', ', seven eighths of it turned'] as const
 
 /**
  * The defense a blow meets: all of it, less the Abyss's weight (`abyssWeight`), a knight's KNIGHT_ARMOR times; through
@@ -1061,8 +1083,15 @@ const foeBlow = (g: Game, turn: ReturnType<typeof foeTurn> | undefined) => {
   const isBulwark = g.foe !== null && g.foe.landed === undefined && wornTrigger(g, 'bulwark')
   const isBraced = g.cls === 'knight' && g.foe?.braced === true && g.foe.opened === undefined
   if (isBraced && g.foe !== null) g.foe = { ...g.foe, opened: true }
+  // The hero's own brace against a warned blow, spent on it.
+  const isGuarded = g.foe?.guard === true
+  if (isGuarded && g.foe !== null) {
+    const { guard: _guard, ...unguarded } = g.foe
+    g.foe = unguarded
+  }
   const once = isBulwark ? Math.ceil(heavy / 2) : heavy
-  return { dmg: isBraced ? Math.ceil(once / 2) : once, halved: (isBulwark ? 1 : 0) + (isBraced ? 1 : 0) }
+  const twice = isBraced ? Math.ceil(once / 2) : once
+  return { dmg: isGuarded ? Math.ceil(twice / 2) : twice, halved: (isBulwark ? 1 : 0) + (isBraced ? 1 : 0) + (isGuarded ? 1 : 0) }
 }
 
 /** A blow landed and the hero standing (a death takes the foe away with it): the foe has landed one, and Thorns answers it. */
@@ -1167,11 +1196,20 @@ const outcome = (g: Game, ok: boolean, what: string, work: Work | undefined) => 
   if (ok) {
     if (work === 'tests') greenBuild(g)
     strike(g, work === 'tests')
-    if (g.foe !== null) counter(g, what)
+    if (g.foe !== null && !(work === 'tests' && staggers(g, g.foe))) counter(g, what)
   } else fail(g, what)
   const regen = tickEffects(g)
   if (regen !== undefined) say(g, regen)
   if (ok) reward(g, work)
+}
+
+/** A passing test run staggers a big boss once a phase: it loses its turn, its count kept, so a warned blow still comes. */
+const staggers = (g: Game, foe: Foe) => {
+  const phase = foe.phase ?? 1
+  if (foe.big === undefined || foe.staggered === phase) return false
+  g.foe = { ...foe, staggered: phase }
+  say(g, `The tests pass: ${theFoe(foe)} staggers.`)
+  return true
 }
 
 /** Tests that pass: the blow is sure, and the Aegis of Green Builds wards off the next hit. */
@@ -1312,10 +1350,12 @@ const goTo = (g: Game, target: Pos) => {
     say(g, "You can't get there.")
     return
   }
-  // A click on the hero explores: a step toward the stairs. On the stairs it takes them, as walking onto them does,
-  // so a hero stopped there by a foe goes down once it is gone without stepping off and back.
+  // A click on the hero braces while a heavy blow is warned, else explores: a step toward the stairs. On the stairs it
+  // takes them, as walking onto them does, so a hero stopped there by a foe goes down once it is gone without stepping
+  // off and back.
   if (path.length === 1) {
-    if (same(g, level.stairs)) descend(g)
+    if (g.foe !== null && isHeavyNext(g, g.foe)) brace(g)
+    else if (same(g, level.stairs)) descend(g)
     else step(g, 1)
     return
   }
@@ -1418,6 +1458,7 @@ const HANDLERS: { [K in Action['kind']]: (g: Game, a: Extract<Action, { kind: K 
   descend: g => walkDown(g),
   answer: g => answered(g),
   attack: g => attack(g),
+  brace: g => brace(g),
   potion: g => quaff(g),
   walk: g => step(g, 1),
   move: (g, a) => move(g, a.dx, a.dy),
@@ -1905,6 +1946,7 @@ const TOWN: { [K in Action['kind']]?: (g: Game, a: Extract<Action, { kind: K }>)
     if (a.ok) reward(g, a.work)
   },
   attack: g => say(g, 'No foes here.'),
+  brace: g => say(g, NO_HEAVY),
   walk: g => say(g, NO_STAIRS),
   stairs: g => say(g, NO_STAIRS),
   move: (g, a) => townMove(g, a.dx, a.dy),

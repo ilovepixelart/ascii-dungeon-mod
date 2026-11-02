@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Added
 
+- Bracing: while a foe's heavy blow is warned, press `b` or click your hero to brace. Your next blow is held, and the
+  heavy blow lands at half. The warning says how.
+- A passing test run staggers a big boss once a phase: after the run's sure blow it loses its turn.
 - Three deep Legendaries, paid by the Abyss wardens and found nowhere else: the Treads of the Hot Path (the stairs
   heal half of max HP), the Signet of Force Push (blows on a big boss or a warden deal a fifth more) and the Pendant
   of the Clean Slate (the Abyss's weight takes none of your defense). Each warden slain leaves one, one you hold

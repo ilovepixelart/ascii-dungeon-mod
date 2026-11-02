@@ -1,7 +1,7 @@
 // The power curve (`curveOf` in hooks/curve.ts), printed: depth by depth, the hero's level, attack, defense, crit and
 // max HP, hits a kill, the blows it took. Read beside it, `hitsToDie` (max HP over the average blow) says how many blows
 // the hero can stand.
-// Usage: bun tools/curve.ts [games] [steps] [--class knight|mage|rogue|all] [--build might|focus|vigor|insight] [--hand]
+// Usage: bun tools/curve.ts [games] [steps] [--class knight|mage|rogue|all] [--build might|focus|vigor|insight] [--hand] [--away]
 //        (20 and 3000 by default; prints a table, and the JSON with --json)
 import type { Attribute, HeroClass } from '../types'
 import { curveOf } from '../hooks/curve'
@@ -19,6 +19,7 @@ const CLASSES: HeroClass[] = flag('class', 'all') === 'all' ? ['knight', 'mage',
 const play: SimOptions = {
   ...(flag('build', '') === '' ? {} : { build: flag('build', '') as Attribute }),
   ...(args.includes('--hand') ? { byHand: true } : {}),
+  ...(args.includes('--away') ? { away: true } : {}),
 }
 
 const rows = curveOf(CLASSES, games, steps, play, true)

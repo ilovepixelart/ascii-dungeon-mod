@@ -239,6 +239,16 @@ describe('the simulator played another way', () => {
     expect(final.talents).toEqual(['secondWind', 'opener'])
   })
 
+  test('away from the pane, the player uses no belt in a fight: the orders drink for it; watching, it does', { timeoutMs: 20000 }, async () => {
+    const usedInFight = (away: boolean) => {
+      const { records } = simulate(3, 1500, 'knight', { away, checks: false })
+      // A step's foe is as it stands after the step: a belt use with a foe before it is the one before's.
+      return records.filter((r, i) => r.action.kind === 'use' && (records[i - 1]?.foe ?? null) !== null).length
+    }
+    expect(usedInFight(true)).toBe(0)
+    expect(usedInFight(false)).toBeGreaterThan(0)
+  })
+
   test('with calls per answer set, each answer has that many tool calls', { timeoutMs: 20000 }, async () => {
     const { records } = simulate(4, 600, 'knight', { calls: { least: 2, most: 2 } })
     const perAnswer: number[] = []

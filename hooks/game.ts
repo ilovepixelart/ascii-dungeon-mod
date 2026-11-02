@@ -1313,7 +1313,7 @@ const move = (g: Game, dx: number, dy: number) => {
 
 /**
  * Where the player clicked: a seen floor tile is walked to by the shortest path; a living foe is walked up to and
- * attacked; the hero's own tile explores. The walk stops on coming next to a living foe, as exploring does; walking away from one is free.
+ * attacked; the hero's own tile braces while a heavy blow is warned, else explores. The walk stops on coming next to a living foe, as exploring does; walking away from one is free.
  */
 /** The way to a clicked tile: to a foe, or to known floor, around a foe in the way where there is room, else up to it. */
 const wayTo = (g: Game, level: Level, target: Pos, isFoe: boolean) => {

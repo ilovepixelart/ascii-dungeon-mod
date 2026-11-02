@@ -1,13 +1,15 @@
-// The codex window, the hero's windows' last tab, on two pages: Foes, the uniques and the big bosses; Finds, the
-// Legendaries and Card, which shares the hero. Each is lit once slain or found and a dark shape until then; the box
-// under them counts them, and on Finds holds the records. Pure: the click layer reports whole gestures, this decides
+// The codex window, the hero's windows' last tab, on three pages: Foes, the uniques and the big bosses; Finds, the
+// Legendaries and Card, which shares the hero; Abyss, the circles' wardens. Each is lit once slain or found and a dark
+// shape until then; the box under them counts them, then holds the records. Pure: the click layer reports whole gestures, this decides
 // the window's page, the game actions they make and whether the card is asked for.
 import type { Codex, Game } from '../types'
 import type { Action, Run } from './game'
 import { BIG_BOSSES, UNIQUES, firstCodex } from './game'
 import { LEGENDARIES, baseOf } from './items'
 import { CELL, ICONS } from './icons'
-import { BOSS_ART, PAL, foeArtOf } from './pixelart'
+import { BOSS_ART, PAL, bigArtOf, foeArtOf } from './pixelart'
+import { NAMED_CIRCLES, TIER_DEPTHS, tierStart } from './deep'
+import { themeOf } from './map'
 import { BUTTON_H, button, buttonBox, buttonW, onCell, tierBox } from './pieces'
 import { BG, SLOT, art, canvas, fill, frame } from './canvas'
 import type { Canvas } from './canvas'
@@ -33,16 +35,19 @@ const LEG_GAP = 4
 /** Where a row of `n` boxes `w` wide a `step` apart starts, centred in the window (the odd pixel on the right). */
 const rowX = (n: number, w: number, step: number) => Math.floor((WINDOW_W - ((n - 1) * step + w)) / 2)
 /** The pages' tabs at the body's top; the first row of boxes under them, the second under that. */
-const PAGES = [{ label: 'FOES' }, { label: 'FINDS' }] as const
+const PAGES = [{ label: 'FOES' }, { label: 'FINDS' }, { label: 'ABYSS' }] as const
 const ROW1_Y = top + TABS_H + 2
 /** A unique in a slot, as in the bag: its 8 by 8 a dot a pixel in a frame, centred over its big boss's column. */
 const UNIQUE_X = Math.floor((FOE_BOX - SLOT) / 2)
 const ROW2_Y = ROW1_Y + SLOT + 2
 
 /** The window's state beyond the game: the page shown. */
-export type CodexUi = { page: 'foes' | 'finds' }
+export type CodexUi = { page: 'foes' | 'finds' | 'abyss' }
 export const CODEX_UI: CodexUi = { page: 'foes' }
-const pageIndex = (ui: CodexUi) => (ui.page === 'foes' ? 0 : 1)
+const PAGE_KEYS: readonly CodexUi['page'][] = ['foes', 'finds', 'abyss']
+const pageIndex = (ui: CodexUi) => PAGE_KEYS.indexOf(ui.page)
+/** The page after `ui`'s, the last turning back to the first. */
+export const nextPage = (ui: CodexUi): CodexUi => ({ page: PAGE_KEYS[(pageIndex(ui) + 1) % PAGE_KEYS.length]! })
 
 /** Art at `scale` pixels a dot, in its own colours or all in `ink`. */
 const scaled = (c: Canvas, rows: readonly string[], x: number, y: number, scale: number, ink?: string) =>
@@ -64,13 +69,27 @@ const bigs = Object.entries(BIG_BOSSES)
 /** The Card button, under the Legendaries on Finds: it saves the hero card and copies it as text. */
 export const CARD_KEY = { key: 'K', label: 'CARD' }
 const CARD_RECT: Rect = { x: Math.floor((WINDOW_W - buttonW(CARD_KEY.label)) / 2), y: onCell(ROW1_Y + LEG_H + 2), w: buttonW(CARD_KEY.label), h: BUTTON_H }
-/** The box under the pages stands 2 px under the lower of the two pages' last rows: Foes' big bosses, Finds' Card (the
- * two end on one row). */
-const BOX_ABOVE = Math.max(ROW2_Y + FOE_BOX, CARD_RECT.y + BUTTON_H)
+/** The wardens two rows of five, circles I to V over VI to X: a circle's theme is the one five circles on, so each
+ * column is one big boss remade. */
+const WARDENS_ACROSS = 5
+/** The box under a page stands 2 px under its last row: on Foes and Finds under the lower of the big bosses and Card
+ * (the two end on one row), so turning between them keeps the window's size; on Abyss under the second row of wardens. */
+const boxAbove = (ui: CodexUi) => (ui.page === 'abyss' ? ROW1_Y + FOE_STEP + FOE_BOX : Math.max(ROW2_Y + FOE_BOX, CARD_RECT.y + BUTTON_H))
 /** The Card button's place, in window pixels, on the page it is on: Finds; none on Foes. */
 export const codexCardRect = (ui: CodexUi = { page: 'finds' }): Rect | undefined => (ui.page === 'finds' ? CARD_RECT : undefined)
 
 const foundLegendaries = (c: Codex) => c.legendaries.filter(n => LEGENDARIES.some(l => l.name === n)).length
+const circles = Array.from({ length: NAMED_CIRCLES }, (_, i) => i + 1)
+/** A circle's warden as drawn: its theme's big boss, at the depth it guards, in the circle's colours. */
+const wardenArt = (tier: number) => bigArtOf({ big: BIG_BOSSES[themeOf(tierStart(tier) + TIER_DEPTHS - 1)].key, warden: tier })
+
+/** Each page's count, the first line of the box under it. */
+const countLine = (c: Codex, page: CodexUi['page']): string => {
+  if (page === 'foes') return `Uniques slain ${c.uniques.length} of ${uniques.length}, big bosses ${c.bigs.length} of ${bigs.length}.`
+  if (page === 'finds') return `Legendaries found ${foundLegendaries(c)} of ${LEGENDARIES.length}.`
+  const named = (c.wardens ?? []).filter(t => t <= NAMED_CIRCLES).length
+  return `Wardens slain ${named} of ${NAMED_CIRCLES}, of the Nameless Dark ${(c.wardens ?? []).length - named}.`
+}
 
 /** The box under the page, in cells: on Foes how many of each are slain; on Finds how many Legendaries are found, then
  * the records. Then the pages' tab labels, and on Finds the Card button's words. */
@@ -78,12 +97,12 @@ export const codexOverlay = (g: Game, ui: CodexUi = CODEX_UI): OverlayBox[] => {
   const c = codexOf(g)
   // The page's count, then the records, on both pages, so the box and the window are one height on both.
   const lines: Run[][] = [
-    ui.page === 'foes' ? [{ text: `Uniques slain ${c.uniques.length} of ${uniques.length}, big bosses ${c.bigs.length} of ${bigs.length}.` }] : [{ text: `Legendaries found ${foundLegendaries(c)} of ${LEGENDARIES.length}.` }],
+    [{ text: countLine(c, ui.page) }],
     [{ text: `Deepest ${c.deepest}, level ${c.level}, kills ${countText(c.kills)}, bosses ${countText(c.bosses)}.`, dim: true }],
     [{ text: `Deaths ${countText(c.deaths)}, heroes retired ${c.retired ?? 0}, gold found ${countText(c.gold)}.`, dim: true }],
   ]
   const card = ui.page === 'finds' ? [buttonBox(CARD_KEY.label, CARD_RECT.x, CARD_RECT.y, 'ready')] : []
-  return [{ role: 'about', x: 2, y: Math.ceil((BOX_ABOVE + 2) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
+  return [{ role: 'about', x: 2, y: Math.ceil((boxAbove(ui) + 2) / 2), w: WINDOW_W - 4, h: lines.length + 2, border: SURFACE.frame, lines }, ...textTabBoxes(PAGES, pageIndex(ui), top, BG), ...card]
 }
 
 /** The window's height in pixels, title bar and all. */
@@ -92,13 +111,14 @@ export const codexHeight = (g: Game, ui: CodexUi = CODEX_UI) => {
   return 2 * (box.y + box.h) + 2
 }
 
-/** Whether each of a row's entries is lit: the uniques, the big bosses and the Legendaries, in their order. */
+/** Whether each of a row's entries is lit: the uniques, the big bosses, the Legendaries and the wardens, in their order. */
 export const codexLit = (g: Game) => {
   const c = codexOf(g)
   return {
     uniques: uniques.map(([, u]) => c.uniques.includes(u.key)),
     bigs: bigs.map(([, b]) => c.bigs.includes(b.key)),
     legendaries: LEGENDARIES.map(l => c.legendaries.includes(l.name)),
+    wardens: circles.map(t => (c.wardens ?? []).includes(t)),
   }
 }
 
@@ -144,6 +164,16 @@ const drawFinds = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
   button(body, CARD_KEY.label, CARD_RECT.x, CARD_RECT.y - top, 'ready')
 }
 
+const drawAbyss = (body: Canvas, lit: ReturnType<typeof codexLit>) => {
+  const x0 = rowX(WARDENS_ACROSS, FOE_BOX, FOE_STEP)
+  circles.forEach((tier, i) => {
+    const x = x0 + (i % WARDENS_ACROSS) * FOE_STEP
+    const y = ROW1_Y - top + Math.floor(i / WARDENS_ACROSS) * FOE_STEP
+    box(body, x, y, FOE_BOX, FOE_BOX, lit.wardens[i]!)
+    scaled(body, wardenArt(tier), x + 1, y + 1, 1, lit.wardens[i] ? undefined : SHADE)
+  })
+}
+
 /** The window's pixels: the hero's tabs, the pages' tabs, the page's boxes (and on Finds, Card), the box under them. */
 export const codexPixels = (g: Game, ui: CodexUi = CODEX_UI): string[][] => {
   const lit = codexLit(g)
@@ -151,7 +181,8 @@ export const codexPixels = (g: Game, ui: CodexUi = CODEX_UI): string[][] => {
   tabGround(body, PAGES, pageIndex(ui), 0)
   fill(body, PAD, TABS_H, WINDOW_W - 2 * PAD, 1, SURFACE.line)
   if (ui.page === 'foes') drawFoes(body, lit)
-  else drawFinds(body, lit)
+  else if (ui.page === 'finds') drawFinds(body, lit)
+  else drawAbyss(body, lit)
   const c = windowPixels(heroChrome(g, 'codex'), body.px)
   for (const b of codexOverlay(g, ui)) if (b.role === 'about') drawBox(c, b)
   return c.px
@@ -171,7 +202,7 @@ export const codexGesture = (g: Game, ui: CodexUi, gesture: Gesture): CodexOutco
   const tab = heroTabAt(g, 'codex', at)
   if (tab !== undefined) return { ...none, actions: tab }
   const page = textTabRects(PAGES, top).findIndex(r => isInside(at, r.x, r.y, r.w, r.h))
-  if (page >= 0) return { ...none, ui: { page: page === 0 ? 'foes' : 'finds' } }
+  if (page >= 0) return { ...none, ui: { page: PAGE_KEYS[page]! } }
   const card = codexCardRect(ui)
   if (card !== undefined && isInside(at, card.x, card.y, card.w, card.h)) return { ...none, isCard: true }
   return isInside(at, ...CLOSE_BOX) ? { ...none, actions: [{ kind: 'panel', panel: 'codex' }] } : none

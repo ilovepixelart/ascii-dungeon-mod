@@ -9,7 +9,7 @@ import { EMPTY_CODEX, recorded } from './codex'
 import { codexGesture, codexHeight, codexLit, codexOverlay, codexPixels } from './codexwindow'
 import type { CodexUi } from './codexwindow'
 import { CLOSE_BOX, TABS_H, WINDOW_TOP } from './window'
-import { UNIQUE_ART } from './pixelart'
+import { PAL, UNIQUE_ART, bigArtOf } from './pixelart'
 import { SURFACE } from './ui/tokens'
 import { BG } from './canvas'
 
@@ -32,6 +32,12 @@ describe('what the codex records', () => {
     expect(apply(facing(UNIQUE), hit).codex).toMatchObject({ uniques: ['ember'], bigs: [], kills: 1, bosses: 0 })
     expect(apply(facing(BIG, 50), hit).codex).toMatchObject({ uniques: [], bigs: ['wyrm'], kills: 1, bosses: 1 })
     expect(apply(facing({ boss: true }, 5), hit).codex).toMatchObject({ bigs: [], kills: 1, bosses: 1 })
+  })
+
+  test('a warden slain adds its circle, listed once; a big boss above the Abyss adds none', async () => {
+    expect(apply(facing({ ...BIG, warden: 2 }, 70), hit).codex).toMatchObject({ bigs: ['wyrm'], wardens: [2], bosses: 1 })
+    expect(apply(facing({ ...BIG, warden: 2 }, 70, { ...EMPTY_CODEX, wardens: [2] }), hit).codex?.wardens).toEqual([2])
+    expect(apply(facing(BIG, 50), hit).codex?.wardens).toEqual([])
   })
 
   test('a unique slain again is listed once', async () => {
@@ -105,6 +111,8 @@ describe('a save kept before the codex', () => {
       uniques: ['bones', 'rot'],
       bigs: ['queen', 'lich'],
       legendaries: [LEGENDARIES[1]!.name],
+      // No save from before the codex met a warden: they came later.
+      wardens: [],
       deepest: 27, level: 19, kills: 0, bosses: 5, deaths: 6, gold: 0,
     })
   })
@@ -158,9 +166,10 @@ describe('the codex window', () => {
   const shown = (c: Codex): Game => ({ ...plainHero(3), panel: 'codex', codex: c })
   const told: Codex = { uniques: ['rot', 'bones', 'rime'], bigs: ['king'], legendaries: [LEGENDARIES[1]!.name, LEGENDARIES[4]!.name], deepest: 34, level: 22, kills: 1240, bosses: 12, deaths: 9, gold: 18450, retired: 2 }
 
-  const said = (g: Game, page: 'foes' | 'finds') => codexOverlay(g, { page })[0]!.lines.map(l => l.map(r => r.text).join(''))
+  const said = (g: Game, page: CodexUi['page']) => codexOverlay(g, { page })[0]!.lines.map(l => l.map(r => r.text).join(''))
   const FINDS = { page: 'finds' as const }
   const FOES = { page: 'foes' as const }
+  const ABYSS = { page: 'abyss' as const }
 
   test('Foes counts the uniques and big bosses slain, Finds the Legendaries found, each then the records', async () => {
     expect(said(shown(told), 'foes')).toEqual([
@@ -175,11 +184,23 @@ describe('the codex window', () => {
     ])
   })
 
-  test('is one height on both pages, the records under each, so turning the page does not move the window', async () => {
+  test('Abyss counts the ten circles\' wardens slain, and apart those of the Nameless Dark, then the records', async () => {
+    expect(said(shown({ ...told, wardens: [1, 4, 12] }), 'abyss')).toEqual([
+      'Wardens slain 2 of 10, of the Nameless Dark 1.',
+      'Deepest 34, level 22, kills 1,240, bosses 12.',
+      'Deaths 9, heroes retired 2, gold found 18,450.',
+    ])
+    expect(said(shown(told), 'abyss')[0]).toBe('Wardens slain 0 of 10, of the Nameless Dark 0.')
+  })
+
+  test('is one height on Foes and Finds, so turning between them does not move the window; Abyss its second row taller', async () => {
     const g = shown(told)
-    expect(codexHeight(g, FOES)).toBe(codexHeight(g, FINDS))
-    expect(said(g, 'foes').slice(1)).toEqual(said(g, 'finds').slice(1))
-    expect(codexOverlay(g, FOES)[0]!.y).toBe(codexOverlay(g, FINDS)[0]!.y)
+    expect(codexHeight(g, FINDS)).toBe(codexHeight(g, FOES))
+    expect(codexOverlay(g, FINDS)[0]!.y).toBe(codexOverlay(g, FOES)[0]!.y)
+    // Abyss's second row of wardens ends 38 under the first row's top, Finds' Card 30 (22 of Legendaries, 2, a button 6
+    // on its cell): 8 px taller, 4 rows of text.
+    expect(codexHeight(g, ABYSS)).toBe(codexHeight(g, FOES) + 8)
+    for (const ui of [FINDS, ABYSS]) expect(said(g, ui.page).slice(1)).toEqual(said(g, 'foes').slice(1))
   })
 
   test('a click on a page\'s tab shows that page', async () => {
@@ -190,8 +211,12 @@ describe('the codex window', () => {
     expect(tap(15, WINDOW_TOP + TABS_H - 1)).toEqual({ ui: FINDS, actions: [], isCard: false })
     expect(tap(2, WINDOW_TOP + 4)).toEqual({ ui: FOES, actions: [], isCard: false })
     expect(tap(16, WINDOW_TOP + 4).ui).toEqual(FOES)
+    // ABYSS on columns 17 to 23.
+    expect(tap(17, WINDOW_TOP + 4).ui).toEqual(ABYSS)
+    expect(tap(23, WINDOW_TOP + 4).ui).toEqual(ABYSS)
+    expect(tap(24, WINDOW_TOP + 4).ui).toEqual(FOES)
     const pages = codexOverlay(g, FOES).filter(b => b.role === 'tabs')
-    expect(pages.map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['FOES', 'FINDS'])
+    expect(pages.map(b => b.lines[0]!.map(r => r.text).join(''))).toEqual(['FOES', 'FINDS', 'ABYSS'])
   })
 
   test('lights what is slain or found, in the themes\' order and the Legendaries\' own', async () => {
@@ -199,7 +224,28 @@ describe('the codex window', () => {
       uniques: [true, false, true, true, false],
       bigs: [true, false, false, false, false],
       legendaries: [false, true, false, false, true, false, false],
+      wardens: [false, false, false, false, false, false, false, false, false, false],
     })
+    expect(codexLit(shown({ ...told, wardens: [1, 4, 12] })).wardens).toEqual([true, false, false, true, false, false, false, false, false, false])
+  })
+
+  test('each warden stands in its circle\'s box, in its own colours once slain and a dark shape until then', async () => {
+    // Circles I to V on the first row under the page tabs, VI to X 20 under them, a column every 20 from x 3: each
+    // circle's theme is the one five circles before or after it, so a column is one boss remade. Each box 18 square,
+    // the warden's 16 px art a pixel in.
+    const row1 = WINDOW_TOP + TABS_H + 2
+    const slain = codexPixels(shown({ ...EMPTY_CODEX, wardens: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }), ABYSS)
+    const dark = codexPixels(shown(EMPTY_CODEX), ABYSS)
+    // The circles' bosses, by the depth each warden guards (60, 70, ... 150): flooded, frozen, crypt, fungal, forge.
+    const bigs = ['queen', 'lich', 'king', 'hive', 'wyrm'] as const
+    for (let tier = 1; tier <= 10; tier++) {
+      const x = 3 + ((tier - 1) % 5) * 20 + 1
+      const y = row1 + Math.floor((tier - 1) / 5) * 20 + 1
+      const art = bigArtOf({ big: bigs[(tier - 1) % 5]!, warden: tier })
+      const drawn = art.flatMap((r, dy) => [...r].map((k, dx) => [k, slain[y + dy]![x + dx], dark[y + dy]![x + dx]] as const)).filter(([k]) => k !== '.')
+      expect(drawn.every(([k, lit]) => lit === PAL[k])).toBe(true)
+      expect(new Set(drawn.map(([, , shade]) => shade))).toEqual(new Set([SURFACE.shade]))
+    }
   })
 
   test('a lit entry is drawn in its colours, one not yet found in the one dark ink', async () => {
@@ -290,7 +336,7 @@ describe('the codex window', () => {
 
   test('each page fits in 40 rows, and its close box closes it; a click elsewhere does nothing', async () => {
     const g = shown(told)
-    for (const ui of [FOES, FINDS]) {
+    for (const ui of [FOES, FINDS, ABYSS]) {
       expect(codexHeight(g, ui)).toBeLessThanOrEqual(80)
       expect(codexPixels(g, ui).length).toBe(codexHeight(g, ui))
     }

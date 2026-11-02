@@ -5,7 +5,7 @@
 import type { Game } from '../types'
 import { BIG_BOSSES, UNIQUES, firstCodex } from './game'
 import { CLASS_NAME, LEGENDARIES, RARITY_NAME, SLOTS } from './items'
-import { TALENTS } from './talents'
+import { takenTalents, talentLabel } from './talents'
 import { MARKS, markOf, roman, tierOf } from './deep'
 import { heroArt } from './pixelart'
 import { PORTRAIT, drawItem, portrait } from './pieces'
@@ -39,7 +39,7 @@ const deepest = (g: Game) => {
 
 /** The talents taken, upper case, a line each TALENTS_A_LINE; none yet, said. */
 const talentLines = (g: Game) => {
-  const names = (g.talents ?? []).map(t => TALENTS[t].name.toUpperCase())
+  const names = takenTalents(g).map(t => talentLabel(g, t).toUpperCase())
   if (names.length === 0) return ['NO TALENTS YET']
   const lines = []
   for (let i = 0; i < names.length; i += TALENTS_A_LINE) lines.push(names.slice(i, i + TALENTS_A_LINE).join('  '))
@@ -93,7 +93,7 @@ export const cardText = (g: Game): string => {
   const tier = tierOf(g.deepest)
   const where = tier === 0 ? '' : ` (tier ${roman(tier)}, ${MARKS[markOf(g, tier)].name})`
   const worn = SLOTS.flatMap(slot => (g.gear[slot] === undefined ? [] : [`${g.gear[slot]!.name} (${RARITY_NAME[g.gear[slot]!.rarity]})`]))
-  const talents = (g.talents ?? []).map(t => TALENTS[t].name)
+  const talents = takenTalents(g).map(t => talentLabel(g, t))
   return [
     `ASCII Dungeon: Level ${g.level} ${CLASS_NAME[g.cls]}, deepest depth ${g.deepest}${where}`,
     `Kills ${countText(c.kills)}, deaths ${countText(c.deaths)}, gold found ${countText(c.gold)}${(c.retired ?? 0) > 0 ? `, heroes retired ${c.retired}` : ''}`,

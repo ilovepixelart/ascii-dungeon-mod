@@ -19,7 +19,7 @@ import { cardPixels, cardText, svgOf } from './herocard'
 import { retireGesture, retireHeight, retireHot, retireOverlay, retirePixels } from './retirewindow'
 import { TALENT_UI, talentGesture, talentHeight, talentHot, talentOverlay, talentPixels } from './talentwindow'
 import type { TalentUi } from './talentwindow'
-import { TALENTS, TALENT_EVERY, offer, owed } from './talents'
+import { TALENTS, TALENT_EVERY, offer, offerDoes, offerLabel, owed, takenTalents, talentLabel } from './talents'
 import { deepGesture, deepHeight, deepHot, deepOverlay, deepPixels } from './deepwindow'
 import { DEEP_FROM, MARKS, circleSaid, fateOf, forkTier, isForkOpen, markOf, pairOf, roman, tierOf } from './deep'
 import type { RetireUi } from './retirewindow'
@@ -1697,10 +1697,10 @@ const talentKeys = ({ g, Button, press, redraw }: Pane, isWindow: boolean) => {
     redraw()
   }
   const windowKey = (t: Talent, i: number) => (
-    <Button key={`talent-${t}`} label={t === chosen ? `[${TALENTS[t].name}]` : TALENTS[t].name} hotkey={String(i + 1)} plain dimColor={t !== chosen} onPress={choose(i)} />
+    <Button key={`talent-${t}`} label={t === chosen ? `[${offerLabel(g, t)}]` : offerLabel(g, t)} hotkey={String(i + 1)} plain dimColor={t !== chosen} onPress={choose(i)} />
   )
   return [
-    ...offered.map((t, i) => (isWindow ? windowKey(t, i) : <Button key={`talent-${t}`} label={`${TALENTS[t].name}: ${TALENTS[t].does}`} plain onPress={press({ kind: 'talent', talent: t })} />)),
+    ...offered.map((t, i) => (isWindow ? windowKey(t, i) : <Button key={`talent-${t}`} label={`${offerLabel(g, t)}: ${offerDoes(g, t)}`} plain onPress={press({ kind: 'talent', talent: t })} />)),
     ...(isWindow && chosen !== undefined ? [<Button key="talent-take" label="Take" hotkey="t" plain onPress={press({ kind: 'talent', talent: chosen })} />] : []),
     <Button key="talent-close" label={offered.length > 0 ? 'Later' : 'Close'} hotkey={isWindow ? (offered.length > 0 ? 'l' : 'c') : undefined} plain onPress={press({ kind: 'panel', panel: 'talent' })} />,
   ]
@@ -2116,7 +2116,7 @@ const textDeep = (p: Pane) => {
 /** The talent window as text: the talents offered, a button each, or those taken and the level of the next. */
 const textTalent = (p: Pane) => {
   const { g, Box, Text } = p
-  const taken = (g.talents ?? []).map(t => TALENTS[t].name).join(', ')
+  const taken = takenTalents(g).map(t => talentLabel(g, t)).join(', ')
   const next = TALENT_EVERY * ((g.talents?.length ?? 0) + 1)
   return (
     <Box flexDirection="column">

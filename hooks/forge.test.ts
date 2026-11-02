@@ -90,13 +90,13 @@ describe('the jobs', () => {
     expect(whyNotTemper(g, { ...sword, temper: 3 })).toBe('tempered as far as it goes')
   })
 
-  test('reforging: not a Common, not a Legendary, and not short of gold', async () => {
+  test('reforging: not a Common, and not short of gold; a Legendary is remade too', async () => {
     const g = knight(1000)
     expect(whyNotReforge(g, g.gear.weapon!)).toBe('a Common has no affixes')
     const rare = wear(g, 'helm', 'steelHelm', 'rare').gear.helm!
     expect(whyNotReforge(g, rare)).toBeUndefined()
     expect(whyNotReforge({ ...g, gold: 0 }, rare)).toBe('not enough gold')
-    expect(whyNotReforge(g, wear(g, 'ring', 'ring', 'legendary').gear.ring!)).toBe('a Legendary stays as it was made')
+    expect(whyNotReforge(g, wear(g, 'ring', 'ring', 'legendary').gear.ring!)).toBeUndefined()
   })
 
   test('the card ends with what each job costs, or why it cannot be done; tempering says what it makes of the stat', async () => {

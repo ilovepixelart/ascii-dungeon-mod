@@ -1914,7 +1914,7 @@ const textForge = ({ g, Box, Text, Button, press }: Pane) => {
       {worn.length === 0 && <Text dimColor>You wear nothing for the smith to work on.</Text>}
       {worn.map(({ slot, item }) => {
         const tempered = item.temper ?? 0
-        const isReforgeable = item.rarity !== 'common' && item.rarity !== 'legendary'
+        const isReforgeable = item.rarity !== 'common'
         return (
           <Box key={`forge-${slot}`} flexDirection="row">
             <Text color={RARITY_COLOR[item.rarity]}>{item.name}</Text>

@@ -1171,7 +1171,21 @@ describe('the smith', () => {
     expect(at('epic', 50, 0, 3)).toBe(1440)
   })
 
-  test('cannot reforge a Common (no affixes) or a Legendary (fixed), nor without the gold', async () => {
+  test("a Legendary is remade for the depth: its fixed stats grown as there, its name, power, id and tempering kept", async () => {
+    const town = apply({ ...newGame(4), ...arrive(newGame(4).world, 30), depth: 30, deepest: 30 }, { kind: 'portal' })
+    // Segfault as found on depth 1: its fixed 8 attack and nothing more, tempered twice.
+    const blade = { ...plainItem(town, 'sword', 'legendary'), name: 'Segfault, the Null Blade', power: 'tripleCrit', atk: 10, def: 0, hp: 0, crit: 0, xp: 0, temper: 2 }
+    const g = { ...town, gold: 5000, gear: { ...town.gear, weapon: blade } }
+    const done = apply(g, { kind: 'reforge', slot: 'weapon' })
+    const made = done.gear.weapon!
+    // At depth 30 its 8 attack grows a point every three depths, 18, and its two tempers stay: 20.
+    expect({ name: made.name, power: made.power, id: made.id, rarity: made.rarity, atk: made.atk, temper: made.temper }).toEqual({ name: blade.name, power: 'tripleCrit', id: blade.id, rarity: 'legendary', atk: 20, temper: 2 })
+    // 60 times the Legendary's 8 times 1 and a tenth of depth 30: 1,920.
+    expect(done.gold).toBe(5000 - 1920)
+    expect(done.log.at(-1)).toBe('The smith remakes your Segfault, the Null Blade for depth 30, its power kept, for 1,920 gold.')
+  })
+
+  test('cannot reforge a Common (no affixes), nor without the gold', async () => {
     const g = inTown()
     const plain = apply({ ...g, gear: { ...g.gear, weapon: plainItem(g, 'sword') } }, { kind: 'reforge', slot: 'weapon' })
     expect(plain.log.at(-1)).toBe('The smith has nothing to reforge on a Common item.')

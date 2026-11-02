@@ -2,7 +2,7 @@
 import type { ClassSet, Game, HeroClass, Item, Rarity, Trigger } from '../../types'
 import { hash, pick, roll } from '../rng'
 import { AFFIX_COUNT, BASES, LEGENDARIES, PREFIXES, RARE_TRIGGER_SHARE, SETS, STARTING_KIT, SUFFIXES, TRIGGERS, baseOf } from './catalog'
-import type { Affix, Base } from './catalog'
+import type { Affix, Base, Legendary } from './catalog'
 import { NO_STATS, STAT_KEYS, plus } from './stats'
 import type { Stats } from './stats'
 import { stashedItems } from '../stash'
@@ -114,10 +114,17 @@ export const temperItem = (item: Item): Item => {
 
 /** The item with its affixes rolled anew for the depth: the same base, tier, id, place and temper. Commons and Legendaries keep theirs. */
 export const reforgeItem = (g: Game, item: Item): Item => {
-  if (item.rarity === 'common' || item.rarity === 'legendary') return item
+  if (item.rarity === 'common') return item
+  const stat = temperStat(item)
+  if (item.rarity === 'legendary') {
+    // Remade for the depth, as found there: its name, power, id and tempering kept.
+    const legend = LEGENDARIES.find(l => l.name === item.name)
+    if (legend === undefined) return item
+    const stats = legendaryStatsAt(legend, g.depth)
+    return { ...item, ...stats, [stat]: stats[stat] + (item.temper ?? 0) }
+  }
   const base = baseOf(item.base) ?? BASES[0]!
   const { name, stats } = affixed(g, base, AFFIX_COUNT[item.rarity])
-  const stat = temperStat(item)
   const tempered = { ...stats, [stat]: stats[stat] + (item.temper ?? 0) }
   // A set piece keeps its name, and its set is its power: no trigger.
   if (item.set !== undefined) return { ...item, ...tempered }
@@ -165,10 +172,15 @@ const rarityFor = (g: Game, atLeast: Rarity, rolls: number): Rarity => {
 
 /** A Legendary: its fixed powers, and stats that grow with depth as any item's do. */
 const legendaryOf = (g: Game): Item => {
-  const { base, name, power, work: _work, ...stats } = pick(g, isHand(g) ? LEGENDARIES.filter(l => l.work !== true) : LEGENDARIES)
-  const bonus = Math.floor(g.depth / 3)
-  const grown = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, typeof v === 'number' && v > 0 && STAT_KEYS.includes(k as never) ? v + (k === 'hp' ? bonus * 2 : bonus) : v]))
-  return { ...plainItem(g, base, 'legendary'), name, power, ...plus(NO_STATS, grown) }
+  const legend = pick(g, isHand(g) ? LEGENDARIES.filter(l => l.work !== true) : LEGENDARIES)
+  return { ...plainItem(g, legend.base, 'legendary'), name: legend.name, power: legend.power, ...legendaryStatsAt(legend, g.depth) }
+}
+
+/** A Legendary's fixed stats as found at a depth: each a point more every three depths, HP two. */
+const legendaryStatsAt = (legend: Legendary, depth: number): Stats => {
+  const { base: _base, name: _name, power: _power, work: _work, ...stats } = legend
+  const bonus = Math.floor(depth / 3)
+  return plus(NO_STATS, Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, typeof v === 'number' && v > 0 && STAT_KEYS.includes(k as never) ? v + (k === 'hp' ? bonus * 2 : bonus) : v])))
 }
 
 /**

@@ -8,6 +8,9 @@ release may change behaviour.
 
 ### Changed
 
+- The smith remakes a Legendary for the depth: its fixed stats grown as they would be found there, its name, power
+  and tempering kept, for 480 gold times 1 and a tenth of the deepest depth. The smith would not touch one, so a
+  Legendary found early was never worth keeping deep.
 - A reforge, the smith making an item anew for the depth it is done at, is priced by the item's tier and the
   deepest depth: 60 gold an Uncommon, 120 a Rare, 240 an Epic, times 1 and a tenth of the deepest depth, 40 more for
   each reforge before. It cost the same for any tier, by the depth stood on: an Epic made new at depth 50, 290 gold.

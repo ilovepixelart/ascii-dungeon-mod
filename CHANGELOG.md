@@ -8,6 +8,8 @@ release may change behaviour.
 
 ### Changed
 
+- A Health Potion heals 10 HP and 1 more a depth, a Greater twice that; an Elixir still heals all. They healed 35%
+  and 70% of max HP, growing with the hero: deep heroes now lean on Vigor and gear, and the deep kills more.
 - A harder mark chosen at an Abyss fork stays as a weight: 30 less defense in its circle and every circle after,
   on top of the mark's own rule and reward. Each mark says so.
 - The smith remakes a Legendary for the depth: its fixed stats grown as they would be found there, its name, power

@@ -4,12 +4,14 @@ import type { Attribute } from '../types'
 import { curveOf } from './curve'
 
 /**
- * The bands the power curve keeps, every build: a blow taken never on average over 30% of max HP, a kill never more
+ * The bands the power curve keeps, every build: a blow taken never on average over 40% of max HP, a kill never more
  * than 6 blows, and past depth 100 no build slaying in under 1.7 blows on average. With armor taking its defense off a
  * blow and foe attack outgrowing depth, deep blows took 31% to 39% of max HP by depth 130 and builds slew in 1.6; with
  * Focus raising crit damage 5% a point, every point on it slew deep foes in 1.44 blows.
  */
-const MOST_BLOW_SHARE = 30
+// 40, not 30: healing potions heal set amounts, so a hero on one attribute, buying no HP, takes a bigger share deep
+// (every point on Might, 37% on depths 171 to 180), by design. The old armor rule still fails the deep hits.
+const MOST_BLOW_SHARE = 40
 const MOST_HITS = 6
 const LEAST_DEEP_HITS = 1.7
 

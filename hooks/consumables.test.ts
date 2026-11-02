@@ -46,7 +46,8 @@ describe('the belt', () => {
     expect(useBelt(g, 0)).toBe(`You drink an Elixir. +${g.maxHp - 1} HP`)
     expect(g.belt[0]).toEqual({ kind: 'health', tiers: [1, 0, 0] })
     g.hp = 1
-    expect(useBelt(g, 0)).toBe(`You drink a Health Potion. +${Math.ceil(g.maxHp * 0.35)} HP`)
+    // 10 HP and 1 more a depth: 11 at depth 1.
+    expect(useBelt(g, 0)).toBe('You drink a Health Potion. +11 HP')
     expect(g.belt[0]).toBeNull()
     expect(useBelt(g, 0)).toBe('Belt slot 1 is empty.')
   })
@@ -337,5 +338,15 @@ describe('the items\' icons', () => {
         for (const k of row) expect(k === '.' || PAL[k] !== undefined).toBe(true)
       }
     }
+  })
+})
+
+describe('healing potions heal set amounts, growing with depth slower than the hero', () => {
+  test('a Health Potion 10 HP and 1 a depth, a Greater twice that, an Elixir all: 60, 120 and 500 at depth 50 of 500 HP', async () => {
+    const at = (tier: 1 | 2 | 3) => {
+      const g = { ...plainHero(), depth: 50, deepest: 50, hp: 1, maxHp: 500, belt: [{ kind: 'health' as const, tiers: [tier === 1 ? 1 : 0, tier === 2 ? 1 : 0, tier === 3 ? 1 : 0] as [number, number, number] }, null, null, null, null] }
+      return useBelt(g, 0)
+    }
+    expect([at(1), at(2), at(3)]).toEqual(['You drink a Health Potion. +60 HP', 'You drink a Greater Health Potion. +120 HP', 'You drink an Elixir. +499 HP'])
   })
 })

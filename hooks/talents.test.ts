@@ -159,9 +159,9 @@ describe('what each talent does', () => {
 
   test('Iron Stomach: a potion heals a quarter more, rounded up', async () => {
     const g = { ...plainHero(3), hp: 1 }
-    // A Health Potion restores 35% of 20 HP: 7; a quarter more is 9.
+    // A Health Potion restores 10 HP and 1 a depth, 11 at depth 1; a quarter more is 13.75, rounded up 14.
     const drink = (x: Game) => apply(x, { kind: 'use', slot: slotOf('health') }).hp - 1
-    expect([drink(g), drink(knowing(g, 'ironStomach'))]).toEqual([7, 9])
+    expect([drink(g), drink(knowing(g, 'ironStomach'))]).toEqual([11, 14])
   })
 
   test('Haggler: the merchant asks a fifth less, rounded up, and takes that', async () => {

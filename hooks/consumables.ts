@@ -46,11 +46,21 @@ const ward = (g: Game, hits: number) => {
   return `A ward shimmers around you: it absorbs the next ${hits} hits.`
 }
 
+/**
+ * What a Health Potion heals: POTION_HEAL and POTION_PER_DEPTH a depth; a Greater twice that. Set amounts that grow
+ * slower than the hero, about 35% of max HP at the start and 21% deep, so deep heroes lean on Vigor and gear. A share
+ * of max HP grew with the hero: played by a player away from the pane (`SimOptions.away`), deaths in 100 tool calls on
+ * depths 61 to 100 were 0.17; at these amounts, 0.29.
+ */
+export const POTION_HEAL = 10
+export const POTION_PER_DEPTH = 1
+const potionHeal = (g: Pick<Game, 'depth'>) => POTION_HEAL + POTION_PER_DEPTH * g.depth
+
 /** Each kind's three tiers: name, what it does in a line (as the merchant's card says), and its use. */
 export const CONSUMABLES: Readonly<Record<Consumable, Readonly<Record<Tier, Entry>>>> = {
   health: {
-    1: { name: 'Health Potion', about: 'Restores 35% of your HP.', use: g => `You drink a Health Potion. +${heal(g, Math.ceil(g.maxHp * 0.35))} HP` },
-    2: { name: 'Greater Health Potion', about: 'Restores 70% of your HP.', use: g => `You drink a Greater Health Potion. +${heal(g, Math.ceil(g.maxHp * 0.7))} HP` },
+    1: { name: 'Health Potion', about: `Restores ${POTION_HEAL} HP, ${POTION_PER_DEPTH} more a depth.`, use: g => `You drink a Health Potion. +${heal(g, potionHeal(g))} HP` },
+    2: { name: 'Greater Health Potion', about: `Restores ${2 * POTION_HEAL} HP, ${2 * POTION_PER_DEPTH} more a depth.`, use: g => `You drink a Greater Health Potion. +${heal(g, 2 * potionHeal(g))} HP` },
     3: { name: 'Elixir', about: 'Restores all your HP.', use: g => `You drink an Elixir. +${heal(g, g.maxHp)} HP` },
   },
   regen: {

@@ -22,7 +22,8 @@ export const CLASS_NAME: Record<HeroClass, string> = { knight: 'Knight', mage: '
 export type Base = Partial<Stats> & { key: string; name: string; slot: Slot; w: number; h: number; cls?: HeroClass }
 export type Affix = Partial<Stats> & { name: string }
 /** `work`: its power needs a tool call, so it is never found played by hand. */
-export type Legendary = Partial<Stats> & { base: string; name: string; power: string; work?: true }
+/** A Legendary; `deep` falls only in the Abyss. */
+export type Legendary = Partial<Stats> & { base: string; name: string; power: string; work?: true; deep?: true }
 
 /** Every base, keyed by its icon; `cls` absent means any class wears it. */
 export const BASES: readonly Base[] = [
@@ -99,6 +100,9 @@ export const LEGENDARIES: readonly Legendary[] = [
   { base: 'kite', name: 'Aegis of Green Builds', def: 4, power: 'greenBlock', work: true },
   { base: 'staff', name: 'Staff of Stack Traces', atk: 6, power: 'stackTrace', work: true },
   { base: 'dagger', name: 'Whisper of the Linter', atk: 5, power: 'chainCrit' },
+  { base: 'boots', name: 'Treads of the Hot Path', def: 4, hp: 8, power: 'hotPath', deep: true },
+  { base: 'signet', name: 'Signet of Force Push', atk: 6, power: 'forcePush', deep: true },
+  { base: 'pendant', name: 'Pendant of the Clean Slate', def: 3, hp: 12, power: 'cleanSlate', deep: true },
 ]
 
 export const POWERS: Readonly<Record<string, string>> = {
@@ -109,6 +113,9 @@ export const POWERS: Readonly<Record<string, string>> = {
   greenBlock: 'A passing test run wards off the next hit.',
   stackTrace: 'A failed tool call strikes the foe as well.',
   chainCrit: 'A critical hit makes the next hit critical too.',
+  hotPath: 'The stairs heal half of max HP.',
+  forcePush: 'Blows on a big boss or a warden deal a fifth more.',
+  cleanSlate: "The Abyss's weight takes none of your defense.",
 }
 
 /** Every trigger: its name, what it does, and whether it rewards the player's work. */

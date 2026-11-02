@@ -28,7 +28,7 @@ describe('the card as text', () => {
     expect(cardText(hero()).split('\n')).toEqual([
       'ASCII Dungeon: Level 88 Knight, deepest depth 105 (tier VI, Lean)',
       'Kills 4,210, deaths 30, gold found 54,702, heroes retired 2',
-      'Uniques 2 of 5, big bosses 1 of 5, Legendaries 1 of 7',
+      'Uniques 2 of 5, big bosses 1 of 5, Legendaries 1 of 10',
       `Wearing: ${plainHero(3).gear.weapon!.name} (Common), Oathbound Plate (Epic), Sharp Band (Rare)`,
       'Talents: Grudge, Haggler',
     ])

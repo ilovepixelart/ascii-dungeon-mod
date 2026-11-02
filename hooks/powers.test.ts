@@ -3,7 +3,8 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Foe, Game, Item, Work } from '../types'
 import { apply } from './game'
 import { foeAhead, plainHero } from './fixtures'
-import { LEGENDARIES, plainItem } from './items'
+import { LEGENDARIES, makeItem, plainItem } from './items'
+import { arrive } from './world'
 
 /** A Legendary carrying `power`, its base's own stats zeroed but `over`, so only the power differs. */
 const legendary = (base: string, power: string, over: Partial<Item> = {}): Item => {
@@ -113,6 +114,90 @@ describe('Staff of Stack Traces', () => {
     const after = failed(wearing({ ...g, foe: foeAhead(g, 1, { hp: 1, maxHp: 1, opened: true }) }, { ...legendary('staff', 'stackTrace'), atk: 1 }))
     expect(after.foe).toBeNull()
     expect(after.hp).toBe(15)
+  })
+})
+
+/** The hero standing at `depth`, nothing in the way: no boss owed above it, no fork open. */
+const deepAt = (depth: number, over: Partial<Game> = {}): Game => {
+  const g = plainHero(3)
+  return { ...g, ...arrive(g.world, depth), deepest: depth, bossSlain: 0, fortune: null, ...over }
+}
+const DEEP = ['Treads of the Hot Path', 'Signet of Force Push', 'Pendant of the Clean Slate']
+
+describe('the deep Legendaries', () => {
+  /** The hero at a warden's depth with `foe`, one HP left, beside them; `over` the rest of the game. */
+  const atWarden = (foe: Partial<Foe>, over: Partial<Game> = {}) => {
+    const g = deepAt(60, { bossSlain: 59, ...over })
+    return { ...g, foe: foeAhead(g, 1, { glyph: '&', name: 'Hollow Queen', hp: 1, maxHp: 1, opened: true, boss: true, big: 'queen', ...foe }) }
+  }
+  const deepHeld = (g: Game) => [...g.bag, ...(g.stashLegends ?? []), ...(g.floor ?? []).map(f => f.item)].filter(i => DEEP.includes(i.name)).map(i => i.name)
+
+  test('never fall as an ordinary find, at any depth', async () => {
+    for (const depth of [50, 51, 150]) {
+      for (const seed of [1, 2, 3]) {
+        const g = { ...plainHero(seed), depth }
+        for (let i = 0; i < 100; i += 1) expect(DEEP).not.toContain(makeItem(g, 'legendary').name)
+      }
+    }
+    expect(LEGENDARIES.filter(l => l.deep === true).map(l => l.name)).toEqual(DEEP)
+  })
+
+  test('a warden slain pays one, besides its hoard; a big boss that is no warden pays none', async () => {
+    expect(deepHeld(ok(atWarden({ warden: 1 })))).toHaveLength(1)
+    expect(deepHeld(ok(atWarden({})))).toEqual([])
+  })
+
+  test('one the hero holds nowhere comes first; holding all three, any of them', async () => {
+    const held = (name: string, id: number): Item => {
+      const l = LEGENDARIES.find(x => x.name === name)!
+      return { ...plainItem({ nextId: id }, l.base, 'legendary'), name, power: l.power }
+    }
+    // Two of the three in the stash's Legendaries: the third is paid, in every world.
+    for (const world of [1, 2, 3, 4, 5]) {
+      const paid = deepHeld(ok(atWarden({ warden: 1 }, { world, stashLegends: [held(DEEP[0]!, 960), held(DEEP[2]!, 961)] })))
+      expect(paid.filter(n => n !== DEEP[0] && n !== DEEP[2])).toEqual([DEEP[1]])
+    }
+    const all = DEEP.map((n, i) => held(n, 970 + i))
+    expect(deepHeld(ok(atWarden({ warden: 1 }, { stashLegends: all }))).length).toBe(4)
+  })
+})
+
+describe('Treads of the Hot Path', () => {
+  test('the stairs heal half of max HP where they heal a quarter', async () => {
+    // Depth 52 to 53, at 10 of 100 HP: a quarter is 25, half 50.
+    const g = deepAt(52, { hp: 10, maxHp: 100 })
+    expect(apply(g, { kind: 'descend' })).toMatchObject({ depth: 53, hp: 35 })
+    expect(apply(wearing(g, legendary('boots', 'hotPath')), { kind: 'descend' })).toMatchObject({ depth: 53, hp: 60 })
+  })
+})
+
+describe('Signet of Force Push', () => {
+  const blow = (g: Game) => Number(g.log.find(l => /^You (CRITICALLY )?hit/.test(l))?.match(/for (\d+)\.$/)?.[1])
+  test('a blow on a big boss or a warden deals a fifth more; on a lesser boss, any other foe, or without it, the same', async () => {
+    for (const seed of [1, 2, 3]) {
+      const g = { ...plainHero(seed), stats: { ...plainHero(seed).stats, might: 0, focus: 0 } }
+      const signet = { ...legendary('signet', 'forcePush'), atk: 40 }
+      const on = (h: Game, over: Partial<Foe>) => blow(ok({ ...h, foe: tough(h, { hp: 999, maxHp: 999, ...over }) }))
+      const plain = on(wearing(g, signet), {})
+      expect(on(wearing(g, signet), { boss: true, big: 'king' })).toBe(Math.round(plain * 1.2))
+      expect(on(wearing(g, signet), { boss: true, big: 'lich', warden: 2 })).toBe(Math.round(plain * 1.2))
+      expect(on(wearing(g, signet), { boss: true })).toBe(plain)
+      expect(on(wearing(g, { ...signet, power: 'none' }), { boss: true, big: 'king' })).toBe(plain)
+    }
+  })
+})
+
+describe('Pendant of the Clean Slate', () => {
+  test("the Abyss's weight takes none of the hero's defense", async () => {
+    // As the weight's own test: a rogue at depth 75 in 100 defense, two harder marks behind: a 100 blow lands 66
+    // under the weight, 43 without it.
+    const armor = { ...plainHero().gear.weapon!, slot: 'armor' as const, atk: 0, def: 100, id: 901 }
+    const struck = (g: Game) => {
+      const after = apply({ ...g, foe: foeAhead(g, 1, { glyph: 'o', name: 'orc of x', hp: 99, maxHp: 99, atk: 100, opened: true }) }, { kind: 'outcome', ok: false, what: 'Bash' })
+      return Number(/strikes you for (\d+)\./.exec(after.log.join('\n'))?.[1])
+    }
+    const g = deepAt(75, { cls: 'rogue', hp: 500, maxHp: 500, marks: { 1: 'steady', 2: 'ironclad', 3: 'lean' }, gear: { ...plainHero().gear, armor } })
+    expect([struck(g), struck(wearing(g, legendary('pendant', 'cleanSlate')))]).toEqual([66, 43])
   })
 })
 

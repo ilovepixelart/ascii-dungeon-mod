@@ -6,6 +6,13 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Added
+
+- Three deep Legendaries, paid by the Abyss wardens and found nowhere else: the Treads of the Hot Path (the stairs
+  heal half of max HP), the Signet of Force Push (blows on a big boss or a warden deal a fifth more) and the Pendant
+  of the Clean Slate (the Abyss's weight takes none of your defense). Each warden slain leaves one, one you hold
+  nowhere first. The codex's Finds and the stash's Legendaries tab hold them in a second row.
+
 ### Changed
 
 - The codex has a third page, Abyss: the ten named circles' wardens, circles I to V over VI to X, each lit in its

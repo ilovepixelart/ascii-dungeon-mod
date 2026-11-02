@@ -97,16 +97,23 @@ const setSlots = (): Slot[] => {
     return { ...helm, x: x + Math.floor((SET_COLUMN - helm.w) / 2) }
   })
 }
-/** The Legendaries' board: their slots in a row, 4 apart. */
+/** The Legendaries' board: two rows of slots, 4 apart, each centred: the ordinary ones, then the deep ones 4 under
+ * the first row's tallest. */
 const LEGEND_GAP = 4
-const legendSlots = (): Slot[] => {
-  const slots = LEGEND_PLACES.map(p => slotOf(p.base, 0, BOARD_TOP))
+const legendRow = (deep: boolean, y: number): Slot[] => {
+  const slots = LEGEND_PLACES.filter(p => p.isDeep === deep).map(p => slotOf(p.base, 0, y))
   let x = runX(slots.reduce((n, s) => n + s.w, 0) + LEGEND_GAP * (slots.length - 1), BOARD_LEFT, BOARD_RIGHT)
   return slots.map(s => {
     const at = { ...s, x }
     x += s.w + LEGEND_GAP
     return at
   })
+}
+const legendSlots = (): Slot[] => {
+  const first = legendRow(false, BOARD_TOP)
+  const deep = legendRow(true, BOARD_TOP + Math.max(...first.map(s => s.h)) + LEGEND_GAP)
+  // In the places' order, the first row's and the deep row's each in turn.
+  return LEGEND_PLACES.map(p => (p.isDeep ? deep : first).shift()!)
 }
 const boardOf = (tab: 'sets' | 'legends') => (tab === 'sets' ? setSlots() : legendSlots())
 

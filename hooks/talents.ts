@@ -27,7 +27,7 @@ export const TALENTS: Readonly<Record<Talent, { name: string; does: string; twic
   haggler: { name: 'Haggler', does: 'The merchant asks a fifth less.', twice: 'The merchant asks two fifths less.' },
   pathfinder: { name: 'Pathfinder', does: 'In corridors you see two tiles around you, not one.', twice: 'In corridors you see three tiles around you.' },
 }
-/** The most times a talent is taken: its second rank twice its first. Talents ran out at level 60; ranked, at 120. */
+/** The most times a talent is taken: its second rank twice its first, all taken by level 120. */
 export const MAX_RANK = 2
 const ALL = Object.keys(TALENTS) as Talent[]
 

@@ -1,6 +1,6 @@
 // Rules every game state must keep, whatever happened: the simulator checks them after every step.
 // Each returns a sentence naming what broke, or nothing.
-import type { Game } from '../types'
+import type { Game, Talent } from '../types'
 import { BELT_SIZE, KINDS, STACK_MAX, countOf } from './consumables'
 import { BAG_H, BAG_W, RARE_KILLS, SETS, SLOTS, TEMPER_MAX, TRIGGERS, itemAt } from './items'
 import { MAP_H, MAP_W, cellId, isFloor, same } from './map'
@@ -8,7 +8,7 @@ import { isTownWalkable } from './town'
 import { LOG_KEPT, LOOP_KILLS, isBossDepth } from './game'
 import { TAB_PRICES, isLaidOut, specialTabOf, stashedItems } from './stash'
 import { CALM_CALLS, LEGACY_MAX, TOWN_IDLE_CALLS } from './balance'
-import { TALENT_EVERY } from './talents'
+import { MAX_RANK, TALENTS, TALENT_EVERY, rankOf } from './talents'
 import { pairOf, tierStart, wardenRule } from './deep'
 import { levelOf } from './world'
 
@@ -111,9 +111,13 @@ const RULES: Readonly<Record<string, Rule>> = {
     const h = g.heirloom
     return h === undefined || (h.temper === undefined && h.locked === undefined && h.junk === undefined) ? undefined : `the heirloom ${h.name} kept tempered ${h.temper}, locked ${h.locked}, junk ${h.junk}`
   },
-  'talents each once, no more than earned': g => {
+  'talents at most twice, a second once all found by hand are taken, no more than earned': g => {
     const t = g.talents ?? []
-    return new Set(t).size === t.length && t.length <= Math.floor(g.level / TALENT_EVERY) ? undefined : `talents ${t.join(', ')} at level ${g.level}`
+    const ranks = (Object.keys(TALENTS) as Talent[]).map(k => ({ k, rank: rankOf(g, k) }))
+    // A second rank is offered once every talent on offer has its first; by hand, the work talents are never on offer.
+    const isSecondEarly = ranks.some(r => r.rank > 1) && ranks.some(r => r.rank === 0 && TALENTS[r.k].work !== true)
+    const isFair = ranks.every(r => r.rank <= MAX_RANK) && !isSecondEarly && t.length <= Math.floor(g.level / TALENT_EVERY)
+    return isFair ? undefined : `talents ${t.join(', ')} at level ${g.level}`
   },
   'marks each of its fork, on a fork reached': g => {
     const wrong = Object.entries(g.marks ?? {}).find(([t, mark]) => {

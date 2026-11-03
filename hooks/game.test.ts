@@ -1010,7 +1010,8 @@ describe('champions', () => {
 
   test('a vampiric champion heals by what it deals, never past its full HP', async () => {
     const g = plainHero()
-    const hurtFoe = championOf(foeAhead(g, 1, { hp: 10, maxHp: 30, atk: 5, opened: true }), 'vampiric')
+    // 450 HP, a twentieth of it 22: more than its blow, so what it deals is all it heals.
+    const hurtFoe = championOf(foeAhead(g, 1, { hp: 10, maxHp: 300, atk: 5, opened: true }), 'vampiric')
     const after = apply({ ...g, foe: hurtFoe }, { kind: 'outcome', ok: false, what: 'Bash' })
     const dealt = g.hp - after.hp
     expect(dealt).toBeGreaterThan(0)
@@ -1027,6 +1028,14 @@ describe('champions', () => {
     expect([g.hp - after.hp > 2, after.foe!.hp]).toEqual([true, 43])
     // Struck again with nothing taken since: no heal.
     expect(apply(after, { kind: 'outcome', ok: false, what: 'Bash' }).foe!.hp).toBe(43)
+  })
+
+  test('a vampiric champion heals by at most a twentieth of its full HP a blow', async () => {
+    const g = { ...plainHero(), maxHp: 400, hp: 400 }
+    // 150 HP, down to 50: half of what it took is 50, its blow 40 or so, a twentieth of its HP 7. It heals 7.
+    const foe = { ...championOf(foeAhead(g, 1, { maxHp: 100, atk: 40, opened: true }), 'vampiric'), hp: 50 }
+    const after = apply({ ...g, foe }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect([g.hp - after.hp > 7, after.foe!.hp]).toEqual([true, 57])
   })
 
   test('a vampiric champion striking far harder than the hero hits still loses HP every round, and falls', async () => {

@@ -17,6 +17,9 @@ doing.
   simulated games it now reaches depth 162 where it reached 124, with 13 deaths where it had 24. Crit from gear past
   60% still adds nothing.
 - The pixel character sheet says what Might gives, its share of every blow, beside what Vigor and Insight give.
+- A vampiric foe heals by at most a twentieth of its full HP a blow. Uncapped, it healed by all it dealt, up to half of
+  what it had taken, and a hero with much HP and little damage could not wear it down: a knight with every point on
+  Vigor died 4.4 times a game on depths 31 to 60, now 0.6, and reaches depth 112 where it reached 100.
 
 ## [0.9.0] - 2026-11-03
 

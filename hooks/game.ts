@@ -702,7 +702,7 @@ const CHAMPIONS_FROM = 4
 /**
  * A foe made a champion: its modifier first in its name, double XP, half again its HP and a quarter more attack, and
  * one strength on top: tough has 60% more HP again, savage hits half again as hard, shielded turns the first blow
- * aside, vampiric heals by what it deals, up to half of what it took since its last blow.
+ * aside, vampiric heals by what it deals, up to half of what it took since its last blow and a twentieth of its HP.
  */
 export const championOf = (foe: Foe, mod: ChampionMod): Foe => {
   const hp = Math.round(foe.hp * 1.5)
@@ -1032,11 +1032,16 @@ const steal = (g: Game, by: string) => {
   if (took > 0) say(g, `${capitalized(by)} snatches ${countText(took)} gold!`)
 }
 
+/** The most of its full HP a vampiric foe heals by a blow: a hero of much HP and little damage, struck hard and long,
+ * would otherwise fill it back up. */
+const DRINK_MOST = 0.05
+
 /** A vampiric champion after its blow: healed by what it dealt, at most half of what it took since its last blow (its
- * whole loss on its first), so a blow bigger than the hero's never stalls the fight; never past its full HP. */
+ * whole loss on its first), so a blow bigger than the hero's never stalls the fight, and at most DRINK_MOST of its
+ * full HP; never past its full HP. */
 const drink = (foe: Foe, dmg: number): Foe => {
   const taken = (foe.hpAtBlow ?? foe.maxHp) - foe.hp
-  const hp = Math.min(foe.maxHp, foe.hp + Math.min(dmg, Math.max(0, Math.floor(taken / 2))))
+  const hp = Math.min(foe.maxHp, foe.hp + Math.min(dmg, Math.floor(foe.maxHp * DRINK_MOST), Math.max(0, Math.floor(taken / 2))))
   return { ...foe, hp, hpAtBlow: hp }
 }
 

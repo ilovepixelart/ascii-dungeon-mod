@@ -38,7 +38,7 @@ export const SLOT_STEP = BELT_SLOT_W - 1
 export const SIDE_LINE_Y = BELT_BELOW_Y + 3
 export const SIDE_LINE_X = 5 * SLOT_STEP + 1 + 3
 
-/** HP's red, the same at every share as Diablo's life globe: its lit top, its body and its shade. */
+/** HP's red, the same at every share, so the bar reads as one globe of life: its lit top, its body and its shade. */
 export const HP_TONES = ['#f06a5a', '#c0392b', '#8a231a'] as const
 export const HP_EMPTY = '#1e2420'
 export const XP_FILL = '#e0b84a'

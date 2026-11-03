@@ -142,8 +142,9 @@ describe('the deep Legendaries', () => {
     expect(LEGENDARIES.filter(l => l.deep === true).map(l => l.name)).toEqual(DEEP)
   })
 
-  test('a warden slain pays one, besides its hoard; a big boss that is no warden pays none', async () => {
-    expect(deepHeld(ok(atWarden({ warden: 1 })))).toHaveLength(1)
+  test('the warden of every third circle pays one, I, IV, VII and on, besides its hoard; the rest, and a big boss that is no warden, none', async () => {
+    const paid = [1, 2, 3, 4, 5, 6, 7, 10, 13].map(warden => deepHeld(ok(atWarden({ warden }))).length)
+    expect(paid).toEqual([1, 0, 0, 1, 0, 0, 1, 1, 1])
     expect(deepHeld(ok(atWarden({})))).toEqual([])
   })
 

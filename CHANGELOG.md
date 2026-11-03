@@ -17,8 +17,8 @@ release may change behaviour.
 - A passing test run staggers a big boss once a phase: after the run's sure blow it loses its turn.
 - Three deep Legendaries, paid by the Abyss wardens and found nowhere else: the Treads of the Hot Path (the stairs
   heal half of max HP), the Signet of Force Push (blows on a big boss or a warden deal a fifth more) and the Pendant
-  of the Clean Slate (the Abyss's weight takes none of your defense). Each warden slain leaves one, one you hold
-  nowhere first. The codex's Finds and the stash's Legendaries tab hold them in a second row.
+  of the Clean Slate (the Abyss's weight takes none of your defense). The warden of every third circle (I, IV, VII
+  and on) leaves one, one you hold nowhere first. The codex's Finds and the stash's Legendaries tab hold them in a second row.
 
 ### Changed
 

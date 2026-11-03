@@ -114,12 +114,19 @@ export const BESTIARY = [
 
 /** Bonus melee damage: every worn item's attack. */
 export const attackBonus = (g: Game) => gearBonus(g, 'atk')
-/** A critical blow's times: twice (Segfault's three times) and Focus's share. */
-export const critTimes = (g: Game) => (wornPower(g, 'tripleCrit') === undefined ? CRIT_TIMES : 3) + statShare(g.stats.focus)
+/** Crit chance shows no higher than this; each point of Focus's over it makes a critical CRIT_OVER times the harder,
+ * so Focus is not spent for nothing on a hero whose gear has reached it. */
+const CRIT_MOST = 60
+const CRIT_OVER = 0.02
+const focusPoints = (g: Game) => Math.round(100 * statShare(g.stats.focus))
+/** Crit chance from Focus, gear and luck, before CRIT_MOST holds it. */
+const critPoints = (g: Game) => focusPoints(g) + gearBonus(g, 'crit') + (g.fortune?.kind === 'luck' ? LUCK_CRIT : 0)
+/** A critical blow's times: twice (Segfault's three times), Focus's share, and Focus's crit chance past CRIT_MOST. */
+export const critTimes = (g: Game) => (wornPower(g, 'tripleCrit') === undefined ? CRIT_TIMES : 3) + statShare(g.stats.focus) + CRIT_OVER * Math.min(focusPoints(g), Math.max(0, critPoints(g) - CRIT_MOST))
 /** What Might lifts every blow by. */
 export const mightTimes = (g: Game) => 1 + statShare(g.stats.might)
 export const defense = (g: Game) => gearBonus(g, 'def')
-export const critChance = (g: Game) => Math.min(60, Math.round(100 * statShare(g.stats.focus)) + gearBonus(g, 'crit') + (g.fortune?.kind === 'luck' ? LUCK_CRIT : 0))
+export const critChance = (g: Game) => Math.min(CRIT_MOST, critPoints(g))
 export const xpGain = (g: Game, xp: number) => {
   const gained = Math.floor(xp * (1 + g.stats.insight / 20 + gearBonus(g, 'xp') / 100))
   return g.fortune?.kind === 'insight' ? Math.floor(gained * FORTUNE_MORE) : gained

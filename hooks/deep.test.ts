@@ -258,7 +258,8 @@ describe('the Abyss window', () => {
     const [a, b] = pairOf(atFork.world, 6).map(m => MARKS[m])
     const words = deepOverlay(atFork).filter(x => x.role === 'button').map(x => x.lines[0]!.map(r => r.text).join(''))
     expect(words).toEqual([`BLESSING: ${a!.name.toUpperCase()}`, `CURSE: ${b!.name.toUpperCase()}`])
-    expect(said(atFork).slice(3, 5)).toEqual([`A ${a!.name}, a blessing: ${a!.does}`, `B ${b!.name}, a curse: ${b!.does}`])
+    // A mark's words too long for a row wrap onto the rows under it, cut at a space.
+    expect(said(atFork).join(' ')).toContain(`A ${a!.name}, a blessing: ${a!.does} B ${b!.name}, a curse: ${b!.does}`)
     expect(said(atFork).at(-1)).toBe('Choose its fate: none chosen, the blessing holds.')
     expect(deepGesture(atFork, tap({ x: cards[1]!.rect.x + 20, y: cards[1]!.rect.y + 3 }))).toEqual([{ kind: 'mark', mark: cards[1]!.mark }])
   })

@@ -39,6 +39,19 @@ describe('a window', () => {
   })
 })
 
+describe('a framed box', () => {
+  test('holds each of its lines inside its frame and padding, two cells a side, on every window', async () => {
+    const all = shots()
+    expect(all.some(s => s.name.startsWith('deep-') && /ironclad|frenzied|lean/.test(s.name))).toBe(true)
+    for (const s of all) {
+      for (const b of s.boxes.filter(x => !['title', 'gold', 'label', 'tabs'].includes(x.role))) {
+        const widest = Math.max(0, ...(b.lines ?? []).map(line => line.reduce((n, r) => n + r.text.length, 0)))
+        expect([s.name, b.role, widest <= b.w - 4]).toEqual([s.name, b.role, true])
+      }
+    }
+  })
+})
+
 describe('a portrait', () => {
   test('has its box beside it 3 px off, on every window with one', async () => {
     const all = shots()

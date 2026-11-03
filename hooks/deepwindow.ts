@@ -8,6 +8,7 @@ import type { Action, Run } from './game'
 import { DEEP_FROM, MARKS, RULE_SAID, TIER_DEPTHS, circleName, fateOf, forkTier, markOf, pairOf, roman, tierOf, tierStart, wardenName, wardenOf } from './deep'
 import { BIG_BOSSES } from './game'
 import { themeOf } from './map'
+import { wrap } from './talk'
 import { canvas } from './canvas'
 import { heroChrome, heroTabAt } from './herotabs'
 import { BUTTON_H, buttonFace, wideButtonBox } from './pieces'
@@ -86,6 +87,19 @@ const noteOf = (g: Game, fork: number | undefined) => {
   return `Choose its fate: ${g.marks?.[fork] === undefined ? 'none chosen, the blessing holds' : 'a click changes it'}.`
 }
 
+/** The box's lines at most this wide, in cells: two of frame and padding each side. */
+const WORDS_W = WINDOW_W - 4 - 4
+
+/** A card's mark: its key and name, what it does after them as far as the row holds, the rest wrapped under them. */
+const markLines = (c: Card, i: number): Run[][] => {
+  const head: Run[] = [{ text: `${CARD_KEYS[i]} ` }, { text: `${MARKS[c.mark].name}, a ${fateOf(c.mark)}: `, bold: true, color: inkOf(c.mark) }]
+  const does = MARKS[c.mark].does
+  const room = WORDS_W - head.reduce((n, r) => n + r.text.length, 0)
+  const cut = does.length <= room ? does.length : does.lastIndexOf(' ', room)
+  const rest = does.slice(cut).trimStart()
+  return [[...head, { text: does.slice(0, cut) }], ...(rest === '' ? [] : wrap([[{ text: rest }]], WORDS_W))]
+}
+
 /** The box, in cells: the head, the last tiers reached, what each card's mark does, then the note. Then the choices'
  * words. */
 export const deepOverlay = (g: Game): OverlayBox[] => {
@@ -98,7 +112,7 @@ export const deepOverlay = (g: Game): OverlayBox[] => {
       ]
     : [
         ...circleLines(tier),
-        ...l.cards.map((c, i) => [{ text: `${CARD_KEYS[i]} ` }, { text: `${MARKS[c.mark].name}, a ${fateOf(c.mark)}: `, bold: true, color: inkOf(c.mark) }, { text: MARKS[c.mark].does }]),
+        ...l.cards.flatMap(markLines),
         ...(tierOf(g.deepest) > 0 ? [fatesLine(g)] : []),
         [{ text: noteOf(g, l.fork), dim: true }],
       ]

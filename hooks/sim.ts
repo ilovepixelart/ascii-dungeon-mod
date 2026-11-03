@@ -202,10 +202,14 @@ const errands = (g: Game, d: Dice): Action | undefined => {
   return deals(g, d)
 }
 
-/** Three spare pieces to the guard for one better; with three packs' gold and room in the bag for the largest piece a
- * pack can hold (2 by 3), a pack from the villager, who refuses one to a full bag. */
-const deals = (g: Game, d: Dice): Action | undefined => {
-  if (tradeInOf(g).length === 3) return g.panel === 'guard' ? { kind: 'tradeIn' } : d(2) === 1 ? { kind: 'goto', ...TOWN_SPOTS.guard } : undefined
+/** How the guard refuses a trade whose piece the bag has no room for. */
+const GUARD_NO_ROOM = 'The guard: "No room in your bag'
+/** Three spare pieces to the guard for one better, unless the guard just refused for want of room (a refusal leaves
+ * the bag as it was, so asking again is refused again); with three packs' gold and room in the bag for the largest
+ * piece a pack can hold (2 by 3), a pack from the villager, who refuses one to a full bag. */
+export const deals = (g: Game, d: Dice): Action | undefined => {
+  const isRefused = g.log.at(-1)?.startsWith(GUARD_NO_ROOM) === true
+  if (tradeInOf(g).length === 3 && !isRefused) return g.panel === 'guard' ? { kind: 'tradeIn' } : d(2) === 1 ? { kind: 'goto', ...TOWN_SPOTS.guard } : undefined
   if (g.gold < 3 * gambleCost(g) || fit(g.bag, 2, 3) === null) return undefined
   return g.panel === 'villager' ? { kind: 'gamble' } : d(3) === 1 ? { kind: 'goto', ...TOWN_SPOTS.villager } : undefined
 }

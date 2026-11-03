@@ -4,7 +4,8 @@ import { apply, gambleCost, newGame } from './game'
 import type { Consumable, Game } from '../types'
 import { KINDS } from './consumables'
 import { foeAhead, fullTab, plainHero } from './fixtures'
-import { beltAid, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate, townMove } from './sim'
+import { beltAid, deals, drawnVsTold, isJump, isUnexplainedClick, sightBreaks, simulate, townMove } from './sim'
+import { plainItem } from './items'
 import { forkTier, MARKS, tierOf } from './deep'
 import { bfs, isFloor, roomAt, visibleFrom } from './map'
 import { TOWN_SPOTS, pathBeside } from './town'
@@ -264,3 +265,22 @@ describe('the simulator played another way', () => {
     expect(new Set(perAnswer)).toEqual(new Set([2]))
   })
 })
+
+describe('the simulated player at the guard', () => {
+  /** In town at the guard's window with three spare Commons, so a trade is on offer. */
+  const atGuard = (log: string[] = []): Game => {
+    const g = { ...apply(plainHero(3), { kind: 'portal' }), panel: 'guard' as const }
+    const ring = (id: number) => ({ ...plainItem({ nextId: id }, 'ring', 'common'), x: id - 900, y: 5 })
+    return { ...g, bag: [...g.bag, ring(900), ring(901), ring(902)], log: [...g.log, ...log] }
+  }
+  const once = () => 1
+
+  test('trades three spares for one', async () => {
+    expect(deals(atGuard(), once)).toEqual({ kind: 'tradeIn' })
+  })
+
+  test('refused for want of room, does not ask again, so it never stands there asking forever', async () => {
+    expect(deals(atGuard(['The guard: "No room in your bag for what I would give you."']), once)).not.toEqual({ kind: 'tradeIn' })
+  })
+})
+

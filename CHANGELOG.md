@@ -6,20 +6,17 @@ release may change behaviour.
 
 ## [Unreleased]
 
-### Added
-
-- A big boss or warden that fells you tires: met again, it has a tenth less HP for each win over you, down to half,
-  and says so as it rises. One simulated hero died 116 times between two wardens it could not beat.
-
 ## [0.9.0] - 2026-11-03
 
 Saves from 0.8.0 load as they are: the save stays at version 14, and every new field (the wardens in the codex, a
-brace or stagger on a foe, the start screen's count) starts empty. Nothing breaks and nothing needs doing. A hero
+brace or stagger on a foe, the start screen's count, a big boss's wins over the hero) starts empty. Nothing breaks and nothing needs doing. A hero
 already deep in the Abyss meets a warden at the next circle's end, and a deep Legendary from the next of circles I,
 IV, VII and on; the codex lists no warden slain before 0.9.0.
 
 ### Added
 
+- A big boss or warden that fells you tires: met again, it has a tenth less HP for each win over you, down to half,
+  and says so as it rises. One simulated hero died 116 times between two wardens it could not beat.
 - A first game nobody starts sets out as a Knight on the fifth tool call, saying how to pick another hero; the
   start screen waited for a click however long the session ran.
 - An `autoOpen` option, on by default: turned off, a session no longer opens the pane as it starts, and `/dungeon`

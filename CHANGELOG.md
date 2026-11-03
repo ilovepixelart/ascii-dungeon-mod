@@ -6,6 +6,12 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed
+
+- Champions, random or at the tension's peak, begin at depth 4, where they began at depth 2; no champions' den
+  falls on depths 2 and 3 either. In 18 away games the first five depths killed a new hero 46 times, 15 of them
+  champions; now 34 times.
+
 ## [0.9.0] - 2026-11-03
 
 Saves from 0.8.0 load as they are: the save stays at version 14, and every new field (the wardens in the codex, a

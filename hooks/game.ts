@@ -470,7 +470,9 @@ const LEAN_GOLD = 2
 /** A depth's twist, the same every time it is drawn: picked from the world and the depth, none on depth 1 or a boss depth. */
 export const depthMod = (world: number, depth: number): DepthMod | undefined => {
   if (depth < 2 || isBossDepth(depth) || hash(depth, world, 7) >= MOD_SHARE) return undefined
-  return DEPTH_MODS[hash(depth, world, 11) % DEPTH_MODS.length]
+  const mod = DEPTH_MODS[hash(depth, world, 11) % DEPTH_MODS.length]
+  // A den before champions come would promise what never shows.
+  return mod === 'den' && depth < CHAMPIONS_FROM ? undefined : mod
 }
 const modHere = (g: Game) => (g.where === 'dungeon' ? depthMod(g.world, g.depth) : undefined)
 
@@ -524,7 +526,7 @@ const spawn = (g: Game, origin: string): Foe => {
     xp: foeXp(g.depth, tier),
     ...foeSpot(g),
   }
-  if (g.depth >= 2 && roll(g, mod === 'den' || mark === 'frenzied' ? DEN_ODDS : CHAMPION_ODDS) === 1) return championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
+  if (g.depth >= CHAMPIONS_FROM && roll(g, mod === 'den' || mark === 'frenzied' ? DEN_ODDS : CHAMPION_ODDS) === 1) return championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
   return foe
 }
 
@@ -666,8 +668,14 @@ const uniqueFoe = (g: Game): Foe => {
   return { glyph: u.glyph, name: u.name, hp, maxHp: hp, atk: Math.round(foeAtk(g.depth, tier, 2) * UNIQUE_ATK), xp: foeXp(g.depth, tier) * UNIQUE_XP, ...foeSpot(g), unique: u.key }
 }
 
-/** One foe in this many, from depth 2, is a champion. */
+/** One foe in this many, from depth CHAMPIONS_FROM, is a champion. */
 const CHAMPION_ODDS = 10
+/**
+ * The first depth with champions, random or at a peak. From depth 2 they took 15 of the 46 deaths 18 away games met
+ * on depths 1 to 5, a new hero's first minutes; from depth 4, 34 deaths there. From depth 6 it was 30, but without
+ * their gear and XP heroes met the first big boss weaker: 4.9 blows a kill at depth 10, from 4.1.
+ */
+const CHAMPIONS_FROM = 4
 
 /**
  * A foe made a champion: its modifier first in its name, double XP, half again its HP and a quarter more attack, and
@@ -1182,7 +1190,7 @@ const summon = (g: Game, name: string) => {
   }
   const foe = spawn(g, name)
   // A peak: the pressure has built, so a champion comes, announced, and a calm follows it.
-  if (g.tension >= TENSION_PEAK && g.depth >= 2 && g.hp >= g.maxHp * PEAK_HP) {
+  if (g.tension >= TENSION_PEAK && g.depth >= CHAMPIONS_FROM && g.hp >= g.maxHp * PEAK_HP) {
     g.foe = foe.champion !== undefined ? foe : championOf(foe, CHAMPION_MODS[roll(g, CHAMPION_MODS.length) - 1]!)
     g.tension = 0
     g.calm = CALM_CALLS

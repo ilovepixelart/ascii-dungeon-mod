@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { Game } from '../types'
-import { SAVE_VERSION, SHOP_PRICES, isBossDepth, alongTheWay, foeTierWeights, apply, isOnlyAWalk, championOf, classAbout, critChance, xpGain, levelOf, newGame, normalize, onToolStart, reforgeCost, routeToStairs } from './game'
+import { SAVE_VERSION, SHOP_PRICES, isBossDepth, alongTheWay, foeTierWeights, apply, isOnlyAWalk, championOf, classAbout, depthMod, critChance, xpGain, levelOf, newGame, normalize, onToolStart, reforgeCost, routeToStairs } from './game'
 import { foeAhead, plainHero } from './fixtures'
 import { countOf } from './consumables'
 import { BAG_H, BAG_W, plainItem } from './items'
@@ -974,7 +974,7 @@ describe('champions', () => {
     expect(championOf({ ...base, atk: 10 }, 'shielded').atk).toBe(13)
   })
 
-  test('about one foe in ten is a champion from depth 2, none at depth 1', { timeoutMs: 20000 }, async () => {
+  test('about one foe in ten is a champion from depth 4, none on the first three', { timeoutMs: 20000 }, async () => {
     const share = (depth: number) => {
       let champions = 0
       for (let seed = 1; seed <= 800; seed += 1) {
@@ -983,10 +983,18 @@ describe('champions', () => {
       }
       return champions / 800
     }
-    expect(share(1)).toBe(0)
-    const deep = share(5)
+    expect([share(1), share(2), share(3)]).toEqual([0, 0, 0])
+    const deep = share(4)
     expect(deep).toBeGreaterThan(0.06)
     expect(deep).toBeLessThan(0.15)
+  })
+
+  test("no champions' den on the first three depths, where no champion comes; past them, dens as before", async () => {
+    const worlds = Array.from({ length: 400 }, (_, i) => i + 1)
+    expect(worlds.filter(w => [2, 3].some(d => depthMod(w, d) === 'den'))).toEqual([])
+    expect(worlds.some(w => [2, 3].some(d => depthMod(w, d) !== undefined))).toBe(true)
+    expect(worlds.some(w => depthMod(w, 4) === 'den')).toBe(true)
+    expect(worlds.some(w => depthMod(w, 7) === 'den')).toBe(true)
   })
 
   test('a shielded champion turns the first blow aside, then takes them', async () => {
@@ -1642,8 +1650,9 @@ describe("the mystic's fortunes", () => {
 })
 
 describe('the pacing: tension, a peak, a calm', () => {
-  // Its unique already slain: depth 3 may be where the band's waits.
-  const hero = (over: Partial<Game> = {}): Game => ({ ...plainHero(4), depth: 3, deepest: 3, uniquesSlain: [0], ...over })
+  // Past the first three depths, where no champion comes; its band's unique already slain, as depth 7 may be where it
+  // waits.
+  const hero = (over: Partial<Game> = {}): Game => ({ ...plainHero(4), depth: 7, deepest: 7, uniquesSlain: [0, 1], ...over })
 
   test('a blow adds its share of max HP to the tension, in percent; a kill adds 4', async () => {
     const g = hero({ maxHp: 40, hp: 40, tension: 10 })
@@ -1664,11 +1673,13 @@ describe('the pacing: tension, a peak, a calm', () => {
     expect(g.log).toContain('The air grows heavy. Something strong is near.')
   })
 
-  test('no peak for a hero under 60% of max HP, nor on depth 1: a plain foe, the tension kept', async () => {
+  test('no peak for a hero under 60% of max HP, nor on the first three depths: a plain foe, the tension kept', async () => {
     const low = apply(hero({ tension: 120, hp: 23, maxHp: 40 }), { kind: 'summon', name: 'ls' })
     expect([low.calm, low.tension]).toEqual([0, 120])
-    const first = apply(hero({ depth: 1, deepest: 1, tension: 120, hp: 40, maxHp: 40 }), { kind: 'summon', name: 'ls' })
-    expect([first.calm, first.tension]).toEqual([0, 120])
+    for (const depth of [1, 3]) {
+      const early = apply(hero({ depth, deepest: depth, uniquesSlain: [0], tension: 120, hp: 40, maxHp: 40 }), { kind: 'summon', name: 'ls' })
+      expect([early.calm, early.tension, early.foe?.champion]).toEqual([0, 120, undefined])
+    }
   })
 
   test('the calm: its summons bring no foe, each gives back a tenth of max HP; then foes come again', async () => {

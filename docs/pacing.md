@@ -8,7 +8,7 @@ Any kind the depth has unlocked can come, the theme's favorites and the newest m
 
 ## Tension, peaks and calms
 
-`tension` (`Game`) builds with every blow the hero takes, its share of max HP in percent, and a little with each kill (`KILL_TENSION`). At `TENSION_PEAK` the next foe is a champion, announced ("The air grows heavy. Something strong is near.", and a toast); once it is down, the next `CALM_CALLS` summons bring no foe and each gives back a tenth of max HP (`CALM_HEAL`). A death clears both. The numbers are in `hooks/balance.ts`.
+`tension` (`Game`) builds with every blow the hero takes, its share of max HP in percent, and a little with each kill (`KILL_TENSION`). At `TENSION_PEAK`, from depth 4 (`CHAMPIONS_FROM`), the next foe is a champion, announced in the log ("The air grows heavy. Something strong is near."); once it is down, the next `CALM_CALLS` summons bring no foe and each gives back a tenth of max HP (`CALM_HEAL`). A death clears both. The numbers are in `hooks/balance.ts`.
 
 - The peak waits for a hero at `PEAK_HP` of max HP or more: tension is recent damage, so without the wait the champion came exactly when the hero was most hurt, and deaths nearly doubled.
 - The calm is short on purpose: every summon it holds back is a kill not made, while the depth goes on growing at each task's end. A calm of 4 calls put the hero about a level behind and raised deaths by half.
@@ -16,7 +16,7 @@ Any kind the depth has unlocked can come, the theme's favorites and the newest m
 
 ## Depth twists
 
-From depth 2, about 40 depths in 100 (boss depths aside) have a twist (`depthMod` in `hooks/game.ts`), drawn from the world and the depth so a depth keeps its own: Gloom (foes hit a fifth harder, kills pay half again the gold), Horde (foes a quarter more HP, kills half again the XP), Champions' den (one foe in four a champion), Barren (no potions drop, gear drops more often), Bloodlust (the hero and the foes both hit a quarter harder), Hoard (gold on the floor and in chests doubled, foes a sixth harder). It is said in full and toasted on arrival, by stairs or on waking after a death, and its mark stands after the depth on the strip's side line.
+From depth 2, about 40 depths in 100 (boss depths aside) have a twist (`depthMod` in `hooks/game.ts`), drawn from the world and the depth so a depth keeps its own: Gloom (foes hit a fifth harder, kills pay half again the gold), Horde (foes a quarter more HP, kills half again the XP), Champions' den (one foe in four a champion; none before depth 4, where champions begin), Barren (no potions drop, gear drops more often), Bloodlust (the hero and the foes both hit a quarter harder), Hoard (gold on the floor and in chests doubled, foes a sixth harder). It is said in full and toasted on arrival, by stairs or on waking after a death, and its mark stands after the depth on the strip's side line.
 
 ## Tiers past depth 50
 

@@ -6,6 +6,13 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Changed
+- Focus past the crit cap is no longer wasted: each point of Focus's crit chance over 60% adds 0.02 to a critical's
+  times. A rogue's gear alone reaches 60%, so an all-Focus rogue's Focus gave it no crit chance at all; over 4
+  simulated games it now reaches depth 162 where it reached 124, with 13 deaths where it had 24. Crit from gear past
+  60% still adds nothing.
+- The pixel character sheet says what Might gives, its share of every blow, beside what Vigor and Insight give.
+
 ## [0.9.0] - 2026-11-03
 
 Saves from 0.8.0 load as they are: the save stays at version 14, and every new field (the wardens in the codex, a

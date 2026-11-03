@@ -1491,6 +1491,26 @@ describe('class abilities', () => {
     expect(dealt(rogue({ might: 20 }))).toBe(Math.round(plain * 1.3))
   })
 
+  test("Focus's crit chance past 60% makes criticals harder, 0.02 times a point over; gear's past 60 alone, nothing", async () => {
+    // A ring of 100 attack, so the blow is big enough for a hundredth of its times to show.
+    const ringed = (crit: number, focus = 50) => {
+      const ring = { ...plainHero().gear.weapon!, slot: 'ring' as const, atk: 100, crit, id: 903 }
+      const g = fight('rogue')
+      return { ...g, gear: { ring }, stats: { ...g.stats, might: 0, focus }, foe: { ...g.foe!, hp: 99999, maxHp: 99999 } }
+    }
+    const dealt = (g: Game) => Number(apply(g, { kind: 'attack' }).log.find(l => l.includes(`the ${g.foe!.name} for`))?.match(/for (\d+)\.$/)?.[1])
+    // The ambush, a sure critical: with no Focus and no crit, twice the blow. 50 Focus is 60 x 50 / 70, 0.4286, and
+    // 43 points of chance.
+    const base = dealt(ringed(0, 0)) / 2
+    expect(base).toBeGreaterThan(50)
+    // A 17-crit ring: 60 points, none over, 2.4286 times. A 30-crit ring: 73, 13 over, 2.4286 + 0.26 = 2.6886 times.
+    expect(dealt(ringed(17))).toBe(Math.round(base * 2.4286))
+    expect(dealt(ringed(30))).toBe(Math.round(base * 2.6886))
+    expect(critChance(ringed(30))).toBe(60)
+    // An 80-crit ring and no Focus: 20 points over, none of them Focus's, so twice the blow as ever.
+    expect(dealt(ringed(80, 0))).toBe(base * 2)
+  })
+
   test('the mage draws a fifth of max HP from every kill, never past max', async () => {
     const g = fight('mage')
     const hurt = { ...g, hp: g.maxHp - 20, foe: { ...g.foe!, hp: 1 } }

@@ -201,6 +201,7 @@ const die = (g: Game, killer: string) => {
   say(g, `You were slain by ${killer} on depth ${g.depth}. You wake on depth ${wake}.`)
   if (foe !== undefined) remember(g, foe)
   if (foe?.unique !== undefined) g.uniqueWon = { ...g.uniqueWon, [bandOf(depth)]: g.level }
+  if (foe?.big !== undefined) g.bossWins = { ...g.bossWins, [depth]: (g.bossWins?.[depth] ?? 0) + 1 }
   // Waking on the same depth, what lies on its floor still lies there; on another, it is lost, said.
   const lying = g.floor ?? []
   if (wake !== depth && lying.length > 0) say(g, `${lying.length === 1 ? 'The item' : `The ${lying.length} items`} left on the floor of depth ${depth} ${lying.length === 1 ? 'is' : 'are'} lost.`)
@@ -559,6 +560,20 @@ const bigBossOf = (g: Game): Foe => {
   const maxHp = Math.round(foeHp(g.depth, tier, 4) * BIG_HP)
   const big: Foe = { glyph: '&', name: b.name, hp: maxHp, maxHp, atk: Math.ceil(foeAtk(g.depth, tier, 2) * BIG_ATK), xp: foeXp(g.depth, tier) * 8, ...foeSpot(g), boss: true, big: b.key }
   return tierOf(g.depth) > 0 ? wardenFrom(big, tierOf(g.depth)) : big
+}
+
+/**
+ * A big boss tires of felling the hero: met again, a tenth less HP for each win (`Game.bossWins`), down to half, so
+ * a wall always gives way. One away rogue died 116 times, 66 of them to two wardens, stuck at level 50.
+ */
+const TIRED_STEP = 0.1
+const TIRED_MOST = 5
+const TIRED_SAID = ['', 'a tenth', 'a fifth', 'three tenths', 'two fifths', 'half'] as const
+const tired = (g: Game, big: Foe): Foe => {
+  const wins = Math.min(g.bossWins?.[g.depth] ?? 0, TIRED_MOST)
+  if (wins === 0) return big
+  const maxHp = Math.round(big.maxHp * (1 - TIRED_STEP * wins))
+  return { ...big, hp: maxHp, maxHp }
 }
 
 /** A warden's rule on its stats: tough half again the HP, savage a tenth harder, shielded one blow turned; a quarter more XP. */
@@ -1128,8 +1143,10 @@ const descend = (g: Game) => {
     return
   }
   if (isBossDepth(g.depth) && g.bossSlain < g.depth) {
-    g.foe = isBigBossDepth(g.depth) ? bigBossOf(g) : bossOf(g)
+    g.foe = isBigBossDepth(g.depth) ? tired(g, bigBossOf(g)) : bossOf(g)
     say(g, `${TheFoe(g.foe)} (${g.foe.glyph}) rises to bar the way down!`)
+    const wins = g.bossWins?.[g.depth] ?? 0
+    if (g.foe.big !== undefined && wins > 0) say(g, `${TheFoe(g.foe)} is worn from ${wins === 1 ? 'its win' : `its ${wins} wins`} over you: ${TIRED_SAID[Math.min(wins, TIRED_MOST)]} less HP.`)
     return
   }
   const fork = forkTier(g)

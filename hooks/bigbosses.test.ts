@@ -263,3 +263,35 @@ describe('the Abyss wardens', () => {
     expect(bigArtOf({ big: 'queen' })).toBe(queen)
   })
 })
+
+describe('a big boss that fells the hero tires', () => {
+  /** Depth 10's big boss (the flooded halls', the Drowned Queen) slaying a hero at 1 HP. */
+  const felled = (over: Partial<Game> = {}) => {
+    const g = met(10)
+    return apply({ ...g, ...over, hp: 1, foe: { ...g.foe!, atk: 999, opened: true } }, { kind: 'outcome', ok: false, what: 'Bash' })
+  }
+
+  test('a fall to it is counted on its depth; a fall to any other foe is not', async () => {
+    expect(felled().bossWins).toEqual({ 10: 1 })
+    expect(felled({ bossWins: { 10: 2, 20: 1 } }).bossWins).toEqual({ 10: 3, 20: 1 })
+    const g = atDepth(9)
+    const plain = apply({ ...g, hp: 1, foe: { glyph: 'o', name: 'orc', hp: 9, maxHp: 9, atk: 999, xp: 1, x: g.x + 1, y: g.y, opened: true } }, { kind: 'outcome', ok: false, what: 'Bash' })
+    expect(plain.deaths).toBe(1)
+    expect(plain.bossWins).toBeUndefined()
+  })
+
+  test('met again, it has a tenth less HP for each win, down to half, and says so', async () => {
+    const fresh = met(10).foe!.maxHp
+    const again = (wins: number) => apply(atDepth(10, { bossWins: { 10: wins } }), { kind: 'descend' })
+    expect([1, 2, 5, 9].map(w => again(w).foe!.maxHp)).toEqual([0.9, 0.8, 0.5, 0.5].map(s => Math.round(fresh * s)))
+    expect(again(2).foe!.hp).toBe(again(2).foe!.maxHp)
+    expect(again(2).log).toContain('The Drowned Queen is worn from its 2 wins over you: a fifth less HP.')
+    expect(again(1).log).toContain('The Drowned Queen is worn from its win over you: a tenth less HP.')
+    expect(met(10).log.some(l => l.includes('worn from'))).toBe(false)
+  })
+
+  test('another depth\'s boss is not tired by it', async () => {
+    const fresh = met(20).foe!.maxHp
+    expect(apply(atDepth(20, { bossWins: { 10: 5 } }), { kind: 'descend' }).foe!.maxHp).toBe(fresh)
+  })
+})

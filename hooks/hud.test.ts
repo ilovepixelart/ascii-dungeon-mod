@@ -17,7 +17,7 @@ import { PAL, PX, TOWN_THING_ART, heroArt, textMask } from './pixelart'
 import { CHAMPION_MARK, FOE_BAR_EMPTY, FOE_BAR_FILL, FOE_BAR_W, frameOf, hexToInt, viewOrigin } from './pixels'
 
 const W = 111
-/** HP's red at every share, as Diablo's life globe: lit, body, shade. */
+/** HP's red, the same at every share: lit, body, shade. */
 const RED = ['#f06a5a', '#c0392b', '#8a231a'] as const
 const hero = (over: Partial<Game> = {}): Game => ({ ...newGame(4, 'knight'), ...over })
 /**

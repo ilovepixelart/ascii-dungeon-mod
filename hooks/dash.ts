@@ -1,4 +1,4 @@
-// The dash, Diablo's way, on a pane DASH_COLUMNS wide or more: a big glass orb in a carved stone socket at each bottom
+// The dash, on a pane DASH_COLUMNS wide or more: a big glass orb in a carved stone socket at each bottom
 // corner, HP on the left and XP on the right, standing high over the map with its numbers on it, a horned gargoyle
 // crest on each socket; under the orbs' curves a short stone dash that holds the belt, with the bag and settings
 // buttons under the HP orb and the portal under the XP; over the map between the orbs, a carved stone plaque of the

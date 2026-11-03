@@ -238,7 +238,7 @@ the map is always pixels. Nothing else needs doing.
 
 ### Added
 
-- From 105 columns the strip is a dash in the manner of Diablo III's: an HP orb and an XP orb of glass, their liquid
+- From 105 columns the strip is a dash: an HP orb and an XP orb of glass, their liquid
   filled to the share and rippling, their numbers on them, standing high over the map with a horned gargoyle crest
   each; the belt between them; the bag, settings and the portal in sockets in its corners; and over the map between
   the orbs a carved plaque of the depth, the gold and the effects. Either orb opens the character sheet and the

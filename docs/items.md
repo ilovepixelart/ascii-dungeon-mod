@@ -110,7 +110,7 @@ Fixed names and stats, each with one effect no affix gives (`wornPower` in `hook
 | Signet of Force Push | ring | +6 atk | a blow on a big boss or a warden deals a fifth more |
 | Pendant of the Clean Slate | amulet | +3 def +12 HP | the Abyss's weight takes none of the hero's defense |
 
-The last three, marked `deep`, are never an ordinary find: each Abyss warden slain pays one besides its hoard, one the hero holds nowhere (bag, stash or worn) first, which by the depth and the world (`deepLegendary` in `hooks/items/loot.ts`), so no die is cast for it and every other find falls as it would. Joining the ordinary pool instead changed which Legendary every Abyss find was: the band test's all-Focus rogue (seed 1) lost its Rubber Duck and stalled at depth 110.
+The last three, marked `deep`, are never an ordinary find: the warden of every third Abyss circle (I, IV, VII and on, `DEEP_PAY_EVERY`) pays one besides its hoard, one the hero holds nowhere (bag, stash or worn) first, which by the depth and the world (`deepLegendary` in `hooks/items/loot.ts`), so no die is cast for it and every other find falls as it would. Joining the ordinary pool instead changed which Legendary every Abyss find was: the band test's all-Focus rogue (seed 1) lost its Rubber Duck and stalled at depth 110. Paid by every warden, all three were in hand by depth 80, and away deaths per 100 calls fell from 0.39 to 0.05 at depths 61 to 100 and from 0.24 to 0.05 at 101 to 200; every third circle brings them back to 0.40 and 0.08, 0.56 deaths per 1,000 steps in all.
 
 ## Triggers
 

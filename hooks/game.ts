@@ -782,6 +782,12 @@ const loot = (g: Game, at: Pos, champion?: string) => {
   stashOrLeave(g, item, at)
 }
 
+/**
+ * The circles a deep Legendary is paid in: I, IV, VII and on. Paid at every warden, all three were in hand by depth
+ * 80 and depths 61 to 200 all but stopped killing (0.05 deaths per 100 calls away, from 0.39 and 0.24).
+ */
+const DEEP_PAY_EVERY = 3
+
 /** A boss's hoard: the best of three rolls, Rare at least (a big boss's Epic at least), and an Elixir; the way down opens. */
 const bossLoot = (g: Game, foe: Foe, isBig = false) => {
   const name = foe.name
@@ -793,8 +799,8 @@ const bossLoot = (g: Game, foe: Foe, isBig = false) => {
   keepPrize(g, item, foe, named => `Loot: ${named}.`)
   if (item.rarity !== 'legendary' && item.rarity !== 'epic') g.toast = `The ${name} falls: ${item.name}. The way down is open.`
   else announce(g, item)
-  // A warden also pays one of the deep Legendaries, which fall nowhere else.
-  if (foe.warden === undefined) return
+  // Every DEEP_PAY_EVERY-th circle's warden also pays one of the deep Legendaries, which fall nowhere else.
+  if (foe.warden === undefined || (foe.warden - 1) % DEEP_PAY_EVERY !== 0) return
   const deep = deepLegendary(g)
   keepPrize(g, deep, foe, named => `The ${name} leaves ${named}.`)
   announce(g, deep)

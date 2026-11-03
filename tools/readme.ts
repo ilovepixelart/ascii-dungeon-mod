@@ -22,7 +22,7 @@ mkdirSync(out, { recursive: true })
 const WIDTH = WINDOW_W
 const MAP_PX = 72
 /** The windows shown, by their name in hooks/screens.ts. */
-const WINDOWS = ['start-knight', 'talent-0', 'deep-brittle-ironclad', 'talk-mystic']
+const WINDOWS = ['start-knight', 'talent-0', 'deep-brittle-ironclad', 'talk-mystic', 'chest-knight', 'codex-foes', 'codex-abyss']
 
 const hex = (n: number) => `#${(n & 0xffffff).toString(16).padStart(6, '0')}`
 

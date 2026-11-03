@@ -90,6 +90,9 @@ As text, the keys are `i` inventory, `c` character, `a` attack, `p` potion, `w` 
     <td><img src="docs/img/chest-knight.png" alt="The stash: a tab's grid over the bag's, its tabs and the gold in the title bar"></td>
     <td><img src="docs/img/codex-foes.png" alt="The codex: the uniques and the big bosses, the slain ones drawn, the rest dark shapes"></td>
   </tr>
+  <tr>
+    <td><img src="docs/img/codex-abyss.png" alt="The codex Abyss page: the ten circle wardens, the slain ones drawn, the rest dark shapes"></td>
+  </tr>
 </table>
 
 Options in the plugin's config: `sound` (effects) and `music` (the town's tune), both on by default.

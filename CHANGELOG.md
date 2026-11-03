@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-03
+
+Saves from 0.9.0 load as they are: the save stays at version 14 and no field is new. Nothing breaks and nothing needs
+doing.
+
 ### Changed
 - Focus past the crit cap is no longer wasted: each point of Focus's crit chance over 60% adds 0.02 to a critical's
   times. A rogue's gear alone reaches 60%, so an all-Focus rogue's Focus gave it no crit chance at all; over 4

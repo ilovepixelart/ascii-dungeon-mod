@@ -6,6 +6,13 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-03
+
+Saves from 0.8.0 load as they are: the save stays at version 14, and every new field (the wardens in the codex, a
+brace or stagger on a foe, the start screen's count) starts empty. Nothing breaks and nothing needs doing. A hero
+already deep in the Abyss meets a warden at the next circle's end, and a deep Legendary from the next of circles I,
+IV, VII and on; the codex lists no warden slain before 0.9.0.
+
 ### Added
 
 - A first game nobody starts sets out as a Knight on the fifth tool call, saying how to pick another hero; the

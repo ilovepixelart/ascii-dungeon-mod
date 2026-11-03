@@ -11,6 +11,10 @@ release may change behaviour.
   plain strength. The two stacked on every other blow, and her circle IV warden, the Rime Mother at depth 90, felled
   simulated heroes 193 times in 96 games, twice any other foe; now 65, in line with the other wardens.
 
+### Added
+- The help window's Growth page says what Insight trades: faster levels, no damage or HP. Over 20,000 simulated steps a
+  hero with every point on Insight ended 45 to 71 depths behind one with every point on Might.
+
 ## [0.10.0] - 2026-11-03
 
 Saves from 0.9.0 load as they are: the save stays at version 14 and no field is new. Nothing breaks and nothing needs

@@ -69,6 +69,7 @@ export const HELP_PAGES: Readonly<Record<HelpPage, { label: string; head: string
       { when: 'Every 10th depth', does: 'A big boss instead' },
       { when: 'Past depth 50', does: 'The Abyss: a mark each circle' },
       { when: 'The codex', does: 'All you found and slew' },
+      { when: 'Insight', does: 'Faster levels, no damage or HP' },
     ],
   },
 }

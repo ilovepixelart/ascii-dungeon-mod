@@ -74,7 +74,7 @@ describe('the how it plays window', () => {
     expect(helpGesture({ type: 'drag', from: { x: 1, y: 1 }, at: { x: 9, y: 9 }, button: 'left' } as Gesture)).toBeUndefined()
   })
 
-  test('its pages say how the hero plays by hand, what the town holds, and how the hero grows', async () => {
+  test('its pages say how the hero plays by hand, what the town holds, and how the hero grows, Insight a trade', async () => {
     expect(HELP_PAGES.hand.rows.map(r => [r.when, r.does])).toEqual([
       ['A walk', 'May meet a foe'],
       ['A foe met', 'Hits twice as hard as its kind'],
@@ -97,6 +97,7 @@ describe('the how it plays window', () => {
       ['Every 10th depth', 'A big boss instead'],
       ['Past depth 50', 'The Abyss: a mark each circle'],
       ['The codex', 'All you found and slew'],
+      ['Insight', 'Faster levels, no damage or HP'],
     ])
     // The coding page is HELP_ROWS, as before; each page heads with its own line.
     expect(HELP_PAGES.coding.rows).toBe(HELP_ROWS)

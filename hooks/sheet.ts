@@ -4,7 +4,7 @@
 // is in settings. Pure: the click layer reports whole gestures, this decides the game actions they make.
 import type { Game } from '../types'
 import type { Action, Run } from './game'
-import { attackBonus, canRetire, critChance, defense, xpToLevel } from './game'
+import { attackBonus, canRetire, critChance, defense, mightTimes, xpToLevel } from './game'
 import { CLASS_NAME } from './items'
 import { canvas, fill, frame } from './canvas'
 import { ATTRIBUTES } from './panels'
@@ -47,12 +47,11 @@ export const SHEET_H = RETIRE_RECT.y + RETIRE_RECT.h + 2
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-/** Who the hero is, how they stand, what Vigor and Insight give (Focus's is the crit; Might's share of every blow the
- * text sheet says), what they have to spend. */
+/** Who the hero is, how they stand, what Might, Vigor and Insight give (Focus's is the crit), what they have to spend. */
 const headLines = (g: Game): Run[][] => [
   [{ text: `Level ${g.level} ${CLASS_NAME[g.cls]}`, bold: true }, { text: `   HP ${Math.max(0, g.hp)}/${g.maxHp}`, dim: true }],
   [{ text: `Attack +${attackBonus(g)}  Defense ${defense(g)}  Crit ${critChance(g)}%`, dim: true }],
-  [{ text: `Vigor +3 max HP a point, Insight +${g.stats.insight * 5}% XP`, dim: true }],
+  [{ text: `Might +${Math.round(100 * (mightTimes(g) - 1))}% damage, Vigor +3 max HP a point, Insight +${g.stats.insight * 5}% XP`, dim: true }],
   g.points > 0 ? [{ text: `${plural(g.points, 'point')} to spend`, color: INK.easy, bold: true }] : [{ text: 'Level up for points to spend', dim: true }],
 ]
 

@@ -86,10 +86,11 @@ describe('its moves', () => {
     expect(raging.map(t => t.pierces)).toEqual([false, true, false, true])
   })
 
-  test('the Hive Mother\'s spores slip past armor every other turn; raging, the swarm bites half again as hard', async () => {
+  test('the Hive Mother\'s spores slip past armor every other turn; raging, the swarm bites half again as hard between them', async () => {
     const calm = turns(big('hive', { hp: 60 }), 4)
     expect(calm.map(t => [t.pierces, t.times])).toEqual([[false, 1], [true, 1], [false, 1], [true, 1]])
-    expect(turns(big('hive', { phase: 2, hp: 40 }), 2).map(t => t.times)).toEqual([1.5, 1.5])
+    // A spore blow slips past armor but is no harder: the swarm's bite and the spores take turns, never on one blow.
+    expect(turns(big('hive', { phase: 2, hp: 40 }), 4).map(t => [t.pierces, t.times])).toEqual([[false, 1.5], [true, 1], [false, 1.5], [true, 1]])
   })
 
   test('the Frost Lich chills the air and looses a double frost nova; raging, ice armors it every fourth turn', async () => {

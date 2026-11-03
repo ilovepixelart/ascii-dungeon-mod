@@ -74,7 +74,8 @@ const RAGE: Readonly<Record<NonNullable<Foe['big']>, string>> = {
  *   the hero's next blow each time he raises it;
  * - the Drowned Queen's tide mends a tenth of her HP every third turn; in her second phase she drags the hero under,
  *   past their armor, every other turn;
- * - the Hive Mother's spores slip past armor every other turn; in her second phase the swarm bites half again as hard;
+ * - the Hive Mother's spores slip past armor every other turn; in her second phase the swarm bites half again as hard
+ *   on the turns between, never on a spore blow;
  * - the Frost Lich chills the air one turn and looses a frost nova double the next; in its second phase ice armor turns
  *   the next blow every fourth turn;
  * - the Furnace Wyrm draws breath one turn and breathes fire two and a half times as hard the next, every third turn; in
@@ -96,7 +97,7 @@ const MOVES: Readonly<Record<NonNullable<Foe['big']>, Move>> = {
   hive: (foe, plain, turn, isRaging) => {
     const isSpores = turn % 2 === 0
     const said = isSpores ? [`${TheFoe(foe)}'s spores slip past your armor!`] : isRaging ? ['The swarm bites!'] : []
-    return { ...plain, pierces: isSpores, times: isRaging ? 1.5 : 1, said }
+    return { ...plain, pierces: isSpores, times: isRaging && !isSpores ? 1.5 : 1, said }
   },
   lich: (foe, plain, turn, isRaging) => {
     if (isRaging && turn % 4 === 1) return { ...plain, foe: { ...foe, shield: 1 }, said: [`Ice armor forms on ${theFoe(foe)}.`] }

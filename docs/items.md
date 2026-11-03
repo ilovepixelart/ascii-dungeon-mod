@@ -189,7 +189,7 @@ Tier I does what each kind did before tiers, so a belt saved before them (versio
 |---|---|---|
 | Bone King (crypt) | raises his greatsword, brings it down double the next turn | bones shield him as he raises it |
 | Drowned Queen (flooded) | the tide mends a tenth of her HP every third turn | drags the hero under, past armor, every other turn |
-| Hive Mother (fungal) | spores slip past armor every other turn | the swarm bites half again as hard |
+| Hive Mother (fungal) | spores slip past armor every other turn | the swarm bites half again as hard on the turns between the spores (the two stacked, its circle IV warden, the Rime Mother, felled heroes 193 times in 96 away games, twice any other foe; apart, 65) |
 | Frost Lich (frozen) | the air freezes, then a frost nova double | ice armor every fourth turn |
 | Furnace Wyrm (forge) | draws a breath, then fire at two and a half times its attack, every third turn | every other turn |
 

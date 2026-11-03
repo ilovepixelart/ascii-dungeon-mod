@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Added
+
+- A big boss or warden that fells you tires: met again, it has a tenth less HP for each win over you, down to half,
+  and says so as it rises. One simulated hero died 116 times between two wardens it could not beat.
+
 ## [0.9.0] - 2026-11-03
 
 Saves from 0.8.0 load as they are: the save stays at version 14, and every new field (the wardens in the codex, a

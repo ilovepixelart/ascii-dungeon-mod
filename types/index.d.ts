@@ -217,6 +217,8 @@ export type Game = {
   codex?: Codex
   /** Tool calls come while a first game's start screen waited for a hero: at START_WAIT_CALLS a Knight sets out. */
   startWaited?: number
+  /** Times the big boss of each depth has felled this hero: met again, it starts tired (`tiredBy`). */
+  bossWins?: Record<number, number>
   /** The depths each once-a-depth reward for work was given on. */
   boons?: Partial<Record<Exclude<Work, 'tests'>, number[]>>
   deaths: number

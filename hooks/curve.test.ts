@@ -15,11 +15,13 @@ const MOST_BLOW_SHARE = 40
 const MOST_HITS = 6
 const LEAST_DEEP_HITS = 1.7
 
-describe('the power curve, one game a class to 10,000 steps', () => {
+describe('the power curve, two games a class to 10,000 steps', () => {
   for (const build of [undefined, 'might', 'focus'] as const satisfies readonly (Attribute | undefined)[]) {
     test(`${build === undefined ? 'points spent at random' : `every point on ${build}`}: every depth band keeps its bands`, { timeoutMs: 120000 }, async () => {
-      // A band two games of the three reached, so one game's luck is not the band.
-      const rows = curveOf(['knight', 'mage', 'rogue'], 1, 10000, build === undefined ? {} : { build }).filter(r => r.games >= 2)
+      // A band two games in three reached (4 of the 6), so one game's luck is not the band. Two seeds a class: with one,
+      // a rematch with a big boss that had felled the hero, a tenth weaker, moved the dice so one game's depth 10 read
+      // 6.5 blows a kill where 12 games read 4.5 with and without it.
+      const rows = curveOf(['knight', 'mage', 'rogue'], 2, 10000, build === undefined ? {} : { build }).filter(r => r.games >= 4)
       expect(rows.filter(r => r.blowShare > MOST_BLOW_SHARE).map(r => `${r.depth}: ${r.blowShare}%`)).toEqual([])
       expect(rows.filter(r => r.hitsPerKill > MOST_HITS).map(r => `${r.depth}: ${r.hitsPerKill} hits`)).toEqual([])
       const deep = rows.filter(r => r.from > 100 && r.hitsPerKill > 0)

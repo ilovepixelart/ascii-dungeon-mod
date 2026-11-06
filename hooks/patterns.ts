@@ -3,7 +3,7 @@ import type { Foe, Game } from '../types'
 import { roll } from './rng'
 import { TheFoe, theFoe } from './names'
 import { wardenRule } from './deep'
-import { ENRAGE_FROM, ENRAGE_STEP } from './balance'
+import { ENRAGE_FROM, ENRAGE_STEP, LAST_STAND_AT, LAST_STAND_HITS, LAST_STAND_TAKES } from './balance'
 
 /** What the foe's turn comes to before its blow: lines to say, a changed foe, whether it strikes, and how. */
 export type FoeTurn = { foe: Foe; said: string[]; strikes: boolean; times: number; pierces: boolean; steals: boolean }
@@ -81,7 +81,8 @@ const RAGE: Readonly<Record<NonNullable<Foe['big']>, string>> = {
  *   the next blow every fourth turn;
  * - the Furnace Wyrm draws breath one turn and breathes fire two and a half times as hard the next, every third turn; in
  *   its second phase every other turn.
- * Past ENRAGE_FROM turns any of them grows furious (`enraged`).
+ * A warden, raging, makes its last stand once at LAST_STAND_AT of its HP. Past ENRAGE_FROM turns any of them grows
+ * furious (`enraged`).
  */
 type Move = (foe: Foe, plain: FoeTurn, turn: number, isRaging: boolean) => FoeTurn
 
@@ -120,7 +121,11 @@ const bigTurn = (foe: Foe, plain: FoeTurn, turn: number, share: number): FoeTurn
     if (wardenRule(foe) === 'shielded') return { ...plain, foe: { ...foe, phase: 2, shield: 1 }, strikes: false, said: [`${TheFoe(foe)} ${RAGE[big]}`, `${TheFoe(foe)} raises its guard.`] }
     return { ...plain, foe: { ...foe, phase: 2 }, strikes: false, said: [`${TheFoe(foe)} ${RAGE[big]}`] }
   }
-  return MOVES[big](foe, plain, turn, foe.phase === 2)
+  if (foe.stand === undefined && foe.warden !== undefined && share <= LAST_STAND_AT) {
+    return { ...plain, foe: { ...foe, stand: true }, strikes: false, said: [`${TheFoe(foe)} makes its last stand!`] }
+  }
+  const move = MOVES[big](foe, plain, turn, foe.phase === 2)
+  return foe.stand === true ? { ...move, times: move.times * LAST_STAND_HITS } : move
 }
 
 /** A big boss past ENRAGE_FROM turns: its blows ENRAGE_STEP harder a turn beyond, said as it begins. */
@@ -133,6 +138,7 @@ const enraged = (t: FoeTurn, turn: number): FoeTurn => {
 
 /** The hero's blow as the foe's kind takes it: dodged, blunted, or passing through. */
 export const heroBlowOn = (g: Game, foe: Foe, dmg: number): { dmg: number; said?: string } => {
+  if (foe.stand === true) return { dmg: dmg * LAST_STAND_TAKES }
   if (foe.glyph === 'r' && roll(g, 5) === 1) return { dmg: 0, said: `${TheFoe(foe)} darts aside.` }
   if (foe.glyph === 's') return { dmg: Math.max(1, dmg - 1) }
   if (foe.glyph === 'W' && isOverlord(foe) && (foe.turn ?? 0) % 4 === 3) return { dmg: 0, said: `${TheFoe(foe)} fades into the dark; your blow passes through.` }

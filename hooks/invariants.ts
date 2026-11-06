@@ -30,6 +30,7 @@ const RULES: Readonly<Record<string, Rule>> = {
     const wards = foe.champion === 'shielded' || wardenRule(foe) === 'shielded' || foe.big === 'king' || foe.big === 'lich'
     return wards && foe.shield >= 0 && foe.shield <= 1 ? undefined : `the ${foe.name} holds ${foe.shield} shield as a ${foe.champion ?? 'plain foe'}`
   },
+  'last stand only by a raging warden': g => (g.foe?.stand === true && (g.foe.warden === undefined || g.foe.phase !== 2) ? `the ${g.foe.name} makes a last stand, warden ${g.foe.warden}, phase ${g.foe.phase}` : undefined),
   'temper within 0 to 3': g => {
     const off = [...SLOTS.map(s => g.gear[s]), ...g.bag].find(item => item?.temper !== undefined && !(Number.isInteger(item.temper) && item.temper >= 0 && item.temper <= TEMPER_MAX))
     return off === undefined ? undefined : `${off.name} tempered ${off.temper} times`

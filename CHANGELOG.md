@@ -10,6 +10,9 @@ release may change behaviour.
 - With the session playing, the first walk by hand on a depth with no foe about says where foes come from: they come
   with the session's work, and Play by hand (the gear) meets them as you walk. Before, a player clicking around an idle
   session met no foes and nothing said why.
+- An Abyss warden, raging, makes its last stand once at a quarter of its HP: a turn spent on it, then it hits a quarter
+  harder and takes a quarter more from every blow, so its fight ends sooner either way. Over 192 simulated away games
+  deaths went 2,681 to 2,752, within what two sets of seeds differ by on the same code.
 
 ### Changed
 - A big boss whose fight passes its 50th turn grows furious, said once: its blows land 2% harder each turn after, twice

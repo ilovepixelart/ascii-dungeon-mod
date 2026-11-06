@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-06
+
+Saves from 0.11.0 load as they are: the save stays at version 14, with two new optional fields (`walkHint` on the
+game, `stand` on a foe) that older saves simply lack. Nothing breaks and nothing needs doing.
+
 ### Added
 - With the session playing, the first walk by hand on a depth with no foe about says where foes come from: they come
   with the session's work, and Play by hand (the gear) meets them as you walk. Before, a player clicking around an idle
@@ -13,7 +18,6 @@ release may change behaviour.
 - An Abyss warden, raging, makes its last stand once at a quarter of its HP: a turn spent on it, then it hits a quarter
   harder and takes a quarter more from every blow, so its fight ends sooner either way. Over 192 simulated away games
   deaths went 2,681 to 2,752, within what two sets of seeds differ by on the same code.
-
 - The README names the stable surface: the `/dungeon` command, the `sound`, `music` and `autoOpen` options, and saves.
   A test loads saves written by released versions 0.4.0 (save version 11) and 0.11.0 (version 14), each class, and
   plays each on 400 steps with every rule checked; the release check holds the plugin's options to the README.

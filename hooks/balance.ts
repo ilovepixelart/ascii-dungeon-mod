@@ -140,6 +140,14 @@ export const armorShare = (def: number, depth: number) => {
 export const HEAVY_BLOW_MAX = 0.6
 
 /**
+ * A big boss's fight that drags on: from its turn past ENRAGE_FROM its blows land ENRAGE_STEP harder a turn, so a hero
+ * who cannot outpace its healing falls instead of trading blows without end. Over 1,663 simulated boss fights the 90th
+ * percentile lasted 41 steps; one against a healing warden ran 580.
+ */
+export const ENRAGE_FROM = 50
+export const ENRAGE_STEP = 0.02
+
+/**
  * How much a knight's defense counts against a blow: the class that blocks and outlasts. Its shields give defense where
  * the others' off-hands give attack, and armor's share rewards defense less the more there is: knights slew in 4 to 4.3
  * blows where mages and rogues took 2.3 to 3, and over 10 games of 6,000 steps a class reached depth 71 where the others

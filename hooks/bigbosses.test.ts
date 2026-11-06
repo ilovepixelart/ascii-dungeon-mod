@@ -109,6 +109,34 @@ describe('its moves', () => {
   })
 })
 
+describe('a long fight', () => {
+  const furious = 'The Boss grows furious: its blows land harder every turn the fight drags on.'
+
+  test('through its 50th turn it fights as its moves say; from the 51st it hits 2% harder a turn, said once', async () => {
+    const all = turns(big('king'), 120)
+    // Turns 1, 49 and 52 are the Bone King's plain turns (turn % 3 === 1), 100 too.
+    expect([1, 49, 52, 100].map(t => all[t - 1]!.times)).toEqual([1, 1, 1.04, 2])
+    expect(all[50]!.said).toContain(furious)
+    expect(all.flatMap(t => t.said).filter(l => l === furious)).toHaveLength(1)
+    expect(all.slice(0, 50).flatMap(t => t.said)).not.toContain(furious)
+  })
+
+  test('its own heavy blow grows with it: the greatsword on turn 60 lands double, then 1.2 times again', async () => {
+    const all = turns(big('king'), 60)
+    expect(Math.abs(all[59]!.times - 2.4)).toBeLessThan(1e-9)
+  })
+
+  test('a guardian or a plain foe never grows furious, however long the fight', async () => {
+    const guardian: Foe = { glyph: 'r', name: 'rat overlord', hp: 100, maxHp: 100, atk: 10, xp: 1, x: 0, y: 0, boss: true }
+    const plainFoe: Foe = { glyph: 'r', name: 'rat', hp: 100, maxHp: 100, atk: 10, xp: 1, x: 0, y: 0 }
+    for (const foe of [guardian, plainFoe]) {
+      const all = turns(foe, 120)
+      expect(all.every(t => t.times === 1)).toBe(true)
+      expect(all.flatMap(t => t.said).join(' ')).not.toContain('furious')
+    }
+  })
+})
+
 describe('its arena', () => {
   const stairsRoom = (world: number, depth: number) => {
     const l = generate(world, depth)

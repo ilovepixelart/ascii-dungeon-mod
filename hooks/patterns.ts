@@ -3,6 +3,7 @@ import type { Foe, Game } from '../types'
 import { roll } from './rng'
 import { TheFoe, theFoe } from './names'
 import { wardenRule } from './deep'
+import { ENRAGE_FROM, ENRAGE_STEP } from './balance'
 
 /** What the foe's turn comes to before its blow: lines to say, a changed foe, whether it strikes, and how. */
 export type FoeTurn = { foe: Foe; said: string[]; strikes: boolean; times: number; pierces: boolean; steals: boolean }
@@ -53,7 +54,7 @@ export const foeTurn = (g: Game, before: Foe): FoeTurn => {
   const foe = { ...before, turn }
   const plain: FoeTurn = { foe, said: [], strikes: true, times: 1, pierces: false, steals: false }
   const share = foe.hp / foe.maxHp
-  if (foe.big !== undefined) return bigTurn(foe, plain, turn, share)
+  if (foe.big !== undefined) return enraged(bigTurn(foe, plain, turn, share), turn)
   const t: Turn = { foe, plain, turn, share }
   return (foe.unique === undefined ? undefined : UNIQUE_MOVES[foe.unique]?.(t)) ?? KIND_MOVES[foe.glyph]?.(t) ?? plain
 }
@@ -80,6 +81,7 @@ const RAGE: Readonly<Record<NonNullable<Foe['big']>, string>> = {
  *   the next blow every fourth turn;
  * - the Furnace Wyrm draws breath one turn and breathes fire two and a half times as hard the next, every third turn; in
  *   its second phase every other turn.
+ * Past ENRAGE_FROM turns any of them grows furious (`enraged`).
  */
 type Move = (foe: Foe, plain: FoeTurn, turn: number, isRaging: boolean) => FoeTurn
 
@@ -119,6 +121,14 @@ const bigTurn = (foe: Foe, plain: FoeTurn, turn: number, share: number): FoeTurn
     return { ...plain, foe: { ...foe, phase: 2 }, strikes: false, said: [`${TheFoe(foe)} ${RAGE[big]}`] }
   }
   return MOVES[big](foe, plain, turn, foe.phase === 2)
+}
+
+/** A big boss past ENRAGE_FROM turns: its blows ENRAGE_STEP harder a turn beyond, said as it begins. */
+const enraged = (t: FoeTurn, turn: number): FoeTurn => {
+  const over = turn - ENRAGE_FROM
+  if (over <= 0) return t
+  const said = over === 1 ? [...t.said, `${TheFoe(t.foe)} grows furious: its blows land harder every turn the fight drags on.`] : t.said
+  return { ...t, times: t.times * (1 + ENRAGE_STEP * over), said }
 }
 
 /** The hero's blow as the foe's kind takes it: dodged, blunted, or passing through. */

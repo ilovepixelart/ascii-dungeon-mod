@@ -93,4 +93,26 @@ describe('playing by hand', () => {
     for (let i = 0; i < 40 && g.foe === null; i += 1) g = apply(g, { kind: 'walk' })
     expect(g.foe).toBeNull()
   })
+
+  test('the session playing, the first walk by hand on a depth says where foes come from, and only the first', async () => {
+    const hint = 'Foes come with the session\'s work. To meet them as you walk, set Play to by hand (the gear).'
+    let g: Game = { ...newGame(1, 'knight'), panel: 'none' }
+    g = apply(g, { kind: 'walk' })
+    expect(g.log.at(-1)).toBe(hint)
+    for (let i = 0; i < 5; i += 1) g = apply(g, { kind: 'walk' })
+    expect(g.log.filter(l => l === hint)).toHaveLength(1)
+    const down = apply(g, { kind: 'descend' })
+    expect(down.depth).toBe(g.depth + 1)
+    const below = apply(down, { kind: 'walk' })
+    expect(below.log.at(-1)).toBe(hint)
+  })
+
+  test('by hand, or with a foe about, a walk says nothing of where foes come from', async () => {
+    const hint = 'Foes come with the session\'s work. To meet them as you walk, set Play to by hand (the gear).'
+    const hand = apply(byHand(newGame(1, 'knight')), { kind: 'walk' })
+    expect(hand.log).not.toContain(hint)
+    const g0: Game = { ...newGame(1, 'knight'), panel: 'none' }
+    const fighting = apply({ ...g0, foe: { glyph: 'r', name: 'rat', hp: 5, maxHp: 5, atk: 1, xp: 1, x: g0.x + 5, y: g0.y } }, { kind: 'walk' })
+    expect(fighting.log).not.toContain(hint)
+  })
 })

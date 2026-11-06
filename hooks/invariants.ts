@@ -126,6 +126,7 @@ const RULES: Readonly<Record<string, Rule>> = {
     })
     return wrong === undefined ? undefined : `tier ${wrong[0]} marked ${wrong[1]}, deepest boss slain ${g.bossSlain}`
   },
+  'walk hint on a depth reached': g => (g.walkHint === undefined || (g.walkHint >= 1 && g.walkHint <= g.deepest) ? undefined : `walk hint on depth ${g.walkHint}, deepest ${g.deepest}`),
   'second wind on a depth reached': g => (g.wind === undefined || (g.wind >= 1 && g.wind <= g.deepest) ? undefined : `second wind on depth ${g.wind}, deepest ${g.deepest}`),
   'tension a count': g => (Number.isInteger(g.tension) && g.tension >= 0 ? undefined : `tension ${g.tension}`),
   'calm within its length': g => (Number.isInteger(g.calm) && g.calm >= 0 && g.calm <= CALM_CALLS ? undefined : `a calm of ${g.calm} summons, at most ${CALM_CALLS}`),

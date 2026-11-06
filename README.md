@@ -44,7 +44,7 @@ Or in one line, straight from this repository, following `main`:
 To stay on one release, add this repository at its tag instead, then install from it:
 
 ```
-/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v0.12.0
+/plugin marketplace add ilovepixelart/ascii-dungeon-mod#ascii-dungeon--v1.0.0
 /plugin install ascii-dungeon@ascii-dungeon-mod
 ```
 
@@ -124,13 +124,13 @@ by version: `CHANGELOG.md`.
 
 ## Versioning
 
-Releases follow [Semantic Versioning](https://semver.org/). While the version is 0.x, any release may change
-behaviour. The game is saved in a versioned layout (`SAVE_VERSION`): a release brings an older save up to its own, and
+Releases follow [Semantic Versioning](https://semver.org/). The stable surface below is the public API: a release
+that breaks any of it is a new major version. The game is saved in a versioned layout (`SAVE_VERSION`): a release brings an older save up to its own, and
 never reads or overwrites a save from a newer layout than it knows, and says so instead.
 
 ### Stable surface
 
-What a release keeps working, and what a breaking release names first in its CHANGELOG section:
+What every 1.x release keeps working, and what a major release names first in its CHANGELOG section:
 
 | Surface | Promise |
 |---|---|

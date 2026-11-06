@@ -11,6 +11,12 @@ release may change behaviour.
   with the session's work, and Play by hand (the gear) meets them as you walk. Before, a player clicking around an idle
   session met no foes and nothing said why.
 
+### Changed
+- A big boss whose fight passes its 50th turn grows furious, said once: its blows land 2% harder each turn after, twice
+  as hard by its 100th. Healing wardens could trade blows with a hero who could not outpace them for hundreds of
+  steps (the longest simulated Choir Queen fight ran 580 steps); ordinary fights end long before (90th percentile 41
+  steps). Deaths over 96 simulated away games 1,379 to 1,385.
+
 ## [0.11.0] - 2026-11-03
 
 Saves from 0.10.0 load as they are: the save stays at version 14 and no field is new. Nothing breaks and nothing

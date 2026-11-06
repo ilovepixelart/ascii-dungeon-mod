@@ -366,6 +366,8 @@ export type SimOptions = {
   away?: boolean
   /** Each step held to the rules (`violations`, the walk and sight checks); off, only played, in about two thirds the time. */
   checks?: boolean
+  /** The game played on from, a loaded save, in place of a new one. */
+  from?: Game
 }
 
 const CALLS = { least: 4, most: 13 }
@@ -592,7 +594,7 @@ export const startOf = (seed: number, cls: HeroClass, { byHand = false, talents 
 /** A game of `steps` actions, played as a session would by default, or as `options` say. */
 export const simulate = (seed: number, steps: number, cls: HeroClass = 'knight', options: SimOptions = {}): SimResult => {
   const { timeFrames = false, byHand = false, checks: isChecked = true } = options
-  let g = startOf(seed, cls, options)
+  let g = options.from ?? startOf(seed, cls, options)
   const d = dice(seed)
   const actions = byHand ? handPlay(() => g, d, options) : session(() => g, d, options)
   const records: StepRecord[] = []

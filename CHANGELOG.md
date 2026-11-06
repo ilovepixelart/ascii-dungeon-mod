@@ -14,6 +14,10 @@ release may change behaviour.
   harder and takes a quarter more from every blow, so its fight ends sooner either way. Over 192 simulated away games
   deaths went 2,681 to 2,752, within what two sets of seeds differ by on the same code.
 
+- The README names the stable surface: the `/dungeon` command, the `sound`, `music` and `autoOpen` options, and saves.
+  A test loads saves written by released versions 0.4.0 (save version 11) and 0.11.0 (version 14), each class, and
+  plays each on 400 steps with every rule checked; the release check holds the plugin's options to the README.
+
 ### Changed
 - A big boss whose fight passes its 50th turn grows furious, said once: its blows land 2% harder each turn after, twice
   as hard by its 100th. Healing wardens could trade blows with a hero who could not outpace them for hundreds of

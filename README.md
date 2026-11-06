@@ -109,6 +109,7 @@ Options in the plugin's config: `sound` (effects) and `music` (the town's tune),
 | `bun tools/curve.ts 6 15000` | the power curve, depth by depth: the hero's level, attack, defense, crit and max HP, hits a kill, the blow taken as a share of max HP and how many such blows the hero stands |
 | `uv run --with pillow python tools/shots/shoot.py <out> [name...]` | every window as a real Claude Code session draws it: a copy of the mod in a private tmux, each scene of `tools/shots/scenes.ts` opened, captured cell for cell and painted as Ghostty shows it, into `<out>/gallery.html` |
 | `bun tools/readme.ts` | the README's pictures, into `docs/img/` |
+| `bun tools/released-saves.ts <version>...` | saves as those released versions wrote them, into `hooks/released.ts`, for `hooks/released.test.ts`; run it with the new version after each release that changes `SAVE_VERSION` |
 | `python3 tools/sounds.py` | builds the sound clips into `sounds/` and `hooks/clips.ts` |
 | `python3 tools/measure.py` | frames as a real terminal receives them, during `/dungeon-bench` |
 
@@ -126,6 +127,20 @@ by version: `CHANGELOG.md`.
 Releases follow [Semantic Versioning](https://semver.org/). While the version is 0.x, any release may change
 behaviour. The game is saved in a versioned layout (`SAVE_VERSION`): a release brings an older save up to its own, and
 never reads or overwrites a save from a newer layout than it knows, and says so instead.
+
+### Stable surface
+
+What a release keeps working, and what a breaking release names first in its CHANGELOG section:
+
+| Surface | Promise |
+|---|---|
+| Command | `/dungeon` opens the pane. |
+| Options | `sound`, `music`, `autoOpen`: booleans, on by default. |
+| Saves | Every save a release wrote loads and plays on: `hooks/released.test.ts` loads saves written by released versions (`tools/released-saves.ts`). |
+
+Everything else may change in any release: the game's rules and balance, the windows, keys and art, and the measuring
+commands `/dungeon-bench` and `/dungeon-frames`. `scripts/check-release.mjs` holds the plugin's options to the row
+above, and `hooks/surface.test.ts` the commands.
 
 ## License
 

@@ -34,6 +34,14 @@ describe('each rule speaks up when broken', () => {
   const g = newGame(3)
   const item = (over: object) => ({ ...plainItem({ nextId: 500 }, 'chain'), ...over })
 
+  test('a last stand on a foe that is no raging warden', async () => {
+    const rule = 'last stand only by a raging warden'
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), stand: true } })).toContain(rule)
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'king', warden: 3, stand: true } })).toContain(rule)
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'king', phase: 2, stand: true } })).toContain(rule)
+    expect(broke({ ...g, foe: { ...foeAhead(g, 2), big: 'king', warden: 3, phase: 2, stand: true } })).not.toContain(rule)
+  })
+
   test('a shield on a foe that is no shielded champion', async () => {
     const g = newGame(3)
     expect(broke({ ...g, foe: { ...foeAhead(g, 2), shield: 1 } })).toContain('shield only on a shielded champion')

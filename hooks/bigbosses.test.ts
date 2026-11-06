@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { Foe, Game } from '../types'
 import { SAVE_VERSION, apply, newGame, normalize } from './game'
 import { MAP_H, MAP_W, generate } from './map'
-import { foeTurn } from './patterns'
+import { foeTurn, heroBlowOn } from './patterns'
 import { BOSS_ART, PX, bigArtOf } from './pixelart'
 import { frameOf } from './pixels'
 import { SPRITES } from './sprites'
@@ -282,6 +282,36 @@ describe('the Abyss wardens', () => {
     const plain = after({ ...hurt, warden: undefined })
     expect(drank.log.some(l => l.startsWith('The Rotting King strikes you for'))).toBe(true)
     expect(drank.foe!.hp).toBeGreaterThan(plain.foe!.hp)
+  })
+
+  test('raging, at a quarter of its HP or less, a warden makes its last stand once: a turn spent on it, no blow', async () => {
+    const king = big('king', { name: 'Rotting King', warden: 3, phase: 2, hp: 25 })
+    const stand = foeTurn(atDepth(80), king)
+    expect(stand).toMatchObject({ strikes: false, said: ['The Rotting King makes its last stand!'] })
+    expect(stand.foe.stand).toBe(true)
+    const next = turns(stand.foe, 6)
+    expect(next.flatMap(t => t.said)).not.toContain('The Rotting King makes its last stand!')
+    expect(next.every(t => t.strikes)).toBe(true)
+  })
+
+  test('in its last stand its blows land a quarter harder, its own heavy blow too', async () => {
+    // From turn 0: turn 1 is a plain turn (x1), turn 3 the greatsword (x2).
+    const all = turns(big('king', { name: 'Rotting King', warden: 3, phase: 2, hp: 25, stand: true }), 3)
+    expect([all[0]!.times, all[2]!.times]).toEqual([1.25, 2.5])
+  })
+
+  test('in its last stand it takes a quarter more from every blow', async () => {
+    const g = atDepth(80)
+    const king = big('king', { name: 'Rotting King', warden: 3, phase: 2, hp: 25 })
+    expect(heroBlowOn(g, king, 100).dmg).toBe(100)
+    expect(heroBlowOn(g, { ...king, stand: true }, 100).dmg).toBe(125)
+  })
+
+  test('above a quarter of its HP, not yet raging, or no warden, there is no last stand', async () => {
+    const at = (over: Partial<Foe>) => foeTurn(atDepth(80), big('king', { name: 'Rotting King', warden: 3, phase: 2, hp: 25, ...over }))
+    expect(at({ hp: 26 }).foe.stand).toBeUndefined()
+    expect(at({ warden: undefined }).foe.stand).toBeUndefined()
+    expect(at({ phase: undefined }).foe.stand).toBeUndefined()
   })
 
   test('a warden is drawn as its boss in its circle colors: the same shape, the swapped keys gone', async () => {

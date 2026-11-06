@@ -37,6 +37,8 @@ export type Foe = {
   warden?: number
   /** A big boss at half its HP or less: its second phase, entered once. */
   phase?: 2
+  /** A raging warden at a quarter of its HP or less makes its last stand, once: it hits a quarter harder and takes a quarter more. */
+  stand?: true
   /** The hero braces against its warned heavy blow: their next blow is held, and that blow of its lands at half. */
   guard?: true
   /** The phase (1 or 2) in which a passing test run staggered this big boss, once each. */

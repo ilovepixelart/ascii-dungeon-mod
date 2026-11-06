@@ -148,6 +148,16 @@ export const ENRAGE_FROM = 50
 export const ENRAGE_STEP = 0.02
 
 /**
+ * A raging warden at LAST_STAND_AT of its HP or less makes its last stand, once: a turn spent on it, then its blows land
+ * LAST_STAND_HITS times as hard and it takes LAST_STAND_TAKES times every blow, so its fight's end comes sooner either
+ * way. Over 192 simulated away games deaths went 2,681 to 2,752, less than two seed sets of the same code differ (89);
+ * at half again as hard the hero lost the trade (1,385 to 1,471 over 96).
+ */
+export const LAST_STAND_AT = 0.25
+export const LAST_STAND_HITS = 1.25
+export const LAST_STAND_TAKES = 1.25
+
+/**
  * How much a knight's defense counts against a blow: the class that blocks and outlasts. Its shields give defense where
  * the others' off-hands give attack, and armor's share rewards defense less the more there is: knights slew in 4 to 4.3
  * blows where mages and rogues took 2.3 to 3, and over 10 games of 6,000 steps a class reached depth 71 where the others

@@ -205,6 +205,8 @@ export type Game = {
   talents?: Talent[]
   /** How many talents earned the talent window has opened on its own for; absent, none. */
   talentOffered?: number
+  /** The depth a walk by hand last said, the session playing, that foes come with the session's work: once a depth. */
+  walkHint?: number
   /** The depth Second Wind last saved the hero on: once a depth. */
   wind?: number
   /** The hero's last blow slew its foe while Momentum is worn: the next blow deals a quarter more. */

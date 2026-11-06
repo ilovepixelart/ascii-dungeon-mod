@@ -302,6 +302,13 @@ describe('each rule speaks up when broken', () => {
     expect(broke({ ...g, deepest: 7, wind: 8 })).toContain(rule)
   })
 
+  test("a walk's word on where foes come from, said on a depth not reached", async () => {
+    const rule = 'walk hint on a depth reached'
+    expect(broke({ ...g, deepest: 7, walkHint: 7 })).not.toContain(rule)
+    expect(broke({ ...g, deepest: 7, walkHint: 8 })).toContain(rule)
+    expect(broke({ ...g, deepest: 7, walkHint: 0 })).toContain(rule)
+  })
+
   test('a fortune outliving its depth', async () => {
     expect(broke({ ...g, depth: 3, fortune: { kind: 'luck', depth: 3 } })).not.toContain('fortune only on its depth')
     expect(broke({ ...g, depth: 4, fortune: { kind: 'luck', depth: 3 } })).toContain('fortune only on its depth')

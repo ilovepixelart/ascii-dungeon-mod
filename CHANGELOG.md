@@ -6,6 +6,11 @@ release may change behaviour.
 
 ## [Unreleased]
 
+### Added
+- With the session playing, the first walk by hand on a depth with no foe about says where foes come from: they come
+  with the session's work, and Play by hand (the gear) meets them as you walk. Before, a player clicking around an idle
+  session met no foes and nothing said why.
+
 ## [0.11.0] - 2026-11-03
 
 Saves from 0.10.0 load as they are: the save stays at version 14 and no field is new. Nothing breaks and nothing

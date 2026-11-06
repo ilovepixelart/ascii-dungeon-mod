@@ -2244,6 +2244,14 @@ const handFoe = (g: Game) => {
   if (met !== null) g.foe = { ...met, atk: met.atk * HAND_FOE_ATK }
 }
 
+/** The session playing, the first walk by hand on a depth with no foe about and nothing else to say says where foes
+ * come from: they come with the session's work, not with the player's steps. */
+const walkHint = (g: Game) => {
+  if (isByHand(g) || g.where !== 'dungeon' || g.foe !== null || g.walked.length === 0 || g.fresh > 0 || g.walkHint === g.depth) return
+  g.walkHint = g.depth
+  say(g, "Foes come with the session's work. To meet them as you walk, set Play to by hand (the gear).")
+}
+
 /** In town all the gold carried is banked; elsewhere what is spent comes off the banked first, and what is earned is
  * not. Written only when it changes, so an action that changes nothing leaves the game as it was. */
 const bank = (before: Game, g: Game) => {
@@ -2262,7 +2270,10 @@ export const apply = (game: Game, action: Action): Game => {
   const handle = ((g.where === 'town' ? TOWN[action.kind] : undefined) ?? HANDLERS[action.kind]) as (g: Game, a: Action) => void
   handle(g, action)
   bank(before, g)
-  if (HAND_STEPS.has(action.kind)) handFoe(g)
+  if (HAND_STEPS.has(action.kind)) {
+    handFoe(g)
+    walkHint(g)
+  }
   offerTalent(g)
   if (TOOL_DRIVEN.has(action.kind)) g.recap = noted(before, g, action)
   g.codex = record(before, g)

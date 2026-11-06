@@ -1,10 +1,23 @@
 # Changelog
 
 All notable changes to ascii-dungeon are listed here. Versions follow
-[Semantic Versioning](https://semver.org/); while the version is 0.x, any
-release may change behaviour.
+[Semantic Versioning](https://semver.org/): from 1.0.0, a release that breaks the README's stable
+surface is a new major version.
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-11-06
+
+Saves from 0.12.0 load as they are: the save stays at version 14 and no field is new. Nothing breaks and nothing
+needs doing.
+
+### Changed
+- The README's stable surface (the `/dungeon` command, the `sound`, `music` and `autoOpen` options, and saves) is the
+  public API: a release that breaks any of it is a new major version. The game's rules, balance, windows, keys and
+  art may still change in any release.
+
+### Added
+- The released-saves test also loads saves written by 0.12.0, each class, and plays each on with every rule checked.
 
 ## [0.12.0] - 2026-11-06
 

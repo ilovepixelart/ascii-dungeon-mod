@@ -3,8 +3,9 @@
 // the same check CI makes.
 //
 //   node scripts/gates.mjs                 the gates
-//   node scripts/gates.mjs --typecheck     also the typecheck, locally: it needs the engine's type declarations,
-//                                          which Claude Code writes when the plugin loads in an interactive session, so CI skips it
+//   node scripts/gates.mjs --typecheck     also the gates that need the engine's type declarations (the
+//                                          typecheck), locally: Claude Code writes them
+//                                          when the plugin loads in an interactive session, so CI skips them
 //   node scripts/gates.mjs --tag <tag>     the release check also checks the tag
 //   node scripts/gates.mjs --load [n]      also run the tests n times at once (default 8),
 //                                          as a slower runner would, to catch timing flakes
@@ -18,7 +19,7 @@ const tagIndex = args.indexOf('--tag')
 const tag = tagIndex === -1 ? undefined : args[tagIndex + 1]
 const loadIndex = args.indexOf('--load')
 const load = loadIndex === -1 ? 0 : Number(args[loadIndex + 1] ?? 8) || 8
-const wantsTypecheck = args.includes('--typecheck')
+const wantsTypes = args.includes('--typecheck')
 
 const TYPES = '.claude-plugin/types/claude-code/index.d.ts'
 
@@ -31,7 +32,7 @@ const gates = [
   ['python tools: ruff', 'uvx', ['ruff', 'check', 'tools']],
   ['python tools: format', 'uvx', ['ruff', 'format', '--check', 'tools']],
   ['python tools: tests', 'python3', ['-m', 'unittest', 'tools/test_measure.py', 'tools/shots/test_cells.py']],
-  ...(wantsTypecheck ? [['typecheck', 'npx', ['-y', '-p', 'typescript', 'tsc', '-p', '.']]] : []),
+  ...(wantsTypes ? [['typecheck', 'npx', ['-y', '-p', 'typescript', 'tsc', '-p', '.']]] : []),
 ]
 
 const run = (name, command, argv) => {

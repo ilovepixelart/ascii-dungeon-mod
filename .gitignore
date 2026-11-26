@@ -1,4 +1,4 @@
-# Written by the engine for the editor, on every load.
+# written by Claude Code on every load of the plugin
 .claude-plugin/types/
-# Python bytecode.
+# Python bytecode
 __pycache__/

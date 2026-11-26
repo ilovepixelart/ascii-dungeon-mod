@@ -42,10 +42,13 @@ if (existsSync('README.md')) {
   }
 }
 
-// The README's Stable surface names the options: plugin.json's userConfig must be exactly those.
-if (existsSync('README.md')) {
-  const row = readFileSync('README.md', 'utf8').split('\n').find(line => line.startsWith('| Options |'))
-  const promised = row === undefined ? [] : [...row.split('|')[2].split(':')[0].matchAll(/`([^`]+)`/g)].map(m => m[1]).sort()
+// A README whose Stable surface has an Options row promises those options: plugin.json's userConfig must be
+// exactly those. A README without that row promises none, and is not checked.
+const optionsRow = existsSync('README.md')
+  ? readFileSync('README.md', 'utf8').split('\n').find(line => line.startsWith('| Options |'))
+  : undefined
+if (optionsRow !== undefined) {
+  const promised = [...optionsRow.split('|')[2].split(':')[0].matchAll(/`([^`]+)`/g)].map(m => m[1]).sort()
   const options = Object.keys(plugin.userConfig ?? {}).sort()
   if (promised.join() !== options.join()) {
     fail(`README.md's Stable surface promises options ${JSON.stringify(promised)}; plugin.json has ${JSON.stringify(options)}`)
